@@ -134,6 +134,20 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     };
   }, [scheduleRefresh]);
 
+  // Drives the server-side meter for whichever session is running, so every
+  // portal watching it sees energy and cost climb. One ticker per browser is
+  // plenty — the server is the single source of truth for the numbers.
+  const activeSessionId = state?.sessions.find(s => s.status === 'active')?.id ?? null;
+  useEffect(() => {
+    if (!activeSessionId) return;
+    const t = setInterval(() => {
+      apiClient.tickSession(activeSessionId).catch(() => {
+        /* session ended between ticks */
+      });
+    }, 5000);
+    return () => clearInterval(t);
+  }, [activeSessionId]);
+
   const login = useCallback(async (portal: Portal, loginValue: string, password: string) => {
     const { token, user } = await apiClient.login(portal, loginValue, password);
     tokenStore.set(portal, token);

@@ -1,15 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Zap, Car, Building2, Shield, Globe, ArrowRight, Briefcase, BookOpen, Network, Activity, Radio, BellRing, CircleAlert, Route, Columns2 } from 'lucide-react';
-import DriverApp from './components/DriverApp';
-import OperatorApp from './components/OperatorApp';
-import AdminApp from './components/AdminApp';
-import BusinessApp from './components/BusinessApp';
-import ApiDocsApp from './components/ApiDocsApp';
-import AuthFlow from './components/AuthFlow';
+import { lazy, Suspense } from 'react';
 import PortalLogin from './components/PortalLogin';
 import SyncInspector from './components/SyncInspector';
 import SyncToasts from './components/SyncToasts';
-import SplitView from './components/SplitView';
+
+// Each portal is a large, independent app — load one only when it is opened
+// so the landing page ships a fraction of the bundle.
+const DriverApp = lazy(() => import('./components/DriverApp'));
+const OperatorApp = lazy(() => import('./components/OperatorApp'));
+const AdminApp = lazy(() => import('./components/AdminApp'));
+const BusinessApp = lazy(() => import('./components/BusinessApp'));
+const ApiDocsApp = lazy(() => import('./components/ApiDocsApp'));
+const SplitView = lazy(() => import('./components/SplitView'));
 import { useSync } from './lib/sync';
 import type { Portal as AuthPortal } from './lib/api';
 
@@ -626,6 +629,23 @@ function PortalGate({
   return <>{children}</>;
 }
 
+/** Shown while a portal's chunk is still downloading. */
+function PortalLoading() {
+  return (
+    <div className="h-full w-full grid place-items-center bg-slate-950">
+      <div className="flex flex-col items-center gap-3">
+        <div
+          className="w-9 h-9 rounded-xl grid place-items-center"
+          style={{ background: 'linear-gradient(135deg,#38BDF8,#0284C7)', animation: 'pulse 1.6s ease-in-out infinite' }}
+        >
+          <Zap size={17} className="text-white" />
+        </div>
+        <p className="text-xs text-slate-500">Загружаем портал…</p>
+      </div>
+    </div>
+  );
+}
+
 const VALID_PORTALS: Portal[] = ['selector', 'driver', 'operator', 'admin', 'business', 'api', 'architecture'];
 
 /** Lets a portal be deep-linked (?portal=operator) — used by the split view. */
@@ -665,6 +685,7 @@ export default function App() {
 
   return (
     <div className={`size-full overflow-hidden${darkMode ? ' dark' : ''}`}>
+      <Suspense fallback={<PortalLoading />}>
       {portal === 'selector' && <PortalSelector onSelect={setPortal} darkMode={darkMode} setDarkMode={setDarkMode} />}
       {portal === 'driver' && (
         <div className="h-full flex items-center justify-center relative overflow-hidden" style={{ background: 'radial-gradient(ellipse at 50% 30%, #0f1e3a 0%, #080d19 50%, #050810 100%)' }}>
@@ -738,6 +759,7 @@ export default function App() {
         </PortalGate>
       )}
       {portal === 'architecture' && <ArchitectureDiagram onBack={() => setPortal('selector')} />}
+      </Suspense>
       <SyncToasts />
       {!embedded && <SyncInspector />}
       {!embedded && portal === 'selector' && (
@@ -749,7 +771,11 @@ export default function App() {
           <span className="text-[11px] font-semibold text-white tracking-wide hidden sm:inline">Сравнить порталы</span>
         </button>
       )}
-      {splitView && <SplitView onClose={() => setSplitView(false)} />}
+      {splitView && (
+        <Suspense fallback={<PortalLoading />}>
+          <SplitView onClose={() => setSplitView(false)} />
+        </Suspense>
+      )}
       {showChangelog && portal === 'selector' && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm" style={{animation:'fade-in 0.3s ease both'}}>
           <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl" style={{animation:'scale-in 0.4s cubic-bezier(0.16,1,0.3,1) both'}}>

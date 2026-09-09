@@ -12,7 +12,8 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 import { sessions, revenueData, hourlyData, connectorDistribution } from '../data/mockData';
-import { useLiveStations, useLiveAdminSessions, useLiveStats, type LegacyAdminSession } from '../lib/live';
+import { useLiveStations, useLiveAdminSessions, useLiveStats, useLiveAlerts, type LegacyAdminSession } from '../lib/live';
+import { useSync } from '../lib/sync';
 import AnimatedCounter from './AnimatedCounter';
 import AIChat from './AIChat';
 
@@ -1317,7 +1318,50 @@ function TariffsPage() {
 function StationDetailPage({ stationId, onBack }: { stationId: string; onBack: () => void }) {
   const stations = useLiveStations();
   const adminSessions = useLiveAdminSessions();
+  const { actions, refresh, state } = useSync();
+  const [busyConnector, setBusyConnector] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const s = stations.find(st => st.id === stationId) || stations[0];
+
+  /** Takes an EVSE in or out of service for the whole platform. */
+  const toggleConnector = async (connectorId: string, status: string) => {
+    setBusyConnector(connectorId);
+    setActionError(null);
+    try {
+      await actions.setConnectorStatus(
+        'operator',
+        s.id,
+        connectorId,
+        status === 'unavailable' ? 'available' : 'unavailable',
+      );
+      await refresh();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Не удалось изменить статус');
+    } finally {
+      setBusyConnector(null);
+    }
+  };
+
+  /** Remote-stops whoever is charging on this connector. */
+  const stopConnectorSession = async (connectorId: string) => {
+    const live = state?.sessions.find(
+      x => x.status === 'active' && x.stationId === s.id && x.connectorId === connectorId,
+    );
+    if (!live) {
+      setActionError('Активная сессия не найдена');
+      return;
+    }
+    setBusyConnector(connectorId);
+    setActionError(null);
+    try {
+      await actions.stopSession('operator', live.id);
+      await refresh();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Не удалось остановить сессию');
+    } finally {
+      setBusyConnector(null);
+    }
+  };
   const statusColors: Record<string, string> = { available: '#22C55E', occupied: '#EF4444', unavailable: '#94A3B8', reserved: '#F59E0B' };
   const statusBgs: Record<string, string> = { available: 'bg-green-100 text-green-700', occupied: 'bg-red-100 text-red-700', unavailable: 'bg-slate-100 text-slate-500', reserved: 'bg-amber-100 text-amber-700' };
   const statusLabels: Record<string, string> = { available: 'Свободно', occupied: 'Занято', unavailable: 'Недоступно', reserved: 'Забронировано' };
@@ -1373,6 +1417,12 @@ function StationDetailPage({ stationId, onBack }: { stationId: string; onBack: (
           </h3>
           <span className="text-xs text-slate-400">обновляется каждые 2 сек</span>
         </div>
+        {actionError && (
+          <div role="alert" className="mx-5 mt-3 flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+            <AlertTriangle size={13} className="shrink-0 mt-px" />
+            <span>{actionError}</span>
+          </div>
+        )}
         <div className="divide-y divide-slate-50">
           {s.connectors.map((c, i) => (
             <div key={c.id} className="px-5 py-4 flex items-center gap-5">
@@ -1404,12 +1454,20 @@ function StationDetailPage({ stationId, onBack }: { stationId: string; onBack: (
                 <p className="text-xs text-slate-400 mt-1 mono">{c.price.toLocaleString()} сум/кВт·ч</p>
               </div>
               <div className="flex gap-1.5">
-                <button className="px-2.5 py-1.5 text-xs bg-slate-50 text-slate-600 rounded-lg hover:bg-slate-100 border border-slate-200">
-                  Remote Reset
+                <button
+                  onClick={() => toggleConnector(c.id, c.status)}
+                  disabled={busyConnector === c.id || c.status === 'occupied'}
+                  className="px-2.5 py-1.5 text-xs bg-slate-50 text-slate-600 rounded-lg hover:bg-slate-100 border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {busyConnector === c.id ? '…' : c.status === 'unavailable' ? 'Включить' : 'Вывести из работы'}
                 </button>
                 {c.status === 'occupied' && (
-                  <button className="px-2.5 py-1.5 text-xs bg-red-50 text-red-500 rounded-lg hover:bg-red-100 border border-red-200">
-                    Stop
+                  <button
+                    onClick={() => stopConnectorSession(c.id)}
+                    disabled={busyConnector === c.id}
+                    className="px-2.5 py-1.5 text-xs bg-red-50 text-red-500 rounded-lg hover:bg-red-100 border border-red-200 disabled:opacity-40"
+                  >
+                    {busyConnector === c.id ? '…' : 'Stop'}
                   </button>
                 )}
               </div>
@@ -1933,7 +1991,7 @@ function HelpPage() {
   );
 }
 
-const alertsData = [
+const staticAlerts = [
   { id: 'A001', severity: 'critical', title: 'Станция офлайн', desc: 'GreenCharge Toshkent-1 потеряла связь с OCPP сервером', station: 'GreenCharge Toshkent-1', time: '5 мин назад', code: 'OCPP-503' },
   { id: 'A002', severity: 'critical', title: 'Ошибка зарядки', desc: 'EVSE #3 прервал сессию S-10840 с ошибкой PowerLoss', station: 'EV Hub Samarkand', time: '12 мин назад', code: 'EVSE-E07' },
   { id: 'A003', severity: 'warning', title: 'Высокое время отклика', desc: 'OCPP latency > 800ms в течение последних 15 минут', station: 'AutoCharge Fergana', time: '18 мин назад', code: 'NET-W02' },
@@ -1945,12 +2003,45 @@ const alertsData = [
 ];
 
 function AlertsPage() {
+  const liveAlerts = useLiveAlerts();
+  const { actions, refresh } = useSync();
   const [filter, setFilter] = useState<'all' | 'critical' | 'warning' | 'info'>('all');
   const [resolved, setResolved] = useState<Set<string>>(new Set());
 
+  // Alerts raised by the platform come first; the bundled ones pad the list out.
+  const alertsData = [
+    ...liveAlerts.map(a => ({
+      id: a.id,
+      severity: a.severity,
+      title: a.code.replace(/_/g, ' '),
+      desc: a.message,
+      station: a.station,
+      time: new Date(a.time).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+      code: a.code,
+      live: true,
+      ack: a.ack,
+    })),
+    ...staticAlerts.map(a => ({ ...a, live: false, ack: false })),
+  ];
+
+  /** Acknowledging a live alert clears it for every portal, not just this tab. */
+  const resolveAlert = async (id: string) => {
+    setResolved(prev => new Set([...prev, id]));
+    if (liveAlerts.some(a => a.id === id)) {
+      try {
+        await actions.ackAlert('operator', id);
+        await refresh();
+      } catch {
+        /* optimistic update already applied */
+      }
+    }
+  };
+
+  const isResolved = (a: { id: string; ack: boolean }) => resolved.has(a.id) || a.ack;
+
   const filtered = alertsData.filter(a => filter === 'all' || a.severity === filter);
-  const active = filtered.filter(a => !resolved.has(a.id));
-  const resolvedFiltered = filtered.filter(a => resolved.has(a.id));
+  const active = filtered.filter(a => !isResolved(a));
+  const resolvedFiltered = filtered.filter(a => isResolved(a));
   const criticalCount = alertsData.filter(a => a.severity === 'critical').length;
   const warningCount = alertsData.filter(a => a.severity === 'warning').length;
   const infoCount = alertsData.filter(a => a.severity === 'info').length;
@@ -2063,7 +2154,7 @@ function AlertsPage() {
               </div>
             </div>
             <button
-              onClick={() => setResolved(prev => new Set([...prev, alert.id]))}
+              onClick={() => resolveAlert(alert.id)}
               className="text-xs text-green-600 hover:text-green-700 font-medium px-2.5 py-1 rounded-lg hover:bg-green-50 transition-colors shrink-0"
             >
               Устранить
