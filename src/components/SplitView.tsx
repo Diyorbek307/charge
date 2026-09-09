@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { X, ArrowLeftRight, RefreshCw, Columns2, Rows2, Zap } from 'lucide-react';
 import { useSync } from '../lib/sync';
+import { useI18n } from '../lib/i18n';
 
 type PaneId = 'driver' | 'operator' | 'admin' | 'business' | 'api' | 'architecture';
 
@@ -69,6 +70,7 @@ export default function SplitView({ onClose }: { onClose: () => void }) {
   const [right, setRight] = useState<PaneId>('operator');
   const [stacked, setStacked] = useState(false);
   const { eventCount, connection } = useSync();
+  const { t } = useI18n();
 
   const swap = () => {
     setLeft(right);
@@ -89,8 +91,8 @@ export default function SplitView({ onClose }: { onClose: () => void }) {
             <Zap size={14} className="text-white" />
           </div>
           <div className="min-w-0 hidden sm:block">
-            <p className="text-xs font-bold text-white leading-none">Демо синхронизации</p>
-            <p className="text-[10px] text-slate-500 mt-0.5 truncate">Два портала · одна база данных</p>
+            <p className="text-xs font-bold text-white leading-none">{t('split.title')}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5 truncate">{t('split.subtitle')}</p>
           </div>
         </div>
 
@@ -98,12 +100,12 @@ export default function SplitView({ onClose }: { onClose: () => void }) {
           <span className="flex items-center gap-1.5 text-[10px] text-slate-400 bg-white/[0.04] border border-white/10 rounded-full px-2.5 py-1.5">
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: dot, boxShadow: `0 0 6px ${dot}` }} />
             <span className="mono">{eventCount}</span>
-            <span className="hidden sm:inline">событий</span>
+            <span className="hidden sm:inline">{t('split.eventsWord')}</span>
           </span>
 
           <button
             onClick={swap}
-            aria-label="Поменять панели местами"
+            aria-label={t('split.swap')}
             className="w-8 h-8 grid place-items-center rounded-lg border border-white/10 text-slate-400 hover:text-white hover:bg-white/8 transition-colors"
           >
             <ArrowLeftRight size={14} />
@@ -117,7 +119,7 @@ export default function SplitView({ onClose }: { onClose: () => void }) {
           </button>
           <button
             onClick={onClose}
-            aria-label="Закрыть режим сравнения"
+            aria-label={t('split.close')}
             className="w-8 h-8 grid place-items-center rounded-lg border border-white/10 text-slate-400 hover:text-white hover:bg-white/8 transition-colors"
           >
             <X size={15} />
@@ -127,7 +129,7 @@ export default function SplitView({ onClose }: { onClose: () => void }) {
 
       {/* Hint */}
       <p className="px-3 py-1.5 text-[11px] text-slate-500 border-b border-white/[0.06] shrink-0 leading-snug">
-        Войдите в оба портала и начните зарядку слева — справа всё обновится само, без перезагрузки.
+        {t('split.hint')}
       </p>
 
       {/* Panes */}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, CornerDownLeft, Car, Building2, Shield, Briefcase, BookOpen, Network, Home, Columns2, Activity, LogOut } from 'lucide-react';
 import { useSync } from '../lib/sync';
+import { useI18n } from '../lib/i18n';
 import type { Portal as AuthPortal } from '../lib/api';
 
 export interface Command {
@@ -33,6 +34,7 @@ export default function CommandPalette({
   onSplitView: () => void;
 }) {
   const { sessions, logout, connection, state } = useSync();
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [cursor, setCursor] = useState(0);
@@ -67,18 +69,18 @@ export default function CommandPalette({
     };
 
     const list: Command[] = [
-      { id: 'selector', label: 'Все порталы', group: 'Навигация', icon: <Home size={15} />, run: go('selector') },
-      { id: 'driver', label: 'Driver App', hint: 'Мобильное приложение', group: 'Порталы', icon: <Car size={15} />, run: go('driver') },
-      { id: 'operator', label: 'Operator Portal', hint: 'Кабинет оператора', group: 'Порталы', icon: <Building2 size={15} />, run: go('operator') },
-      { id: 'admin', label: 'Admin Control Center', hint: 'Национальный мониторинг', group: 'Порталы', icon: <Shield size={15} />, run: go('admin') },
-      { id: 'business', label: 'Business Portal', hint: 'Корпоративный кабинет', group: 'Порталы', icon: <Briefcase size={15} />, run: go('business') },
-      { id: 'api', label: 'Partner API', hint: 'Документация', group: 'Порталы', icon: <BookOpen size={15} />, run: go('api') },
-      { id: 'architecture', label: 'Архитектура платформы', group: 'Порталы', icon: <Network size={15} />, run: go('architecture') },
+      { id: 'selector', label: t('nav.portals'), group: t('cmd.navigation'), icon: <Home size={15} />, run: go('selector') },
+      { id: 'driver', label: 'Driver App', hint: t('portal.driver.sub'), group: t('cmd.portals'), icon: <Car size={15} />, run: go('driver') },
+      { id: 'operator', label: 'Operator Portal', hint: t('portal.operator.sub'), group: t('cmd.portals'), icon: <Building2 size={15} />, run: go('operator') },
+      { id: 'admin', label: 'Admin Control Center', hint: t('portal.admin.sub'), group: t('cmd.portals'), icon: <Shield size={15} />, run: go('admin') },
+      { id: 'business', label: 'Business Portal', hint: t('portal.business.sub'), group: t('cmd.portals'), icon: <Briefcase size={15} />, run: go('business') },
+      { id: 'api', label: 'Partner API', hint: t('portal.api.sub'), group: t('cmd.portals'), icon: <BookOpen size={15} />, run: go('api') },
+      { id: 'architecture', label: t('portal.arch.label'), group: t('cmd.portals'), icon: <Network size={15} />, run: go('architecture') },
       {
         id: 'split',
-        label: 'Сравнить порталы',
-        hint: 'Два портала рядом',
-        group: 'Действия',
+        label: t('cta.compare'),
+        hint: t('split.subtitle'),
+        group: t('cmd.actions'),
         icon: <Columns2 size={15} />,
         run: () => {
           onSplitView();
@@ -89,7 +91,7 @@ export default function CommandPalette({
         id: 'status',
         label: `Синхронизация: ${connection === 'live' ? 'активна' : connection === 'connecting' ? 'подключение' : 'нет связи'}`,
         hint: state ? `${state.stats.activeSessions} активных · ${state.stats.evseOnline}/${state.stats.evseTotal} EVSE` : undefined,
-        group: 'Статус',
+        group: t('cmd.status'),
         icon: <Activity size={15} />,
         run: () => setOpen(false),
       },
@@ -100,9 +102,9 @@ export default function CommandPalette({
       .forEach(([portal, account]) => {
         list.push({
           id: `logout-${portal}`,
-          label: `Выйти из ${portal}`,
+          label: `${t('cmd.signOut')} ${portal}`,
           hint: (account as { name: string }).name,
-          group: 'Сессии',
+          group: t('cmd.sessions'),
           icon: <LogOut size={15} />,
           run: () => {
             void logout(portal);
@@ -160,7 +162,7 @@ export default function CommandPalette({
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Куда перейти?"
+            placeholder={t('cmd.placeholder')}
             className="flex-1 bg-transparent text-sm text-white placeholder:text-slate-600 outline-none"
           />
           <kbd className="text-[10px] text-slate-600 border border-white/10 rounded px-1.5 py-0.5">ESC</kbd>
@@ -168,7 +170,7 @@ export default function CommandPalette({
 
         <div className="max-h-[52vh] overflow-y-auto py-1.5">
           {filtered.length === 0 && (
-            <p className="px-4 py-6 text-center text-xs text-slate-500">Ничего не найдено</p>
+            <p className="px-4 py-6 text-center text-xs text-slate-500">{t('cmd.nothing')}</p>
           )}
           {filtered.map((c, i) => {
             const showGroup = c.group !== lastGroup;
@@ -200,8 +202,8 @@ export default function CommandPalette({
         </div>
 
         <div className="flex items-center gap-3 px-4 py-2 border-t border-white/10 text-[10px] text-slate-600">
-          <span>↑↓ выбор</span>
-          <span>↵ открыть</span>
+          <span>↑↓ {t('cmd.select')}</span>
+          <span>↵ {t('cmd.open')}</span>
           <span className="ml-auto">Ctrl+K</span>
         </div>
       </div>

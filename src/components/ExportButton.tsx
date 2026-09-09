@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Download, FileText, Sheet, LoaderCircle, Check } from 'lucide-react';
 import { exportCsv, exportPdf, type CsvValue } from '../lib/export';
+import { useI18n } from '../lib/i18n';
 
 interface Props {
   /** Base file name, without extension or timestamp. */
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export default function ExportButton({ name, title, headers, rows, className = '' }: Props) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<'pdf' | null>(null);
   const [done, setDone] = useState(false);
@@ -61,7 +63,7 @@ export default function ExportButton({ name, title, headers, rows, className = '
         className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
       >
         {done ? <Check size={13} className="text-green-600" /> : <Download size={13} />}
-        {failed ? 'Ошибка' : done ? 'Готово' : 'Экспорт'}
+        {failed ? t('export.error') : done ? t('export.done') : t('export.button')}
       </button>
 
       {open && (
@@ -72,8 +74,8 @@ export default function ExportButton({ name, title, headers, rows, className = '
           >
             <Sheet size={14} className="text-green-600 shrink-0" />
             <span>
-              CSV для Excel
-              <span className="block text-[10px] text-slate-400">{rows.length} строк</span>
+              {t('export.csv')}
+              <span className="block text-[10px] text-slate-400">{rows.length} {t('export.rows')}</span>
             </span>
           </button>
           {(
@@ -88,8 +90,8 @@ export default function ExportButton({ name, title, headers, rows, className = '
                 <FileText size={14} className="text-red-500 shrink-0" />
               )}
               <span>
-                {busy === 'pdf' ? 'Формируем…' : 'PDF-отчёт'}
-                <span className="block text-[10px] text-slate-400">A4, альбомная</span>
+                {busy === 'pdf' ? t('export.building') : t('export.pdf')}
+                <span className="block text-[10px] text-slate-400">{t('export.pdfHint')}</span>
               </span>
             </button>
           )}

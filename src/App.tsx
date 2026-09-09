@@ -5,6 +5,8 @@ import PortalLogin from './components/PortalLogin';
 import SyncInspector from './components/SyncInspector';
 import SyncToasts from './components/SyncToasts';
 import CommandPalette from './components/CommandPalette';
+import LangSwitcher from './components/LangSwitcher';
+import { useI18n } from './lib/i18n';
 
 // Each portal is a large, independent app — load one only when it is opened
 // so the landing page ships a fraction of the bundle.
@@ -239,6 +241,7 @@ const PARTICLES = Array.from({ length: 28 }, (_, i) => ({
 }));
 
 function LiveTicker() {
+  const { t } = useI18n();
   const [sessions, setSessions] = useState(10418);
   const [kwh, setKwh] = useState(847312);
   const [online, setOnline] = useState(241);
@@ -255,10 +258,10 @@ function LiveTicker() {
   }, []);
 
   const stats = [
-    { label: 'сессий сегодня', value: sessions.toLocaleString(), dot: '#38BDF8', live: true },
-    { label: 'кВт·ч сегодня', value: kwh.toLocaleString(), dot: '#4ADE80', live: false },
-    { label: 'EVSE онлайн', value: online.toString(), dot: '#FBBF24', live: true },
-    { label: 'выручка, млн сум', value: revenue.toFixed(1) + 'M', dot: '#A78BFA', live: false },
+    { label: t('ticker.sessions'), value: sessions.toLocaleString(), dot: '#38BDF8', live: true },
+    { label: t('ticker.kwh'), value: kwh.toLocaleString(), dot: '#4ADE80', live: false },
+    { label: t('ticker.online'), value: online.toString(), dot: '#FBBF24', live: true },
+    { label: t('ticker.revenue'), value: revenue.toFixed(1) + 'M', dot: '#A78BFA', live: false },
   ];
 
   return (
@@ -336,51 +339,52 @@ function NetworkPulse({ onSelect }: { onSelect: (portal: Portal) => void }) {
 }
 
 function PortalSelector({ onSelect, darkMode, setDarkMode }: { onSelect: (p: Portal) => void; darkMode: boolean; setDarkMode: (v: (d: boolean) => boolean) => void }) {
+  const { t } = useI18n();
   const portals = [
     {
       id: 'driver' as Portal, icon: <Car size={22} />,
-      label: 'Driver App', sub: 'Мобильное приложение',
-      desc: 'Карта, зарядка, история, AI-планировщик маршрутов, оплата через Humo / Uzcard.',
+      label: 'Driver App', sub: t('portal.driver.sub'),
+      desc: t('portal.driver.desc'),
       grad: 'from-sky-500 to-cyan-400', shadow: 'rgba(14,165,233,0.35)',
       line: 'from-sky-500 via-cyan-400 to-transparent', cta: 'text-sky-400',
       tags: ['iOS / Android', 'QR-зарядка', 'AI Trip', 'Humo'],
     },
     {
       id: 'operator' as Portal, icon: <Building2 size={22} />,
-      label: 'Operator Portal', sub: 'Кабинет оператора',
-      desc: 'Управление станциями, тарифами, финансами, Settlement D+2, OCPI/OCPP.',
+      label: 'Operator Portal', sub: t('portal.operator.sub'),
+      desc: t('portal.operator.desc'),
       grad: 'from-emerald-500 to-green-400', shadow: 'rgba(16,185,129,0.35)',
       line: 'from-emerald-500 via-green-400 to-transparent', cta: 'text-emerald-400',
       tags: ['Dashboard', 'OCPI 2.3.0', 'Settlement', 'EVSE Live'],
     },
     {
       id: 'admin' as Portal, icon: <Shield size={22} />,
-      label: 'Admin Control Center', sub: 'Национальный мониторинг',
-      desc: 'Live Map, AI Insights, Fraud ML, CDR Validation, Settlement, Роли & Права.',
+      label: 'Admin Control Center', sub: t('portal.admin.sub'),
+      desc: t('portal.admin.desc'),
       grad: 'from-violet-500 to-purple-400', shadow: 'rgba(139,92,246,0.35)',
       line: 'from-violet-500 via-purple-400 to-transparent', cta: 'text-violet-400',
       tags: ['Live Map', 'AI Insights', 'Fraud ML', 'Audit Log'],
     },
     {
       id: 'business' as Portal, icon: <Briefcase size={22} />,
-      label: 'Business Portal', sub: 'Корпоративный кабинет',
-      desc: 'Автопарк, сотрудники, лимиты, CDR-отчёты, IBAN-выплаты.',
+      label: 'Business Portal', sub: t('portal.business.sub'),
+      desc: t('portal.business.desc'),
       grad: 'from-indigo-500 to-violet-500', shadow: 'rgba(99,102,241,0.35)',
       line: 'from-indigo-500 via-violet-500 to-transparent', cta: 'text-indigo-400',
       tags: ['Fleet', 'Employees', 'Limits', 'Reports'],
     },
     {
       id: 'api' as Portal, icon: <BookOpen size={22} />,
-      label: 'Partner API Docs', sub: 'Документация',
-      desc: 'REST API v1, OCPI 2.3.0, OAuth 2.0, Remote Start/Stop, CDR, Webhooks.',
+      label: 'Partner API Docs', sub: t('portal.api.sub'),
+      desc: t('portal.api.desc'),
       grad: 'from-slate-500 to-slate-400', shadow: 'rgba(100,116,139,0.3)',
       line: 'from-slate-500 via-slate-400 to-transparent', cta: 'text-slate-300',
       tags: ['REST API', 'OCPI 2.3', 'OAuth2', 'Webhooks'],
     },
     {
       id: 'architecture' as Portal, icon: <Network size={22} />,
-      label: 'Архитектура', sub: 'Техническая схема',
-      desc: 'Визуальная диаграмма всей экосистемы — 6 слоёв от Driver App до SmartGrid.',
+      label: t('portal.arch.label'), sub: t('portal.arch.sub'),
+      desc: t('portal.arch.desc'),
       grad: 'from-teal-500 to-cyan-500', shadow: 'rgba(20,184,166,0.35)',
       line: 'from-teal-500 via-cyan-500 to-transparent', cta: 'text-teal-400',
       tags: ['OCPI', 'OCPP', 'Payment', 'SmartGrid'],
@@ -454,15 +458,13 @@ function PortalSelector({ onSelect, darkMode, setDarkMode }: { onSelect: (p: Por
             </div>
           </div>
           <div className="flex items-center gap-2 md:gap-4">
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500 inter">
-              <Globe size={11} /><span>UZ · RU · EN</span>
-            </div>
+            <LangSwitcher className="hidden sm:flex" />
             <div className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-400/8 border border-emerald-400/15 px-3 py-1.5 rounded-full">
               <div className="live-dot w-1.5 h-1.5 bg-emerald-400 rounded-full" style={{ color: 'rgba(52,211,153,0.6)' }} />
               <span className="inter font-medium">Live</span>
             </div>
             <button onClick={() => setDarkMode(d => !d)} className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-full bg-white/10 text-white text-xs font-medium hover:bg-white/20 transition-colors">
-              {darkMode ? '☀️' : '🌙'}<span className="hidden md:inline">{darkMode ? ' Светлая' : ' Тёмная'}</span>
+              {darkMode ? '☀️' : '🌙'}<span className="hidden md:inline"> {darkMode ? t('nav.light') : t('nav.dark')}</span>
             </button>
           </div>
         </div>
@@ -476,20 +478,20 @@ function PortalSelector({ onSelect, darkMode, setDarkMode }: { onSelect: (p: Por
                 <span key={d} className="w-1 h-1 bg-sky-400 rounded-full animate-pulse" style={{ animationDelay: `${d}ms` }} />
               ))}
             </span>
-            Национальная eMobility-платформа · Узбекистан · 2026
+            {t('hero.badge')}
           </div>
 
           {/* Headline */}
           <div className="enter-up delay-150">
             <h1 className="text-4xl md:text-5xl lg:text-[56px] font-bold text-white leading-[1.05] tracking-[-0.03em] mb-6">
-              Одно приложение.<br />
+              {t('hero.line1')}<br />
               <span style={{ background: 'linear-gradient(135deg, #BAE6FD 0%, #38BDF8 40%, #0EA5E9 70%, #7C3AED 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                Любая зарядная станция.
+                {t('hero.line2')}
               </span>
             </h1>
             <p className="text-slate-400 text-lg max-w-lg mx-auto leading-relaxed font-normal inter">
-              Единая экосистема зарядки ЭВ в Узбекистане —<br />
-              108 станций · 276 EVSE · 4 оператора · 14 000+ водителей
+              {t('hero.sub')}<br />
+              {t('hero.stats')}
             </p>
           </div>
         </div>
@@ -503,7 +505,7 @@ function PortalSelector({ onSelect, darkMode, setDarkMode }: { onSelect: (p: Por
 
         {/* Section label */}
         <div className="flex items-center gap-3 mb-5 enter-up delay-250">
-          <p className="text-xs font-semibold text-slate-600 tracking-widest inter uppercase">Выберите портал</p>
+          <p className="text-xs font-semibold text-slate-600 tracking-widest inter uppercase">{t('section.choose')}</p>
           <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
         </div>
 
@@ -549,7 +551,7 @@ function PortalSelector({ onSelect, darkMode, setDarkMode }: { onSelect: (p: Por
               </div>
 
               <div className={`flex items-center gap-1.5 text-[13px] font-semibold ${portal.cta} group-hover:gap-3 transition-all duration-200`}>
-                Открыть демо <ArrowRight size={13} />
+                {t('cta.openDemo')} <ArrowRight size={13} />
               </div>
             </button>
           ))}
@@ -661,6 +663,7 @@ function initialPortal(): Portal {
 }
 
 export default function App() {
+  const { t: tApp } = useI18n();
   const [portal, setPortal] = useState<Portal>(initialPortal);
   const [splitView, setSplitView] = useState(false);
   // Split view embeds the app in iframes; nested chrome there would be noise.
@@ -711,7 +714,7 @@ export default function App() {
                     <PortalLogin
                       portal="driver"
                       title="Driver App"
-                      subtitle="Вход в мобильное приложение"
+                      subtitle={tApp('portal.driver.sub')}
                       icon={<Car size={22} />}
                       onBack={() => setPortal('selector')}
                     />
@@ -740,22 +743,22 @@ export default function App() {
         </div>
       )}
       {portal === 'operator' && (
-        <PortalGate portal="operator" title="Operator Portal" subtitle="Кабинет оператора зарядной сети" icon={<Building2 size={22} />} onBack={() => setPortal('selector')}>
+        <PortalGate portal="operator" title="Operator Portal" subtitle={tApp('portal.operator.sub')} icon={<Building2 size={22} />} onBack={() => setPortal('selector')}>
           <div className="h-full overflow-x-auto"><OperatorApp onBack={() => setPortal('selector')} /></div>
         </PortalGate>
       )}
       {portal === 'admin' && (
-        <PortalGate portal="admin" title="Admin Control Center" subtitle="Национальный мониторинг платформы" icon={<Shield size={22} />} onBack={() => setPortal('selector')}>
+        <PortalGate portal="admin" title="Admin Control Center" subtitle={tApp('portal.admin.sub')} icon={<Shield size={22} />} onBack={() => setPortal('selector')}>
           <div className="h-full overflow-x-auto"><AdminApp onBack={() => setPortal('selector')} /></div>
         </PortalGate>
       )}
       {portal === 'business' && (
-        <PortalGate portal="business" title="Business Portal" subtitle="Корпоративный кабинет автопарка" icon={<Briefcase size={22} />} onBack={() => setPortal('selector')}>
+        <PortalGate portal="business" title="Business Portal" subtitle={tApp('portal.business.sub')} icon={<Briefcase size={22} />} onBack={() => setPortal('selector')}>
           <div className="h-full overflow-x-auto"><BusinessApp onBack={() => setPortal('selector')} /></div>
         </PortalGate>
       )}
       {portal === 'api' && (
-        <PortalGate portal="api" title="Partner API" subtitle="Документация и песочница интеграции" icon={<BookOpen size={22} />} onBack={() => setPortal('selector')}>
+        <PortalGate portal="api" title="Partner API" subtitle={tApp('portal.api.sub')} icon={<BookOpen size={22} />} onBack={() => setPortal('selector')}>
           <ApiDocsApp onBack={() => setPortal('selector')} />
         </PortalGate>
       )}
@@ -775,7 +778,7 @@ export default function App() {
           className="fixed z-[150] bottom-4 left-4 flex items-center gap-2 rounded-full border border-white/12 bg-slate-950/85 backdrop-blur px-3.5 py-2.5 shadow-2xl hover:border-sky-400/40 transition-colors group"
         >
           <Columns2 size={14} className="text-sky-400" />
-          <span className="text-[11px] font-semibold text-white tracking-wide hidden sm:inline">Сравнить порталы</span>
+          <span className="text-[11px] font-semibold text-white tracking-wide hidden sm:inline">{tApp('cta.compare')}</span>
         </button>
       )}
       {splitView && (

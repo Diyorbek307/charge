@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Activity, X, Radio, Zap, TriangleAlert, Wallet, Users, Building2, LogIn, RotateCcw, Plug } from 'lucide-react';
 import { useSync } from '../lib/sync';
+import { useI18n } from '../lib/i18n';
 import type { SyncEvent } from '../lib/api';
 
 const PORTAL_STYLE: Record<string, { label: string; color: string; bg: string }> = {
@@ -70,6 +71,7 @@ function EventRow({ event }: { event: SyncEvent }) {
 
 export default function SyncInspector() {
   const { connection, events, eventCount, state, sessions } = useSync();
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [, forceTick] = useState(0);
 
@@ -81,7 +83,7 @@ export default function SyncInspector() {
   }, [open]);
 
   const dot = connection === 'live' ? '#34D399' : connection === 'connecting' ? '#FBBF24' : '#F87171';
-  const label = connection === 'live' ? 'LIVE' : connection === 'connecting' ? 'СВЯЗЬ…' : 'ОФФЛАЙН';
+  const label = connection === 'live' ? t('sync.live') : connection === 'connecting' ? t('sync.connecting') : t('sync.offline');
   const signedIn = (Object.entries(sessions) as [string, unknown][]).filter(([, v]) => v);
 
   return (
@@ -89,7 +91,7 @@ export default function SyncInspector() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          aria-label="Открыть монитор синхронизации"
+          aria-label={t('sync.open')}
           className="fixed z-[150] bottom-4 right-4 flex items-center gap-2 rounded-full border border-white/12 bg-slate-950/85 backdrop-blur px-3.5 py-2.5 shadow-2xl hover:border-white/25 transition-colors"
         >
           <span className="relative flex items-center justify-center">
@@ -125,14 +127,14 @@ export default function SyncInspector() {
                 )}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-bold text-white leading-none">Синхронизация</p>
+                <p className="text-[13px] font-bold text-white leading-none">{t('sync.title')}</p>
                 <p className="text-[10px] text-slate-500 mt-1">
-                  {label} · {eventCount} событий за сессию
+                  {label} · {eventCount} {t('sync.events')}
                 </p>
               </div>
               <button
                 onClick={() => setOpen(false)}
-                aria-label="Закрыть"
+                aria-label={t('sync.close')}
                 className="w-7 h-7 grid place-items-center rounded-lg text-slate-500 hover:text-white hover:bg-white/8 transition-colors"
               >
                 <X size={15} />
@@ -143,9 +145,9 @@ export default function SyncInspector() {
             {state && (
               <div className="grid grid-cols-3 gap-px bg-white/8 shrink-0">
                 {[
-                  { label: 'активных', value: state.stats.activeSessions },
-                  { label: 'EVSE онлайн', value: `${state.stats.evseOnline}/${state.stats.evseTotal}` },
-                  { label: 'алертов', value: state.stats.openAlerts },
+                  { label: t('sync.active'), value: state.stats.activeSessions },
+                  { label: t('sync.evseOnline'), value: `${state.stats.evseOnline}/${state.stats.evseTotal}` },
+                  { label: t('sync.alerts'), value: state.stats.openAlerts },
                 ].map(s => (
                   <div key={s.label} className="bg-slate-950 px-2 py-2.5 text-center">
                     <p className="text-sm font-bold text-white mono leading-none">{s.value}</p>
@@ -157,9 +159,9 @@ export default function SyncInspector() {
 
             {/* Signed-in portals */}
             <div className="px-3.5 py-2 border-b border-white/8 shrink-0 flex items-center gap-1.5 flex-wrap">
-              <span className="text-[9px] text-slate-600 uppercase tracking-widest font-semibold">Вошли:</span>
+              <span className="text-[9px] text-slate-600 uppercase tracking-widest font-semibold">{t('sync.signedIn')}</span>
               {signedIn.length === 0 ? (
-                <span className="text-[10px] text-slate-600">никто</span>
+                <span className="text-[10px] text-slate-600">{t('sync.nobody')}</span>
               ) : (
                 signedIn.map(([portal]) => {
                   const st = PORTAL_STYLE[portal] ?? PORTAL_STYLE.system;
@@ -182,8 +184,7 @@ export default function SyncInspector() {
                 <div className="px-4 py-10 text-center">
                   <Activity size={22} className="mx-auto text-slate-700 mb-2.5" />
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Пока тихо. Начните зарядку в Driver App или измените статус EVSE в кабинете оператора —
-                    событие появится здесь мгновенно во всех порталах.
+                    {t('sync.empty')}
                   </p>
                 </div>
               ) : (

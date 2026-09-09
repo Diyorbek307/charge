@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { ArrowRight, Lock, LoaderCircle, ShieldCheck, TriangleAlert, Copy, Check } from 'lucide-react';
 import { useSync } from '../lib/sync';
+import { useI18n } from '../lib/i18n';
 import type { Portal } from '../lib/api';
 
 const THEME: Record<Portal, { grad: string; accent: string; ring: string; glow: string }> = {
@@ -21,6 +22,7 @@ interface Props {
 
 export default function PortalLogin({ portal, title, subtitle, icon, onBack }: Props) {
   const { login, credentials } = useSync();
+  const { t } = useI18n();
   const theme = THEME[portal];
   const demo = credentials.find(c => c.portal === portal);
 
@@ -38,7 +40,7 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
     try {
       await login(portal, loginValue.trim(), password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось войти');
+      setError(err instanceof Error ? err.message : t('auth.failed'));
       setBusy(false);
     }
   };
@@ -65,7 +67,7 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
           className="mb-5 flex items-center gap-2 text-xs sm:text-sm text-slate-400 hover:text-white transition-colors"
         >
           <ArrowRight size={14} className="rotate-180" />
-          Все порталы
+          {t('nav.portals')}
         </button>
 
         <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-6 sm:p-7">
@@ -82,7 +84,7 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
           <form onSubmit={submit} className="space-y-3.5">
             <div>
               <label htmlFor={`${portal}-login`} className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-                {portal === 'driver' ? 'Телефон' : 'Email / Логин'}
+                {portal === 'driver' ? t('auth.phone') : t('auth.login')}
               </label>
               <input
                 id={`${portal}-login`}
@@ -96,7 +98,7 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
 
             <div>
               <label htmlFor={`${portal}-password`} className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-                Пароль
+                {t('auth.password')}
               </label>
               <div className="relative">
                 <input
@@ -128,20 +130,20 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
               className={`w-full bg-gradient-to-r ${theme.grad} text-white font-semibold py-3 rounded-xl text-sm transition-all hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
             >
               {busy ? <LoaderCircle size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
-              {busy ? 'Проверяем…' : 'Войти'}
+              {busy ? t('auth.checking') : t('auth.signIn')}
             </button>
           </form>
 
           {demo && (
             <div className="mt-5 pt-5 border-t border-white/8">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Демо-доступ</p>
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">{t('auth.demoAccess')}</p>
                 <button
                   onClick={fillDemo}
                   className={`flex items-center gap-1.5 text-[11px] font-medium ${theme.accent} hover:brightness-125 transition`}
                 >
                   {copied ? <Check size={12} /> : <Copy size={12} />}
-                  {copied ? 'Подставлено' : 'Заполнить'}
+                  {copied ? t('auth.filled') : t('auth.fill')}
                 </button>
               </div>
               <div className="space-y-1 font-mono text-[11px] text-slate-400">
@@ -156,7 +158,7 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
         </div>
 
         <p className="text-center text-[11px] text-slate-600 mt-4">
-          У каждого портала собственная учётная запись и пароль
+          {t('auth.ownAccount')}
         </p>
       </div>
     </div>
