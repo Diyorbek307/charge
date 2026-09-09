@@ -744,8 +744,8 @@ function FleetPage() {
                 className={`px-5 py-4 flex items-center gap-5 cursor-pointer transition-colors ${selected?.id === v.id ? 'bg-indigo-50/60' : 'hover:bg-slate-50/60'}`}
               >
                 {/* Icon */}
-                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${statusBg[v.status].split(' ')[0]}`}>
-                  <Car size={20} className={statusBg[v.status].split(' ')[1]} />
+                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${(statusBg[v.status] ?? statusBg.available).split(' ')[0]}`}>
+                  <Car size={20} className={(statusBg[v.status] ?? statusBg.available).split(' ')[1]} />
                 </div>
 
                 {/* Vehicle info */}

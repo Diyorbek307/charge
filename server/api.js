@@ -293,8 +293,10 @@ api.post('/sessions/:id/stop', requireAuth('driver', 'business', 'admin', 'opera
 
   const vehicle = db.find('vehicles', v => v.driverId === session.userId);
   if (vehicle) {
-    vehicle.status = 'idle';
+    vehicle.status = 'available';
     vehicle.battery = Math.min(100, vehicle.battery + Math.round(energy / 1.2));
+    vehicle.charged += 1;
+    vehicle.cost += cost;
   }
 
   const transaction = {
