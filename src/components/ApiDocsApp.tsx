@@ -1,3 +1,4 @@
+import WebhooksLive from './WebhooksLive';
 import { useState, useRef, useEffect } from 'react';
 import {
   ArrowLeft, Copy, CheckCircle, ChevronDown, Terminal,
@@ -691,6 +692,10 @@ function WebhooksSection() {
             </pre>
           </div>
         </div>
+      </div>
+
+      <div className="pt-6 border-t border-slate-700/50">
+        <WebhooksLive />
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 
 // Bump when the shape below changes so existing stores reseed instead of
 // silently serving a stale schema.
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 export function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   const hash = crypto.scryptSync(password, salt, 32).toString('hex');
@@ -205,6 +205,18 @@ export function seed() {
     employees,
     wallets,
     events: [],
-    counters: { session: 10843, txn: 28442, alert: 5, event: 1 },
+    webhooks: [
+      {
+        id: 'wh-001',
+        url: 'https://partner.example.uz/hooks/one-charge',
+        events: ['session.start', 'session.stop', 'evse.status'],
+        secret: 'whsec_' + crypto.randomBytes(16).toString('hex'),
+        active: true,
+        created: '2026-09-01T09:00:00.000Z',
+        owner: 'acc-partner',
+      },
+    ],
+    deliveries: [],
+    counters: { session: 10843, txn: 28442, alert: 5, event: 1, webhook: 2, delivery: 1 },
   };
 }

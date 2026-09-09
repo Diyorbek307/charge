@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'node:crypto';
 import { db, publicAccount } from './db.js';
 import { DEMO_ACCOUNTS } from './seed.js';
 
@@ -36,9 +37,56 @@ function emit({ type, portal, actor, message, entity = null, payload = {} }) {
   };
   db.data.events.unshift(event);
   if (db.data.events.length > 300) db.data.events.length = 300;
+  recordDeliveries(event);
   db.save();
   broadcast(event);
   return event;
+}
+
+/**
+ * Signs the event for every webhook subscribed to it and records the delivery.
+ *
+ * Deliberately does not perform the outbound HTTP request: this service is
+ * publicly reachable, and POSTing to an arbitrary user-supplied URL would make
+ * it an SSRF gadget. Partners get the exact signed payload and headers they
+ * would have received, which is what a sandbox needs.
+ */
+function recordDeliveries(event) {
+  const hooks = (db.data.webhooks ?? []).filter(
+    w => w.active && w.events.includes(event.type),
+  );
+  if (hooks.length === 0) return;
+
+  for (const hook of hooks) {
+    const body = JSON.stringify({
+      id: event.id,
+      type: event.type,
+      created: event.ts,
+      data: { actor: event.actor, portal: event.portal, message: event.message, entity: event.entity, ...event.payload },
+    });
+    const timestamp = Math.floor(Date.now() / 1000);
+    const signature = crypto
+      .createHmac('sha256', hook.secret)
+      .update(`${timestamp}.${body}`)
+      .digest('hex');
+
+    db.data.deliveries.unshift({
+      id: db.nextId('delivery', 'DLV-'),
+      webhookId: hook.id,
+      event: event.type,
+      url: hook.url,
+      body,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-OneCharge-Event': event.type,
+        'X-OneCharge-Timestamp': String(timestamp),
+        'X-OneCharge-Signature': `t=${timestamp},v1=${signature}`,
+      },
+      status: 'signed',
+      ts: new Date().toISOString(),
+    });
+  }
+  if (db.data.deliveries.length > 200) db.data.deliveries.length = 200;
 }
 
 api.get('/stream', (req, res) => {
@@ -501,6 +549,106 @@ api.post('/operators/:id/status', requireAuth('admin'), (req, res) => {
   });
 
   res.json({ operator });
+});
+
+// ---------------------------------------------------------------------------
+// Partner webhooks
+// ---------------------------------------------------------------------------
+
+const WEBHOOK_EVENTS = [
+  'session.start',
+  'session.stop',
+  'evse.status',
+  'alert.new',
+  'alert.ack',
+  'wallet.topup',
+  'operator.status',
+];
+
+api.get('/webhooks/events', (_req, res) => res.json(WEBHOOK_EVENTS));
+
+api.get('/webhooks', requireAuth('api', 'admin'), (_req, res) => {
+  res.json(
+    (db.data.webhooks ?? []).map(w => ({
+      ...w,
+      // Show only a prefix; the full secret is returned once, at creation.
+      secret: `${w.secret.slice(0, 11)}…${w.secret.slice(-4)}`,
+    })),
+  );
+});
+
+api.post('/webhooks', requireAuth('api', 'admin'), (req, res) => {
+  const { url, events } = req.body ?? {};
+  let parsed;
+  try {
+    parsed = new URL(String(url));
+  } catch {
+    return res.status(400).json({ error: 'Некорректный URL' });
+  }
+  if (parsed.protocol !== 'https:') {
+    return res.status(400).json({ error: 'Endpoint должен использовать HTTPS' });
+  }
+  const chosen = Array.isArray(events) ? events.filter(e => WEBHOOK_EVENTS.includes(e)) : [];
+  if (chosen.length === 0) {
+    return res.status(400).json({ error: 'Выберите хотя бы одно событие' });
+  }
+
+  const hook = {
+    id: db.nextId('webhook', 'wh-'),
+    url: parsed.toString(),
+    events: chosen,
+    secret: 'whsec_' + crypto.randomBytes(16).toString('hex'),
+    active: true,
+    created: new Date().toISOString(),
+    owner: req.account.id,
+  };
+  db.insert('webhooks', hook);
+
+  emit({
+    type: 'webhook.created',
+    portal: req.account.portal,
+    actor: req.account.name,
+    message: `Webhook зарегистрирован · ${chosen.length} событий`,
+    entity: hook.id,
+  });
+
+  // The only time the full secret is revealed.
+  res.json({ webhook: hook });
+});
+
+api.post('/webhooks/:id/toggle', requireAuth('api', 'admin'), (req, res) => {
+  const hook = db.byId('webhooks', req.params.id);
+  if (!hook) return res.status(404).json({ error: 'Webhook не найден' });
+  hook.active = !hook.active;
+  db.save();
+  res.json({ webhook: { ...hook, secret: `${hook.secret.slice(0, 11)}…${hook.secret.slice(-4)}` } });
+});
+
+api.delete('/webhooks/:id', requireAuth('api', 'admin'), (req, res) => {
+  const i = (db.data.webhooks ?? []).findIndex(w => w.id === req.params.id);
+  if (i < 0) return res.status(404).json({ error: 'Webhook не найден' });
+  db.data.webhooks.splice(i, 1);
+  db.save();
+  res.json({ ok: true });
+});
+
+api.post('/webhooks/:id/test', requireAuth('api', 'admin'), (req, res) => {
+  const hook = db.byId('webhooks', req.params.id);
+  if (!hook) return res.status(404).json({ error: 'Webhook не найден' });
+  emit({
+    type: hook.events[0],
+    portal: req.account.portal,
+    actor: req.account.name,
+    message: 'Тестовое событие для проверки подписи',
+    entity: hook.id,
+    payload: { test: true },
+  });
+  res.json({ ok: true });
+});
+
+api.get('/webhooks/deliveries', requireAuth('api', 'admin'), (req, res) => {
+  const limit = Math.min(Number(req.query.limit) || 30, 200);
+  res.json((db.data.deliveries ?? []).slice(0, limit));
 });
 
 api.get('/events', (req, res) => {
