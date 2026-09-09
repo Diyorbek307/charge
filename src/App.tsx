@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Zap, Car, Building2, Shield, Globe, ArrowRight, Briefcase, BookOpen, Network, Activity, Radio, BellRing, CircleAlert, Route } from 'lucide-react';
+import { Zap, Car, Building2, Shield, Globe, ArrowRight, Briefcase, BookOpen, Network, Activity, Radio, BellRing, CircleAlert, Route, Columns2 } from 'lucide-react';
 import DriverApp from './components/DriverApp';
 import OperatorApp from './components/OperatorApp';
 import AdminApp from './components/AdminApp';
@@ -8,6 +8,8 @@ import ApiDocsApp from './components/ApiDocsApp';
 import AuthFlow from './components/AuthFlow';
 import PortalLogin from './components/PortalLogin';
 import SyncInspector from './components/SyncInspector';
+import SyncToasts from './components/SyncToasts';
+import SplitView from './components/SplitView';
 import { useSync } from './lib/sync';
 import type { Portal as AuthPortal } from './lib/api';
 
@@ -624,8 +626,24 @@ function PortalGate({
   return <>{children}</>;
 }
 
+const VALID_PORTALS: Portal[] = ['selector', 'driver', 'operator', 'admin', 'business', 'api', 'architecture'];
+
+/** Lets a portal be deep-linked (?portal=operator) — used by the split view. */
+function initialPortal(): Portal {
+  try {
+    const p = new URLSearchParams(window.location.search).get('portal') as Portal | null;
+    if (p && VALID_PORTALS.includes(p)) return p;
+  } catch {
+    /* SSR-safe no-op */
+  }
+  return 'selector';
+}
+
 export default function App() {
-  const [portal, setPortal] = useState<Portal>('selector');
+  const [portal, setPortal] = useState<Portal>(initialPortal);
+  const [splitView, setSplitView] = useState(false);
+  // Split view embeds the app in iframes; nested chrome there would be noise.
+  const embedded = typeof window !== 'undefined' && window.self !== window.top;
   const { sessions } = useSync();
   const driverSession = sessions.driver;
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('oc-theme') === 'dark');
@@ -720,7 +738,18 @@ export default function App() {
         </PortalGate>
       )}
       {portal === 'architecture' && <ArchitectureDiagram onBack={() => setPortal('selector')} />}
-      <SyncInspector />
+      <SyncToasts />
+      {!embedded && <SyncInspector />}
+      {!embedded && portal === 'selector' && (
+        <button
+          onClick={() => setSplitView(true)}
+          className="fixed z-[150] bottom-4 left-4 flex items-center gap-2 rounded-full border border-white/12 bg-slate-950/85 backdrop-blur px-3.5 py-2.5 shadow-2xl hover:border-sky-400/40 transition-colors group"
+        >
+          <Columns2 size={14} className="text-sky-400" />
+          <span className="text-[11px] font-semibold text-white tracking-wide hidden sm:inline">Сравнить порталы</span>
+        </button>
+      )}
+      {splitView && <SplitView onClose={() => setSplitView(false)} />}
       {showChangelog && portal === 'selector' && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm" style={{animation:'fade-in 0.3s ease both'}}>
           <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl" style={{animation:'scale-in 0.4s cubic-bezier(0.16,1,0.3,1) both'}}>

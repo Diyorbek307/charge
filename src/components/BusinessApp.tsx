@@ -11,12 +11,13 @@ import {
   BarChart, Bar, LineChart, Line, ComposedChart, Cell
 } from 'recharts';
 import { revenueData } from '../data/mockData';
+import { useLiveVehicles, useLiveEmployees, useLiveStats } from '../lib/live';
 import AnimatedCounter from './AnimatedCounter';
 import AIChat from './AIChat';
 
 type Page = 'dashboard' | 'fleet' | 'employees' | 'expenses' | 'reports' | 'settings';
 
-const fleetVehicles = [
+const staticFleetVehicles = [
   { id: 'VH-001', model: 'BYD Han EV', plate: '01 A 111 AA', driver: 'Alisher T.', battery: 82, status: 'available', charged: 18, cost: 1420000 },
   { id: 'VH-002', model: 'Hyundai Ioniq 6', plate: '01 B 222 BB', driver: 'Nilufar K.', battery: 45, status: 'charging', charged: 31, cost: 2180000 },
   { id: 'VH-003', model: 'Tesla Model 3', plate: '01 C 333 CC', driver: 'Bobur M.', battery: 91, status: 'driving', charged: 24, cost: 1840000 },
@@ -24,7 +25,7 @@ const fleetVehicles = [
   { id: 'VH-005', model: 'BYD Atto 3', plate: '01 E 555 EE', driver: 'Kamola A.', battery: 66, status: 'available', charged: 19, cost: 1560000 },
 ];
 
-const employees = [
+const staticEmployees = [
   { name: 'Alisher Toshmatov', dept: 'Продажи', limit: 500000, spent: 284000, sessions: 22, vehicle: 'BYD Han EV' },
   { name: 'Nilufar Karimova', dept: 'Маркетинг', limit: 400000, spent: 391000, sessions: 28, vehicle: 'Hyundai Ioniq 6' },
   { name: 'Bobur Mirzayev', dept: 'IT', limit: 300000, spent: 142000, sessions: 14, vehicle: 'Tesla Model 3' },
@@ -173,6 +174,10 @@ const weeklyUtil = [
 ];
 
 function DashboardPage() {
+  const liveVehicles = useLiveVehicles();
+  const liveEmployees = useLiveEmployees();
+  const fleetVehicles = liveVehicles.length ? liveVehicles : staticFleetVehicles;
+  const employees = liveEmployees.length ? liveEmployees : staticEmployees;
   const spentPct = Math.round((SPENT / MONTHLY_BUDGET) * 100);
   const R = 52, C = 2 * Math.PI * R;
   const dashOffset = C - (spentPct / 100) * C;
@@ -619,6 +624,8 @@ function DashboardPage() {
 }
 
 function FleetPage() {
+  const liveVehicles = useLiveVehicles();
+  const fleetVehicles = liveVehicles.length ? liveVehicles : staticFleetVehicles;
   type VehicleStatus = 'available' | 'charging' | 'driving' | 'low';
   const [statusFilter, setStatusFilter] = useState<'all' | VehicleStatus>('all');
   const [selected, setSelected] = useState<typeof fleetVehicles[0] | null>(null);
@@ -864,6 +871,8 @@ function FleetPage() {
 }
 
 function EmployeesPage() {
+  const liveEmployees = useLiveEmployees();
+  const employees = liveEmployees.length ? liveEmployees : staticEmployees;
   const [selected, setSelected] = useState<typeof employees[0] | null>(null);
   const [editingLimit, setEditingLimit] = useState(false);
   const [limitDraft, setLimitDraft] = useState('');

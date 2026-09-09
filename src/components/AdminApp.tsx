@@ -10,7 +10,14 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell
 } from 'recharts';
-import { operators, revenueData, hourlyData, adminSessions, payments, connectorDistribution } from '../data/mockData';
+import { revenueData, hourlyData, connectorDistribution } from '../data/mockData';
+import {
+  useLiveOperators,
+  useLiveAdminSessions,
+  useLivePayments,
+  useLiveStats,
+  type LegacyAdminSession,
+} from '../lib/live';
 import AnimatedCounter from './AnimatedCounter';
 import AIChat from './AIChat';
 
@@ -182,6 +189,8 @@ function useLiveData() {
 }
 
 function AdminDashboard() {
+  const operators = useLiveOperators();
+  const adminSessions = useLiveAdminSessions();
   const { liveData, lastUpdated } = useLiveData();
 
   return (
@@ -544,7 +553,8 @@ function LiveMapPage() {
 }
 
 function OperatorsPage() {
-  const [selected, setSelected] = useState<typeof operators[0] | null>(null);
+  const operators = useLiveOperators();
+  const [selected, setSelected] = useState<(typeof operators)[0] | null>(null);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
 
   const ocpiHealth = ['OK', 'OK', 'OK', 'WARN'];
@@ -733,8 +743,9 @@ const methodBreakdown = [
 ];
 
 function PaymentsPage() {
+  const payments = useLivePayments();
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'failed'>('all');
-  const [selected, setSelected] = useState<typeof payments[0] | null>(null);
+  const [selected, setSelected] = useState<(typeof payments)[0] | null>(null);
   const [refunding, setRefunding] = useState<string | null>(null);
   const [query, setQuery] = useState('');
 
@@ -2227,6 +2238,7 @@ function GlobalTariffsPage() {
 }
 
 function CommissionsPage() {
+  const operators = useLiveOperators();
   const [editing, setEditing] = useState<string | null>(null);
   return (
     <div className="p-6 space-y-5 overflow-y-auto h-full">
@@ -2857,15 +2869,16 @@ function AuditLogPage() {
   );
 }
 
-const extendedSessions = [
-  ...adminSessions,
+const extraSessions = [
   { id: 'S-106', user: 'Sardor N.', station: 'EcoVolt Andijon', start: '09:12', end: '10:01', energy: '31.2', cost: '54 600 сум', status: 'completed' as const },
   { id: 'S-107', user: 'Kamola A.', station: 'Nukus Power', start: '11:30', end: '—', energy: '18.4', cost: '—', status: 'active' as const },
   { id: 'S-108', user: 'Timur K.', station: 'GreenCharge Namangan', start: '07:55', end: '08:44', energy: '0', cost: '0 сум', status: 'failed' as const },
 ];
 
 function AdminSessionsPage() {
-  const [selected, setSelected] = useState<typeof extendedSessions[0] | null>(null);
+  const liveSessions = useLiveAdminSessions();
+  const extendedSessions = [...liveSessions, ...extraSessions] as LegacyAdminSession[];
+  const [selected, setSelected] = useState<LegacyAdminSession | null>(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [operatorFilter, setOperatorFilter] = useState('all');

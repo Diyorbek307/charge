@@ -92,17 +92,20 @@ export interface Vehicle {
   driverId: string;
   battery: number;
   status: string;
+  charged: number;
+  cost: number;
   odo: number;
 }
 
 export interface Employee {
   id: string;
   name: string;
-  role: string;
+  dept: string;
   limit: number;
   spent: number;
-  cards: number;
-  status: string;
+  sessions: number;
+  vehicle: string;
+  status?: string;
 }
 
 export interface OperatorRecord {

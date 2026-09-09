@@ -11,7 +11,9 @@ import {
   Gift, Trophy, Share2, Copy, TrendingUp, Award, Sparkles, Wallet, ArrowDownCircle,
   Smartphone, Monitor
 } from 'lucide-react';
-import { stations, sessions, Station } from '../data/mockData';
+import { Station } from '../data/mockData';
+import { useLiveStations, useLiveDriverSessions } from '../lib/live';
+import { useSync } from '../lib/sync';
 import AuthFlow from './AuthFlow';
 
 type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'cards' | 'loyalty' | 'referral' | 'app-settings' | 'wallet' | 'security' | 'support';
@@ -44,6 +46,7 @@ function createStationIcon(color: string) {
 }
 
 function UzbekistanMap({ onSelectStation }: { onSelectStation: (s: Station) => void }) {
+  const stations = useLiveStations();
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -681,7 +684,7 @@ function ChargingActiveScreen({ station, onStop }: { station: Station | null; on
   );
 }
 
-function ChargingDoneScreen({ station, onClose }: { station: Station | null; onClose: () => void }) {
+function ChargingDoneScreen({ station, onClose, summary }: { station: Station | null; onClose: () => void; summary?: { energy: number; cost: number; minutes: number } | null }) {
   const [rated, setRated] = useState(0);
   const [ratingDone, setRatingDone] = useState(false);
   const [confetti] = useState(() => Array.from({length: 24}, (_, i) => ({
@@ -692,7 +695,9 @@ function ChargingDoneScreen({ station, onClose }: { station: Station | null; onC
     delay: (i * 0.08).toFixed(2),
     dur: (1.8 + (i % 4) * 0.3).toFixed(1),
   })));
-  const kwh = 38.4;
+  // Real numbers from the session that just ended; demo values only as a fallback.
+  const kwh = summary?.energy ?? 38.4;
+  const minutes = summary?.minutes ?? 43;
   const co2Saved = (kwh * 0.023).toFixed(2);
   const kmAdded = Math.round(kwh / 0.18);
   const cost = 76800;
@@ -730,9 +735,9 @@ function ChargingDoneScreen({ station, onClose }: { station: Station | null; onC
           <p className="text-green-100 text-sm mt-0.5">{station?.name}</p>
           <div className="grid grid-cols-3 gap-3 mt-5">
             {[
-              { value: '38.4', unit: 'кВт·ч', label: 'заряжено' },
-              { value: '80%', unit: '', label: 'заряд батареи' },
-              { value: '43', unit: 'мин', label: 'время' },
+              { value: String(kwh), unit: 'кВт·ч', label: 'заряжено' },
+              { value: summary ? `${(summary.cost / 1000).toFixed(1)}k` : '80%', unit: summary ? 'сум' : '', label: summary ? 'списано' : 'заряд батареи' },
+              { value: String(minutes), unit: 'мин', label: 'время' },
             ].map(s => (
               <div key={s.label} className="bg-white/15 rounded-2xl py-2">
                 <p className="text-xl font-bold mono">{s.value}<span className="text-sm font-normal">{s.unit}</span></p>
@@ -866,6 +871,7 @@ function ChargingDoneScreen({ station, onClose }: { station: Station | null; onC
 }
 
 function ChargingHubScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
+  const stations = useLiveStations();
   const nearbyStations = stations.slice(0, 3);
   const [activeCard, setActiveCard] = useState<'promo' | 'subscription' | null>(null);
 
@@ -1036,6 +1042,7 @@ function PowerMiniChart({ energy, maxPower }: { energy: number; maxPower: number
 }
 
 function HistoryScreen() {
+  const sessions = useLiveDriverSessions();
   const [period, setPeriod] = useState<'week' | 'month' | 'all'>('month');
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -2585,6 +2592,7 @@ function ReportScreen({ station, onBack }: { station: Station | null; onBack: ()
 }
 
 function FavoritesScreen({ onBack, onSelectStation }: { onBack: () => void; onSelectStation: (s: Station) => void }) {
+  const stations = useLiveStations();
   const [favs, setFavs] = useState(stations.slice(0, 4));
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<'name' | 'rating' | 'distance'>('rating');
@@ -3203,6 +3211,7 @@ const QR_VALID_CODES: Record<string, string> = {
 };
 
 function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStartCharging: (s: Station) => void }) {
+  const stations = useLiveStations();
   const [phase, setPhase] = useState<QRPhase>('idle');
   const [torchOn, setTorchOn] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -4537,6 +4546,14 @@ function PushToast({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
 }
 
 export default function DriverApp() {
+  const { actions, sessions: portalSessions, state, refresh } = useSync();
+  const driverAccount = portalSessions.driver;
+  // The session this driver currently has running, as the server sees it.
+  const liveSession = state?.sessions.find(
+    s => s.status === 'active' && s.userId === driverAccount?.id,
+  ) ?? null;
+
+  const [lastSummary, setLastSummary] = useState<{ energy: number; cost: number; minutes: number } | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('map');
   const [screen, setScreen] = useState<Screen>('map');
@@ -4546,6 +4563,54 @@ export default function DriverApp() {
 
   const pushToast = (t: Omit<Toast, 'id'>) =>
     setToasts(p => [...p, { ...t, id: Date.now().toString() }]);
+
+  /**
+   * Starts a real session on the server so every other portal sees it. Falls
+   * through to the local screen either way — a demo shouldn't dead-end on a
+   * connector someone else grabbed first.
+   */
+  const startCharging = async () => {
+    const station = selectedStation;
+    const connector =
+      station?.connectors.find(c => c.status === 'available') ?? station?.connectors[0];
+
+    if (station && connector && driverAccount) {
+      try {
+        await actions.startSession('driver', station.id, connector.id);
+        await refresh();
+      } catch (err) {
+        pushToast({
+          icon: '⚠️',
+          title: 'Не удалось начать зарядку',
+          body: err instanceof Error ? err.message : 'Попробуйте другой коннектор',
+          color: '#F59E0B',
+        });
+      }
+    }
+    setScreen('charging-active');
+  };
+
+  const stopCharging = async () => {
+    if (liveSession) {
+      try {
+        const { session } = await actions.stopSession('driver', liveSession.id);
+        setLastSummary({
+          energy: session.energy,
+          cost: session.cost,
+          minutes: Math.max(
+            1,
+            Math.round(
+              (new Date(session.end ?? Date.now()).getTime() - new Date(session.start).getTime()) / 60000,
+            ),
+          ),
+        });
+        await refresh();
+      } catch {
+        /* already stopped elsewhere — the done screen is still correct */
+      }
+    }
+    setScreen('charging-done');
+  };
   const dismissToast = (id: string) =>
     setToasts(p => p.filter(t => t.id !== id));
 
@@ -4577,9 +4642,9 @@ export default function DriverApp() {
 
   const renderContent = () => {
     if (screen === 'cards') return <CardsScreen onBack={() => setScreen('profile')} />;
-    if (screen === 'charging-start') return <ChargingStartScreen station={selectedStation} onBack={() => setScreen('station')} onConfirm={() => setScreen('charging-active')} onOpenQR={() => setScreen('qr-scan')} />;
-    if (screen === 'charging-active') return <ChargingActiveScreen station={selectedStation} onStop={() => setScreen('charging-done')} />;
-    if (screen === 'charging-done') return <ChargingDoneScreen station={selectedStation} onClose={handleBack} />;
+    if (screen === 'charging-start') return <ChargingStartScreen station={selectedStation} onBack={() => setScreen('station')} onConfirm={startCharging} onOpenQR={() => setScreen('qr-scan')} />;
+    if (screen === 'charging-active') return <ChargingActiveScreen station={selectedStation} onStop={stopCharging} />;
+    if (screen === 'charging-done') return <ChargingDoneScreen station={selectedStation} onClose={handleBack} summary={lastSummary} />;
     if (screen === 'trip') return <TripPlannerScreen onBack={() => setScreen('map')} />;
     if (screen === 'booking') return <BookingScreen station={selectedStation} onBack={() => setScreen('station')} onConfirm={() => setScreen('booking-done')} />;
     if (screen === 'booking-done') return <BookingDoneScreen station={selectedStation} onClose={handleBack} />;

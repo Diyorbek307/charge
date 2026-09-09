@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 
 // Bump when the shape below changes so existing stores reseed instead of
 // silently serving a stale schema.
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   const hash = crypto.scryptSync(password, salt, 32).toString('hex');
@@ -172,19 +172,19 @@ export function seed() {
   ];
 
   const vehicles = [
-    { id: 'veh-01', plate: '01 A 123 BC', model: 'BYD Song Plus', driver: 'Alisher Tursunov', driverId: 'acc-driver', battery: 68, status: 'idle', odo: 42180 },
-    { id: 'veh-02', plate: '01 B 456 DE', model: 'Chevrolet Bolt EUV', driver: 'Kamola Aliyeva', driverId: 'usr-kamola', battery: 34, status: 'idle', odo: 28740 },
-    { id: 'veh-03', plate: '01 C 789 FG', model: 'BYD Chazor', driver: 'Bobur Mirzaev', driverId: 'usr-bobur', battery: 91, status: 'idle', odo: 15320 },
-    { id: 'veh-04', plate: '01 D 012 HI', model: 'Hongqi E-HS9', driver: 'Dilshod Rahimov', driverId: 'usr-dilshod', battery: 52, status: 'idle', odo: 9870 },
-    { id: 'veh-05', plate: '01 E 345 JK', model: 'BYD Han EV', driver: 'Javlon Sobirov', driverId: 'usr-javlon', battery: 77, status: 'idle', odo: 33410 },
+    { id: 'VH-001', model: 'BYD Han EV', plate: '01 A 111 AA', driver: 'Alisher T.', driverId: 'acc-driver', battery: 82, status: 'available', charged: 18, cost: 1420000, odo: 42180 },
+    { id: 'VH-002', model: 'Hyundai Ioniq 6', plate: '01 B 222 BB', driver: 'Nilufar K.', driverId: 'usr-nilufar', battery: 45, status: 'charging', charged: 31, cost: 2180000, odo: 28740 },
+    { id: 'VH-003', model: 'Tesla Model 3', plate: '01 C 333 CC', driver: 'Bobur M.', driverId: 'usr-bobur', battery: 91, status: 'driving', charged: 24, cost: 1840000, odo: 15320 },
+    { id: 'VH-004', model: 'Kia EV6', plate: '01 D 444 DD', driver: 'Dilshod R.', driverId: 'usr-dilshod', battery: 28, status: 'low', charged: 12, cost: 890000, odo: 9870 },
+    { id: 'VH-005', model: 'BYD Atto 3', plate: '01 E 555 EE', driver: 'Kamola A.', driverId: 'usr-kamola', battery: 66, status: 'available', charged: 19, cost: 1560000, odo: 33410 },
   ];
 
   const employees = [
-    { id: 'emp-01', name: 'Alisher Tursunov', role: 'Driver', limit: 1500000, spent: 842000, cards: 1, status: 'active' },
-    { id: 'emp-02', name: 'Kamola Aliyeva', role: 'Driver', limit: 1200000, spent: 631000, cards: 1, status: 'active' },
-    { id: 'emp-03', name: 'Bobur Mirzaev', role: 'Fleet Manager', limit: 3000000, spent: 1204000, cards: 2, status: 'active' },
-    { id: 'emp-04', name: 'Dilshod Rahimov', role: 'Driver', limit: 1000000, spent: 977000, cards: 1, status: 'warning' },
-    { id: 'emp-05', name: 'Javlon Sobirov', role: 'Driver', limit: 1000000, spent: 120000, cards: 1, status: 'active' },
+    { id: 'emp-01', name: 'Alisher Toshmatov', dept: 'Продажи', limit: 500000, spent: 284000, sessions: 22, vehicle: 'BYD Han EV' },
+    { id: 'emp-02', name: 'Nilufar Karimova', dept: 'Маркетинг', limit: 400000, spent: 391000, sessions: 28, vehicle: 'Hyundai Ioniq 6' },
+    { id: 'emp-03', name: 'Bobur Mirzayev', dept: 'IT', limit: 300000, spent: 142000, sessions: 14, vehicle: 'Tesla Model 3' },
+    { id: 'emp-04', name: 'Dilshod Raximov', dept: 'Логистика', limit: 600000, spent: 521000, sessions: 38, vehicle: 'Kia EV6' },
+    { id: 'emp-05', name: 'Kamola Abdullayeva', dept: 'HR', limit: 250000, spent: 98000, sessions: 9, vehicle: 'BYD Atto 3' },
   ];
 
   const wallets = {

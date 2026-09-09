@@ -11,7 +11,8 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
-import { stations, sessions, revenueData, hourlyData, connectorDistribution, adminSessions } from '../data/mockData';
+import { sessions, revenueData, hourlyData, connectorDistribution } from '../data/mockData';
+import { useLiveStations, useLiveAdminSessions, useLiveStats, type LegacyAdminSession } from '../lib/live';
 import AnimatedCounter from './AnimatedCounter';
 import AIChat from './AIChat';
 
@@ -164,6 +165,7 @@ function StatCard({ label, value, sub, icon, trend, color = 'sky', numValue, del
 }
 
 function DashboardPage() {
+  const adminSessions = useLiveAdminSessions();
   const [activeSessions, setActiveSessions] = useState(12);
   const [livePower, setLivePower] = useState(1482);
   const [todaySessions, setTodaySessions] = useState(284);
@@ -323,6 +325,7 @@ function DashboardPage() {
 }
 
 function StationsPage() {
+  const stations = useLiveStations();
   const [selectedStation, setSelectedStation] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   if (selectedStation) return <StationDetailPage stationId={selectedStation} onBack={() => setSelectedStation(null)} />;
@@ -472,7 +475,8 @@ function StationsPage() {
 }
 
 function SessionsPage() {
-  const [selected, setSelected] = useState<typeof adminSessions[0] | null>(null);
+  const adminSessions = useLiveAdminSessions();
+  const [selected, setSelected] = useState<LegacyAdminSession | null>(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [query, setQuery] = useState('');
 
@@ -1311,6 +1315,8 @@ function TariffsPage() {
 }
 
 function StationDetailPage({ stationId, onBack }: { stationId: string; onBack: () => void }) {
+  const stations = useLiveStations();
+  const adminSessions = useLiveAdminSessions();
   const s = stations.find(st => st.id === stationId) || stations[0];
   const statusColors: Record<string, string> = { available: '#22C55E', occupied: '#EF4444', unavailable: '#94A3B8', reserved: '#F59E0B' };
   const statusBgs: Record<string, string> = { available: 'bg-green-100 text-green-700', occupied: 'bg-red-100 text-red-700', unavailable: 'bg-slate-100 text-slate-500', reserved: 'bg-amber-100 text-amber-700' };
