@@ -1357,7 +1357,7 @@ function ExpensesPage() {
               <Area type="monotone" dataKey="cost" stroke="#8B5CF6" strokeWidth={2.5} fill="url(#expGrad)" dot={false} activeDot={{ r: 5, fill: '#8B5CF6' }} />
             </AreaChart>
           </ResponsiveContainer>
-          <div className="grid grid-cols-3 gap-3 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
             {[
               { label: 'Средн. за неделю', value: `${Math.round(weeklyTrend.reduce((s, w) => s + w.cost, 0) / weeklyTrend.length / 1000000 * 100) / 100} млн сум` },
               { label: 'Рост м/м', value: '+12.4%' },

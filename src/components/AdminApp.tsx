@@ -327,11 +327,11 @@ function AdminDashboard() {
         </div>
         <div className="divide-y divide-slate-50">
           {adminSessions.map(s => (
-            <div key={s.id} className="px-5 py-3 flex items-center gap-4 text-sm">
+            <div key={s.id} className="px-5 py-3 flex items-center flex-wrap gap-x-4 gap-y-1 text-sm">
               <span className="text-xs text-sky-600 font-medium mono w-20">{s.id}</span>
               <span className="text-slate-700 w-28">{s.user}</span>
-              <span className="text-slate-500 flex-1 truncate">{s.station}</span>
-              <span className="text-xs text-slate-400 w-16">{s.operator.split(' ')[0]}</span>
+              <span className="text-slate-500 flex-1 min-w-32 truncate">{s.station}</span>
+              <span className="text-xs text-slate-400 w-16 hidden sm:inline">{s.operator.split(' ')[0]}</span>
               <span className="text-slate-700 font-medium mono w-28">{s.cost}</span>
               <span className={`text-xs px-2 py-0.5 rounded-full ${statusBg[s.status]}`}>{statusLabel[s.status]}</span>
             </div>
@@ -613,7 +613,7 @@ function OperatorsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 text-center mb-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center mb-3">
                 {[
                   { label: 'Станции', value: op.stations },
                   { label: 'EVSE', value: op.evse },

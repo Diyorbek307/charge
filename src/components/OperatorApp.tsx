@@ -231,7 +231,7 @@ function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Станции" value="47" numValue={47} sub="+3 этот месяц" icon={<MapPin size={16} />} trend={3} color="sky" delay={0} />
         <StatCard label="Активные зарядки" value={String(activeSessions)} numValue={activeSessions} sub="из 124 EVSE" icon={<Zap size={16} />} color="green" delay={60} />
         <StatCard label="Выручка (сент.)" value="18.4M" sub="+22% vs авг." icon={<DollarSign size={16} />} trend={22} color="purple" delay={120} />
@@ -310,11 +310,11 @@ function DashboardPage() {
         </div>
         <div className="divide-y divide-slate-50">
           {adminSessions.slice(0, 4).map(s => (
-            <div key={s.id} className="px-5 py-3 flex items-center gap-4">
+            <div key={s.id} className="px-5 py-3 flex items-center flex-wrap gap-x-4 gap-y-1">
               <span className="text-xs text-slate-400 mono w-20">{s.id}</span>
-              <span className="text-sm text-slate-700 flex-1">{s.user}</span>
-              <span className="text-sm text-slate-600 w-44 truncate">{s.station}</span>
-              <span className="text-xs text-slate-400 w-16">{s.start}</span>
+              <span className="text-sm text-slate-700 flex-1 min-w-24">{s.user}</span>
+              <span className="text-sm text-slate-600 w-full lg:w-44 truncate order-last lg:order-none">{s.station}</span>
+              <span className="text-xs text-slate-400 w-16 hidden sm:inline">{s.start}</span>
               <span className="text-sm font-medium text-slate-800 mono w-24">{s.cost}</span>
               <span className={`text-xs px-2 py-0.5 rounded-full ${statusBg[s.status]}`}>{statusLabel[s.status]}</span>
             </div>
@@ -720,7 +720,7 @@ function FinancePage() {
                 </div>
             )}
           </div>
-          <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-center text-slate-500">
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-center text-slate-500">
             <span>184 500 000 сум</span>
             <span>-5 535 000 сум (3%)</span>
             <span className="text-green-600 font-semibold">178 965 000 сум</span>
@@ -972,7 +972,7 @@ function IntegrationPage() {
                   <button onClick={() => setSelectedCs(null)} className="text-slate-400 hover:text-slate-600 text-xs">✕</button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {[
                     { label: 'Вендор', value: selectedCs.vendor },
                     { label: 'Модель', value: selectedCs.model },
@@ -993,7 +993,7 @@ function IntegrationPage() {
                   <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
                     <p className="text-xs font-semibold text-slate-600">OCPP КОМАНДЫ</p>
                   </div>
-                  <div className="p-4 grid grid-cols-3 gap-2">
+                  <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {[
                       { id: 'reset_soft', label: 'Reset Soft', icon: '🔄', color: 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100' },
                       { id: 'reset_hard', label: 'Reset Hard', icon: '⚡', color: 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' },
@@ -1218,7 +1218,7 @@ function TariffsPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
           { label: 'Активных тарифов', value: tariffs.filter(t => t.active).length, color: 'text-green-600' },
           { label: 'Мин. цена кВт·ч', value: `${Math.min(...tariffs.map(t => t.price)).toLocaleString()} сум`, color: 'text-sky-600' },
@@ -1391,7 +1391,7 @@ function StationDetailPage({ stationId, onBack }: { stationId: string; onBack: (
         <div className="col-span-1 rounded-2xl overflow-hidden h-36 bg-slate-100">
           <img src={s.image} alt={s.name} className="w-full h-full object-cover" />
         </div>
-        <div className="col-span-2 grid grid-cols-3 gap-3">
+        <div className="col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             { label: 'Режим работы', value: s.hours },
             { label: 'Макс. мощность', value: `${s.totalPower} кВт` },
@@ -1483,9 +1483,9 @@ function StationDetailPage({ stationId, onBack }: { stationId: string; onBack: (
         </div>
         <div className="divide-y divide-slate-50">
           {adminSessions.filter(s2 => s2.station === s.name || true).slice(0, 4).map(sess => (
-            <div key={sess.id} className="px-5 py-3 flex items-center gap-4 text-sm">
+            <div key={sess.id} className="px-5 py-3 flex items-center flex-wrap gap-x-4 gap-y-1 text-sm">
               <span className="text-xs text-sky-600 mono w-20">{sess.id}</span>
-              <span className="text-slate-700 flex-1">{sess.user}</span>
+              <span className="text-slate-700 flex-1 min-w-24">{sess.user}</span>
               <span className="text-xs text-slate-400">{sess.start}</span>
               <span className="font-medium mono text-slate-800">{sess.cost}</span>
               <span className={`text-xs px-2 py-0.5 rounded-full ${statusBg[sess.status]}`}>{statusLabel[sess.status]}</span>
@@ -1883,7 +1883,7 @@ function HelpPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {/* FAQ */}
         <div className="col-span-3 bg-white rounded-2xl border border-slate-100 overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
           <div className="px-5 py-4 border-b border-slate-50">
@@ -1971,7 +1971,7 @@ function HelpPage() {
           <h3 className="text-sm font-bold text-slate-800">Статус платформы</h3>
           <span className="text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-1 rounded-lg">Все системы работают</span>
         </div>
-        <div className="grid grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {[
             { label: 'API Gateway', status: '✅', uptime: '99.98%' },
             { label: 'OCPP Server', status: '✅', uptime: '99.95%' },
@@ -2055,9 +2055,9 @@ function AlertsPage() {
   const severityCircle = (sev: string) => sev === 'critical' ? 'bg-red-50' : sev === 'warning' ? 'bg-amber-50' : 'bg-sky-50';
 
   return (
-    <div className="h-full overflow-y-auto p-6 space-y-5">
+    <div className="h-full overflow-y-auto p-4 sm:p-6 space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Оповещения</h1>
           <p className="text-sm text-slate-500 mt-0.5">{alertsData.length} оповещений всего</p>
@@ -2071,7 +2071,7 @@ function AlertsPage() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white rounded-xl p-4 border border-slate-200 flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center">
             <Bell size={16} className="text-slate-500" />
@@ -2111,7 +2111,7 @@ function AlertsPage() {
       </div>
 
       {/* Filter tabs */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {(['all', 'critical', 'warning', 'info'] as const).map(f => {
           const labels: Record<string, string> = { all: 'Все', critical: 'Критические', warning: 'Предупреждения', info: 'Инфо' };
           const activeColors: Record<string, string> = { all: 'bg-slate-800 text-white', critical: 'bg-red-500 text-white', warning: 'bg-amber-500 text-white', info: 'bg-sky-500 text-white' };

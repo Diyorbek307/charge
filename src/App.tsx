@@ -4,6 +4,7 @@ import { lazy, Suspense } from 'react';
 import PortalLogin from './components/PortalLogin';
 import SyncInspector from './components/SyncInspector';
 import SyncToasts from './components/SyncToasts';
+import CommandPalette from './components/CommandPalette';
 
 // Each portal is a large, independent app — load one only when it is opened
 // so the landing page ships a fraction of the bundle.
@@ -761,6 +762,12 @@ export default function App() {
       {portal === 'architecture' && <ArchitectureDiagram onBack={() => setPortal('selector')} />}
       </Suspense>
       <SyncToasts />
+      {!embedded && (
+        <CommandPalette
+          onNavigate={p => setPortal(p as Portal)}
+          onSplitView={() => setSplitView(true)}
+        />
+      )}
       {!embedded && <SyncInspector />}
       {!embedded && portal === 'selector' && (
         <button
