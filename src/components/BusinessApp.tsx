@@ -13,6 +13,7 @@ import {
 import { revenueData } from '../data/mockData';
 import { useLiveVehicles, useLiveEmployees, useLiveStats } from '../lib/live';
 import { useSync } from '../lib/sync';
+import SidebarThemeToggle from './SidebarThemeToggle';
 import AnimatedCounter from './AnimatedCounter';
 import AIChat from './AIChat';
 
@@ -127,6 +128,7 @@ function Sidebar({ current, onChange, onBack, isOpen, onClose }: { current: Page
         >
           <LogOut size={14} />Выйти из портала
         </button>
+        <SidebarThemeToggle />
       </div>
     </div>
   );
@@ -1661,7 +1663,7 @@ export default function BusinessApp({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <div className="h-full flex relative" style={{ background: '#F2F4F8' }}>
+    <div className="h-full flex relative dash-surface">
       {sidebarOpen && <div onClick={() => setSidebarOpen(false)} className="md:hidden fixed inset-0 bg-black/40 z-20" />}
       <Sidebar current={page} onChange={setPage} onBack={onBack} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 overflow-hidden relative">

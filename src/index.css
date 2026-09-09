@@ -630,3 +630,9 @@ nav::-webkit-scrollbar { display: none; }
 .dark ::-webkit-scrollbar-track { background: #0f172a; }
 .dark ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
 .dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+/* ── Dashboard surface ──
+   The three dashboards share one page background. Declaring it here instead
+   of inline lets the dark layer below actually override it. */
+.dash-surface { background: #F2F4F8; }
+.dark .dash-surface { background: #0b1220; }

@@ -12,6 +12,8 @@ import {
 } from 'recharts';
 import { revenueData, hourlyData, connectorDistribution } from '../data/mockData';
 import { useSync } from '../lib/sync';
+import SidebarThemeToggle from './SidebarThemeToggle';
+import ExportButton from './ExportButton';
 import {
   useLiveOperators,
   useLiveAdminSessions,
@@ -154,6 +156,7 @@ function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current:
         >
           <LogOut size={14} />Выйти из портала
         </button>
+        <SidebarThemeToggle />
       </div>
     </div>
   );
@@ -785,9 +788,12 @@ function PaymentsPage() {
             <h1 className="text-xl font-bold text-slate-900">Платёжный центр</h1>
             <p className="text-sm text-slate-500">Все транзакции платформы · реальное время</p>
           </div>
-          <button className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50">
-            <Download size={14} />Экспорт
-          </button>
+          <ExportButton
+            name="one-charge-payments"
+            title="Payments report"
+            headers={['ID', 'Пользователь', 'Сумма', 'Метод', 'Статус', 'Время', 'Сессия']}
+            rows={filtered.map(p => [p.id, p.user, p.amount, p.method, p.status, p.time, p.session])}
+          />
         </div>
 
         {/* KPI */}
@@ -2917,9 +2923,12 @@ function AdminSessionsPage() {
             <h1 className="text-xl font-bold text-slate-900">Все сессии</h1>
             <p className="text-sm text-slate-500">{filtered.length} записей</p>
           </div>
-          <button className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50">
-            <Download size={14} />Экспорт CDR
-          </button>
+          <ExportButton
+            name="one-charge-cdr"
+            title="CDR export"
+            headers={['ID', 'Пользователь', 'Станция', 'Начало', 'Конец', 'Энергия', 'Стоимость', 'Статус']}
+            rows={filtered.map(s => [s.id, s.user, s.station, s.start, s.end, s.energy, s.cost, s.status])}
+          />
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -3580,7 +3589,7 @@ export default function AdminApp({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <div className="h-full flex relative" style={{ background: '#F2F4F8' }}>
+    <div className="h-full flex relative dash-surface">
       {sidebarOpen && <div onClick={() => setSidebarOpen(false)} className="md:hidden fixed inset-0 bg-black/40 z-20" />}
       <AdminSidebar current={page} onChange={setPage} onBack={onBack} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 overflow-hidden relative">

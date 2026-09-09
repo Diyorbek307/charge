@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import {
   LayoutDashboard, MapPin, DollarSign, BarChart2,
   Settings, LogOut, Zap, ArrowUp, ArrowDown, ArrowLeft, Activity,
@@ -14,6 +14,8 @@ import {
 import { sessions, revenueData, hourlyData, connectorDistribution } from '../data/mockData';
 import { useLiveStations, useLiveAdminSessions, useLiveStats, useLiveAlerts, type LegacyAdminSession } from '../lib/live';
 import { useSync } from '../lib/sync';
+import SidebarThemeToggle from './SidebarThemeToggle';
+import ExportButton from './ExportButton';
 import AnimatedCounter from './AnimatedCounter';
 import AIChat from './AIChat';
 
@@ -133,6 +135,7 @@ function Sidebar({ current, onChange, onBack, isOpen, onClose }: { current: Page
         >
           <LogOut size={14} />Выйти из портала
         </button>
+        <SidebarThemeToggle />
       </div>
     </div>
   );
@@ -495,9 +498,12 @@ function SessionsPage() {
             <h1 className="text-xl font-bold text-slate-900">Сессии</h1>
             <p className="text-sm text-slate-500">{filtered.length} из {adminSessions.length}</p>
           </div>
-          <button className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50">
-            <Download size={14} />CSV
-          </button>
+          <ExportButton
+            name="one-charge-sessions"
+            title="Sessions report"
+            headers={['ID', 'Пользователь', 'Станция', 'Оператор', 'Начало', 'Конец', 'Энергия', 'Стоимость', 'Статус']}
+            rows={filtered.map(s => [s.id, s.user, s.station, s.operator, s.start, s.end, s.energy, s.cost, s.status])}
+          />
         </div>
 
         {/* KPI */}
@@ -2217,7 +2223,7 @@ export default function OperatorApp({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <div className="h-full flex relative" style={{ background: '#F2F4F8' }}>
+    <div className="h-full flex relative dash-surface">
       {sidebarOpen && <div onClick={() => setSidebarOpen(false)} className="md:hidden fixed inset-0 bg-black/40 z-20" />}
       <Sidebar current={page} onChange={setPage} onBack={onBack} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 overflow-hidden relative">
