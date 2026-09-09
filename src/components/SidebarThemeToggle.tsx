@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
+import { useI18n } from '../lib/i18n';
 
 function readTheme(): boolean {
   try {
@@ -15,6 +16,7 @@ function readTheme(): boolean {
  * class flips even though this control lives deep inside a portal.
  */
 export default function SidebarThemeToggle() {
+  const { t } = useI18n();
   const [dark, setDark] = useState(readTheme);
 
   useEffect(() => {
@@ -40,7 +42,7 @@ export default function SidebarThemeToggle() {
   return (
     <button
       onClick={toggle}
-      aria-label={dark ? 'Включить светлую тему' : 'Включить тёмную тему'}
+      aria-label={dark ? t('nav.themeLight') : t('nav.themeDark')}
       className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-colors"
       style={{ color: 'rgba(148,163,184,0.45)' }}
       onMouseEnter={e => {
@@ -53,7 +55,7 @@ export default function SidebarThemeToggle() {
       }}
     >
       {dark ? <Sun size={14} /> : <Moon size={14} />}
-      {dark ? 'Светлая тема' : 'Тёмная тема'}
+      {dark ? t('nav.themeLight') : t('nav.themeDark')}
     </button>
   );
 }

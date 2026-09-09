@@ -14,6 +14,7 @@ import {
 import { sessions, revenueData, hourlyData, connectorDistribution } from '../data/mockData';
 import { useLiveStations, useLiveAdminSessions, useLiveStats, useLiveAlerts, type LegacyAdminSession } from '../lib/live';
 import { useSync } from '../lib/sync';
+import { useI18n } from '../lib/i18n';
 import SidebarThemeToggle from './SidebarThemeToggle';
 import ExportButton from './ExportButton';
 import AnimatedCounter from './AnimatedCounter';
@@ -37,30 +38,31 @@ const statusLabel: Record<string, string> = {
 };
 
 function Sidebar({ current, onChange, onBack, isOpen, onClose }: { current: Page; onChange: (p: Page) => void; onBack: () => void; isOpen?: boolean; onClose?: () => void }) {
+  const { t } = useI18n();
   const groups = [
     {
-      label: 'Обзор',
+      label: t('nav.group.overview'),
       items: [
-        { id: 'dashboard' as Page, label: 'Дашборд', icon: <LayoutDashboard size={14} /> },
-        { id: 'stations' as Page, label: 'Станции', icon: <MapPin size={14} /> },
-        { id: 'sessions' as Page, label: 'Сессии', icon: <Activity size={14} /> },
-        { id: 'alerts' as Page, label: 'Оповещения', icon: <Bell size={14} />, badge: 3 },
+        { id: 'dashboard' as Page, label: t('nav.dashboard'), icon: <LayoutDashboard size={14} /> },
+        { id: 'stations' as Page, label: t('nav.stations'), icon: <MapPin size={14} /> },
+        { id: 'sessions' as Page, label: t('nav.sessions'), icon: <Activity size={14} /> },
+        { id: 'alerts' as Page, label: t('nav.alerts'), icon: <Bell size={14} />, badge: 3 },
       ],
     },
     {
-      label: 'Финансы',
+      label: t('nav.finance'),
       items: [
-        { id: 'tariffs' as Page, label: 'Тарифы', icon: <DollarSign size={14} /> },
-        { id: 'finance' as Page, label: 'Финансы', icon: <BarChart2 size={14} /> },
+        { id: 'tariffs' as Page, label: t('nav.tariffs'), icon: <DollarSign size={14} /> },
+        { id: 'finance' as Page, label: t('nav.finance'), icon: <BarChart2 size={14} /> },
       ],
     },
     {
-      label: 'Клиенты & Система',
+      label: t('nav.group.clientsSystem'),
       items: [
-        { id: 'customers' as Page, label: 'Клиенты', icon: <Users size={14} /> },
-        { id: 'integration' as Page, label: 'Интеграция', icon: <Link size={14} /> },
-        { id: 'settings' as Page, label: 'Настройки', icon: <Settings size={14} /> },
-        { id: 'help' as Page, label: 'Помощь', icon: <Bell size={14} /> },
+        { id: 'customers' as Page, label: t('nav.clients'), icon: <Users size={14} /> },
+        { id: 'integration' as Page, label: t('nav.integration'), icon: <Link size={14} /> },
+        { id: 'settings' as Page, label: t('nav.settings'), icon: <Settings size={14} /> },
+        { id: 'help' as Page, label: t('nav.help'), icon: <Bell size={14} /> },
       ],
     },
   ];
@@ -133,7 +135,7 @@ function Sidebar({ current, onChange, onBack, isOpen, onClose }: { current: Page
           onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.7)'; }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(148,163,184,0.45)'; }}
         >
-          <LogOut size={14} />Выйти из портала
+          <LogOut size={14} />{t('nav.signOutPortal')}
         </button>
         <SidebarThemeToggle />
       </div>

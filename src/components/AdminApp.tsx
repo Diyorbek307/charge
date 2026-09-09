@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { revenueData, hourlyData, connectorDistribution } from '../data/mockData';
 import { useSync } from '../lib/sync';
+import { useI18n } from '../lib/i18n';
 import TwoFactorPanel from './TwoFactorPanel';
 import SidebarThemeToggle from './SidebarThemeToggle';
 import ExportButton from './ExportButton';
@@ -42,46 +43,47 @@ const statusLabel: Record<string, string> = {
 };
 
 function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current: Page; onChange: (p: Page) => void; onBack: () => void; isOpen?: boolean; onClose?: () => void }) {
+  const { t } = useI18n();
   const groups = [
     {
-      label: 'Обзор',
+      label: t('nav.group.overview'),
       items: [
         { id: 'dashboard' as Page, label: 'Overview', icon: <LayoutDashboard size={14} /> },
         { id: 'map' as Page, label: 'Live Map', icon: <MapPin size={14} />, badge: '●' },
       ],
     },
     {
-      label: 'Операции',
+      label: t('nav.group.operations'),
       items: [
-        { id: 'operators' as Page, label: 'Операторы', icon: <Building2 size={14} /> },
-        { id: 'users' as Page, label: 'Пользователи', icon: <Users size={14} /> },
-        { id: 'sessions' as Page, label: 'Сессии', icon: <Activity size={14} /> },
+        { id: 'operators' as Page, label: t('nav.operators'), icon: <Building2 size={14} /> },
+        { id: 'users' as Page, label: t('nav.users'), icon: <Users size={14} /> },
+        { id: 'sessions' as Page, label: t('nav.sessions'), icon: <Activity size={14} /> },
       ],
     },
     {
-      label: 'Финансы',
+      label: t('nav.finance'),
       items: [
-        { id: 'payments' as Page, label: 'Платежи', icon: <DollarSign size={14} /> },
+        { id: 'payments' as Page, label: t('nav.payments'), icon: <DollarSign size={14} /> },
         { id: 'settlement' as Page, label: 'Settlement', icon: <Banknote size={14} /> },
-        { id: 'commissions' as Page, label: 'Комиссии', icon: <Percent size={14} /> },
-        { id: 'tariffs_global' as Page, label: 'Тарифы сети', icon: <Tag size={14} /> },
+        { id: 'commissions' as Page, label: t('nav.commissions'), icon: <Percent size={14} /> },
+        { id: 'tariffs_global' as Page, label: t('nav.networkTariffs'), icon: <Tag size={14} /> },
       ],
     },
     {
-      label: 'Аналитика & AI',
+      label: t('nav.group.analyticsAi'),
       items: [
-        { id: 'analytics' as Page, label: 'Аналитика', icon: <BarChart2 size={14} /> },
+        { id: 'analytics' as Page, label: t('nav.analytics'), icon: <BarChart2 size={14} /> },
         { id: 'ai' as Page, label: 'AI Insights', icon: <Brain size={14} /> },
         { id: 'fraud' as Page, label: 'Fraud & Risk', icon: <Shield size={14} />, badge: '3' },
         { id: 'cdr' as Page, label: 'CDR Validation', icon: <ClipboardCheck size={14} /> },
       ],
     },
     {
-      label: 'Система',
+      label: t('nav.group.system'),
       items: [
         { id: 'audit' as Page, label: 'Audit Log', icon: <ScrollText size={14} /> },
-        { id: 'roles' as Page, label: 'Роли & Права', icon: <UserCheck size={14} /> },
-        { id: 'settings' as Page, label: 'Настройки', icon: <Settings size={14} /> },
+        { id: 'roles' as Page, label: t('nav.roles'), icon: <UserCheck size={14} /> },
+        { id: 'settings' as Page, label: t('nav.settings'), icon: <Settings size={14} /> },
         { id: 'system_health' as Page, label: 'System Health', icon: <Activity size={14} /> },
       ],
     },
@@ -155,7 +157,7 @@ function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current:
           onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.7)'; }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(148,163,184,0.5)'; }}
         >
-          <LogOut size={14} />Выйти из портала
+          <LogOut size={14} />{t('nav.signOutPortal')}
         </button>
         <SidebarThemeToggle />
       </div>

@@ -13,6 +13,7 @@ import {
 import { revenueData } from '../data/mockData';
 import { useLiveVehicles, useLiveEmployees, useLiveStats } from '../lib/live';
 import { useSync } from '../lib/sync';
+import { useI18n } from '../lib/i18n';
 import SidebarThemeToggle from './SidebarThemeToggle';
 import AnimatedCounter from './AnimatedCounter';
 import AIChat from './AIChat';
@@ -45,21 +46,22 @@ const monthlySpend = [
 ];
 
 function Sidebar({ current, onChange, onBack, isOpen, onClose }: { current: Page; onChange: (p: Page) => void; onBack: () => void; isOpen?: boolean; onClose?: () => void }) {
+  const { t } = useI18n();
   const groups = [
     {
-      label: 'Обзор',
+      label: t('nav.group.overview'),
       items: [
-        { id: 'dashboard' as Page, label: 'Дашборд', icon: <LayoutDashboard size={14} /> },
-        { id: 'fleet' as Page, label: 'Автопарк', icon: <Car size={14} /> },
-        { id: 'employees' as Page, label: 'Сотрудники', icon: <Users size={14} /> },
+        { id: 'dashboard' as Page, label: t('nav.dashboard'), icon: <LayoutDashboard size={14} /> },
+        { id: 'fleet' as Page, label: t('nav.fleet'), icon: <Car size={14} /> },
+        { id: 'employees' as Page, label: t('nav.employees'), icon: <Users size={14} /> },
       ],
     },
     {
-      label: 'Финансы & Отчёты',
+      label: t('nav.group.financeReports'),
       items: [
-        { id: 'expenses' as Page, label: 'Расходы', icon: <DollarSign size={14} /> },
-        { id: 'reports' as Page, label: 'Отчёты', icon: <FileText size={14} /> },
-        { id: 'settings' as Page, label: 'Настройки', icon: <Settings size={14} /> },
+        { id: 'expenses' as Page, label: t('nav.expenses'), icon: <DollarSign size={14} /> },
+        { id: 'reports' as Page, label: t('nav.reports'), icon: <FileText size={14} /> },
+        { id: 'settings' as Page, label: t('nav.settings'), icon: <Settings size={14} /> },
       ],
     },
   ];
@@ -126,7 +128,7 @@ function Sidebar({ current, onChange, onBack, isOpen, onClose }: { current: Page
           onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.7)'; }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(148,163,184,0.45)'; }}
         >
-          <LogOut size={14} />Выйти из портала
+          <LogOut size={14} />{t('nav.signOutPortal')}
         </button>
         <SidebarThemeToggle />
       </div>
