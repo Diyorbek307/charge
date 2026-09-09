@@ -252,14 +252,14 @@ function LiveTicker() {
   ];
 
   return (
-    <div className="flex items-stretch justify-center gap-0 mb-14 rounded-2xl border border-white/8 overflow-hidden bg-white/[0.03] backdrop-blur-sm divide-x divide-white/8">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-px mb-10 sm:mb-14 rounded-2xl border border-white/8 overflow-hidden bg-white/[0.08] backdrop-blur-sm">
       {stats.map(stat => (
-        <div key={stat.label} className="flex-1 flex flex-col items-center justify-center py-5 px-4 gap-1.5">
-          <div className="flex items-center gap-1.5">
+        <div key={stat.label} className="flex flex-col items-center justify-center text-center py-4 sm:py-5 px-2 sm:px-4 gap-1.5 bg-[#04070e]">
+          <div className="flex items-center gap-1.5 min-w-0">
             <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: stat.dot, boxShadow: stat.live ? `0 0 6px ${stat.dot}` : 'none', animation: stat.live ? 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite' : 'none' }} />
-            <span className="text-xs text-slate-500 uppercase tracking-wider font-medium inter">{stat.label}</span>
+            <span className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-medium inter truncate">{stat.label}</span>
           </div>
-          <span className="text-2xl font-bold text-white mono tracking-tight">{stat.value}</span>
+          <span className="text-xl sm:text-2xl font-bold text-white mono tracking-tight">{stat.value}</span>
         </div>
       ))}
     </div>
