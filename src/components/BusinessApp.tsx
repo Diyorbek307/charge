@@ -629,6 +629,7 @@ function DashboardPage() {
 }
 
 function FleetPage() {
+  const { t } = useI18n();
   const liveVehicles = useLiveVehicles();
   const fleetVehicles = liveVehicles.length ? liveVehicles : staticFleetVehicles;
   type VehicleStatus = 'available' | 'charging' | 'driving' | 'low';
@@ -688,7 +689,7 @@ function FleetPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Автопарк</h1>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('page.fleet')}</h1>
             <p className="text-sm text-slate-500 inter">Uzauto Motors Corp. · 5 автомобилей</p>
           </div>
           <button className="flex items-center gap-1.5 px-4 py-2 bg-indigo-500 text-white rounded-xl text-sm font-semibold hover:bg-indigo-600 active:scale-95 transition-all shadow-sm">
@@ -876,6 +877,7 @@ function FleetPage() {
 }
 
 function EmployeesPage() {
+  const { t } = useI18n();
   const liveEmployees = useLiveEmployees();
   const { actions, refresh } = useSync();
   const employees = liveEmployees.length ? liveEmployees : staticEmployees;
@@ -908,7 +910,7 @@ function EmployeesPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Сотрудники</h1>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('page.employees')}</h1>
             <p className="text-sm text-slate-500 inter">{employees.length} сотрудников · корпоративные лимиты</p>
           </div>
           <button className="flex items-center gap-1.5 px-4 py-2 bg-indigo-500 text-white rounded-xl text-sm font-semibold hover:bg-indigo-600 active:scale-95 transition-all shadow-sm">
@@ -1174,6 +1176,7 @@ const byEmployee = [
 ];
 
 function ExpensesPage() {
+  const { t } = useI18n();
   const [cityFilter, setCityFilter] = useState('all');
   const [period, setPeriod] = useState<'week' | 'month' | 'quarter'>('month');
   const [viewTab, setViewTab] = useState<'overview' | 'employees' | 'trend'>('overview');
@@ -1185,7 +1188,7 @@ function ExpensesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Расходы на зарядку</h1>
+          <h1 className="text-xl font-bold text-slate-900">{t('page.chargingCosts')}</h1>
           <p className="text-sm text-slate-400">Аналитика затрат корпоративного флота</p>
         </div>
         <div className="flex items-center gap-2">
@@ -1394,6 +1397,7 @@ function ExpensesPage() {
 }
 
 function ReportsPage() {
+  const { t } = useI18n();
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState<string | null>(null);
 
@@ -1414,7 +1418,7 @@ function ReportsPage() {
 
   return (
     <div className="p-6 space-y-5 overflow-y-auto h-full">
-      <h1 className="text-xl font-bold text-slate-900">Отчёты</h1>
+      <h1 className="text-xl font-bold text-slate-900">{t('page.reports')}</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {reportTypes.map(r => (
@@ -1488,6 +1492,7 @@ function BizToggle({ value, onChange }: { value: boolean; onChange: (v: boolean)
 }
 
 function BusinessSettingsPage() {
+  const { t } = useI18n();
   const [notifs, setNotifs] = useState({ limit80: true, limit95: true, chargeStart: false, chargeEnd: true, newEmployee: true, invoice: true });
   const [saved, setSaved] = useState(false);
   const [lang, setLang] = useState<'ru' | 'uz' | 'en'>('ru');
@@ -1499,7 +1504,7 @@ function BusinessSettingsPage() {
   return (
     <div className="p-6 space-y-5 overflow-y-auto h-full">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900">Настройки аккаунта</h1>
+        <h1 className="text-xl font-bold text-slate-900">{t('page.accountSettings')}</h1>
         <button onClick={saveSettings}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95"
           style={{ background: saved ? '#22C55E' : 'linear-gradient(135deg,#6366F1,#4F46E5)', color: '#fff', boxShadow: saved ? '0 4px 12px rgba(34,197,94,0.3)' : '0 4px 12px rgba(99,102,241,0.3)' }}>

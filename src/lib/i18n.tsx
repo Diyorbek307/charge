@@ -221,6 +221,31 @@ const DICT = {
   'lbl.forecast': { ru: 'Прогноз', uz: 'Prognoz', en: 'Forecast' },
   'lbl.chargingNow': { ru: 'Заряжается сейчас', uz: 'Hozir zaryadlanmoqda', en: 'Charging now' },
   'lbl.overLimit': { ru: 'Превысили лимит', uz: 'Limitdan oshgan', en: 'Over limit' },
+
+  // ── Dashboard page headings ──
+  'page.stations': { ru: 'Станции', uz: 'Stansiyalar', en: 'Stations' },
+  'page.sessions': { ru: 'Сессии', uz: 'Seanslar', en: 'Sessions' },
+  'page.allSessions': { ru: 'Все сессии', uz: 'Barcha seanslar', en: 'All sessions' },
+  'page.alerts': { ru: 'Оповещения', uz: 'Ogohlantirishlar', en: 'Alerts' },
+  'page.tariffs': { ru: 'Управление тарифами', uz: 'Tariflarni boshqarish', en: 'Tariff management' },
+  'page.finance': { ru: 'Финансы и расчёты', uz: 'Moliya va hisob-kitoblar', en: 'Finance & settlements' },
+  'page.clients': { ru: 'Клиенты', uz: 'Mijozlar', en: 'Clients' },
+  'page.integration': { ru: 'Интеграция', uz: 'Integratsiya', en: 'Integration' },
+  'page.settingsApi': { ru: 'Настройки и API', uz: 'Sozlamalar va API', en: 'Settings & API' },
+  'page.help': { ru: 'Помощь и поддержка', uz: 'Yordam va qo‘llab-quvvatlash', en: 'Help & support' },
+  'page.nationalOverview': { ru: 'Национальный обзор', uz: 'Milliy ko‘rinish', en: 'National overview' },
+  'page.operators': { ru: 'Операторы', uz: 'Operatorlar', en: 'Operators' },
+  'page.users': { ru: 'Пользователи', uz: 'Foydalanuvchilar', en: 'Users' },
+  'page.paymentCenter': { ru: 'Платёжный центр', uz: 'To‘lov markazi', en: 'Payment centre' },
+  'page.commissions': { ru: 'Управление комиссиями', uz: 'Komissiyalarni boshqarish', en: 'Commission management' },
+  'page.networkTariffs': { ru: 'Тарифы сети', uz: 'Tarmoq tariflari', en: 'Network tariffs' },
+  'page.analytics': { ru: 'Аналитика', uz: 'Tahlil', en: 'Analytics' },
+  'page.settings': { ru: 'Настройки', uz: 'Sozlamalar', en: 'Settings' },
+  'page.fleet': { ru: 'Автопарк', uz: 'Avtopark', en: 'Fleet' },
+  'page.employees': { ru: 'Сотрудники', uz: 'Xodimlar', en: 'Employees' },
+  'page.chargingCosts': { ru: 'Расходы на зарядку', uz: 'Zaryadlash xarajatlari', en: 'Charging costs' },
+  'page.reports': { ru: 'Отчёты', uz: 'Hisobotlar', en: 'Reports' },
+  'page.accountSettings': { ru: 'Настройки аккаунта', uz: 'Hisob sozlamalari', en: 'Account settings' },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type TKey = keyof typeof DICT;

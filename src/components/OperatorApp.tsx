@@ -331,6 +331,7 @@ function DashboardPage() {
 }
 
 function StationsPage() {
+  const { t } = useI18n();
   const stations = useLiveStations();
   const [selectedStation, setSelectedStation] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -338,7 +339,7 @@ function StationsPage() {
   return (
     <div className="p-6 space-y-5 overflow-y-auto h-full">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900">Станции</h1>
+        <h1 className="text-xl font-bold text-slate-900">{t('page.stations')}</h1>
         <button onClick={() => setShowAddModal(true)} className="flex items-center gap-1.5 px-4 py-2 bg-sky-500 text-white rounded-xl text-sm font-medium hover:bg-sky-600 transition-colors">
           + Добавить станцию
         </button>
@@ -481,6 +482,7 @@ function StationsPage() {
 }
 
 function SessionsPage() {
+  const { t } = useI18n();
   const adminSessions = useLiveAdminSessions();
   const [selected, setSelected] = useState<LegacyAdminSession | null>(null);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -497,7 +499,7 @@ function SessionsPage() {
       <div className={`flex-1 p-6 space-y-5 overflow-y-auto transition-all ${selected ? 'w-0 hidden' : ''} md:block md:flex-1`}>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-slate-900">Сессии</h1>
+            <h1 className="text-xl font-bold text-slate-900">{t('page.sessions')}</h1>
             <p className="text-sm text-slate-500">{filtered.length} из {adminSessions.length}</p>
           </div>
           <ExportButton
@@ -659,13 +661,14 @@ const revenueMonthly = [
 ];
 
 function FinancePage() {
+  const { t } = useI18n();
   const [selectedInvoice, setSelectedInvoice] = useState<typeof financeHistory[0] | null>(null);
 
   return (
     <div className="flex h-full">
       <div className="flex-1 p-6 space-y-5 overflow-y-auto min-w-0">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-slate-900">Финансы и расчёты</h1>
+          <h1 className="text-xl font-bold text-slate-900">{t('page.finance')}</h1>
           <button className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50">
             <Download size={14} />Выгрузить
           </button>
@@ -854,6 +857,7 @@ const ocppLog = [
 ];
 
 function IntegrationPage() {
+  const { t } = useI18n();
   const [tab, setTab] = useState<'ocpp' | 'ocpi' | 'webhooks'>('ocpp');
   const [selectedCs, setSelectedCs] = useState<typeof ocppChargers[0] | null>(null);
   const [cmdResult, setCmdResult] = useState<string | null>(null);
@@ -915,7 +919,7 @@ function IntegrationPage() {
       {/* Tabs */}
       <div className="px-6 pt-5 pb-0 border-b border-slate-100 shrink-0">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold text-slate-900">Интеграция</h1>
+          <h1 className="text-xl font-bold text-slate-900">{t('page.integration')}</h1>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
             <span className="text-xs text-green-600 font-medium">124 CS подключено</span>
@@ -1208,6 +1212,7 @@ const initialTariffs = [
 ];
 
 function TariffsPage() {
+  const { t } = useI18n();
   const [tariffs, setTariffs] = useState(initialTariffs);
   const [editing, setEditing] = useState<typeof initialTariffs[0] | null>(null);
 
@@ -1220,7 +1225,7 @@ function TariffsPage() {
   return (
     <div className="p-6 space-y-5 overflow-y-auto h-full relative">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900">Управление тарифами</h1>
+        <h1 className="text-xl font-bold text-slate-900">{t('page.tariffs')}</h1>
         <button className="flex items-center gap-1.5 px-4 py-2 bg-sky-500 text-white rounded-xl text-sm font-medium hover:bg-sky-600">
           + Новый тариф
         </button>
@@ -1507,6 +1512,7 @@ function StationDetailPage({ stationId, onBack }: { stationId: string; onBack: (
 }
 
 function CustomersPage() {
+  const { t } = useI18n();
   const customers = [
     { id: 'U-8831', name: 'Alisher T.', phone: '+998 90 123 45 67', sessions: 22, spent: 1680000, car: 'BYD Han EV', connector: 'CCS2', last: '4 сент 2026', rating: 5.0, joined: 'Янв 2024', avgKwh: 38.4, avgCost: 76400 },
     { id: 'U-4422', name: 'Nilufar K.', phone: '+998 91 234 56 78', sessions: 18, spent: 1240000, car: 'Hyundai Ioniq 6', connector: 'CCS2', last: '3 сент 2026', rating: 4.8, joined: 'Мар 2024', avgKwh: 42.1, avgCost: 68900 },
@@ -1545,7 +1551,7 @@ function CustomersPage() {
       <div className="flex-1 p-6 space-y-5 overflow-y-auto">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Клиенты</h1>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('page.clients')}</h1>
             <p className="text-sm text-slate-500 inter">Водители ONE CHARGE, заряжавшиеся на ваших станциях</p>
           </div>
           <button className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50">
@@ -1715,6 +1721,7 @@ function CustomersPage() {
 }
 
 function SettingsPage() {
+  const { t } = useI18n();
   const [showKey, setShowKey] = useState(false);
   const apiKey = 'oc_live_GreenChargeUZ_k9X2mP4nQ8rL1vT7wS3eA5hY6uN0jF';
   const [copied, setCopied] = useState(false);
@@ -1727,7 +1734,7 @@ function SettingsPage() {
 
   return (
     <div className="p-6 space-y-5 overflow-y-auto h-full">
-      <h1 className="text-xl font-bold text-slate-900">Настройки и API</h1>
+      <h1 className="text-xl font-bold text-slate-900">{t('page.settingsApi')}</h1>
 
       {/* API Keys */}
       <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
@@ -1842,6 +1849,7 @@ function SettingsPage() {
 }
 
 function HelpPage() {
+  const { t } = useI18n();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [ticketSent, setTicketSent] = useState(false);
   const [ticketText, setTicketText] = useState('');
@@ -1866,7 +1874,7 @@ function HelpPage() {
     <div className="p-6 space-y-5 overflow-y-auto h-full">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Помощь и поддержка</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('page.help')}</h1>
           <p className="text-sm text-slate-400 inter mt-0.5">Документация, FAQ и контакты команды ONE CHARGE</p>
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl" style={{ background: '#ECFDF5', border: '1px solid #A7F3D0' }}>
@@ -2012,6 +2020,7 @@ const staticAlerts = [
 ];
 
 function AlertsPage() {
+  const { t } = useI18n();
   const liveAlerts = useLiveAlerts();
   const { actions, refresh } = useSync();
   const [filter, setFilter] = useState<'all' | 'critical' | 'warning' | 'info'>('all');
@@ -2068,7 +2077,7 @@ function AlertsPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Оповещения</h1>
+          <h1 className="text-xl font-bold text-slate-800">{t('page.alerts')}</h1>
           <p className="text-sm text-slate-500 mt-0.5">{alertsData.length} оповещений всего</p>
         </div>
         <button

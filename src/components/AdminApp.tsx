@@ -196,6 +196,7 @@ function useLiveData() {
 }
 
 function AdminDashboard() {
+  const { t } = useI18n();
   const operators = useLiveOperators();
   const adminSessions = useLiveAdminSessions();
   const { liveData, lastUpdated } = useLiveData();
@@ -204,7 +205,7 @@ function AdminDashboard() {
     <div className="p-6 space-y-6 overflow-y-auto h-full">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Национальный обзор</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('page.nationalOverview')}</h1>
           <p className="text-sm text-slate-500 inter">ONE CHARGE UZ · Реальное время · 5 сент 2026</p>
         </div>
         <div className="flex items-center gap-2">
@@ -560,6 +561,7 @@ function LiveMapPage() {
 }
 
 function OperatorsPage() {
+  const { t } = useI18n();
   const operators = useLiveOperators();
   const { actions, refresh } = useSync();
   const [selected, setSelected] = useState<(typeof operators)[0] | null>(null);
@@ -578,7 +580,7 @@ function OperatorsPage() {
       <div className="flex-1 p-6 space-y-5 overflow-y-auto min-w-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-slate-900">Операторы</h1>
+            <h1 className="text-xl font-bold text-slate-900">{t('page.operators')}</h1>
             <p className="text-sm text-slate-500">{operators.length} зарегистрированных партнёров</p>
           </div>
           <button className="flex items-center gap-1.5 px-4 py-2 bg-sky-500 text-white rounded-xl text-sm font-medium hover:bg-sky-600">
@@ -764,6 +766,7 @@ const methodBreakdown = [
 ];
 
 function PaymentsPage() {
+  const { t } = useI18n();
   const payments = useLivePayments();
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'failed'>('all');
   const [selected, setSelected] = useState<(typeof payments)[0] | null>(null);
@@ -788,7 +791,7 @@ function PaymentsPage() {
       <div className="flex-1 p-6 space-y-5 overflow-y-auto">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-slate-900">Платёжный центр</h1>
+            <h1 className="text-xl font-bold text-slate-900">{t('page.paymentCenter')}</h1>
             <p className="text-sm text-slate-500">Все транзакции платформы · реальное время</p>
           </div>
           <ExportButton
@@ -967,12 +970,13 @@ const growthTrend = [
 ];
 
 function AnalyticsPage() {
+  const { t } = useI18n();
   const [tab, setTab] = useState<'overview' | 'regions' | 'connectors' | 'growth'>('overview');
 
   return (
     <div className="p-6 space-y-5 overflow-y-auto h-full">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900">Аналитика</h1>
+        <h1 className="text-xl font-bold text-slate-900">{t('page.analytics')}</h1>
         <button className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50">
           <Download size={14} />Экспорт
         </button>
@@ -1639,6 +1643,7 @@ const paymentMethods: Record<string, { type: string; last4: string; default: boo
 };
 
 function UsersPage() {
+  const { t } = useI18n();
   const [search, setSearch] = useState('');
   const [users, setUsers] = useState(allUsers);
   const [selected, setSelected] = useState<typeof allUsers[0] | null>(null);
@@ -1663,7 +1668,7 @@ function UsersPage() {
       <div className="flex-1 p-6 space-y-5 overflow-y-auto">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Пользователи</h1>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('page.users')}</h1>
             <p className="text-sm text-slate-500 inter">14 218 зарегистрированных аккаунтов · платформа ONE CHARGE</p>
           </div>
           <button className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50">
@@ -2095,6 +2100,7 @@ const pricingRules = [
 ];
 
 function GlobalTariffsPage() {
+  const { t } = useI18n();
   const [editingRegion, setEditingRegion] = useState<string | null>(null);
   const [regionData, setRegionData] = useState(regionTariffs);
   const [editValues, setEditValues] = useState<Record<string, number>>({});
@@ -2125,7 +2131,7 @@ function GlobalTariffsPage() {
     <div className="p-6 space-y-5 overflow-y-auto h-full">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Тарифы сети</h1>
+          <h1 className="text-xl font-bold text-slate-900">{t('page.networkTariffs')}</h1>
           <p className="text-sm text-slate-500">Ценообразование по регионам, пиковые правила и AI-оптимизация</p>
         </div>
         <button onClick={runAI} disabled={aiLoading}
@@ -2263,12 +2269,13 @@ function GlobalTariffsPage() {
 }
 
 function CommissionsPage() {
+  const { t } = useI18n();
   const operators = useLiveOperators();
   const [editing, setEditing] = useState<string | null>(null);
   return (
     <div className="p-6 space-y-5 overflow-y-auto h-full">
       <div>
-        <h1 className="text-xl font-bold text-slate-900">Управление комиссиями</h1>
+        <h1 className="text-xl font-bold text-slate-900">{t('page.commissions')}</h1>
         <p className="text-sm text-slate-500">Индивидуальные ставки ONE CHARGE per оператор</p>
       </div>
 
@@ -2901,6 +2908,7 @@ const extraSessions = [
 ];
 
 function AdminSessionsPage() {
+  const { t } = useI18n();
   const liveSessions = useLiveAdminSessions();
   const extendedSessions = [...liveSessions, ...extraSessions] as LegacyAdminSession[];
   const [selected, setSelected] = useState<LegacyAdminSession | null>(null);
@@ -2924,7 +2932,7 @@ function AdminSessionsPage() {
       <div className="flex-1 p-6 space-y-5 overflow-y-auto min-w-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-slate-900">Все сессии</h1>
+            <h1 className="text-xl font-bold text-slate-900">{t('page.allSessions')}</h1>
             <p className="text-sm text-slate-500">{filtered.length} записей</p>
           </div>
           <ExportButton
@@ -3072,6 +3080,7 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
 }
 
 function AdminSettingsPage() {
+  const { t } = useI18n();
   const [email, setEmail] = useState('rustam.nazarov@onecharge.uz');
   const [tfa, setTfa] = useState(true);
   const [showChangePw, setShowChangePw] = useState(false);
@@ -3098,7 +3107,7 @@ function AdminSettingsPage() {
     <div className="p-6 space-y-5 overflow-y-auto h-full">
       <TwoFactorPanel portal="admin" />
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900">Настройки</h1>
+        <h1 className="text-xl font-bold text-slate-900">{t('page.settings')}</h1>
         <button onClick={handleSave}
           className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${saved ? 'bg-green-500 text-white' : 'bg-sky-500 text-white hover:bg-sky-600'}`}>
           {saved ? '✓ Сохранено' : 'Сохранить'}
