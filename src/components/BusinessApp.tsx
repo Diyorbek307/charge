@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { revenueData } from '../data/mockData';
 import { useLiveVehicles, useLiveEmployees, useLiveStats } from '../lib/live';
+import { useSync } from '../lib/sync';
 import AnimatedCounter from './AnimatedCounter';
 import AIChat from './AIChat';
 
@@ -26,11 +27,11 @@ const staticFleetVehicles = [
 ];
 
 const staticEmployees = [
-  { name: 'Alisher Toshmatov', dept: 'Продажи', limit: 500000, spent: 284000, sessions: 22, vehicle: 'BYD Han EV' },
-  { name: 'Nilufar Karimova', dept: 'Маркетинг', limit: 400000, spent: 391000, sessions: 28, vehicle: 'Hyundai Ioniq 6' },
-  { name: 'Bobur Mirzayev', dept: 'IT', limit: 300000, spent: 142000, sessions: 14, vehicle: 'Tesla Model 3' },
-  { name: 'Dilshod Raximov', dept: 'Логистика', limit: 600000, spent: 521000, sessions: 38, vehicle: 'Kia EV6' },
-  { name: 'Kamola Abdullayeva', dept: 'HR', limit: 250000, spent: 98000, sessions: 9, vehicle: 'BYD Atto 3' },
+  { id: 'emp-01', name: 'Alisher Toshmatov', dept: 'Продажи', limit: 500000, spent: 284000, sessions: 22, vehicle: 'BYD Han EV' },
+  { id: 'emp-02', name: 'Nilufar Karimova', dept: 'Маркетинг', limit: 400000, spent: 391000, sessions: 28, vehicle: 'Hyundai Ioniq 6' },
+  { id: 'emp-03', name: 'Bobur Mirzayev', dept: 'IT', limit: 300000, spent: 142000, sessions: 14, vehicle: 'Tesla Model 3' },
+  { id: 'emp-04', name: 'Dilshod Raximov', dept: 'Логистика', limit: 600000, spent: 521000, sessions: 38, vehicle: 'Kia EV6' },
+  { id: 'emp-05', name: 'Kamola Abdullayeva', dept: 'HR', limit: 250000, spent: 98000, sessions: 9, vehicle: 'BYD Atto 3' },
 ];
 
 const monthlySpend = [
@@ -872,6 +873,7 @@ function FleetPage() {
 
 function EmployeesPage() {
   const liveEmployees = useLiveEmployees();
+  const { actions, refresh } = useSync();
   const employees = liveEmployees.length ? liveEmployees : staticEmployees;
   const [selected, setSelected] = useState<typeof employees[0] | null>(null);
   const [editingLimit, setEditingLimit] = useState(false);
@@ -1058,7 +1060,19 @@ function EmployeesPage() {
                   <div className="flex gap-2">
                     <input value={limitDraft} onChange={e => setLimitDraft(e.target.value)}
                       className="flex-1 text-sm border border-indigo-300 rounded-xl px-3 py-2 outline-none mono focus:ring-2 focus:ring-indigo-200" />
-                    <button onClick={() => setEditingLimit(false)}
+                    <button
+                      onClick={async () => {
+                        setEditingLimit(false);
+                        const next = Number(limitDraft.replace(/\s/g, ''));
+                        if (!Number.isFinite(next) || next < 0) return;
+                        try {
+                          await actions.setEmployeeLimit('business', selected.id, next);
+                          await refresh();
+                          setSelected(prev => (prev ? { ...prev, limit: next } : prev));
+                        } catch {
+                          /* server keeps the previous limit */
+                        }
+                      }}
                       className="px-3 py-2 bg-indigo-500 text-white rounded-xl text-xs font-semibold hover:bg-indigo-600">
                       ✓
                     </button>

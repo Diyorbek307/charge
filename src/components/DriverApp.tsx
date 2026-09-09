@@ -1344,7 +1344,10 @@ function AppSettingsScreen({ onBack }: { onBack: () => void }) {
 }
 
 function WalletScreen({ onBack }: { onBack: () => void }) {
-  const [balance] = useState(47500);
+  const { actions, refresh, state, sessions: portalSessions } = useSync();
+  const driverId = portalSessions.driver?.id;
+  // Balance is owned by the server so a top-up shows up in every portal.
+  const balance = (driverId && state?.wallets?.[driverId]?.balance) ?? 47500;
   const [showTopUp, setShowTopUp] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState('');
@@ -1368,9 +1371,15 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
     { id: 'W-1036', type: 'charge', amount: -75820, label: 'Зарядка — SolarStation Bukhara', date: '31 авг, 16:10' },
   ];
 
-  const doTopUp = () => {
+  const doTopUp = async () => {
     const amt = selectedAmount || parseInt(customAmount) || 0;
     if (amt < 5000) return;
+    try {
+      await actions.topUp('driver', amt);
+      await refresh();
+    } catch {
+      /* balance falls back to the server's value on the next snapshot */
+    }
     setTopUpSuccess(true);
     setTimeout(() => {
       setShowTopUp(false);

@@ -11,6 +11,7 @@ import {
   ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell
 } from 'recharts';
 import { revenueData, hourlyData, connectorDistribution } from '../data/mockData';
+import { useSync } from '../lib/sync';
 import {
   useLiveOperators,
   useLiveAdminSessions,
@@ -554,6 +555,7 @@ function LiveMapPage() {
 
 function OperatorsPage() {
   const operators = useLiveOperators();
+  const { actions, refresh } = useSync();
   const [selected, setSelected] = useState<(typeof operators)[0] | null>(null);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
 
@@ -723,7 +725,20 @@ function OperatorsPage() {
                   <p className="text-xs text-red-700 font-medium mb-2">Подтвердить отключение?</p>
                   <div className="flex gap-2">
                     <button onClick={() => setConfirmDisconnect(false)} className="flex-1 py-1.5 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">Отмена</button>
-                    <button onClick={() => setConfirmDisconnect(false)} className="flex-1 py-1.5 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600">Отключить</button>
+                    <button
+                      onClick={async () => {
+                        setConfirmDisconnect(false);
+                        try {
+                          await actions.setOperatorStatus('admin', selected.id, selected.status === 'suspended' ? 'active' : 'suspended');
+                          await refresh();
+                        } catch {
+                          /* status stays as the server reports it */
+                        }
+                      }}
+                      className="flex-1 py-1.5 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600"
+                    >
+                      {selected.status === 'suspended' ? 'Включить' : 'Отключить'}
+                    </button>
                   </div>
                 </div>
               )}
