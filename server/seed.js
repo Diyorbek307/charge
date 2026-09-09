@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 
 // Bump when the shape below changes so existing stores reseed instead of
 // silently serving a stale schema.
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 export function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   const hash = crypto.scryptSync(password, salt, 32).toString('hex');
@@ -219,6 +219,7 @@ export function seed() {
       },
     ],
     deliveries: [],
-    counters: { session: 10843, txn: 28442, alert: 5, event: 1, webhook: 2, delivery: 1 },
+    reports: [],
+    counters: { session: 10843, txn: 28442, alert: 5, event: 1, webhook: 2, delivery: 1, report: 1 },
   };
 }

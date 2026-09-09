@@ -162,6 +162,7 @@ const DICT = {
   'export.pdf': { ru: 'PDF-отчёт', uz: 'PDF hisobot', en: 'PDF report' },
   'export.pdfHint': { ru: 'A4, альбомная', uz: 'A4, albom', en: 'A4, landscape' },
   'export.building': { ru: 'Формируем…', uz: 'Tayyorlanmoqda…', en: 'Building…' },
+  'export.history': { ru: 'Последние выгрузки', uz: 'So‘nggi eksportlar', en: 'Recent exports' },
 
   // ── Dashboard navigation (shared across the three consoles) ──
   'nav.group.overview': { ru: 'Обзор', uz: 'Umumiy', en: 'Overview' },

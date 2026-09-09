@@ -175,6 +175,17 @@ export interface PlatformState {
   serverTime: string;
 }
 
+export interface ReportRecord {
+  id: string;
+  name: string;
+  title: string;
+  format: 'csv' | 'pdf';
+  rows: number;
+  actor: string;
+  portal: string;
+  ts: string;
+}
+
 export interface DemoCredential {
   portal: Portal;
   login: string;
@@ -286,4 +297,9 @@ export const apiClient = {
     post<{ operator: OperatorRecord }>(`/operators/${id}/status`, { status }, portal),
 
   resetDemo: (portal: Portal) => post<{ ok: boolean }>('/admin/reset', undefined, portal),
+
+  listReports: (portal: Portal, name: string) =>
+    request<ReportRecord[]>(`/reports?name=${encodeURIComponent(name)}&limit=5`, { portal }),
+  recordReport: (portal: Portal, body: { name: string; title: string; format: 'csv' | 'pdf'; rows: number }) =>
+    post<{ report: ReportRecord }>('/reports', body, portal),
 };

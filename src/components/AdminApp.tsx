@@ -792,6 +792,7 @@ function PaymentsPage() {
             <p className="text-sm text-slate-500">Все транзакции платформы · реальное время</p>
           </div>
           <ExportButton
+            portal="admin"
             name="one-charge-payments"
             title="Payments report"
             headers={['ID', 'Пользователь', 'Сумма', 'Метод', 'Статус', 'Время', 'Сессия']}
@@ -2927,6 +2928,7 @@ function AdminSessionsPage() {
             <p className="text-sm text-slate-500">{filtered.length} записей</p>
           </div>
           <ExportButton
+            portal="admin"
             name="one-charge-cdr"
             title="CDR export"
             headers={['ID', 'Пользователь', 'Станция', 'Начало', 'Конец', 'Энергия', 'Стоимость', 'Статус']}

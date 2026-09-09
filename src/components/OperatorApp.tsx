@@ -501,6 +501,7 @@ function SessionsPage() {
             <p className="text-sm text-slate-500">{filtered.length} из {adminSessions.length}</p>
           </div>
           <ExportButton
+            portal="operator"
             name="one-charge-sessions"
             title="Sessions report"
             headers={['ID', 'Пользователь', 'Станция', 'Оператор', 'Начало', 'Конец', 'Энергия', 'Стоимость', 'Статус']}

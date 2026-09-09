@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { Download, FileText, Sheet, LoaderCircle, Check } from 'lucide-react';
+import { Download, FileText, Sheet, LoaderCircle, Check, History } from 'lucide-react';
 import { exportCsv, exportPdf, type CsvValue } from '../lib/export';
 import { useI18n } from '../lib/i18n';
+import { useSync } from '../lib/sync';
+import type { Portal, ReportRecord } from '../lib/api';
 
 interface Props {
   /** Base file name, without extension or timestamp. */
@@ -9,16 +11,28 @@ interface Props {
   title: string;
   headers: string[];
   rows: CsvValue[][];
+  /** Portal whose credentials record the export in the audit history. */
+  portal?: Portal;
   className?: string;
 }
 
-export default function ExportButton({ name, title, headers, rows, className = '' }: Props) {
+export default function ExportButton({ name, title, headers, rows, portal, className = '' }: Props) {
   const { t } = useI18n();
+  const { actions } = useSync();
   const [open, setOpen] = useState(false);
+  const [history, setHistory] = useState<ReportRecord[]>([]);
   const [busy, setBusy] = useState<'pdf' | null>(null);
   const [done, setDone] = useState(false);
   const [failed, setFailed] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open || !portal) return;
+    actions
+      .listReports(portal, name)
+      .then(setHistory)
+      .catch(() => setHistory([]));
+  }, [open, portal, name, actions]);
 
   useEffect(() => {
     if (!open) return;
@@ -34,8 +48,15 @@ export default function ExportButton({ name, title, headers, rows, className = '
     setTimeout(() => setDone(false), 1800);
   };
 
+  /** Best-effort audit trail; a failed record must not break the download. */
+  const record = (format: 'csv' | 'pdf') => {
+    if (!portal) return;
+    actions.recordReport(portal, { name, title, format, rows: rows.length }).catch(() => {});
+  };
+
   const doCsv = () => {
     exportCsv(name, headers, rows);
+    record('csv');
     setOpen(false);
     flash();
   };
@@ -45,6 +66,7 @@ export default function ExportButton({ name, title, headers, rows, className = '
     setFailed(false);
     try {
       await exportPdf(name, title, headers, rows);
+      record('pdf');
       flash();
     } catch {
       setFailed(true);
@@ -94,6 +116,26 @@ export default function ExportButton({ name, title, headers, rows, className = '
                 <span className="block text-[10px] text-slate-400">{t('export.pdfHint')}</span>
               </span>
             </button>
+          )}
+
+          {history.length > 0 && (
+            <div className="border-t border-slate-100 bg-slate-50/60 px-3 py-2">
+              <p className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
+                <History size={10} />
+                {t('export.history')}
+              </p>
+              <div className="space-y-1">
+                {history.map(h => (
+                  <div key={h.id} className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                    <span className="font-mono uppercase text-slate-400 w-7 shrink-0">{h.format}</span>
+                    <span className="truncate flex-1">{h.actor}</span>
+                    <span className="shrink-0 text-slate-400">
+                      {new Date(h.ts).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       )}
