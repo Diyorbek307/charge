@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { ArrowRight, Lock, LoaderCircle, ShieldCheck, TriangleAlert, Copy, Check } from 'lucide-react';
+import { ArrowRight, Lock, LoaderCircle, ShieldCheck, TriangleAlert, Copy, Check, KeyRound } from 'lucide-react';
 import { useSync } from '../lib/sync';
 import { useI18n } from '../lib/i18n';
 import type { Portal } from '../lib/api';
@@ -21,7 +21,7 @@ interface Props {
 }
 
 export default function PortalLogin({ portal, title, subtitle, icon, onBack }: Props) {
-  const { login, credentials } = useSync();
+  const { login, verify2fa, credentials } = useSync();
   const { t } = useI18n();
   const theme = THEME[portal];
   const demo = credentials.find(c => c.portal === portal);
@@ -31,6 +31,9 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // Set once the password is accepted but a TOTP code is still required.
+  const [challenge, setChallenge] = useState<string | null>(null);
+  const [code, setCode] = useState('');
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -38,7 +41,24 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
     setBusy(true);
     setError(null);
     try {
-      await login(portal, loginValue.trim(), password);
+      const result = await login(portal, loginValue.trim(), password);
+      if (result.requires2fa) {
+        setChallenge(result.challenge);
+        setBusy(false);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('auth.failed'));
+      setBusy(false);
+    }
+  };
+
+  const submitCode = async (e: FormEvent) => {
+    e.preventDefault();
+    if (busy || !challenge) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await verify2fa(portal, challenge, code.trim());
     } catch (err) {
       setError(err instanceof Error ? err.message : t('auth.failed'));
       setBusy(false);
@@ -81,6 +101,47 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{title}</h1>
           <p className="text-sm text-slate-400 mt-1.5 mb-6">{subtitle}</p>
 
+          {challenge ? (
+            <form onSubmit={submitCode} className="space-y-3.5">
+              <div className="flex items-start gap-2.5 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-2.5">
+                <KeyRound size={14} className="text-sky-400 shrink-0 mt-px" />
+                <p className="text-xs text-sky-200 leading-relaxed">
+                  Введите 6-значный код из приложения-аутентификатора
+                </p>
+              </div>
+              <input
+                id={`${portal}-code`}
+                value={code}
+                onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                autoFocus
+                placeholder="000000"
+                className={`w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-3 text-center text-lg tracking-[0.4em] font-mono text-white placeholder:text-slate-700 outline-none transition-all focus:ring-2 ${theme.ring}`}
+              />
+              {error && (
+                <div role="alert" className="flex items-start gap-2 text-xs text-rose-300 bg-rose-500/10 border border-rose-500/20 rounded-xl px-3 py-2.5">
+                  <TriangleAlert size={14} className="shrink-0 mt-px" />
+                  <span>{error}</span>
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={busy || code.length !== 6}
+                className={`w-full bg-gradient-to-r ${theme.grad} text-white font-semibold py-3 rounded-xl text-sm transition-all hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+              >
+                {busy ? <LoaderCircle size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
+                {busy ? t('auth.checking') : t('auth.signIn')}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setChallenge(null); setCode(''); setError(null); }}
+                className="w-full text-xs text-slate-500 hover:text-slate-300 transition-colors"
+              >
+                Назад
+              </button>
+            </form>
+          ) : (
           <form onSubmit={submit} className="space-y-3.5">
             <div>
               <label htmlFor={`${portal}-login`} className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
@@ -133,8 +194,9 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
               {busy ? t('auth.checking') : t('auth.signIn')}
             </button>
           </form>
+          )}
 
-          {demo && (
+          {!challenge && demo && (
             <div className="mt-5 pt-5 border-t border-white/8">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">{t('auth.demoAccess')}</p>

@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { revenueData, hourlyData, connectorDistribution } from '../data/mockData';
 import { useSync } from '../lib/sync';
+import TwoFactorPanel from './TwoFactorPanel';
 import SidebarThemeToggle from './SidebarThemeToggle';
 import ExportButton from './ExportButton';
 import {
@@ -3091,6 +3092,7 @@ function AdminSettingsPage() {
 
   return (
     <div className="p-6 space-y-5 overflow-y-auto h-full">
+      <TwoFactorPanel portal="admin" />
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-slate-900">Настройки</h1>
         <button onClick={handleSave}

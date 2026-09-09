@@ -2,6 +2,7 @@ import express from 'express';
 import crypto from 'node:crypto';
 import { db, publicAccount } from './db.js';
 import { DEMO_ACCOUNTS } from './seed.js';
+import { generateSecret, verifyTotp, otpauthUri } from './totp.js';
 
 export const api = express.Router();
 api.use(express.json());
@@ -167,6 +168,19 @@ api.post('/auth/login', (req, res) => {
     return res.status(401).json({ error: 'Неверный логин или пароль' });
   }
 
+  // With 2FA on, the password only earns a short-lived challenge.
+  if (account.twoFactor?.enabled) {
+    const challenge = crypto.randomBytes(18).toString('hex');
+    db.data.challenges.unshift({
+      challenge,
+      accountId: account.id,
+      expires: Date.now() + 5 * 60_000,
+    });
+    if (db.data.challenges.length > 50) db.data.challenges.length = 50;
+    db.save();
+    return res.json({ requires2fa: true, challenge });
+  }
+
   const token = db.issueToken(account);
   db.update('accounts', account.id, { lastLogin: new Date().toISOString() });
   emit({
@@ -178,6 +192,91 @@ api.post('/auth/login', (req, res) => {
   });
 
   res.json({ token, user: publicAccount(account) });
+});
+
+// ---------------------------------------------------------------------------
+// Two-factor authentication (TOTP, RFC 6238)
+// ---------------------------------------------------------------------------
+
+api.post('/auth/2fa/verify', (req, res) => {
+  const { challenge, code } = req.body ?? {};
+  const idx = db.data.challenges.findIndex(c => c.challenge === challenge);
+  if (idx < 0) return res.status(401).json({ error: 'Сессия входа истекла' });
+
+  const entry = db.data.challenges[idx];
+  if (entry.expires < Date.now()) {
+    db.data.challenges.splice(idx, 1);
+    db.save();
+    return res.status(401).json({ error: 'Сессия входа истекла' });
+  }
+
+  const account = db.byId('accounts', entry.accountId);
+  if (!account || !verifyTotp(account.twoFactor.secret, code)) {
+    return res.status(401).json({ error: 'Неверный код подтверждения' });
+  }
+
+  // One challenge, one login.
+  db.data.challenges.splice(idx, 1);
+  const token = db.issueToken(account);
+  db.update('accounts', account.id, { lastLogin: new Date().toISOString() });
+  emit({
+    type: 'auth.login',
+    portal: account.portal,
+    actor: account.name,
+    message: `${account.name} вошёл в ${portalLabel(account.portal)} (2FA)`,
+    entity: account.id,
+  });
+
+  res.json({ token, user: publicAccount(account) });
+});
+
+api.get('/auth/2fa', requireAuth(), (req, res) => {
+  res.json({ enabled: !!req.account.twoFactor?.enabled });
+});
+
+/** Issues a secret but leaves 2FA off until a code proves the app is paired. */
+api.post('/auth/2fa/setup', requireAuth(), (req, res) => {
+  const secret = generateSecret();
+  req.account.twoFactor = { ...(req.account.twoFactor ?? {}), pending: secret };
+  db.save();
+  res.json({ secret, uri: otpauthUri(secret, req.account.login) });
+});
+
+api.post('/auth/2fa/enable', requireAuth(), (req, res) => {
+  const pending = req.account.twoFactor?.pending;
+  if (!pending) return res.status(400).json({ error: 'Сначала запросите секрет' });
+  if (!verifyTotp(pending, req.body?.code)) {
+    return res.status(401).json({ error: 'Код не совпал — проверьте время на телефоне' });
+  }
+
+  req.account.twoFactor = { enabled: true, secret: pending, pending: null };
+  db.save();
+  emit({
+    type: 'auth.2fa',
+    portal: req.account.portal,
+    actor: req.account.name,
+    message: `${req.account.name} включил двухфакторную аутентификацию`,
+    entity: req.account.id,
+  });
+  res.json({ enabled: true });
+});
+
+api.post('/auth/2fa/disable', requireAuth(), (req, res) => {
+  if (!req.account.twoFactor?.enabled) return res.json({ enabled: false });
+  // Disabling is privileged too — require a current code.
+  if (!verifyTotp(req.account.twoFactor.secret, req.body?.code)) {
+    return res.status(401).json({ error: 'Неверный код подтверждения' });
+  }
+  req.account.twoFactor = { enabled: false, secret: null, pending: null };
+  db.save();
+  emit({
+    type: 'auth.2fa',
+    portal: req.account.portal,
+    actor: req.account.name,
+    message: `${req.account.name} отключил двухфакторную аутентификацию`,
+    entity: req.account.id,
+  });
+  res.json({ enabled: false });
 });
 
 /** Driver portal keeps its phone + OTP flow; the code is fixed in demo mode. */

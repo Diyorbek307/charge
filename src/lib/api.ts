@@ -1,5 +1,10 @@
 export type Portal = 'driver' | 'operator' | 'admin' | 'business' | 'api';
 
+/** A password may buy a token outright, or only a 2FA challenge. */
+export type LoginResult =
+  | { token: string; user: Account; requires2fa?: false }
+  | { requires2fa: true; challenge: string };
+
 export interface Account {
   id: string;
   portal: Portal;
@@ -10,6 +15,7 @@ export interface Account {
   orgId: string | null;
   avatar: string;
   lastLogin: string | null;
+  twoFactorEnabled?: boolean;
 }
 
 export interface Connector {
@@ -244,7 +250,14 @@ export const apiClient = {
   getDemoCredentials: () => request<DemoCredential[]>('/auth/demo-credentials'),
 
   login: (portal: Portal, login: string, password: string) =>
-    post<{ token: string; user: Account }>('/auth/login', { portal, login, password }),
+    post<LoginResult>('/auth/login', { portal, login, password }),
+
+  verify2fa: (challenge: string, code: string) =>
+    post<{ token: string; user: Account }>('/auth/2fa/verify', { challenge, code }),
+  get2fa: (portal: Portal) => request<{ enabled: boolean }>('/auth/2fa', { portal }),
+  setup2fa: (portal: Portal) => post<{ secret: string; uri: string }>('/auth/2fa/setup', undefined, portal),
+  enable2fa: (portal: Portal, code: string) => post<{ enabled: boolean }>('/auth/2fa/enable', { code }, portal),
+  disable2fa: (portal: Portal, code: string) => post<{ enabled: boolean }>('/auth/2fa/disable', { code }, portal),
 
   requestOtp: (phone: string) => post<{ sent: boolean; hint: string }>('/auth/otp/request', { phone }),
   verifyOtp: (phone: string, code: string) =>

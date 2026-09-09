@@ -20,7 +20,12 @@ interface SyncContextValue {
   credentials: DemoCredential[];
   sessions: Record<Portal, Account | null>;
   refresh: () => Promise<void>;
-  login: (portal: Portal, login: string, password: string) => Promise<Account>;
+  login: (
+    portal: Portal,
+    login: string,
+    password: string,
+  ) => Promise<{ requires2fa: true; challenge: string } | { requires2fa: false; user: Account }>;
+  verify2fa: (portal: Portal, challenge: string, code: string) => Promise<Account>;
   loginWithOtp: (phone: string, code: string) => Promise<Account>;
   requestOtp: (phone: string) => Promise<string>;
   logout: (portal: Portal) => Promise<void>;
@@ -148,8 +153,18 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(t);
   }, [activeSessionId]);
 
+  /** Resolves to the account, or to a challenge the caller must answer with a code. */
   const login = useCallback(async (portal: Portal, loginValue: string, password: string) => {
-    const { token, user } = await apiClient.login(portal, loginValue, password);
+    const result = await apiClient.login(portal, loginValue, password);
+    if (result.requires2fa) return { requires2fa: true as const, challenge: result.challenge };
+
+    tokenStore.set(portal, result.token);
+    setSessions(s => ({ ...s, [portal]: result.user }));
+    return { requires2fa: false as const, user: result.user };
+  }, []);
+
+  const verify2fa = useCallback(async (portal: Portal, challenge: string, code: string) => {
+    const { token, user } = await apiClient.verify2fa(challenge, code);
     tokenStore.set(portal, token);
     setSessions(s => ({ ...s, [portal]: user }));
     return user;
@@ -187,13 +202,14 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       sessions,
       refresh,
       login,
+      verify2fa,
       loginWithOtp,
       requestOtp,
       logout,
       actions: apiClient,
       lastError,
     }),
-    [state, connection, events, eventCount, credentials, sessions, refresh, login, loginWithOtp, requestOtp, logout, lastError],
+    [state, connection, events, eventCount, credentials, sessions, refresh, login, verify2fa, loginWithOtp, requestOtp, logout, lastError],
   );
 
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;
