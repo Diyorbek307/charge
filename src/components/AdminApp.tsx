@@ -3530,17 +3530,9 @@ function SystemHealthPage() {
 }
 
 export default function AdminApp({ onBack }: { onBack: () => void }) {
-  const [authed, setAuthed] = useState(false);
+  // Authentication is handled by the real per-portal gate in App.tsx.
   const [page, setPage] = useState<Page>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  if (!authed) {
-    return (
-      <div className="h-full">
-        <AuthFlow onLogin={() => setAuthed(true)} />
-      </div>
-    );
-  }
 
   const renderPage = () => {
     const pages: Record<string, ReactNode> = {

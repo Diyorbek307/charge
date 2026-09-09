@@ -6,6 +6,10 @@ import AdminApp from './components/AdminApp';
 import BusinessApp from './components/BusinessApp';
 import ApiDocsApp from './components/ApiDocsApp';
 import AuthFlow from './components/AuthFlow';
+import PortalLogin from './components/PortalLogin';
+import SyncInspector from './components/SyncInspector';
+import { useSync } from './lib/sync';
+import type { Portal as AuthPortal } from './lib/api';
 
 type Portal = 'selector' | 'driver' | 'operator' | 'admin' | 'business' | 'api' | 'architecture';
 
@@ -594,9 +598,36 @@ const changelog = [
   { icon: '🗺️', title: 'Маршрутизатор поездок', desc: 'Планирование маршрута с учётом зарядных остановок' },
 ];
 
+/**
+ * Wraps a portal in its own authentication gate. Each portal keeps a separate
+ * token, so signing into one never signs you into another.
+ */
+function PortalGate({
+  portal,
+  title,
+  subtitle,
+  icon,
+  onBack,
+  children,
+}: {
+  portal: AuthPortal;
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  onBack: () => void;
+  children: React.ReactNode;
+}) {
+  const { sessions } = useSync();
+  if (!sessions[portal]) {
+    return <PortalLogin portal={portal} title={title} subtitle={subtitle} icon={icon} onBack={onBack} />;
+  }
+  return <>{children}</>;
+}
+
 export default function App() {
   const [portal, setPortal] = useState<Portal>('selector');
-  const [driverAuthed, setDriverAuthed] = useState(false);
+  const { sessions } = useSync();
+  const driverSession = sessions.driver;
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('oc-theme') === 'dark');
 
   useEffect(() => {
@@ -616,7 +647,7 @@ export default function App() {
 
   return (
     <div className={`size-full overflow-hidden${darkMode ? ' dark' : ''}`}>
-      {portal === 'selector' && <PortalSelector onSelect={p => { if (p === 'driver') setDriverAuthed(false); setPortal(p); }} darkMode={darkMode} setDarkMode={setDarkMode} />}
+      {portal === 'selector' && <PortalSelector onSelect={setPortal} darkMode={darkMode} setDarkMode={setDarkMode} />}
       {portal === 'driver' && (
         <div className="h-full flex items-center justify-center relative overflow-hidden" style={{ background: 'radial-gradient(ellipse at 50% 30%, #0f1e3a 0%, #080d19 50%, #050810 100%)' }}>
           {/* Animated ambient orbs */}
@@ -634,7 +665,17 @@ export default function App() {
             <div className="absolute inset-0 rounded-[42px] shadow-[0_32px_80px_rgba(0,0,0,0.6),0_0_0_2px_rgba(255,255,255,0.08)] overflow-hidden" style={{ background: 'linear-gradient(135deg, #2a2a2e 0%, #1a1a1e 100%)' }}>
               <div className="absolute inset-[2px] bg-black rounded-[40px] overflow-hidden">
                 <div className="w-full h-full bg-white rounded-[40px] overflow-hidden">
-                  {driverAuthed ? <DriverApp /> : <AuthFlow onComplete={() => setDriverAuthed(true)} />}
+                  {driverSession ? (
+                    <DriverApp />
+                  ) : (
+                    <PortalLogin
+                      portal="driver"
+                      title="Driver App"
+                      subtitle="Вход в мобильное приложение"
+                      icon={<Car size={22} />}
+                      onBack={() => setPortal('selector')}
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -658,11 +699,28 @@ export default function App() {
           </div>
         </div>
       )}
-      {portal === 'operator' && <div className="h-full overflow-x-auto"><OperatorApp onBack={() => setPortal('selector')} /></div>}
-      {portal === 'admin' && <div className="h-full overflow-x-auto"><AdminApp onBack={() => setPortal('selector')} /></div>}
-      {portal === 'business' && <div className="h-full overflow-x-auto"><BusinessApp onBack={() => setPortal('selector')} /></div>}
-      {portal === 'api' && <ApiDocsApp onBack={() => setPortal('selector')} />}
+      {portal === 'operator' && (
+        <PortalGate portal="operator" title="Operator Portal" subtitle="Кабинет оператора зарядной сети" icon={<Building2 size={22} />} onBack={() => setPortal('selector')}>
+          <div className="h-full overflow-x-auto"><OperatorApp onBack={() => setPortal('selector')} /></div>
+        </PortalGate>
+      )}
+      {portal === 'admin' && (
+        <PortalGate portal="admin" title="Admin Control Center" subtitle="Национальный мониторинг платформы" icon={<Shield size={22} />} onBack={() => setPortal('selector')}>
+          <div className="h-full overflow-x-auto"><AdminApp onBack={() => setPortal('selector')} /></div>
+        </PortalGate>
+      )}
+      {portal === 'business' && (
+        <PortalGate portal="business" title="Business Portal" subtitle="Корпоративный кабинет автопарка" icon={<Briefcase size={22} />} onBack={() => setPortal('selector')}>
+          <div className="h-full overflow-x-auto"><BusinessApp onBack={() => setPortal('selector')} /></div>
+        </PortalGate>
+      )}
+      {portal === 'api' && (
+        <PortalGate portal="api" title="Partner API" subtitle="Документация и песочница интеграции" icon={<BookOpen size={22} />} onBack={() => setPortal('selector')}>
+          <ApiDocsApp onBack={() => setPortal('selector')} />
+        </PortalGate>
+      )}
       {portal === 'architecture' && <ArchitectureDiagram onBack={() => setPortal('selector')} />}
+      <SyncInspector />
       {showChangelog && portal === 'selector' && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm" style={{animation:'fade-in 0.3s ease both'}}>
           <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl" style={{animation:'scale-in 0.4s cubic-bezier(0.16,1,0.3,1) both'}}>
