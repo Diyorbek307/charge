@@ -864,7 +864,7 @@ function PaymentsPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                {['TXN ID', 'Пользователь', 'Метод', 'Сумма', 'Сессия', 'Время', 'Статус', ''].map(h => (
+                {['TXN ID', t('th.user'), t('th.method'), t('th.amount'), t('th.session'), t('th.time'), t('th.status'), ''].map(h => (
                   <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -1075,7 +1075,7 @@ function AnalyticsPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                {['Регион', 'Сессии', 'Выручка (M)', 'кВт·ч (k)', 'Станций', 'Рост', 'Загрузка'].map(h => (
+                {[t('th.region'), t('th.sessions'), t('th.revenueM'), t('th.kwhK'), t('th.stationsCount'), t('th.growth'), t('th.utilisation')].map(h => (
                   <th key={h} className="px-5 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -1706,7 +1706,7 @@ function UsersPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                {['Пользователь', 'Телефон', 'Автомобиль', 'Сессии', 'Расходы', 'Регистрация', 'Статус'].map(h => (
+                {[t('th.user'), t('th.phone'), t('th.vehicle'), t('th.sessions'), t('th.expenses'), t('th.registered'), t('th.status')].map(h => (
                   <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide inter whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -1876,6 +1876,7 @@ const settlementMonthly = [
 ];
 
 function SettlementPage() {
+  const { t } = useI18n();
   const [selected, setSelected] = useState<typeof settlementInvoices[0] | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'pending' | 'processing'>('all');
   const [executing, setExecuting] = useState<string | null>(null);
@@ -1987,7 +1988,7 @@ function SettlementPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                {['Инвойс', 'Оператор', 'Период', 'Выручка', 'Комиссия %', 'К выплате', 'Дата', 'Статус', ''].map(h => (
+                {[t('th.invoice'), t('th.operator'), t('th.period'), t('th.revenue'), t('th.commissionPct'), t('th.payout'), t('th.date'), t('th.status'), ''].map(h => (
                   <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">{h}</th>
                 ))}
               </tr>
@@ -2177,7 +2178,7 @@ function GlobalTariffsPage() {
         <table className="w-full">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-100">
-              {['Регион', 'DC Fast (CCS2)', 'AC Standard', 'DC Ночной', 'Сессий / мес', 'Тренд', ''].map(h => (
+              {[t('th.region'), 'DC Fast (CCS2)', 'AC Standard', t('th.dcNight'), t('th.sessionsPerMonth'), t('th.trend'), ''].map(h => (
                 <th key={h} className="px-5 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">{h}</th>
               ))}
             </tr>
@@ -2294,7 +2295,7 @@ function CommissionsPage() {
         <table className="w-full">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-100">
-              {['Оператор', 'Интеграция', 'Ставка', 'Ежемес. комиссия', 'Изменено', 'Действие'].map(h => (
+              {[t('th.operator'), t('th.integration'), t('th.rate'), t('th.monthlyFee'), t('th.changed'), t('th.action')].map(h => (
                 <th key={h} className="px-5 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">{h}</th>
               ))}
             </tr>
@@ -2418,6 +2419,7 @@ const cdrRecords = [
 ];
 
 function CDRValidationPage() {
+  const { t } = useI18n();
   const [filter, setFilter] = useState<'all' | 'suspicious' | 'mismatch' | 'valid'>('all');
   const filtered = filter === 'all' ? cdrRecords : cdrRecords.filter(r => r.status === filter);
 
@@ -2470,7 +2472,7 @@ function CDRValidationPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-100">
-              {['CDR ID', 'Оператор', 'Пользователь', 'Начало', 'Конец', 'Энергия', 'Расчёт', 'Выставлено', 'Статус', ''].map(h => (
+              {['CDR ID', t('th.operator'), t('th.user'), t('th.start'), t('th.end'), t('th.energy'), t('th.settlement'), t('th.invoiced'), t('th.status'), ''].map(h => (
                 <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -2975,7 +2977,7 @@ function AdminSessionsPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                {['ID', 'Пользователь', 'Станция', 'Начало', 'Конец', 'кВт·ч', 'Сумма', 'Статус'].map(h => (
+                {['ID', t('th.user'), t('th.station'), t('th.start'), t('th.end'), t('th.kwh'), t('th.amount'), t('th.status')].map(h => (
                   <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -3452,6 +3454,7 @@ const systemServices = [
 ];
 
 function SystemHealthPage() {
+  const { t } = useI18n();
   const totalConnected = ocppConnections.reduce((s, o) => s + o.connected, 0);
   const totalStations = ocppConnections.reduce((s, o) => s + o.total, 0);
 
@@ -3541,7 +3544,7 @@ function SystemHealthPage() {
         <table className="w-full">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-100">
-              {['Оператор', 'Подключено', 'Latency', 'Uptime 30д', 'Статус'].map(h => (
+              {[t('th.operator'), t('th.connected'), 'Latency', t('th.uptime30'), t('th.status')].map(h => (
                 <th key={h} className="px-5 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">{h}</th>
               ))}
             </tr>
