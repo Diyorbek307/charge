@@ -222,10 +222,10 @@ function AdminDashboard() {
       {/* National KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Операторы', num: 4, sub: '3 активных', icon: <Building2 size={14} />, bg: 'bg-sky-50', ic: 'text-sky-500' },
-          { label: 'Станции', num: 108, sub: '96 онлайн', icon: <MapPin size={14} />, bg: 'bg-emerald-50', ic: 'text-emerald-600' },
+          { label: t('lbl2.operators'), num: 4, sub: '3 активных', icon: <Building2 size={14} />, bg: 'bg-sky-50', ic: 'text-sky-500' },
+          { label: t('lbl2.stations'), num: 108, sub: '96 онлайн', icon: <MapPin size={14} />, bg: 'bg-emerald-50', ic: 'text-emerald-600' },
           { label: 'EVSE', num: 276, sub: '38 активны сейчас', icon: <Zap size={14} />, bg: 'bg-amber-50', ic: 'text-amber-500' },
-          { label: 'Пользователи', num: 14218, sub: '+420 этой неделе', icon: <Users size={14} />, bg: 'bg-violet-50', ic: 'text-violet-500' },
+          { label: t('lbl2.users'), num: 14218, sub: '+420 этой неделе', icon: <Users size={14} />, bg: 'bg-violet-50', ic: 'text-violet-500' },
         ].map((k, i) => (
           <div key={k.label} className="bg-white rounded-2xl p-4 border border-slate-100/80 hover:shadow-md transition-all enter-up"
             style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)', animationDelay: `${i * 60}ms` }}>
@@ -243,10 +243,10 @@ function AdminDashboard() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Выручка (сент.)', num: 394.1, suffix: 'M', sub: '+19% vs авг.', positive: true },
-          { label: 'Комиссии ONE CHARGE', num: 12.8, suffix: 'M', sub: 'средн. 3.25%', positive: true },
-          { label: 'Ошибочных сессий', num: 14, suffix: '', sub: '0.05% от общего', positive: false },
-          { label: 'Платёжных ошибок', num: 7, suffix: '', sub: 'требуют проверки', positive: false },
+          { label: t('lbl2.revenueSep'), num: 394.1, suffix: 'M', sub: '+19% vs авг.', positive: true },
+          { label: t('lbl2.oneChargeCommissions'), num: 12.8, suffix: 'M', sub: 'средн. 3.25%', positive: true },
+          { label: t('lbl2.failedSessions'), num: 14, suffix: '', sub: '0.05% от общего', positive: false },
+          { label: t('lbl2.paymentErrors'), num: 7, suffix: '', sub: 'требуют проверки', positive: false },
         ].map((k, i) => (
           <div key={k.label} className="bg-white rounded-2xl p-4 border border-slate-100/80 hover:shadow-md transition-all enter-up"
             style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)', animationDelay: `${i * 60 + 240}ms` }}>
@@ -360,6 +360,7 @@ const mapStations = [
 ];
 
 function LiveMapPage() {
+  const { t } = useI18n();
   const [selected, setSelected] = useState<typeof mapStations[0] | null>(null);
   const [opFilter, setOpFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -404,12 +405,12 @@ function LiveMapPage() {
         {/* KPI row */}
         <div className="px-5 py-3 bg-slate-50 border-b border-slate-100 flex gap-4 shrink-0">
           {[
-            { label: 'Всего станций', v: totals.all, c: 'text-slate-900' },
-            { label: 'Свободно', v: totals.available, c: 'text-green-600' },
-            { label: 'Занято', v: totals.occupied, c: 'text-red-500' },
-            { label: 'Забронировано', v: totals.reserved, c: 'text-amber-500' },
-            { label: 'Недоступно', v: totals.unavailable, c: 'text-slate-400' },
-            { label: 'Активных EVSE', v: mapStations.reduce((s, st) => s + st.active, 0), c: 'text-sky-600' },
+            { label: t('lbl2.totalStations'), v: totals.all, c: 'text-slate-900' },
+            { label: t('lbl2.available'), v: totals.available, c: 'text-green-600' },
+            { label: t('lbl2.occupied'), v: totals.occupied, c: 'text-red-500' },
+            { label: t('lbl2.reserved'), v: totals.reserved, c: 'text-amber-500' },
+            { label: t('lbl2.unavailable'), v: totals.unavailable, c: 'text-slate-400' },
+            { label: t('lbl2.activeEvse'), v: mapStations.reduce((s, st) => s + st.active, 0), c: 'text-sky-600' },
           ].map(k => (
             <div key={k.label} className="flex items-center gap-1.5">
               <span className={`text-base font-bold mono ${k.c}`}>{k.v}</span>
@@ -506,10 +507,10 @@ function LiveMapPage() {
 
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: 'Станций', value: selected.count },
+                { label: t('lbl2.stations2'), value: selected.count },
                 { label: 'EVSE всего', value: selected.evse },
-                { label: 'Активных', value: selected.active },
-                { label: 'Макс. мощность', value: `${selected.power} кВт` },
+                { label: t('lbl2.active2'), value: selected.active },
+                { label: t('lbl2.maxPower'), value: `${selected.power} кВт` },
               ].map(m => (
                 <div key={m.label} className="bg-slate-50 rounded-xl p-3">
                   <p className="text-xs text-slate-400 mb-0.5">{m.label}</p>
@@ -591,10 +592,10 @@ function OperatorsPage() {
         {/* Network summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Всего станций', value: operators.reduce((s, o) => s + o.stations, 0) },
-            { label: 'Всего EVSE', value: operators.reduce((s, o) => s + o.evse, 0) },
-            { label: 'Сессий (total)', value: operators.reduce((s, o) => s + o.sessions, 0).toLocaleString() },
-            { label: 'Выручка (total)', value: `${(operators.reduce((s, o) => s + o.revenue, 0) / 1000000).toFixed(0)}M` },
+            { label: t('lbl2.totalStations'), value: operators.reduce((s, o) => s + o.stations, 0) },
+            { label: t('lbl2.totalEvse'), value: operators.reduce((s, o) => s + o.evse, 0) },
+            { label: t('lbl2.sessionsTotal'), value: operators.reduce((s, o) => s + o.sessions, 0).toLocaleString() },
+            { label: t('lbl2.revenueTotal'), value: `${(operators.reduce((s, o) => s + o.revenue, 0) / 1000000).toFixed(0)}M` },
           ].map(k => (
             <div key={k.label} className="bg-white rounded-xl border border-slate-100 p-4 text-center">
               <p className="text-2xl font-bold mono text-slate-900">{k.value}</p>
@@ -625,9 +626,9 @@ function OperatorsPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center mb-3">
                 {[
-                  { label: 'Станции', value: op.stations },
+                  { label: t('lbl2.stations'), value: op.stations },
                   { label: 'EVSE', value: op.evse },
-                  { label: 'Сессии', value: op.sessions.toLocaleString() },
+                  { label: t('lbl2.sessions'), value: op.sessions.toLocaleString() },
                 ].map(s => (
                   <div key={s.label} className="bg-slate-50 rounded-xl p-2">
                     <p className="text-base font-bold text-slate-900 mono">{s.value}</p>
@@ -672,11 +673,11 @@ function OperatorsPage() {
           <div className="p-5 space-y-4">
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: 'Статус', value: statusLabel[selected.status], accent: true },
-                { label: 'С нами с', value: selected.since },
-                { label: 'Тип интеграции', value: selected.integration },
-                { label: 'Комиссия', value: '3%' },
-                { label: 'Станций', value: selected.stations },
+                { label: t('lbl2.status'), value: statusLabel[selected.status], accent: true },
+                { label: t('lbl2.withUsSince'), value: selected.since },
+                { label: t('lbl2.integrationType'), value: selected.integration },
+                { label: t('lbl2.commission'), value: '3%' },
+                { label: t('lbl2.stations2'), value: selected.stations },
                 { label: 'EVSE', value: selected.evse },
               ].map(r => (
                 <div key={r.label} className="bg-slate-50 rounded-xl p-3">
@@ -708,9 +709,9 @@ function OperatorsPage() {
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Финансы</p>
               {[
-                { label: 'Общая выручка', value: `${(selected.revenue / 1000000).toFixed(1)}M сум` },
-                { label: 'Последняя выплата', value: `${(selected.revenue * 0.97 / 1000000).toFixed(1)}M сум` },
-                { label: 'Следующий расчёт', value: 'D+2 · 07.09.2026' },
+                { label: t('lbl2.totalRevenue'), value: `${(selected.revenue / 1000000).toFixed(1)}M сум` },
+                { label: t('lbl2.lastPayout'), value: `${(selected.revenue * 0.97 / 1000000).toFixed(1)}M сум` },
+                { label: t('lbl2.nextSettlement'), value: 'D+2 · 07.09.2026' },
               ].map(r => (
                 <div key={r.label} className="flex justify-between text-xs py-1 border-b border-slate-50">
                   <span className="text-slate-400">{r.label}</span>
@@ -806,10 +807,10 @@ function PaymentsPage() {
         {/* KPI */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Успешных (24ч)', v: '10 418', c: 'text-green-600', bg: 'bg-green-50 border-green-100', f: 'completed' },
-            { label: 'Ошибок (24ч)', v: '14', c: 'text-red-500', bg: 'bg-red-50 border-red-100', f: 'failed' },
-            { label: 'Сумма (24ч)', v: '752M', c: 'text-slate-900', bg: 'bg-slate-50 border-slate-200', f: 'all' },
-            { label: 'Ожидают', v: '3', c: 'text-amber-600', bg: 'bg-amber-50 border-amber-100', f: 'active' },
+            { label: t('lbl2.successful24h'), v: '10 418', c: 'text-green-600', bg: 'bg-green-50 border-green-100', f: 'completed' },
+            { label: t('lbl2.errors24h'), v: '14', c: 'text-red-500', bg: 'bg-red-50 border-red-100', f: 'failed' },
+            { label: t('lbl2.amount24h'), v: '752M', c: 'text-slate-900', bg: 'bg-slate-50 border-slate-200', f: 'all' },
+            { label: t('lbl2.pending2'), v: '3', c: 'text-amber-600', bg: 'bg-amber-50 border-amber-100', f: 'active' },
           ].map(s => (
             <button key={s.label} onClick={() => setFilter(s.f as typeof filter)}
               className={`border rounded-2xl p-4 text-left transition-all hover:shadow-sm ${s.bg} ${filter === s.f ? 'ring-2 ring-offset-1 ring-slate-400' : ''}`}>
@@ -917,11 +918,11 @@ function PaymentsPage() {
           <div className="space-y-2.5">
             {[
               { label: 'TXN ID', value: selected.id, mono: true },
-              { label: 'Пользователь', value: selected.user },
-              { label: 'Метод', value: selected.method },
-              { label: 'Сессия', value: selected.session || '—', mono: true },
-              { label: 'Время', value: selected.time, mono: true },
-              { label: 'Статус', value: statusLabel[selected.status] },
+              { label: t('lbl2.user'), value: selected.user },
+              { label: t('lbl2.method'), value: selected.method },
+              { label: t('lbl2.session'), value: selected.session || '—', mono: true },
+              { label: t('lbl2.time'), value: selected.time, mono: true },
+              { label: t('lbl2.status'), value: statusLabel[selected.status] },
             ].map(r => (
               <div key={r.label} className="flex items-start justify-between gap-2">
                 <span className="text-xs text-slate-400">{r.label}</span>
@@ -985,10 +986,10 @@ function AnalyticsPage() {
       {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Всего сессий (сент.)', value: '10 900', delta: '+8.4%', pos: true },
-          { label: 'кВт·ч отпущено', value: '1 250 MWh', delta: '+13.2%', pos: true },
-          { label: 'Ср. сессия', value: '44 мин', delta: '-2 мин', pos: true },
-          { label: 'Ср. выручка/EVSE', value: '4.2M сум', delta: '+6.1%', pos: true },
+          { label: t('lbl2.totalSessionsSep'), value: '10 900', delta: '+8.4%', pos: true },
+          { label: t('lbl2.kwhDelivered'), value: '1 250 MWh', delta: '+13.2%', pos: true },
+          { label: t('lbl2.avgSession'), value: '44 мин', delta: '-2 мин', pos: true },
+          { label: t('lbl2.avgRevenueEvse'), value: '4.2M сум', delta: '+6.1%', pos: true },
         ].map(k => (
           <div key={k.label} className="bg-white rounded-xl border border-slate-100 p-4">
             <p className="text-xs text-slate-400 mb-1">{k.label}</p>
@@ -1001,10 +1002,10 @@ function AnalyticsPage() {
       {/* Tabs */}
       <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
         {[
-          { id: 'overview', label: 'Обзор' },
-          { id: 'regions', label: 'Регионы' },
-          { id: 'connectors', label: 'Разъёмы' },
-          { id: 'growth', label: 'Рост' },
+          { id: 'overview', label: t('lbl2.overview') },
+          { id: 'regions', label: t('lbl2.regions2') },
+          { id: 'connectors', label: t('lbl2.connectors2') },
+          { id: 'growth', label: t('lbl2.growth') },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id as typeof tab)}
             className={`px-4 py-1.5 text-sm rounded-lg transition-colors ${tab === t.id ? 'bg-white text-slate-900 font-semibold shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
@@ -1166,7 +1167,7 @@ function AnalyticsPage() {
               </LineChart>
             </ResponsiveContainer>
             <div className="flex gap-4 mt-2 justify-center">
-              {[{ color: '#0EA5E9', label: 'Пользователи' }, { color: '#22C55E', label: 'Сессии в месяц' }].map(l => (
+              {[{ color: '#0EA5E9', label: t('lbl2.users') }, { color: '#22C55E', label: t('lbl2.sessionsPerMonth') }].map(l => (
                 <div key={l.label} className="flex items-center gap-1.5 text-xs text-slate-500">
                   <div className="w-3 h-0.5 rounded" style={{ backgroundColor: l.color }} />
                   {l.label}
@@ -1178,7 +1179,7 @@ function AnalyticsPage() {
             {[
               { label: 'CAGR пользователей', value: '+187%', sub: 'янв → сен 2026', color: 'text-sky-600' },
               { label: 'CAGR сессий', value: '+171%', sub: 'янв → сен 2026', color: 'text-green-600' },
-              { label: 'Прогноз к Dec 2026', value: '22k+ users', sub: 'при текущей динамике', color: 'text-violet-600' },
+              { label: t('lbl2.forecastToDec2026'), value: '22k+ users', sub: 'при текущей динамике', color: 'text-violet-600' },
             ].map(k => (
               <div key={k.label} className="bg-white rounded-xl border border-slate-100 p-4 text-center">
                 <p className={`text-xl font-bold mono ${k.color}`}>{k.value}</p>
@@ -1204,6 +1205,7 @@ const AI_ANALYST_QA: Record<string, string> = {
 };
 
 function AIInsightsPage() {
+  const { t } = useI18n();
   type AiMsg = { role: 'user' | 'ai'; text: string; ts: string };
   const [msgs, setMsgs] = useState<AiMsg[]>([{
     role: 'ai',
@@ -1414,6 +1416,7 @@ const fraudAlerts = [
 ];
 
 function FraudPage() {
+  const { t } = useI18n();
   const [alerts, setAlerts] = useState(fraudAlerts);
   const [selected, setSelected] = useState<typeof fraudAlerts[0] | null>(null);
   const [filter, setFilter] = useState<'all' | 'open' | 'resolved'>('all');
@@ -1450,10 +1453,10 @@ function FraudPage() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Критических', v: alerts.filter(a => a.risk === 'critical' && a.status === 'open').length, c: 'text-red-600', bg: 'bg-red-50' },
-            { label: 'Высокий риск', v: alerts.filter(a => a.risk === 'high' && a.status === 'open').length, c: 'text-orange-600', bg: 'bg-orange-50' },
-            { label: 'Средний риск', v: alerts.filter(a => a.risk === 'medium' && a.status === 'open').length, c: 'text-amber-600', bg: 'bg-amber-50' },
-            { label: 'Решено сегодня', v: alerts.filter(a => a.status === 'resolved').length, c: 'text-green-600', bg: 'bg-green-50' },
+            { label: t('lbl2.critical'), v: alerts.filter(a => a.risk === 'critical' && a.status === 'open').length, c: 'text-red-600', bg: 'bg-red-50' },
+            { label: t('lbl2.highRisk'), v: alerts.filter(a => a.risk === 'high' && a.status === 'open').length, c: 'text-orange-600', bg: 'bg-orange-50' },
+            { label: t('lbl2.mediumRisk'), v: alerts.filter(a => a.risk === 'medium' && a.status === 'open').length, c: 'text-amber-600', bg: 'bg-amber-50' },
+            { label: t('lbl2.resolvedToday'), v: alerts.filter(a => a.status === 'resolved').length, c: 'text-green-600', bg: 'bg-green-50' },
           ].map(k => (
             <div key={k.label} className={`${k.bg} rounded-xl border border-slate-100 p-4 text-center`}>
               <p className={`text-2xl font-bold mono ${k.c}`}>{k.v}</p>
@@ -1565,11 +1568,11 @@ function FraudPage() {
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Детали операции</p>
               {[
                 { label: 'Session / Txn ID', value: selected.sessionId },
-                { label: 'Пользователь', value: selected.user },
+                { label: t('lbl2.user'), value: selected.user },
                 { label: 'User ID', value: selected.userId },
-                { label: 'Станция', value: selected.station },
-                { label: 'Время', value: selected.time },
-                { label: 'Сумма', value: selected.amount },
+                { label: t('lbl2.station'), value: selected.station },
+                { label: t('lbl2.time'), value: selected.time },
+                { label: t('lbl2.amount'), value: selected.amount },
               ].map(r => (
                 <div key={r.label} className="flex justify-between text-xs py-0.5 border-b border-slate-50">
                   <span className="text-slate-400">{r.label}</span>
@@ -1679,10 +1682,10 @@ function UsersPage() {
         {/* KPI */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Всего аккаунтов', value: '14 218', sub: 'все платформы', bg: 'bg-slate-50', ic: 'text-slate-500', icon: <Users size={14} /> },
-            { label: 'Активных', value: String(active + 12840), sub: 'подтверждённые телефоны', bg: 'bg-emerald-50', ic: 'text-emerald-600', icon: <UserCheck size={14} /> },
-            { label: 'Новых за 7 дней', value: '284', sub: '+18% к прошлой неделе', bg: 'bg-violet-50', ic: 'text-violet-500', icon: <ArrowUp size={14} /> },
-            { label: 'Заблокированных', value: String(suspended + 10), sub: 'превышение лимитов', bg: 'bg-red-50', ic: 'text-red-500', icon: <AlertTriangle size={14} /> },
+            { label: t('lbl2.totalAccounts'), value: '14 218', sub: 'все платформы', bg: 'bg-slate-50', ic: 'text-slate-500', icon: <Users size={14} /> },
+            { label: t('lbl2.active2'), value: String(active + 12840), sub: 'подтверждённые телефоны', bg: 'bg-emerald-50', ic: 'text-emerald-600', icon: <UserCheck size={14} /> },
+            { label: t('lbl2.newIn7Days'), value: '284', sub: '+18% к прошлой неделе', bg: 'bg-violet-50', ic: 'text-violet-500', icon: <ArrowUp size={14} /> },
+            { label: t('lbl2.blocked'), value: String(suspended + 10), sub: 'превышение лимитов', bg: 'bg-red-50', ic: 'text-red-500', icon: <AlertTriangle size={14} /> },
           ].map(k => (
             <div key={k.label} className="bg-white rounded-2xl p-4 border border-slate-100/80 hover:shadow-md transition-all" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <div className="flex items-start justify-between mb-3">
@@ -1771,11 +1774,11 @@ function UsersPage() {
             {/* Details */}
             <div className="space-y-2.5">
               {[
-                { label: 'Телефон', value: selected.phone },
-                { label: 'Автомобиль', value: selected.car },
-                { label: 'Регистрация', value: selected.registered },
-                { label: 'Всего сессий', value: String(selected.sessions) },
-                { label: 'Всего расходов', value: selected.spent > 0 ? `${selected.spent.toLocaleString()} сум` : '—' },
+                { label: t('lbl2.phone'), value: selected.phone },
+                { label: t('lbl2.vehicle'), value: selected.car },
+                { label: t('lbl2.registered'), value: selected.registered },
+                { label: t('lbl2.totalSessions'), value: String(selected.sessions) },
+                { label: t('lbl2.totalSpend'), value: selected.spent > 0 ? `${selected.spent.toLocaleString()} сум` : '—' },
               ].map(r => (
                 <div key={r.label} className="flex items-center justify-between">
                   <p className="text-xs text-slate-400">{r.label}</p>
@@ -1892,9 +1895,9 @@ function SettlementPage() {
   };
 
   const statusCfg: Record<string, { bg: string; label: string; dot: string }> = {
-    paid: { bg: 'bg-green-100 text-green-700', label: 'Выплачено', dot: 'bg-green-500' },
-    pending: { bg: 'bg-amber-100 text-amber-700', label: 'Ожидает', dot: 'bg-amber-400' },
-    processing: { bg: 'bg-sky-100 text-sky-700', label: 'Обработка', dot: 'bg-sky-400' },
+    paid: { bg: 'bg-green-100 text-green-700', label: t('lbl2.paidOut'), dot: 'bg-green-500' },
+    pending: { bg: 'bg-amber-100 text-amber-700', label: t('lbl2.pending'), dot: 'bg-amber-400' },
+    processing: { bg: 'bg-sky-100 text-sky-700', label: t('lbl2.processing'), dot: 'bg-sky-400' },
   };
 
   return (
@@ -1914,10 +1917,10 @@ function SettlementPage() {
         {/* KPI */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Выплачено (авг)', value: `${(totalPaidMonth / 1000000).toFixed(1)}M`, sub: '4 оператора', color: 'text-green-600', bg: 'bg-green-50 border-green-100' },
-            { label: 'Ожидает выплаты', value: `${(totalPending / 1000000).toFixed(1)}M`, sub: 'дата: 9 сент 2026', color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100' },
-            { label: 'Комиссия (авг)', value: `${((totalPaidMonth * 0.031) / 1000000).toFixed(1)}M`, sub: '~3.1% средняя', color: 'text-violet-600', bg: 'bg-violet-50 border-violet-100' },
-            { label: 'Следующий D+2', value: '9 сент', sub: '3 инвойса', color: 'text-slate-800', bg: 'bg-slate-50 border-slate-200' },
+            { label: t('lbl2.paidOutAug'), value: `${(totalPaidMonth / 1000000).toFixed(1)}M`, sub: '4 оператора', color: 'text-green-600', bg: 'bg-green-50 border-green-100' },
+            { label: t('lbl2.awaitingPayout'), value: `${(totalPending / 1000000).toFixed(1)}M`, sub: 'дата: 9 сент 2026', color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100' },
+            { label: t('lbl2.commissionAug'), value: `${((totalPaidMonth * 0.031) / 1000000).toFixed(1)}M`, sub: '~3.1% средняя', color: 'text-violet-600', bg: 'bg-violet-50 border-violet-100' },
+            { label: t('lbl2.nextD2'), value: '9 сент', sub: '3 инвойса', color: 'text-slate-800', bg: 'bg-slate-50 border-slate-200' },
           ].map(k => (
             <div key={k.label} className={`border rounded-2xl p-4 ${k.bg}`}>
               <p className="text-xs text-slate-500 mb-0.5">{k.label}</p>
@@ -1932,10 +1935,10 @@ function SettlementPage() {
           <p className="text-xs font-semibold text-slate-400 mb-4 tracking-wider">ЦИКЛ ВЫПЛАТЫ</p>
           <div className="flex items-stretch gap-0">
             {[
-              { step: 'T', label: 'Транзакция', sub: 'Оплата пользователя', color: 'bg-sky-500' },
-              { step: 'T+1', label: 'Верификация', sub: 'CDR валидация, fraud check', color: 'bg-violet-500' },
-              { step: 'T+2', label: 'Расчёт', sub: 'Формирование инвойса', color: 'bg-amber-500' },
-              { step: 'D+2', label: 'Банковский перевод', sub: 'IBAN оператора', color: 'bg-green-500' },
+              { step: 'T', label: t('lbl2.transaction'), sub: 'Оплата пользователя', color: 'bg-sky-500' },
+              { step: 'T+1', label: t('lbl2.verification'), sub: 'CDR валидация, fraud check', color: 'bg-violet-500' },
+              { step: 'T+2', label: t('lbl2.settlement'), sub: 'Формирование инвойса', color: 'bg-amber-500' },
+              { step: 'D+2', label: t('lbl2.bankTransfer'), sub: 'IBAN оператора', color: 'bg-green-500' },
             ].map((s, i, arr) => (
               <div key={s.step} className="flex items-center flex-1">
                 <div className="flex-1">
@@ -2049,15 +2052,15 @@ function SettlementPage() {
           </div>
           <div className="space-y-2.5">
             {[
-              { label: 'Оператор', value: `${selected.logo} ${selected.op}` },
-              { label: 'Банк', value: selected.bank },
+              { label: t('lbl2.operator'), value: `${selected.logo} ${selected.op}` },
+              { label: t('lbl2.bank'), value: selected.bank },
               { label: 'IBAN', value: selected.iban, mono: true },
-              { label: 'Сессий', value: selected.sessions.toLocaleString() },
-              { label: 'Энергия', value: `${selected.kwh.toLocaleString()} кВт·ч` },
-              { label: 'Выручка брутто', value: `${(selected.revenueRaw / 1000000).toFixed(2)}M сум` },
+              { label: t('lbl2.sessions2'), value: selected.sessions.toLocaleString() },
+              { label: t('lbl2.energy'), value: `${selected.kwh.toLocaleString()} кВт·ч` },
+              { label: t('lbl2.grossRevenue2'), value: `${(selected.revenueRaw / 1000000).toFixed(2)}M сум` },
               { label: `Комиссия (${(selected.commissionRate * 100).toFixed(1)}%)`, value: `-${((selected.revenueRaw - selected.payoutRaw) / 1000000).toFixed(2)}M сум`, red: true },
-              { label: 'Нетто к выплате', value: `${(selected.payoutRaw / 1000000).toFixed(2)}M сум`, green: true },
-              { label: 'Дата выплаты', value: selected.date },
+              { label: t('lbl2.netPayout'), value: `${(selected.payoutRaw / 1000000).toFixed(2)}M сум`, green: true },
+              { label: t('lbl2.payoutDate'), value: selected.date },
             ].map(r => (
               <div key={r.label} className="flex items-start justify-between gap-2">
                 <span className="text-xs text-slate-400 shrink-0">{r.label}</span>
@@ -2156,10 +2159,10 @@ function GlobalTariffsPage() {
       {/* Summary stat row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Средний DC Fast', value: `${Math.round(regionData.reduce((s, r) => s + r.dcFast, 0) / regionData.length).toLocaleString()} сум`, sub: 'по сети' },
-          { label: 'Средний AC', value: `${Math.round(regionData.reduce((s, r) => s + r.acStd, 0) / regionData.length).toLocaleString()} сум`, sub: 'по сети' },
-          { label: 'Активных правил', value: String(rules.filter(r => r.active).length), sub: `из ${rules.length}` },
-          { label: 'Регионов', value: String(regionData.length), sub: 'охвачено' },
+          { label: t('lbl2.averageDcFast'), value: `${Math.round(regionData.reduce((s, r) => s + r.dcFast, 0) / regionData.length).toLocaleString()} сум`, sub: 'по сети' },
+          { label: t('lbl2.averageAc'), value: `${Math.round(regionData.reduce((s, r) => s + r.acStd, 0) / regionData.length).toLocaleString()} сум`, sub: 'по сети' },
+          { label: t('lbl2.activeRules'), value: String(rules.filter(r => r.active).length), sub: `из ${rules.length}` },
+          { label: t('lbl2.regions'), value: String(regionData.length), sub: 'охвачено' },
         ].map(s => (
           <div key={s.label} className="bg-white border border-slate-100 rounded-2xl p-4">
             <p className="text-xs text-slate-400 mb-0.5">{s.label}</p>
@@ -2447,10 +2450,10 @@ function CDRValidationPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Всего CDR (24ч)', v: String(cdrRecords.length), c: 'text-slate-900' },
-          { label: 'Валидных', v: String(cdrRecords.filter(r => r.status === 'valid').length), c: 'text-green-600' },
-          { label: 'Расхождений', v: String(cdrRecords.filter(r => r.status === 'mismatch').length), c: 'text-amber-500' },
-          { label: 'Подозрительных', v: String(cdrRecords.filter(r => r.suspicious).length), c: 'text-red-500' },
+          { label: t('lbl2.totalCdr24h'), v: String(cdrRecords.length), c: 'text-slate-900' },
+          { label: t('lbl2.valid'), v: String(cdrRecords.filter(r => r.status === 'valid').length), c: 'text-green-600' },
+          { label: t('lbl2.discrepancies'), v: String(cdrRecords.filter(r => r.status === 'mismatch').length), c: 'text-amber-500' },
+          { label: t('lbl2.suspicious'), v: String(cdrRecords.filter(r => r.suspicious).length), c: 'text-red-500' },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-2xl border border-slate-100 p-4 text-center">
             <p className={`text-2xl font-bold mono ${s.c}`}>{s.v}</p>
@@ -2948,10 +2951,10 @@ function AdminSessionsPage() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Всего сегодня', value: extendedSessions.length, color: 'text-slate-900' },
-            { label: 'Активных', value: extendedSessions.filter(s => s.status === 'active').length, color: 'text-green-600' },
-            { label: 'Ошибок', value: extendedSessions.filter(s => s.status === 'failed').length, color: 'text-red-500' },
-            { label: 'Выручка (сум)', value: '4.2 млн', color: 'text-sky-600' },
+            { label: t('lbl2.totalToday'), value: extendedSessions.length, color: 'text-slate-900' },
+            { label: t('lbl2.active2'), value: extendedSessions.filter(s => s.status === 'active').length, color: 'text-green-600' },
+            { label: t('lbl2.errors2'), value: extendedSessions.filter(s => s.status === 'failed').length, color: 'text-red-500' },
+            { label: t('lbl2.revenueUzs'), value: '4.2 млн', color: 'text-sky-600' },
           ].map(k => (
             <div key={k.label} className="bg-white rounded-xl border border-slate-100 p-4">
               <p className={`text-2xl font-bold mono ${k.color}`}>{k.value}</p>
@@ -3020,14 +3023,14 @@ function AdminSessionsPage() {
             <div className="space-y-2">
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Детали сессии</p>
               {[
-                { label: 'Станция', value: selected.station },
-                { label: 'Начало', value: selected.start },
-                { label: 'Конец', value: selected.end },
-                { label: 'Энергия', value: `${selected.energy} кВт·ч` },
-                { label: 'Сумма', value: selected.cost },
-                { label: 'Разъём', value: 'CCS2' },
-                { label: 'Тариф', value: 'DC Fast Standard' },
-                { label: 'Оплата', value: 'Humo' },
+                { label: t('lbl2.station'), value: selected.station },
+                { label: t('lbl2.start'), value: selected.start },
+                { label: t('lbl2.end2'), value: selected.end },
+                { label: t('lbl2.energy'), value: `${selected.energy} кВт·ч` },
+                { label: t('lbl2.amount'), value: selected.cost },
+                { label: t('lbl2.connector2'), value: 'CCS2' },
+                { label: t('lbl2.tariff'), value: 'DC Fast Standard' },
+                { label: t('lbl2.payment'), value: 'Humo' },
               ].map(r => (
                 <div key={r.label} className="flex justify-between text-sm">
                   <span className="text-slate-400 text-xs">{r.label}</span>
@@ -3195,10 +3198,10 @@ function AdminSettingsPage() {
         <div className="space-y-3">
           {([
             { key: 'fraud', label: 'Fraud-оповещения', sub: 'Подозрительные операции' },
-            { key: 'operators', label: 'Новые операторы', sub: 'Заявки на подключение' },
-            { key: 'payments', label: 'Платежи', sub: 'Ошибки и возвраты' },
+            { key: 'operators', label: t('lbl2.newOperators'), sub: 'Заявки на подключение' },
+            { key: 'payments', label: t('lbl2.payments'), sub: 'Ошибки и возвраты' },
             { key: 'cdrErrors', label: 'CDR ошибки', sub: 'Ошибки валидации CDR' },
-            { key: 'system', label: 'Системные', sub: 'Обновления платформы' },
+            { key: 'system', label: t('lbl2.system'), sub: 'Обновления платформы' },
             { key: 'emailDigest', label: 'Email дайджест', sub: 'Еженедельная сводка' },
           ] as const).map(item => (
             <div key={item.key} className="flex items-center justify-between">
@@ -3475,7 +3478,7 @@ function SystemHealthPage() {
       {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Всего OCPP', value: `${totalConnected}/${totalStations}`, sub: 'станций онлайн' },
+          { label: t('lbl2.totalOcpp'), value: `${totalConnected}/${totalStations}`, sub: 'станций онлайн' },
           { label: 'API RPS', value: '67 / сек', sub: 'текущий трафик' },
           { label: 'Avg Latency', value: '51 мс', sub: 'средняя задержка' },
           { label: 'Uptime 30д', value: '99.8%', sub: 'доступность' },

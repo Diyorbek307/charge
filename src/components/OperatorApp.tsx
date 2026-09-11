@@ -347,10 +347,10 @@ function StationsPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Всего', value: '47', color: 'text-slate-900' },
-          { label: 'Активные', value: '41', color: 'text-green-600' },
+          { label: t('lbl2.total'), value: '47', color: 'text-slate-900' },
+          { label: t('lbl2.active'), value: '41', color: 'text-green-600' },
           { label: 'EVSE', value: '124', color: 'text-sky-600' },
-          { label: 'Ошибки', value: '2', color: 'text-red-500' },
+          { label: t('lbl2.errors'), value: '2', color: 'text-red-500' },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-xl border border-slate-100 p-4 text-center">
             <p className={`text-2xl font-bold mono ${s.color}`}>{s.value}</p>
@@ -514,10 +514,10 @@ function SessionsPage() {
         {/* KPI */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Активных', value: adminSessions.filter(s => s.status === 'active').length, color: 'text-green-600', dot: 'bg-green-500' },
-            { label: 'Завершённых', value: adminSessions.filter(s => s.status === 'completed').length, color: 'text-slate-700', dot: 'bg-slate-400' },
-            { label: 'Ошибок', value: adminSessions.filter(s => s.status === 'failed').length, color: 'text-red-600', dot: 'bg-red-500' },
-            { label: 'Итого кВт·ч', value: '847', color: 'text-sky-600', dot: 'bg-sky-500' },
+            { label: t('lbl2.active2'), value: adminSessions.filter(s => s.status === 'active').length, color: 'text-green-600', dot: 'bg-green-500' },
+            { label: t('lbl2.completed'), value: adminSessions.filter(s => s.status === 'completed').length, color: 'text-slate-700', dot: 'bg-slate-400' },
+            { label: t('lbl2.errors2'), value: adminSessions.filter(s => s.status === 'failed').length, color: 'text-red-600', dot: 'bg-red-500' },
+            { label: t('lbl2.totalKwh'), value: '847', color: 'text-sky-600', dot: 'bg-sky-500' },
           ].map(k => (
             <div key={k.label} className="bg-white rounded-xl border border-slate-100 p-3 flex items-center gap-2.5">
               <div className={`w-2 h-2 rounded-full shrink-0 ${k.dot}`} />
@@ -591,9 +591,9 @@ function SessionsPage() {
             <div className="space-y-3">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Временная шкала</p>
               {[
-                { icon: '🔌', label: 'Подключение', time: selected.start },
-                { icon: '⚡', label: 'Начало зарядки', time: selected.start },
-                { icon: '✅', label: 'Завершение', time: selected.end || '—' },
+                { icon: '🔌', label: t('lbl2.connection'), time: selected.start },
+                { icon: '⚡', label: t('lbl2.chargeStart'), time: selected.start },
+                { icon: '✅', label: t('lbl2.end'), time: selected.end || '—' },
               ].map((e, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <span className="text-base">{e.icon}</span>
@@ -608,9 +608,9 @@ function SessionsPage() {
             {/* Metrics */}
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: 'Энергия', value: selected.energy + ' кВт·ч' },
-                { label: 'Стоимость', value: selected.cost },
-                { label: 'Пользователь', value: selected.user },
+                { label: t('lbl2.energy'), value: selected.energy + ' кВт·ч' },
+                { label: t('lbl2.cost'), value: selected.cost },
+                { label: t('lbl2.user'), value: selected.user },
                 { label: 'EVSE', value: 'EVSE-1' },
               ].map(m => (
                 <div key={m.label} className="bg-slate-50 rounded-xl p-3">
@@ -676,10 +676,10 @@ function FinancePage() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Выручка, сен', value: '184.5M', sub: '+4.7% к авг', color: 'text-slate-900', trend: true },
-            { label: 'Комиссия ONE CHARGE', value: '5.5M', sub: '3% · вычтено', color: 'text-red-500', trend: false },
-            { label: 'К выплате', value: '178.9M', sub: 'до 07.09.2026', color: 'text-green-600', trend: false },
-            { label: 'Сессий всего', value: '3 120', sub: 'сентябрь', color: 'text-sky-600', trend: false },
+            { label: t('lbl2.revenueSep2'), value: '184.5M', sub: '+4.7% к авг', color: 'text-slate-900', trend: true },
+            { label: t('lbl2.oneChargeCommission'), value: '5.5M', sub: '3% · вычтено', color: 'text-red-500', trend: false },
+            { label: t('lbl2.payout'), value: '178.9M', sub: 'до 07.09.2026', color: 'text-green-600', trend: false },
+            { label: t('lbl2.sessionsTotal2'), value: '3 120', sub: 'сентябрь', color: 'text-sky-600', trend: false },
           ].map(c => (
             <div key={c.label} className="bg-white rounded-xl border border-slate-100 p-4">
               <p className="text-xs text-slate-400 mb-1">{c.label}</p>
@@ -716,7 +716,7 @@ function FinancePage() {
           <h3 className="text-sm font-semibold text-slate-700 mb-4">Схема расчётов</h3>
           <div className="flex items-center gap-2 text-sm flex-wrap">
             {[
-              { label: 'Пользователь', sub: 'оплачивает', bg: 'bg-sky-50 border-sky-200 text-sky-700' },
+              { label: t('lbl2.user'), sub: 'оплачивает', bg: 'bg-sky-50 border-sky-200 text-sky-700' },
               null,
               { label: 'ONE CHARGE', sub: 'удерживает 3%', bg: 'bg-slate-50 border-slate-200 text-slate-700' },
               null,
@@ -795,12 +795,12 @@ function FinancePage() {
             <div className="space-y-2">
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Детали инвойса</p>
               {[
-                { label: 'Период', value: selectedInvoice.period },
-                { label: 'Сессий', value: selectedInvoice.sessions.toLocaleString() },
-                { label: 'Энергия', value: `${selectedInvoice.energy.toLocaleString()} кВт·ч` },
-                { label: 'Валовая выручка', value: `${selectedInvoice.revenue.toLocaleString()} сум` },
-                { label: 'Комиссия (3%)', value: `-${selectedInvoice.commission.toLocaleString()} сум` },
-                { label: 'Чистая выплата', value: `${selectedInvoice.payout.toLocaleString()} сум` },
+                { label: t('lbl2.period'), value: selectedInvoice.period },
+                { label: t('lbl2.sessions2'), value: selectedInvoice.sessions.toLocaleString() },
+                { label: t('lbl2.energy'), value: `${selectedInvoice.energy.toLocaleString()} кВт·ч` },
+                { label: t('lbl2.grossRevenue'), value: `${selectedInvoice.revenue.toLocaleString()} сум` },
+                { label: t('lbl2.commission3'), value: `-${selectedInvoice.commission.toLocaleString()} сум` },
+                { label: t('lbl2.netPayout2'), value: `${selectedInvoice.payout.toLocaleString()} сум` },
               ].map(r => (
                 <div key={r.label} className="flex justify-between text-xs py-0.5 border-b border-slate-50">
                   <span className="text-slate-400">{r.label}</span>
@@ -987,12 +987,12 @@ function IntegrationPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {[
-                    { label: 'Вендор', value: selectedCs.vendor },
-                    { label: 'Модель', value: selectedCs.model },
+                    { label: t('lbl2.vendor'), value: selectedCs.vendor },
+                    { label: t('lbl2.model'), value: selectedCs.model },
                     { label: 'FW версия', value: selectedCs.fw },
                     { label: 'IP адрес', value: selectedCs.ip },
-                    { label: 'Коннекторов', value: String(selectedCs.connectors) },
-                    { label: 'Сессий (24ч)', value: String(selectedCs.sessions24h) },
+                    { label: t('lbl2.connectors'), value: String(selectedCs.connectors) },
+                    { label: t('lbl2.sessions24h'), value: String(selectedCs.sessions24h) },
                   ].map(r => (
                     <div key={r.label} className="bg-slate-50 rounded-xl p-2.5">
                       <p className="text-[10px] text-slate-400 mb-0.5">{r.label}</p>
@@ -1086,12 +1086,12 @@ function IntegrationPage() {
               <div className="space-y-2.5">
                 {[
                   { label: 'Endpoint', value: 'ocpi.onecharge.uz/2.3.0', mono: true },
-                  { label: 'Роль', value: 'CPO (Charge Point Operator)' },
-                  { label: 'Локации синхр.', value: '47 / 47' },
+                  { label: t('lbl2.role'), value: 'CPO (Charge Point Operator)' },
+                  { label: t('lbl2.locationsSynced'), value: '47 / 47' },
                   { label: 'EVSE синхр.', value: '124 / 124' },
-                  { label: 'Тарифы синхр.', value: '8 / 8' },
+                  { label: t('lbl2.tariffsSynced'), value: '8 / 8' },
                   { label: 'CDR (сутки)', value: '284', ok: true },
-                  { label: 'Последняя синхр.', value: '2 мин назад' },
+                  { label: t('lbl2.lastSync'), value: '2 мин назад' },
                 ].map(r => (
                   <div key={r.label} className="flex items-center justify-between text-sm">
                     <span className="text-slate-500">{r.label}</span>
@@ -1234,9 +1234,9 @@ function TariffsPage() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
-          { label: 'Активных тарифов', value: tariffs.filter(t => t.active).length, color: 'text-green-600' },
-          { label: 'Мин. цена кВт·ч', value: `${Math.min(...tariffs.map(t => t.price)).toLocaleString()} сум`, color: 'text-sky-600' },
-          { label: 'Макс. цена кВт·ч', value: `${Math.max(...tariffs.map(t => t.price)).toLocaleString()} сум`, color: 'text-slate-900' },
+          { label: t('lbl2.activeTariffs'), value: tariffs.filter(t => t.active).length, color: 'text-green-600' },
+          { label: t('lbl2.minPricePerKwh'), value: `${Math.min(...tariffs.map(t => t.price)).toLocaleString()} сум`, color: 'text-sky-600' },
+          { label: t('lbl2.maxPricePerKwh'), value: `${Math.max(...tariffs.map(t => t.price)).toLocaleString()} сум`, color: 'text-slate-900' },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-xl border border-slate-100 p-4">
             <p className={`text-xl font-bold mono ${s.color}`}>{s.value}</p>
@@ -1288,7 +1288,7 @@ function TariffsPage() {
               <button onClick={() => setEditing(null)} className="p-1.5 hover:bg-slate-100 rounded-lg"><Plus size={14} className="rotate-45 text-slate-500" /></button>
             </div>
             {[
-              { label: 'Название', key: 'name' as const, type: 'text' },
+              { label: t('lbl2.name'), key: 'name' as const, type: 'text' },
             ].map(f => (
               <div key={f.key}>
                 <p className="text-xs text-slate-400 mb-1">{f.label}</p>
@@ -1330,6 +1330,7 @@ function TariffsPage() {
 }
 
 function StationDetailPage({ stationId, onBack }: { stationId: string; onBack: () => void }) {
+  const { t } = useI18n();
   const stations = useLiveStations();
   const adminSessions = useLiveAdminSessions();
   const { actions, refresh, state } = useSync();
@@ -1407,12 +1408,12 @@ function StationDetailPage({ stationId, onBack }: { stationId: string; onBack: (
         </div>
         <div className="col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
-            { label: 'Режим работы', value: s.hours },
-            { label: 'Макс. мощность', value: `${s.totalPower} кВт` },
-            { label: 'Рейтинг', value: `⭐ ${s.rating} (${s.reviews})` },
-            { label: 'Тип разъемов', value: [...new Set(s.connectors.map(c => c.type))].join(', ') },
-            { label: 'Свободно', value: `${s.connectors.filter(c => c.status === 'available').length}/${s.connectors.length} EVSE` },
-            { label: 'Услуги', value: s.amenities.join(', ') || '—' },
+            { label: t('lbl2.openingHours'), value: s.hours },
+            { label: t('lbl2.maxPower'), value: `${s.totalPower} кВт` },
+            { label: t('lbl2.rating'), value: `⭐ ${s.rating} (${s.reviews})` },
+            { label: t('lbl2.connectorType'), value: [...new Set(s.connectors.map(c => c.type))].join(', ') },
+            { label: t('lbl2.available'), value: `${s.connectors.filter(c => c.status === 'available').length}/${s.connectors.length} EVSE` },
+            { label: t('lbl2.services'), value: s.amenities.join(', ') || '—' },
           ].map(r => (
             <div key={r.label} className="bg-white rounded-xl border border-slate-100 p-3">
               <p className="text-xs text-slate-400 mb-0.5">{r.label}</p>
@@ -1562,10 +1563,10 @@ function CustomersPage() {
         {/* KPI row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Уникальных клиентов', value: '1 284', sub: '+42 этой неделе', bg: 'bg-sky-50', ic: 'text-sky-500', icon: <Users size={14} /> },
-            { label: 'Средний чек', value: `${(avgCheck / 1000).toFixed(0)}K сум`, sub: 'за сессию', bg: 'bg-emerald-50', ic: 'text-emerald-600', icon: <DollarSign size={14} /> },
-            { label: 'Повторных визитов', value: '78%', sub: 'в течение месяца', bg: 'bg-violet-50', ic: 'text-violet-500', icon: <Activity size={14} /> },
-            { label: 'Средний рейтинг', value: avgRating, sub: 'по отзывам клиентов', bg: 'bg-amber-50', ic: 'text-amber-500', icon: <Star size={14} /> },
+            { label: t('lbl2.uniqueCustomers'), value: '1 284', sub: '+42 этой неделе', bg: 'bg-sky-50', ic: 'text-sky-500', icon: <Users size={14} /> },
+            { label: t('lbl2.averageTicket'), value: `${(avgCheck / 1000).toFixed(0)}K сум`, sub: 'за сессию', bg: 'bg-emerald-50', ic: 'text-emerald-600', icon: <DollarSign size={14} /> },
+            { label: t('lbl2.repeatVisits'), value: '78%', sub: 'в течение месяца', bg: 'bg-violet-50', ic: 'text-violet-500', icon: <Activity size={14} /> },
+            { label: t('lbl2.averageRating'), value: avgRating, sub: 'по отзывам клиентов', bg: 'bg-amber-50', ic: 'text-amber-500', icon: <Star size={14} /> },
           ].map(k => (
             <div key={k.label} className="bg-white rounded-2xl p-4 border border-slate-100/80 hover:shadow-md transition-all" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <div className="flex items-start justify-between mb-3">
@@ -1669,14 +1670,14 @@ function CustomersPage() {
             {/* Details */}
             <div className="space-y-2.5">
               {[
-                { label: 'Телефон', value: selected.phone },
-                { label: 'Автомобиль', value: selected.car },
-                { label: 'Разъем', value: selected.connector },
-                { label: 'Клиент с', value: selected.joined },
-                { label: 'Всего сессий', value: String(selected.sessions) },
-                { label: 'Всего расходов', value: `${selected.spent.toLocaleString()} сум` },
-                { label: 'Ср. кВт·ч/сессию', value: `${selected.avgKwh} кВт·ч` },
-                { label: 'Ср. чек', value: `${selected.avgCost.toLocaleString()} сум` },
+                { label: t('lbl2.phone'), value: selected.phone },
+                { label: t('lbl2.vehicle'), value: selected.car },
+                { label: t('lbl2.connector'), value: selected.connector },
+                { label: t('lbl2.customerSince'), value: selected.joined },
+                { label: t('lbl2.totalSessions'), value: String(selected.sessions) },
+                { label: t('lbl2.totalSpend'), value: `${selected.spent.toLocaleString()} сум` },
+                { label: t('lbl2.avgKwhSession'), value: `${selected.avgKwh} кВт·ч` },
+                { label: t('lbl2.avgTicket'), value: `${selected.avgCost.toLocaleString()} сум` },
               ].map(r => (
                 <div key={r.label} className="flex items-center justify-between">
                   <p className="text-xs text-slate-400">{r.label}</p>
@@ -1815,7 +1816,7 @@ function SettingsPage() {
             { label: 'OCPI URL', value: 'https://ocpi.onecharge.uz/ocpi/2.3' },
             { label: 'Token A (ONE CHARGE)', value: 'eyJhbGc...••••••••' },
             { label: 'Token B (GreenCharge)', value: 'Bearer oc_ocpi_gc_••••' },
-            { label: 'Версия', value: 'OCPI 2.3.0' },
+            { label: t('lbl2.version'), value: 'OCPI 2.3.0' },
           ].map(row => (
             <div key={row.label} className="bg-slate-50 rounded-xl p-3">
               <p className="text-xs text-slate-400 mb-1">{row.label}</p>
@@ -1830,11 +1831,11 @@ function SettingsPage() {
         <h3 className="text-sm font-semibold text-slate-700 mb-4">Реквизиты компании</h3>
         <div className="grid grid-cols-2 gap-3">
           {[
-            { label: 'Название', value: 'GreenCharge UZ LLC' },
-            { label: 'ИНН', value: '312 847 120' },
+            { label: t('lbl2.name'), value: 'GreenCharge UZ LLC' },
+            { label: t('lbl2.taxId'), value: '312 847 120' },
             { label: 'Email', value: 'tech@greencharge.uz' },
             { label: 'IBAN', value: 'UZ21 0080 8000 0000 0001 2345 67' },
-            { label: 'Банк', value: 'Kapitalbank' },
+            { label: t('lbl2.bank'), value: 'Kapitalbank' },
             { label: 'Settlement', value: 'D+2 · SWIFT' },
           ].map(row => (
             <div key={row.label}>
@@ -1865,9 +1866,9 @@ function HelpPage() {
 
   const contacts = [
     { icon: '📧', label: 'Email поддержки', value: 'operator@onecharge.uz', sub: 'Ответ в течение 2 часов' },
-    { icon: '📱', label: 'Телефон', value: '+998 71 200-00-01', sub: 'Пн–Пт 9:00–18:00' },
+    { icon: '📱', label: t('lbl2.phone'), value: '+998 71 200-00-01', sub: 'Пн–Пт 9:00–18:00' },
     { icon: '💬', label: 'Telegram', value: '@onecharge_support', sub: 'Онлайн 24/7' },
-    { icon: '📖', label: 'Документация', value: 'docs.onecharge.uz', sub: 'API, OCPI, вебхуки' },
+    { icon: '📖', label: t('lbl2.documentation'), value: 'docs.onecharge.uz', sub: 'API, OCPI, вебхуки' },
   ];
 
   return (
@@ -1886,10 +1887,10 @@ function HelpPage() {
       {/* Quick links */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { icon: '📖', label: 'Документация', sub: 'API, OCPI, руководства', color: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8' },
-          { icon: '🎓', label: 'Обучение', sub: 'Видеоуроки и вебинары', color: '#F5F3FF', border: '#DDD6FE', text: '#6D28D9' },
-          { icon: '🐛', label: 'Репорт бага', sub: 'Сообщить о проблеме', color: '#FEF2F2', border: '#FECACA', text: '#DC2626' },
-          { icon: '💡', label: 'Идеи', sub: 'Предложить улучшение', color: '#FFFBEB', border: '#FDE68A', text: '#D97706' },
+          { icon: '📖', label: t('lbl2.documentation'), sub: 'API, OCPI, руководства', color: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8' },
+          { icon: '🎓', label: t('lbl2.training'), sub: 'Видеоуроки и вебинары', color: '#F5F3FF', border: '#DDD6FE', text: '#6D28D9' },
+          { icon: '🐛', label: t('lbl2.bugReport'), sub: 'Сообщить о проблеме', color: '#FEF2F2', border: '#FECACA', text: '#DC2626' },
+          { icon: '💡', label: t('lbl2.ideas'), sub: 'Предложить улучшение', color: '#FFFBEB', border: '#FDE68A', text: '#D97706' },
         ].map(c => (
           <button key={c.label} className="rounded-2xl p-4 text-left hover:scale-[1.02] active:scale-98 transition-all"
             style={{ background: c.color, border: `1px solid ${c.border}`, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>

@@ -179,6 +179,7 @@ const weeklyUtil = [
 ];
 
 function DashboardPage() {
+  const { t } = useI18n();
   const liveVehicles = useLiveVehicles();
   const liveEmployees = useLiveEmployees();
   const fleetVehicles = liveVehicles.length ? liveVehicles : staticFleetVehicles;
@@ -300,12 +301,12 @@ function DashboardPage() {
       {/* ── KPI Row (6 tiles) ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {([
-          { label: 'Автомобилей', num: 5, sub: '4 активны', icon: <Car size={13} />, grad: 'linear-gradient(135deg,#EEF2FF,#E0E7FF)', ic: '#6366F1', trend: null },
-          { label: 'Зарядок (сент.)', num: 278, sub: '+15% к авг.', icon: <Zap size={13} />, grad: 'linear-gradient(135deg,#F0F9FF,#DBEAFE)', ic: '#3B82F6', trend: 15 },
-          { label: 'кВт·ч всего', num: 1842, sub: 'за сентябрь', icon: <Activity size={13} />, grad: 'linear-gradient(135deg,#F0FDF4,#DCFCE7)', ic: '#22C55E', trend: 8 },
-          { label: 'Бюджет исп.', num: spentPct, sub: `${(SPENT/1000000).toFixed(1)}M из 14M сум`, icon: <Target size={13} />, grad: 'linear-gradient(135deg,#FFFBEB,#FEF3C7)', ic: '#F59E0B', trend: null },
+          { label: t('lbl2.vehicles'), num: 5, sub: '4 активны', icon: <Car size={13} />, grad: 'linear-gradient(135deg,#EEF2FF,#E0E7FF)', ic: '#6366F1', trend: null },
+          { label: t('lbl2.chargesSep'), num: 278, sub: '+15% к авг.', icon: <Zap size={13} />, grad: 'linear-gradient(135deg,#F0F9FF,#DBEAFE)', ic: '#3B82F6', trend: 15 },
+          { label: t('lbl2.totalKwh2'), num: 1842, sub: 'за сентябрь', icon: <Activity size={13} />, grad: 'linear-gradient(135deg,#F0FDF4,#DCFCE7)', ic: '#22C55E', trend: 8 },
+          { label: t('lbl2.budgetUsed'), num: spentPct, sub: `${(SPENT/1000000).toFixed(1)}M из 14M сум`, icon: <Target size={13} />, grad: 'linear-gradient(135deg,#FFFBEB,#FEF3C7)', ic: '#F59E0B', trend: null },
           { label: 'CO₂ сэкономлено', num: 24, sub: 'тонн × 100г CO₂/км', icon: <Leaf size={13} />, grad: 'linear-gradient(135deg,#F0FDF4,#DCFCE7)', ic: '#10B981', trend: 22 },
-          { label: 'Сотрудников', num: 18, sub: '2 у лимита', icon: <Users size={13} />, grad: 'linear-gradient(135deg,#FDF4FF,#FAE8FF)', ic: '#A855F7', trend: null },
+          { label: t('lbl2.employees'), num: 18, sub: '2 у лимита', icon: <Users size={13} />, grad: 'linear-gradient(135deg,#FDF4FF,#FAE8FF)', ic: '#A855F7', trend: null },
         ] as const).map((k, i) => (
           <div key={k.label} className="rounded-2xl p-4 enter-up"
             style={{ background: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04),inset 0 1px 0 rgba(255,255,255,0.9)', border: '1px solid rgba(226,232,240,0.7)', animationDelay: `${i * 55}ms` }}>
@@ -361,9 +362,9 @@ function DashboardPage() {
             </div>
             <div className="flex-1 space-y-3">
               {[
-                { label: 'Потрачено', value: '9.4M сум', color: '#6366F1', w: `${spentPct}%` },
-                { label: 'Остаток', value: '4.6M сум', color: '#E2E8F0', w: `${100 - spentPct}%` },
-                { label: 'Прогноз', value: '11.2M сум', color: '#F59E0B', w: '80%' },
+                { label: t('lbl2.spent'), value: '9.4M сум', color: '#6366F1', w: `${spentPct}%` },
+                { label: t('lbl2.balance'), value: '4.6M сум', color: '#E2E8F0', w: `${100 - spentPct}%` },
+                { label: t('lbl2.forecast'), value: '11.2M сум', color: '#F59E0B', w: '80%' },
               ].map(r => (
                 <div key={r.label}>
                   <div className="flex items-center justify-between mb-0.5">
@@ -700,10 +701,10 @@ function FleetPage() {
         {/* KPI row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Всего авто', value: '5', sub: '4 активных', bg: 'bg-indigo-50', ic: 'text-indigo-500', icon: <Car size={14} /> },
-            { label: 'Заряжается сейчас', value: String(chargingNow), sub: `${fleetVehicles.filter(v=>v.status==='driving').length} в поездке`, bg: 'bg-sky-50', ic: 'text-sky-500', icon: <Zap size={14} /> },
-            { label: 'кВт·ч за неделю', value: totalKwh.toLocaleString(), sub: 'по всему парку', bg: 'bg-emerald-50', ic: 'text-emerald-600', icon: <Activity size={14} /> },
-            { label: 'Расходы (сент.)', value: `${(totalCost / 1000000).toFixed(1)}M`, sub: 'сум · весь парк', bg: 'bg-amber-50', ic: 'text-amber-500', icon: <DollarSign size={14} /> },
+            { label: t('lbl2.totalVehicles'), value: '5', sub: '4 активных', bg: 'bg-indigo-50', ic: 'text-indigo-500', icon: <Car size={14} /> },
+            { label: t('lbl2.chargingNow'), value: String(chargingNow), sub: `${fleetVehicles.filter(v=>v.status==='driving').length} в поездке`, bg: 'bg-sky-50', ic: 'text-sky-500', icon: <Zap size={14} /> },
+            { label: t('lbl2.kwhThisWeek'), value: totalKwh.toLocaleString(), sub: 'по всему парку', bg: 'bg-emerald-50', ic: 'text-emerald-600', icon: <Activity size={14} /> },
+            { label: t('lbl2.expensesSep'), value: `${(totalCost / 1000000).toFixed(1)}M`, sub: 'сум · весь парк', bg: 'bg-amber-50', ic: 'text-amber-500', icon: <DollarSign size={14} /> },
           ].map(k => (
             <div key={k.label} className="bg-white rounded-2xl p-4 border border-slate-100/80 hover:shadow-md transition-all" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <div className="flex items-start justify-between mb-3">
@@ -823,11 +824,11 @@ function FleetPage() {
             {/* Details */}
             <div className="space-y-2">
               {[
-                { label: 'Гос. номер', value: selected.plate },
-                { label: 'Водитель', value: selected.driver },
+                { label: t('lbl2.plate'), value: selected.plate },
+                { label: t('lbl2.driver'), value: selected.driver },
                 { label: 'ID авто', value: selected.id },
-                { label: 'Зарядок (сент.)', value: String(selected.charged) },
-                { label: 'Расходы (сент.)', value: `${selected.cost.toLocaleString()} сум` },
+                { label: t('lbl2.chargesSep'), value: String(selected.charged) },
+                { label: t('lbl2.expensesSep'), value: `${selected.cost.toLocaleString()} сум` },
               ].map(r => (
                 <div key={r.label} className="flex items-center justify-between">
                   <p className="text-xs text-slate-400">{r.label}</p>
@@ -921,10 +922,10 @@ function EmployeesPage() {
         {/* KPI row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Сотрудников', value: String(employees.length), sub: 'с корп. лимитом', bg: 'bg-indigo-50', ic: 'text-indigo-500', icon: <Users size={14} /> },
-            { label: 'Превысили лимит', value: String(overLimit), sub: 'требуют внимания', bg: 'bg-red-50', ic: 'text-red-500', icon: <AlertTriangle size={14} /> },
+            { label: t('lbl2.employees'), value: String(employees.length), sub: 'с корп. лимитом', bg: 'bg-indigo-50', ic: 'text-indigo-500', icon: <Users size={14} /> },
+            { label: t('lbl2.overLimit'), value: String(overLimit), sub: 'требуют внимания', bg: 'bg-red-50', ic: 'text-red-500', icon: <AlertTriangle size={14} /> },
             { label: 'Avg. использование', value: `${avgUtil}%`, sub: 'от лимита', bg: 'bg-amber-50', ic: 'text-amber-500', icon: <Activity size={14} /> },
-            { label: 'Расходы / лимит', value: `${((totalSpent / totalLimit) * 100).toFixed(0)}%`, sub: `${(totalSpent / 1000000).toFixed(1)}M из ${(totalLimit / 1000000).toFixed(1)}M сум`, bg: 'bg-emerald-50', ic: 'text-emerald-600', icon: <DollarSign size={14} /> },
+            { label: t('lbl2.spendLimit'), value: `${((totalSpent / totalLimit) * 100).toFixed(0)}%`, sub: `${(totalSpent / 1000000).toFixed(1)}M из ${(totalLimit / 1000000).toFixed(1)}M сум`, bg: 'bg-emerald-50', ic: 'text-emerald-600', icon: <DollarSign size={14} /> },
           ].map(k => (
             <div key={k.label} className="bg-white rounded-2xl p-4 border border-slate-100/80 hover:shadow-md transition-all" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <div className="flex items-start justify-between mb-3">
@@ -1047,10 +1048,10 @@ function EmployeesPage() {
               {/* Details */}
               <div className="space-y-2.5">
                 {[
-                  { label: 'Автомобиль', value: selected.vehicle },
-                  { label: 'Зарядок (сент.)', value: String(selected.sessions) },
-                  { label: 'Израсходовано', value: `${selected.spent.toLocaleString()} сум` },
-                  { label: 'Осталось', value: `${Math.max(0, selected.limit - selected.spent).toLocaleString()} сум` },
+                  { label: t('lbl2.vehicle'), value: selected.vehicle },
+                  { label: t('lbl2.chargesSep'), value: String(selected.sessions) },
+                  { label: t('lbl2.consumed'), value: `${selected.spent.toLocaleString()} сум` },
+                  { label: t('lbl2.remaining'), value: `${Math.max(0, selected.limit - selected.spent).toLocaleString()} сум` },
                 ].map(r => (
                   <div key={r.label} className="flex items-center justify-between">
                     <p className="text-xs text-slate-400">{r.label}</p>
@@ -1209,10 +1210,10 @@ function ExpensesPage() {
       {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Всего расходов', value: `${(total / 1000000).toFixed(2)} млн сум`, sub: `за ${period === 'week' ? 'неделю' : period === 'month' ? 'месяц' : 'квартал'}`, trend: +12.4, color: 'text-violet-600' },
-          { label: 'кВт·ч заряжено', value: `${totalKwh.toFixed(0)} кВт·ч`, sub: `${expenseRows.length} сессий`, trend: +8.1, color: 'text-sky-600' },
-          { label: 'Ср. стоимость', value: `${Math.round(total / totalKwh).toLocaleString()}`, sub: 'сум / кВт·ч', trend: -1.2, color: 'text-slate-900' },
-          { label: 'Топ по расходам', value: 'Bobur M.', sub: '5 546 400 сум', trend: null, color: 'text-amber-600' },
+          { label: t('lbl2.totalSpend'), value: `${(total / 1000000).toFixed(2)} млн сум`, sub: `за ${period === 'week' ? 'неделю' : period === 'month' ? 'месяц' : 'квартал'}`, trend: +12.4, color: 'text-violet-600' },
+          { label: t('lbl2.kwhCharged'), value: `${totalKwh.toFixed(0)} кВт·ч`, sub: `${expenseRows.length} сессий`, trend: +8.1, color: 'text-sky-600' },
+          { label: t('lbl2.avgCost'), value: `${Math.round(total / totalKwh).toLocaleString()}`, sub: 'сум / кВт·ч', trend: -1.2, color: 'text-slate-900' },
+          { label: t('lbl2.topBySpend'), value: 'Bobur M.', sub: '5 546 400 сум', trend: null, color: 'text-amber-600' },
         ].map(k => (
           <div key={k.label} className="bg-white rounded-xl border border-slate-100 p-4">
             <p className="text-xs text-slate-400 mb-1">{k.label}</p>
@@ -1380,9 +1381,9 @@ function ExpensesPage() {
           </ResponsiveContainer>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
             {[
-              { label: 'Средн. за неделю', value: `${Math.round(weeklyTrend.reduce((s, w) => s + w.cost, 0) / weeklyTrend.length / 1000000 * 100) / 100} млн сум` },
-              { label: 'Рост м/м', value: '+12.4%' },
-              { label: 'Прогноз (след. мес)', value: '38.2 млн сум' },
+              { label: t('lbl2.weeklyAverage'), value: `${Math.round(weeklyTrend.reduce((s, w) => s + w.cost, 0) / weeklyTrend.length / 1000000 * 100) / 100} млн сум` },
+              { label: t('lbl2.growthMM'), value: '+12.4%' },
+              { label: t('lbl2.forecastNextMonth'), value: '38.2 млн сум' },
             ].map(s => (
               <div key={s.label} className="bg-violet-50 border border-violet-100 rounded-xl p-3">
                 <p className="text-xs text-violet-500 mb-0.5">{s.label}</p>
@@ -1408,12 +1409,12 @@ function ReportsPage() {
   };
 
   const reportTypes = [
-    { id: 'monthly', label: 'Ежемесячный отчёт', desc: 'Расходы, кВт·ч, сессии по месяцам', icon: '📅', color: 'from-violet-500 to-violet-600' },
-    { id: 'fleet', label: 'Отчёт по флоту', desc: 'Стоимость и пробег каждого авто', icon: '🚗', color: 'from-sky-500 to-sky-600' },
-    { id: 'driver', label: 'Отчёт по водителям', desc: 'Расходы и лимиты по сотрудникам', icon: '👤', color: 'from-green-500 to-green-600' },
-    { id: 'station', label: 'По станциям', desc: 'Сравнение операторов и тарифов', icon: '⚡', color: 'from-amber-500 to-amber-600' },
+    { id: 'monthly', label: t('lbl2.monthlyReport'), desc: 'Расходы, кВт·ч, сессии по месяцам', icon: '📅', color: 'from-violet-500 to-violet-600' },
+    { id: 'fleet', label: t('lbl2.fleetReport'), desc: 'Стоимость и пробег каждого авто', icon: '🚗', color: 'from-sky-500 to-sky-600' },
+    { id: 'driver', label: t('lbl2.driverReport'), desc: 'Расходы и лимиты по сотрудникам', icon: '👤', color: 'from-green-500 to-green-600' },
+    { id: 'station', label: t('lbl2.byStation'), desc: 'Сравнение операторов и тарифов', icon: '⚡', color: 'from-amber-500 to-amber-600' },
     { id: 'cdr', label: 'CDR выгрузка', desc: 'Полные Charge Detail Records', icon: '📋', color: 'from-slate-500 to-slate-600' },
-    { id: 'tax', label: 'Налоговый отчёт', desc: 'Для бухгалтерии — НДС, инвойсы', icon: '🧾', color: 'from-red-500 to-red-600' },
+    { id: 'tax', label: t('lbl2.taxReport'), desc: 'Для бухгалтерии — НДС, инвойсы', icon: '🧾', color: 'from-red-500 to-red-600' },
   ];
 
   return (
@@ -1517,11 +1518,11 @@ function BusinessSettingsPage() {
         <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-4">
           <h3 className="text-sm font-semibold text-slate-700">Компания</h3>
           {[
-            { label: 'Название', value: 'UzMotor Fleet LLC' },
-            { label: 'ИНН', value: '310 458 221' },
-            { label: 'Юр. адрес', value: 'г. Ташкент, ул. Амира Темура, 107' },
-            { label: 'Директор', value: 'Алишер Каримов' },
-            { label: 'ОКЭД', value: '49400 — Грузовой транспорт' },
+            { label: t('lbl2.name'), value: 'UzMotor Fleet LLC' },
+            { label: t('lbl2.taxId'), value: '310 458 221' },
+            { label: t('lbl2.legalAddress'), value: 'г. Ташкент, ул. Амира Темура, 107' },
+            { label: t('lbl2.director'), value: 'Алишер Каримов' },
+            { label: t('lbl2.activityCode'), value: '49400 — Грузовой транспорт' },
           ].map(f => (
             <div key={f.label}>
               <p className="text-xs text-slate-400 mb-0.5">{f.label}</p>
@@ -1535,9 +1536,9 @@ function BusinessSettingsPage() {
           <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-4">
             <h3 className="text-sm font-semibold text-slate-700">Банковские реквизиты</h3>
             {[
-              { label: 'Банк', value: 'АО "Узпромстройбанк"' },
+              { label: t('lbl2.bank'), value: 'АО "Узпромстройбанк"' },
               { label: 'IBAN', value: 'UZ53 0145 2000 1234 0001 0001' },
-              { label: 'МФО', value: '00453' },
+              { label: t('lbl2.bankCode'), value: '00453' },
             ].map(f => (
               <div key={f.label}>
                 <p className="text-xs text-slate-400 mb-0.5">{f.label}</p>
@@ -1549,9 +1550,9 @@ function BusinessSettingsPage() {
           <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-3">
             <h3 className="text-sm font-semibold text-slate-700">Лимиты флота</h3>
             {[
-              { label: 'Месячный лимит на авто', value: '5 000 000 сум' },
-              { label: 'Лимит на сотрудника', value: '2 000 000 сум' },
-              { label: 'Уведомление при', value: '80% лимита' },
+              { label: t('lbl2.monthlyLimitPerVehicle'), value: '5 000 000 сум' },
+              { label: t('lbl2.limitPerEmployee'), value: '2 000 000 сум' },
+              { label: t('lbl2.notifyAt'), value: '80% лимита' },
             ].map(f => (
               <div key={f.label} className="flex items-center justify-between">
                 <p className="text-xs text-slate-500">{f.label}</p>
@@ -1570,12 +1571,12 @@ function BusinessSettingsPage() {
         </div>
         <div className="divide-y divide-slate-50">
           {([
-            { key: 'limit80', label: 'Лимит 80%', sub: 'Когда сотрудник использовал 80% лимита' },
-            { key: 'limit95', label: 'Лимит 95%', sub: 'Предупреждение об исчерпании лимита' },
-            { key: 'chargeStart', label: 'Начало зарядки', sub: 'Push при каждой новой зарядке' },
-            { key: 'chargeEnd', label: 'Зарядка завершена', sub: 'Итоговый отчёт по сессии' },
-            { key: 'newEmployee', label: 'Новый сотрудник', sub: 'При добавлении пользователя' },
-            { key: 'invoice', label: 'Счёт на оплату', sub: 'Еженедельный инвойс на email' },
+            { key: 'limit80', label: t('lbl2.limit80'), sub: 'Когда сотрудник использовал 80% лимита' },
+            { key: 'limit95', label: t('lbl2.limit95'), sub: 'Предупреждение об исчерпании лимита' },
+            { key: 'chargeStart', label: t('lbl2.chargeStart'), sub: 'Push при каждой новой зарядке' },
+            { key: 'chargeEnd', label: t('lbl2.chargeComplete'), sub: 'Итоговый отчёт по сессии' },
+            { key: 'newEmployee', label: t('lbl2.newEmployee'), sub: 'При добавлении пользователя' },
+            { key: 'invoice', label: t('lbl2.invoice'), sub: 'Еженедельный инвойс на email' },
           ] as const).map(n => (
             <div key={n.key} className="px-5 py-3 flex items-center justify-between gap-4">
               <div>
