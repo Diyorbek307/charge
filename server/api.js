@@ -329,6 +329,7 @@ api.get('/state', (_req, res) => {
     vehicles: d.vehicles,
     employees: d.employees,
     wallets: d.wallets,
+    queues: pruneQueues(),
     events: d.events.slice(0, 60),
     stats: computeStats(),
     serverTime: new Date().toISOString(),
@@ -363,6 +364,53 @@ const round = (n, p = 1) => Math.round(n * 10 ** p) / 10 ** p;
 const portalLabel = p =>
   ({ driver: 'Driver App', operator: 'Operator Portal', admin: 'Admin Center', business: 'Business Portal', api: 'Partner API' }[p] ?? p);
 
+/** How long a freed connector is held for the driver at the head of the queue. */
+const QUEUE_HOLD_MS = 5 * 60_000;
+
+/** Drops holds nobody claimed in time and returns the live queue. */
+function pruneQueues() {
+  const now = Date.now();
+  const before = db.data.queues.length;
+  db.data.queues = db.data.queues.filter(q => !q.notified || now - q.notifiedAt < QUEUE_HOLD_MS);
+  if (db.data.queues.length !== before) db.save();
+  return db.data.queues;
+}
+
+/** Connectors a station has free right now that are not held for the queue. */
+function unheldFree(station) {
+  const free = station.connectors.filter(c => c.status === 'available').length;
+  const held = db.data.queues.filter(q => q.stationId === station.id && q.notified).length;
+  return free - held;
+}
+
+/** A connector just freed up: hand it to whoever has waited longest. */
+function promoteQueue(stationId, connectorId) {
+  pruneQueues();
+  const next = db.data.queues.find(q => q.stationId === stationId && !q.notified);
+  if (!next) return;
+  next.notified = true;
+  next.notifiedAt = Date.now();
+  next.connectorId = connectorId;
+  emit({
+    type: 'queue.ready',
+    portal: 'system',
+    actor: 'ONE CHARGE',
+    message: `Коннектор ${connectorId} освободился — очередь подошла для ${next.user}`,
+    entity: next.id,
+    payload: { userId: next.userId, stationId, connectorId },
+  });
+}
+
+/** Minimum prepaid energy a wallet must cover before a session may start. */
+const MIN_PREPAID_KWH = 5;
+
+/** Owner, the operator running that station's network, or an admin. */
+function canControlSession(account, session) {
+  if (account.portal === 'admin') return true;
+  if (account.portal === 'operator') return session.operatorId === account.orgId;
+  return session.userId === account.id;
+}
+
 function findConnector(stationId, connectorId) {
   const station = db.byId('stations', stationId);
   if (!station) return {};
@@ -381,6 +429,31 @@ api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), (req, re
   if (connector.status === 'unavailable') return res.status(409).json({ error: 'Коннектор недоступен' });
 
   const account = req.account;
+
+  // One car, one plug: without this a single account could occupy the network.
+  if (db.data.sessions.some(s => s.status === 'active' && s.userId === account.id)) {
+    return res.status(409).json({ error: 'У вас уже идёт зарядка' });
+  }
+
+  // A connector freed for the queue belongs to that driver until the hold lapses.
+  pruneQueues();
+  const holdsMine = db.data.queues.some(
+    q => q.stationId === station.id && q.userId === account.id && q.notified,
+  );
+  if (!holdsMine && unheldFree(station) <= 0) {
+    return res.status(409).json({ error: 'Коннектор удерживается для водителя из очереди' });
+  }
+
+  // Refuse to start what the wallet cannot pay for; otherwise stop() clamps
+  // the balance at zero and the charge is effectively free.
+  const walletId = account.portal === 'business' ? 'biz-001' : account.id;
+  const wallet = db.data.wallets[walletId];
+  const minimum = connector.price * MIN_PREPAID_KWH;
+  if (wallet && wallet.balance < minimum) {
+    return res.status(402).json({
+      error: `Недостаточно средств: нужно минимум ${minimum.toLocaleString('ru-RU')} сум`,
+    });
+  }
   const session = {
     id: db.nextId('session', 'S-'),
     userId: account.id,
@@ -402,6 +475,8 @@ api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), (req, re
   };
 
   connector.status = 'occupied';
+  // Starting here settles this driver's place in the station's queue.
+  db.data.queues = db.data.queues.filter(q => !(q.stationId === station.id && q.userId === account.id));
   db.insert('sessions', session);
 
   const vehicle = db.find('vehicles', v => v.driverId === account.id);
@@ -423,6 +498,9 @@ api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), (req, re
 api.post('/sessions/:id/stop', requireAuth('driver', 'business', 'admin', 'operator'), (req, res) => {
   const session = db.byId('sessions', req.params.id);
   if (!session) return res.status(404).json({ error: 'Сессия не найдена' });
+  if (!canControlSession(req.account, session)) {
+    return res.status(403).json({ error: 'Нет прав на эту сессию' });
+  }
   if (session.status !== 'active') return res.status(409).json({ error: 'Сессия уже завершена' });
 
   const minutes = Math.max(1, (Date.now() - new Date(session.start).getTime()) / 60000);
@@ -479,11 +557,13 @@ api.post('/sessions/:id/stop', requireAuth('driver', 'business', 'admin', 'opera
     payload: { transactionId: transaction.id, operatorId: session.operatorId, energy, cost },
   });
 
+  promoteQueue(session.stationId, session.connectorId);
+
   res.json({ session, transaction, stats: computeStats() });
 });
 
 /** Live meter tick so an in-progress session grows for every watching portal. */
-api.post('/sessions/:id/tick', (req, res) => {
+api.post('/sessions/:id/tick', requireAuth(), (req, res) => {
   const session = db.byId('sessions', req.params.id);
   if (!session || session.status !== 'active') return res.status(404).json({ error: 'Нет активной сессии' });
 
@@ -512,11 +592,15 @@ api.post('/sessions/:id/tick', (req, res) => {
 
 api.post('/stations/:id/connectors/:cid', requireAuth('operator', 'admin'), (req, res) => {
   const status = req.body?.status;
-  if (!['available', 'unavailable', 'reserved', 'occupied'].includes(status)) {
+  // "occupied" is set by a real session only; forcing it strands the connector.
+  if (!['available', 'unavailable', 'reserved'].includes(status)) {
     return res.status(400).json({ error: 'Недопустимый статус' });
   }
   const { station, connector } = findConnector(req.params.id, req.params.cid);
   if (!station || !connector) return res.status(404).json({ error: 'Коннектор не найден' });
+  if (req.account.portal === 'operator' && station.operatorId !== req.account.orgId) {
+    return res.status(403).json({ error: 'Станция принадлежит другому оператору' });
+  }
   if (connector.status === 'occupied' && status !== 'available') {
     return res.status(409).json({ error: 'Идёт зарядка — нельзя изменить статус' });
   }
@@ -603,6 +687,86 @@ api.post('/wallet/topup', requireAuth('driver', 'business'), (req, res) => {
     payload: { amount, balance: wallet.balance },
   });
 
+  res.json({ wallet });
+});
+
+// ---------------------------------------------------------------------------
+// Station queue — wait for a busy station instead of circling the car park.
+// ---------------------------------------------------------------------------
+
+api.post('/stations/:id/queue', requireAuth('driver', 'business'), (req, res) => {
+  const station = db.byId('stations', req.params.id);
+  if (!station) return res.status(404).json({ error: 'Станция не найдена' });
+
+  const account = req.account;
+  pruneQueues();
+  if (db.data.queues.some(q => q.userId === account.id)) {
+    return res.status(409).json({ error: 'Вы уже стоите в очереди' });
+  }
+  if (db.data.sessions.some(s => s.status === 'active' && s.userId === account.id)) {
+    return res.status(409).json({ error: 'У вас уже идёт зарядка' });
+  }
+  if (unheldFree(station) > 0) {
+    return res.status(409).json({ error: 'Есть свободный коннектор — можно заряжаться сразу' });
+  }
+
+  const entry = {
+    id: db.nextId('queue', 'Q-'),
+    stationId: station.id,
+    userId: account.id,
+    user: account.name,
+    joined: new Date().toISOString(),
+    notified: false,
+    notifiedAt: null,
+    connectorId: null,
+  };
+  db.data.queues.push(entry);
+  const position = db.data.queues.filter(q => q.stationId === station.id).length;
+  db.save();
+
+  emit({
+    type: 'queue.join',
+    portal: account.portal,
+    actor: account.name,
+    message: `${account.name} встал в очередь · ${station.name} · №${position}`,
+    entity: entry.id,
+    payload: { stationId: station.id, position },
+  });
+  res.json({ entry, position });
+});
+
+api.delete('/stations/:id/queue', requireAuth('driver', 'business'), (req, res) => {
+  const before = db.data.queues.length;
+  db.data.queues = db.data.queues.filter(
+    q => !(q.stationId === req.params.id && q.userId === req.account.id),
+  );
+  if (db.data.queues.length === before) return res.status(404).json({ error: 'Вы не в очереди' });
+  db.save();
+  emit({
+    type: 'queue.leave',
+    portal: req.account.portal,
+    actor: req.account.name,
+    message: `${req.account.name} покинул очередь`,
+    entity: req.params.id,
+  });
+  res.json({ ok: true });
+});
+
+api.post('/wallets/:id/balance', requireAuth('admin'), (req, res) => {
+  const balance = Number(req.body?.balance);
+  if (!Number.isFinite(balance) || balance < 0) return res.status(400).json({ error: 'Некорректный баланс' });
+  const wallet = db.data.wallets[req.params.id];
+  if (!wallet) return res.status(404).json({ error: 'Кошелёк не найден' });
+
+  wallet.balance = balance;
+  db.save();
+  emit({
+    type: 'wallet.adjust',
+    portal: 'admin',
+    actor: req.account.name,
+    message: `Баланс ${req.params.id} скорректирован → ${balance.toLocaleString('ru-RU')} сум`,
+    entity: req.params.id,
+  });
   res.json({ wallet });
 });
 

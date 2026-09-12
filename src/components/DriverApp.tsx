@@ -184,6 +184,27 @@ function UzbekistanMap({ onSelectStation }: { onSelectStation: (s: Station) => v
 
 function StationDetailSheet({ station, onClose, onStartCharging, onBook, onReviews, onReport }: { station: Station; onClose: () => void; onStartCharging: () => void; onBook: () => void; onReviews: () => void; onReport: () => void }) {
   const free = station.connectors.filter(c => c.status === 'available').length;
+  const { state, actions, sessions: portalSessions, refresh } = useSync();
+  const me = portalSessions.driver;
+  const queue = (state?.queues ?? []).filter(q => q.stationId === station.id);
+  const myIndex = queue.findIndex(q => q.userId === me?.id);
+  const myTurn = myIndex >= 0 && queue[myIndex].notified;
+  const [queueBusy, setQueueBusy] = useState(false);
+  const [queueError, setQueueError] = useState<string | null>(null);
+
+  const toggleQueue = async () => {
+    setQueueBusy(true);
+    setQueueError(null);
+    try {
+      if (myIndex >= 0) await actions.leaveQueue('driver', station.id);
+      else await actions.joinQueue('driver', station.id);
+      await refresh();
+    } catch (err) {
+      setQueueError(err instanceof Error ? err.message : 'Не удалось изменить очередь');
+    } finally {
+      setQueueBusy(false);
+    }
+  };
 
   const amenityIcon: Record<string, ReactNode> = {
     'Wi-Fi': <Wifi size={12} />, 'Кафе': <Coffee size={12} />, 'Парковка': <ParkingCircle size={12} />, 'Туалет': <Toilet size={12} />,
@@ -277,15 +298,26 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
 
         {/* Actions */}
         <div className="grid grid-cols-2 gap-2 mb-2">
-          <button onClick={onStartCharging}
-            className="bg-sky-500 hover:bg-sky-600 text-white rounded-xl py-3 font-semibold text-sm transition-colors flex items-center justify-center gap-2">
-            <Scan size={16} />Начать зарядку
-          </button>
+          {free === 0 && !myTurn ? (
+            <button onClick={toggleQueue} disabled={queueBusy}
+              className={`${myIndex >= 0 ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-violet-500 hover:bg-violet-600 text-white'} rounded-xl py-3 font-semibold text-sm transition-colors flex flex-col items-center justify-center leading-tight disabled:opacity-60`}>
+              <span>{myIndex >= 0 ? `Вы №${myIndex + 1} · выйти` : 'Встать в очередь'}</span>
+              <span className="text-[10px] font-normal opacity-80">{queue.length} в очереди</span>
+            </button>
+          ) : (
+            <button onClick={onStartCharging}
+              className={`${myTurn ? 'bg-green-500 hover:bg-green-600 animate-pulse' : 'bg-sky-500 hover:bg-sky-600'} text-white rounded-xl py-3 font-semibold text-sm transition-colors flex items-center justify-center gap-2`}>
+              <Scan size={16} />{myTurn ? 'Ваша очередь — начать' : 'Начать зарядку'}
+            </button>
+          )}
           <button onClick={onBook}
             className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl py-3 font-semibold text-sm transition-colors flex items-center justify-center gap-2">
             <CalendarCheck size={16} />Забронировать
           </button>
         </div>
+        {queueError && (
+          <p role="alert" className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-2">{queueError}</p>
+        )}
         <div className="grid grid-cols-3 gap-2">
           <button className="bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl py-2 font-medium text-sm transition-colors flex items-center justify-center gap-1.5">
             <Heart size={13} />Избранное
@@ -4555,7 +4587,7 @@ function PushToast({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
 }
 
 export default function DriverApp() {
-  const { actions, sessions: portalSessions, state, refresh } = useSync();
+  const { actions, sessions: portalSessions, state, refresh, events } = useSync();
   const driverAccount = portalSessions.driver;
   // The session this driver currently has running, as the server sees it.
   const liveSession = state?.sessions.find(
@@ -4578,6 +4610,19 @@ export default function DriverApp() {
    * through to the local screen either way — a demo shouldn't dead-end on a
    * connector someone else grabbed first.
    */
+  const seenQueueEvent = useRef<string | null>(null);
+  useEffect(() => {
+    const ready = events.find(
+      e => e.type === 'queue.ready' && (e.payload as { userId?: string })?.userId === driverAccount?.id,
+    );
+    if (ready && seenQueueEvent.current !== ready.id) {
+      seenQueueEvent.current = ready.id;
+      pushToast({ icon: '🔌', title: 'Ваша очередь подошла', body: ready.message + ' · держим 5 минут', color: '#22C55E' });
+    }
+    // pushToast is a stable local helper; re-running on it would be noise.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events, driverAccount]);
+
   const startCharging = async () => {
     const station = selectedStation;
     const connector =
@@ -4594,6 +4639,8 @@ export default function DriverApp() {
           body: err instanceof Error ? err.message : 'Попробуйте другой коннектор',
           color: '#F59E0B',
         });
+        // Stay put: showing "charging active" after a refusal would be a lie.
+        return;
       }
     }
     setScreen('charging-active');

@@ -170,9 +170,21 @@ export interface PlatformState {
   vehicles: Vehicle[];
   employees: Employee[];
   wallets: Record<string, Wallet>;
+  queues?: QueueEntry[];
   events: SyncEvent[];
   stats: Stats;
   serverTime: string;
+}
+
+export interface QueueEntry {
+  id: string;
+  stationId: string;
+  userId: string;
+  user: string;
+  joined: string;
+  notified: boolean;
+  notifiedAt: number | null;
+  connectorId: string | null;
 }
 
 export interface ReportRecord {
@@ -281,7 +293,11 @@ export const apiClient = {
     post<{ session: Session; stats: Stats }>('/sessions/start', { stationId, connectorId }, portal),
   stopSession: (portal: Portal, id: string) =>
     post<{ session: Session; transaction: Transaction; stats: Stats }>(`/sessions/${id}/stop`, undefined, portal),
-  tickSession: (id: string) => post<{ session: Session }>(`/sessions/${id}/tick`),
+  tickSession: (portal: Portal, id: string) => post<{ session: Session }>(`/sessions/${id}/tick`, undefined, portal),
+  joinQueue: (portal: Portal, stationId: string) =>
+    post<{ entry: QueueEntry; position: number }>(`/stations/${stationId}/queue`, undefined, portal),
+  leaveQueue: (portal: Portal, stationId: string) =>
+    request<{ ok: boolean }>(`/stations/${stationId}/queue`, { method: 'DELETE', portal }),
 
   setConnectorStatus: (portal: Portal, stationId: string, connectorId: string, status: string) =>
     post<{ station: Station; stats: Stats }>(`/stations/${stationId}/connectors/${connectorId}`, { status }, portal),

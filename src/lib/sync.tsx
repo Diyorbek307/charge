@@ -143,15 +143,17 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   // portal watching it sees energy and cost climb. One ticker per browser is
   // plenty — the server is the single source of truth for the numbers.
   const activeSessionId = state?.sessions.find(s => s.status === 'active')?.id ?? null;
+  // Ticks are authenticated, so borrow whichever portal this browser is signed into.
+  const tickPortal = (Object.keys(sessions) as Portal[]).find(p => sessions[p]) ?? null;
   useEffect(() => {
-    if (!activeSessionId) return;
+    if (!activeSessionId || !tickPortal) return;
     const t = setInterval(() => {
-      apiClient.tickSession(activeSessionId).catch(() => {
+      apiClient.tickSession(tickPortal, activeSessionId).catch(() => {
         /* session ended between ticks */
       });
     }, 5000);
     return () => clearInterval(t);
-  }, [activeSessionId]);
+  }, [activeSessionId, tickPortal]);
 
   /** Resolves to the account, or to a challenge the caller must answer with a code. */
   const login = useCallback(async (portal: Portal, loginValue: string, password: string) => {

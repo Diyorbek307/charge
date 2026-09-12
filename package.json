@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server.js",
-    "postinstall": "vite build"
+    "postinstall": "vite build",
+    "test": "node --test --test-concurrency=1 \"tests/*.test.mjs\""
   },
   "engines": {
     "node": ">=20"
