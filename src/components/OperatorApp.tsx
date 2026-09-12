@@ -2022,8 +2022,10 @@ const staticAlerts = [
 
 function AlertsPage() {
   const { t } = useI18n();
-  const liveAlerts = useLiveAlerts();
-  const { actions, refresh } = useSync();
+  const { actions, refresh, sessions: portalSessions } = useSync();
+  const myNetwork = portalSessions.operator?.orgId;
+  // An operator only sees its own network's alerts, plus platform-wide ones.
+  const liveAlerts = useLiveAlerts().filter(a => !a.operatorId || a.operatorId === myNetwork);
   const [filter, setFilter] = useState<'all' | 'critical' | 'warning' | 'info'>('all');
   const [resolved, setResolved] = useState<Set<string>>(new Set());
 

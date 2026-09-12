@@ -14,9 +14,10 @@ import {
 import { Station } from '../data/mockData';
 import { useLiveStations, useLiveDriverSessions } from '../lib/live';
 import { useSync } from '../lib/sync';
+import EcoScreen, { GreenHourBanner } from './EcoScreen';
 import AuthFlow from './AuthFlow';
 
-type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'cards' | 'loyalty' | 'referral' | 'app-settings' | 'wallet' | 'security' | 'support';
+type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'cards' | 'loyalty' | 'referral' | 'app-settings' | 'wallet' | 'security' | 'support' | 'eco';
 type Tab = 'map' | 'trips' | 'charging' | 'history' | 'profile';
 
 const statusColor: Record<string, string> = {
@@ -315,6 +316,7 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
             <CalendarCheck size={16} />Забронировать
           </button>
         </div>
+        <GreenHourBanner />
         {queueError && (
           <p role="alert" className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-2">{queueError}</p>
         )}
@@ -2001,6 +2003,18 @@ function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
           </button>
         </div>
 
+        {/* Eco profile */}
+        <button onClick={() => onNavigate('eco')}
+          className="w-full rounded-2xl p-4 flex items-center gap-3 text-left text-white"
+          style={{ background: 'linear-gradient(135deg,#16A34A,#0D9488)' }}>
+          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">🌱</div>
+          <div className="flex-1">
+            <p className="text-sm font-bold">Эко-профиль</p>
+            <p className="text-xs text-green-100">CO₂, достижения, зелёные часы и лидеры</p>
+          </div>
+          <ChevronRight size={16} className="text-green-100" />
+        </button>
+
         {/* Payments */}
         <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
           <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
@@ -2554,9 +2568,27 @@ const reportCategories = [
 ];
 
 function ReportScreen({ station, onBack }: { station: Station | null; onBack: () => void }) {
+  const { actions } = useSync();
   const [category, setCategory] = useState('');
   const [text, setText] = useState('');
-  const [sent, setSent] = useState(false);
+  const [sent, setSent] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+
+  const submit = async () => {
+    const chosen = reportCategories.find(c => c.id === category);
+    if (!station || !chosen) return;
+    setSending(true);
+    setSendError(null);
+    try {
+      const { alert } = await actions.reportIssue('driver', station.id, { category: chosen.label, details: text });
+      setSent(alert.id);
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : 'Не удалось отправить');
+    } finally {
+      setSending(false);
+    }
+  };
 
   if (sent) return (
     <div className="h-full flex flex-col bg-slate-50">
@@ -2570,7 +2602,7 @@ function ReportScreen({ station, onBack }: { station: Station | null; onBack: ()
         <p className="text-sm text-slate-500 mb-6 leading-relaxed">Мы передали информацию оператору станции. Как правило, проблемы устраняются в течение 24 часов.</p>
         <div className="w-full bg-sky-50 border border-sky-100 rounded-2xl p-4 text-left">
           <p className="text-xs font-semibold text-sky-700 mb-2">НОМЕР ЗАЯВКИ</p>
-          <p className="text-lg font-bold text-sky-800 mono">#RPT-{Math.floor(Math.random()*9000+1000)}</p>
+          <p className="text-lg font-bold text-sky-800 mono">{sent}</p>
           <p className="text-xs text-sky-600 mt-1">Вы получите уведомление после устранения</p>
         </div>
         <button onClick={onBack} className="mt-6 w-full bg-sky-500 text-white rounded-2xl py-3.5 font-semibold text-base">Закрыть</button>
@@ -2622,8 +2654,11 @@ function ReportScreen({ station, onBack }: { station: Station | null; onBack: ()
         </div>
       </div>
       <div className="px-4 pb-6 pt-2">
-        <button onClick={() => category && setSent(true)}
-          disabled={!category}
+        {sendError && (
+          <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-2">{sendError}</p>
+        )}
+        <button onClick={submit}
+          disabled={!category || sending}
           className={`w-full rounded-2xl py-4 font-bold text-base transition-colors flex items-center justify-center gap-2 ${category ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
           <Send size={16} />Отправить сообщение
         </button>
@@ -4714,6 +4749,7 @@ export default function DriverApp() {
     if (screen === 'referral') return <ReferralScreen onBack={() => setScreen('profile')} />;
     if (screen === 'app-settings') return <AppSettingsScreen onBack={() => setScreen('profile')} />;
     if (screen === 'wallet') return <WalletScreen onBack={() => setScreen('profile')} />;
+    if (screen === 'eco') return <EcoScreen onBack={() => setScreen('profile')} />;
     if (screen === 'security') return <SecurityScreen onBack={() => setScreen('profile')} />;
     if (screen === 'support') return <SupportScreen onBack={() => setScreen('profile')} />;
 

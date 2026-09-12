@@ -187,6 +187,45 @@ export interface QueueEntry {
   connectorId: string | null;
 }
 
+export interface TariffHour {
+  hour: number;
+  band: 'green' | 'standard' | 'day' | 'peak';
+  multiplier: number;
+}
+
+export interface TariffForecast {
+  timezone: string;
+  currentHour: number;
+  current: TariffHour;
+  hours: TariffHour[];
+  bestWindow: { from: number; to: number; multiplier: number; startsInHours: number };
+}
+
+export interface EcoBadge {
+  id: string;
+  title: string;
+  description: string;
+  earned: boolean;
+}
+
+export interface EcoProfile {
+  sessions: number;
+  kwh: number;
+  co2Kg: number;
+  trees: number;
+  km: number;
+  stationsVisited: number;
+  badges: EcoBadge[];
+}
+
+export interface LeaderRow {
+  rank: number;
+  name: string;
+  kwh: number;
+  co2Kg: number;
+  me: boolean;
+}
+
 export interface ReportRecord {
   id: string;
   name: string;
@@ -294,6 +333,11 @@ export const apiClient = {
   stopSession: (portal: Portal, id: string) =>
     post<{ session: Session; transaction: Transaction; stats: Stats }>(`/sessions/${id}/stop`, undefined, portal),
   tickSession: (portal: Portal, id: string) => post<{ session: Session }>(`/sessions/${id}/tick`, undefined, portal),
+  tariffForecast: () => request<TariffForecast>('/tariffs/forecast'),
+  reportIssue: (portal: Portal, stationId: string, body: { category: string; details?: string }) =>
+    post<{ alert: Alert }>(`/stations/${stationId}/issues`, body, portal),
+  ecoMe: (portal: Portal) => request<EcoProfile>('/eco/me', { portal }),
+  ecoLeaderboard: (portal?: Portal) => request<LeaderRow[]>('/eco/leaderboard', { portal }),
   joinQueue: (portal: Portal, stationId: string) =>
     post<{ entry: QueueEntry; position: number }>(`/stations/${stationId}/queue`, undefined, portal),
   leaveQueue: (portal: Portal, stationId: string) =>

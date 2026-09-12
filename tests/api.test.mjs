@@ -439,3 +439,99 @@ describe('station queue', () => {
     await call(`/sessions/${adminSession}/stop`, { method: 'POST', token: admin });
   });
 });
+
+describe('green hours tariff', () => {
+  before(reset);
+
+  test('forecast covers 24 hours with nights cheaper than the evening peak', async () => {
+    const { status, data } = await call('/tariffs/forecast');
+    assert.equal(status, 200);
+    assert.equal(data.hours.length, 24);
+    const at = h => data.hours.find(x => x.hour === h).multiplier;
+    assert.ok(at(3) < at(19), 'night should be cheaper than 19:00');
+    assert.equal(data.bestWindow.multiplier, Math.min(...data.hours.map(h => h.multiplier)));
+  });
+
+  test('a session locks the price of the band in effect at start', async () => {
+    const { data: forecast } = await call('/tariffs/forecast');
+    const token = await login('driver');
+    const s = await call('/sessions/start', { method: 'POST', token, body: { stationId: 'st-003', connectorId: 'c8' } });
+    assert.equal(s.status, 200);
+    assert.equal(s.data.session.basePrice, 1900);
+    assert.equal(s.data.session.multiplier, forecast.current.multiplier);
+    assert.equal(s.data.session.price, Math.round(1900 * forecast.current.multiplier));
+    await call(`/sessions/${s.data.session.id}/stop`, { method: 'POST', token });
+  });
+});
+
+describe('driver issue reports', () => {
+  before(reset);
+
+  test('a report becomes an alert on the owning operator network', async () => {
+    const driver = await login('driver');
+    const r = await call('/stations/st-001/issues', {
+      method: 'POST',
+      token: driver,
+      body: { category: 'Коннектор не работает', details: 'CCS2 не блокируется' },
+    });
+    assert.equal(r.status, 200);
+    assert.equal(r.data.alert.operatorId, 'op-001');
+    assert.equal(r.data.alert.code, 'DRIVER_REPORT');
+    assert.equal(r.data.alert.severity, 'warning');
+
+    const alerts = (await call('/state')).data.alerts;
+    assert.ok(alerts.some(a => a.id === r.data.alert.id));
+  });
+
+  test('safety reports are raised as critical', async () => {
+    const biz = await login('business');
+    const r = await call('/stations/st-002/issues', {
+      method: 'POST',
+      token: biz,
+      body: { category: 'Угроза безопасности', details: 'искрит разъём' },
+    });
+    assert.equal(r.status, 200);
+    assert.equal(r.data.alert.severity, 'critical');
+  });
+
+  test('repeat reports from the same driver are throttled', async () => {
+    const driver = await login('driver');
+    const again = await call('/stations/st-001/issues', { method: 'POST', token: driver, body: { category: 'Другое' } });
+    assert.equal(again.status, 429);
+  });
+
+  test('empty category and non-driver portals are refused', async () => {
+    const driver = await login('driver');
+    const op = await login('operator');
+    assert.equal((await call('/stations/st-003/issues', { method: 'POST', token: driver, body: { category: '  ' } })).status, 400);
+    assert.equal((await call('/stations/st-003/issues', { method: 'POST', token: op, body: { category: 'x' } })).status, 403);
+  });
+});
+
+describe('eco profile', () => {
+  before(reset);
+
+  test('completed sessions add up to energy, CO₂ and badges', async () => {
+    const token = await login('driver');
+    const before = (await call('/eco/me', { token })).data;
+
+    const s = await call('/sessions/start', { method: 'POST', token, body: { stationId: 'st-003', connectorId: 'c9' } });
+    await call(`/sessions/${s.data.session.id}/stop`, { method: 'POST', token });
+
+    const after = (await call('/eco/me', { token })).data;
+    assert.equal(after.sessions, before.sessions + 1);
+    assert.ok(after.kwh > before.kwh);
+    assert.equal(after.co2Kg, Math.round(after.kwh * 0.6 * 10) / 10);
+    assert.equal(after.badges.find(b => b.id === 'first').earned, true);
+  });
+
+  test('leaderboard hides surnames and marks the caller', async () => {
+    const token = await login('driver');
+    const rows = (await call('/eco/leaderboard', { token })).data;
+    assert.ok(rows.length > 0);
+    const mine = rows.find(r => r.me);
+    assert.ok(mine, 'caller not marked');
+    assert.equal(mine.name, 'Alisher T.');
+    assert.deepEqual(rows.map(r => r.rank), rows.map((_, i) => i + 1));
+  });
+});

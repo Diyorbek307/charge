@@ -469,7 +469,10 @@ api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), (req, re
     energy: 0,
     cost: 0,
     power: connector.power,
-    price: connector.price,
+    // Price is locked at start with the tariff band in effect right now.
+    basePrice: connector.price,
+    multiplier: tariffBand(tashkentHour()).multiplier,
+    price: Math.round(connector.price * tariffBand(tashkentHour()).multiplier),
     status: 'active',
     corporate: account.portal === 'business',
   };
@@ -750,6 +753,172 @@ api.delete('/stations/:id/queue', requireAuth('driver', 'business'), (req, res) 
     entity: req.params.id,
   });
   res.json({ ok: true });
+});
+
+// ---------------------------------------------------------------------------
+// Green hours — cheaper when the grid is quiet, dearer in the evening peak.
+// ---------------------------------------------------------------------------
+
+const TASHKENT_UTC_OFFSET = 5;
+
+function tashkentHour(date = new Date()) {
+  return (date.getUTCHours() + TASHKENT_UTC_OFFSET) % 24;
+}
+
+function tariffBand(hour) {
+  if (hour >= 23 || hour < 7) return { band: 'green', multiplier: 0.7 };
+  if (hour >= 17 && hour < 22) return { band: 'peak', multiplier: 1.25 };
+  if (hour >= 10 && hour < 17) return { band: 'day', multiplier: 0.9 };
+  return { band: 'standard', multiplier: 1 };
+}
+
+api.get('/tariffs/forecast', (_req, res) => {
+  const now = tashkentHour();
+  const hours = Array.from({ length: 24 }, (_, hour) => ({ hour, ...tariffBand(hour) }));
+  const cheapest = Math.min(...hours.map(h => h.multiplier));
+
+  // The next run of cheapest hours, starting from now.
+  let from = now;
+  for (let i = 0; i < 24; i++) {
+    const h = (now + i) % 24;
+    if (hours[h].multiplier === cheapest) {
+      from = h;
+      break;
+    }
+  }
+  let length = 0;
+  while (length < 24 && hours[(from + length) % 24].multiplier === cheapest) length++;
+
+  res.json({
+    timezone: 'Asia/Tashkent',
+    currentHour: now,
+    current: hours[now],
+    hours,
+    bestWindow: { from, to: (from + length) % 24, multiplier: cheapest, startsInHours: (from - now + 24) % 24 },
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Driver issue reports — land as an alert on the owning operator's console.
+// ---------------------------------------------------------------------------
+
+const ISSUE_COOLDOWN_MS = 10 * 60_000;
+
+api.post('/stations/:id/issues', requireAuth('driver', 'business'), (req, res) => {
+  const station = db.byId('stations', req.params.id);
+  if (!station) return res.status(404).json({ error: 'Станция не найдена' });
+
+  const category = String(req.body?.category ?? '').trim().slice(0, 60);
+  if (!category) return res.status(400).json({ error: 'Выберите категорию проблемы' });
+  const details = String(req.body?.details ?? '').trim().slice(0, 500);
+
+  // One report per driver per station per cooldown keeps an angry driver from
+  // burying the operator's queue.
+  const recent = db.data.alerts.find(
+    a =>
+      a.reporterId === req.account.id &&
+      a.stationId === station.id &&
+      Date.now() - new Date(a.time).getTime() < ISSUE_COOLDOWN_MS,
+  );
+  if (recent) {
+    return res.status(429).json({ error: 'Вы уже сообщили об этой станции — оператор разбирается' });
+  }
+
+  const critical = /безопас|огон|пожар|дым|искр/i.test(`${category} ${details}`);
+  const alert = {
+    id: db.nextId('alert', 'AL-'),
+    severity: critical ? 'critical' : 'warning',
+    stationId: station.id,
+    station: station.name,
+    operatorId: station.operatorId,
+    code: 'DRIVER_REPORT',
+    message: details ? `${category}: ${details}` : category,
+    time: new Date().toISOString(),
+    ack: false,
+    reporterId: req.account.id,
+    reporter: req.account.name,
+  };
+  db.insert('alerts', alert);
+
+  emit({
+    type: 'alert.new',
+    portal: req.account.portal,
+    actor: req.account.name,
+    message: `Жалоба водителя · ${station.name} · ${category}`,
+    entity: alert.id,
+    payload: { severity: alert.severity, operatorId: station.operatorId, stationId: station.id },
+  });
+
+  res.json({ alert });
+});
+
+// ---------------------------------------------------------------------------
+// Eco profile — what driving electric actually saved, plus a little glory.
+// ---------------------------------------------------------------------------
+
+// Petrol displaced per kWh minus grid emissions for Uzbekistan's mix; rough
+// on purpose — this is motivation, not an emissions audit.
+const CO2_KG_PER_KWH = 0.6;
+const KM_PER_KWH = 5.5;
+const CO2_KG_PER_TREE_YEAR = 21;
+
+function ecoFor(userId) {
+  const done = db.data.sessions.filter(s => s.userId === userId && s.status === 'completed');
+  const kwh = round(done.reduce((n, s) => n + s.energy, 0), 1);
+  const co2Kg = round(kwh * CO2_KG_PER_KWH, 1);
+  const stationsVisited = new Set(done.map(s => s.stationId)).size;
+  const greenHour = s => {
+    const h = tashkentHour(new Date(s.start));
+    return h >= 23 || h < 7;
+  };
+
+  return {
+    sessions: done.length,
+    kwh,
+    co2Kg,
+    trees: round(co2Kg / CO2_KG_PER_TREE_YEAR, 2),
+    km: Math.round(kwh * KM_PER_KWH),
+    stationsVisited,
+    badges: [
+      { id: 'first', title: 'Первая зарядка', description: 'Завершить первую сессию', earned: done.length >= 1 },
+      { id: 'night', title: 'Ночная птица', description: 'Зарядиться в зелёные часы 23:00–07:00', earned: done.some(greenHour) },
+      { id: 'green', title: 'Зелёный тариф', description: 'Сессия по сниженной цене', earned: done.some(s => (s.multiplier ?? 1) < 1) },
+      { id: 'explorer', title: 'Исследователь', description: 'Зарядиться на 3 разных станциях', earned: stationsVisited >= 3 },
+      { id: 'century', title: '100 кВт·ч', description: 'Накопить 100 кВт·ч', earned: kwh >= 100 },
+    ],
+  };
+}
+
+api.get('/eco/me', requireAuth('driver', 'business'), (req, res) => {
+  res.json(ecoFor(req.account.id));
+});
+
+api.get('/eco/leaderboard', (req, res) => {
+  const me = db.resolveToken(bearer(req))?.account?.id ?? null;
+  const totals = new Map();
+  for (const s of db.data.sessions) {
+    if (s.status !== 'completed') continue;
+    const row = totals.get(s.userId) ?? { userId: s.userId, name: s.user, kwh: 0 };
+    row.kwh += s.energy;
+    totals.set(s.userId, row);
+  }
+  // Public board: first name and an initial only.
+  const shortName = n => {
+    const [first, last] = String(n).split(' ');
+    return last ? `${first} ${last[0]}.` : first;
+  };
+  res.json(
+    [...totals.values()]
+      .sort((a, b) => b.kwh - a.kwh)
+      .slice(0, 10)
+      .map((r, i) => ({
+        rank: i + 1,
+        name: shortName(r.name),
+        kwh: round(r.kwh, 1),
+        co2Kg: round(r.kwh * CO2_KG_PER_KWH, 1),
+        me: r.userId === me,
+      })),
+  );
 });
 
 api.post('/wallets/:id/balance', requireAuth('admin'), (req, res) => {
