@@ -152,7 +152,8 @@ export interface Stats {
   activeSessions: number;
   totalSessions: number;
   energyToday: number;
-  revenueToday: number;
+  /** Network-wide revenue is admin-only; null for everyone else. */
+  revenueToday: number | null;
   evseTotal: number;
   evseOnline: number;
   stations: number;
@@ -179,8 +180,9 @@ export interface PlatformState {
 export interface QueueEntry {
   id: string;
   stationId: string;
-  userId: string;
-  user: string;
+  /** Present only on your own entry; other drivers' places are anonymous. */
+  userId?: string;
+  user?: string;
   joined: string;
   notified: boolean;
   notifiedAt: number | null;
@@ -308,7 +310,8 @@ const post = <T>(path: string, body?: unknown, portal?: Portal) =>
   request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined, portal });
 
 export const apiClient = {
-  getState: () => request<PlatformState>('/state'),
+  getState: (portal?: Portal) => request<PlatformState>('/state', { portal }),
+  streamTicket: (portal: Portal) => post<{ ticket: string }>('/stream/ticket', undefined, portal),
   getDemoCredentials: () => request<DemoCredential[]>('/auth/demo-credentials'),
 
   login: (portal: Portal, login: string, password: string) =>

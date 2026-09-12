@@ -1,5 +1,6 @@
 import express from 'express';
 import crypto from 'node:crypto';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { db, publicAccount } from './db.js';
 import { DEMO_ACCOUNTS } from './seed.js';
 import { generateSecret, verifyTotp, otpauthUri } from './totp.js';
@@ -7,21 +8,251 @@ import { generateSecret, verifyTotp, otpauthUri } from './totp.js';
 export const api = express.Router();
 api.use(express.json());
 
+// Carries the current request through synchronous handler code so emit() can
+// scope an event to whoever caused it.
+const requestContext = new AsyncLocalStorage();
+api.use((req, _res, next) => requestContext.run({ req }, next));
+const actingAccount = () => requestContext.getStore()?.req?.account ?? null;
+
+/** Demo credentials endpoint is for the public prototype only. */
+const DEMO_MODE = process.env.DEMO_MODE !== 'false';
+
 // ---------------------------------------------------------------------------
 // Live sync: every mutation is broadcast to all connected portals over SSE.
 // ---------------------------------------------------------------------------
 
+/** Live subscribers: { res, viewer } where viewer is null for anonymous. */
 const clients = new Set();
 
 function broadcast(event) {
-  const payload = `data: ${JSON.stringify(event)}\n\n`;
-  for (const res of clients) {
+  for (const client of clients) {
+    if (!canSee(client.viewer, event)) continue;
     try {
-      res.write(payload);
+      client.res.write(`data: ${JSON.stringify(viewFor(client.viewer, event))}\n\n`);
     } catch {
-      clients.delete(res);
+      clients.delete(client);
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Visibility. Every event carries a scope; state and events are filtered by it.
+// ---------------------------------------------------------------------------
+
+const withScope = event => ((event.scope = scopeOf(event)), event);
+
+const stationOperator = id => db.byId('stations', id)?.operatorId ?? null;
+
+function sessionScope(id) {
+  const s = db.byId('sessions', id);
+  return s ? { userId: s.userId, operatorId: s.operatorId, fleet: !!s.corporate, stationName: s.stationName } : {};
+}
+
+/** Who may see an event. Unknown types are admin-only by default. */
+function scopeOf({ type, entity, payload = {} }) {
+  const actor = actingAccount();
+  if (payload?.test) return { userId: actor?.id };
+
+  switch (type) {
+    case 'auth.login':
+    case 'auth.2fa':
+      return { userId: entity };
+    case 'webhook.created':
+      return { userId: actor?.id };
+    case 'report.export':
+      return {
+        userId: actor?.id,
+        operatorId: actor?.portal === 'operator' ? actor.orgId : null,
+        fleet: actor?.portal === 'business',
+      };
+    case 'session.start':
+    case 'session.stop':
+      return { ...sessionScope(entity), public: true };
+    case 'session.tick':
+      return { ...sessionScope(entity), public: false };
+    case 'evse.status':
+      return { operatorId: stationOperator(payload.stationId), public: true };
+    case 'alert.new':
+    case 'alert.ack': {
+      const alert = db.byId('alerts', entity);
+      return { operatorId: alert?.operatorId ?? null, userId: alert?.reporterId ?? null };
+    }
+    case 'queue.join':
+      return { userId: actor?.id, operatorId: stationOperator(payload.stationId) };
+    case 'queue.leave':
+      return { userId: actor?.id, operatorId: stationOperator(entity) };
+    case 'queue.ready':
+      return { userId: payload.userId, operatorId: stationOperator(payload.stationId) };
+    case 'wallet.topup':
+    case 'wallet.adjust':
+      return entity === 'biz-001' ? { fleet: true } : { userId: entity };
+    case 'employee.limit':
+      return { fleet: true };
+    case 'operator.status':
+      return { operatorId: entity };
+    case 'system.reset':
+      return { public: true };
+    default:
+      return {};
+  }
+}
+
+/** Full access to an event, as opposed to its public, anonymised form. */
+function entitled(viewer, event) {
+  if (!viewer) return false;
+  const sc = event.scope ?? {};
+  if (viewer.portal === 'admin') return true;
+  if (viewer.portal === 'operator') return !!sc.operatorId && sc.operatorId === viewer.orgId;
+  if (sc.userId && sc.userId === viewer.id) return true;
+  return viewer.portal === 'business' && !!sc.fleet;
+}
+
+function canSee(viewer, event) {
+  return entitled(viewer, event) || !!event.scope?.public;
+}
+
+const PUBLIC_MESSAGE = {
+  'session.start': e => `Старт зарядки · ${e.scope?.stationName ?? 'станция'}`,
+  'session.stop': e => `Зарядка завершена · ${e.scope?.stationName ?? 'станция'}`,
+};
+
+/** The anonymised form: no person, no money, only network facts. */
+function publicView(event) {
+  const pick = ['stationId', 'connectorId', 'status'];
+  const payload = Object.fromEntries(Object.entries(event.payload ?? {}).filter(([k]) => pick.includes(k)));
+  return {
+    id: event.id,
+    type: event.type,
+    portal: 'system',
+    actor: 'ONE CHARGE',
+    message: PUBLIC_MESSAGE[event.type]?.(event) ?? event.message,
+    entity: null,
+    payload,
+    ts: event.ts,
+  };
+}
+
+function viewFor(viewer, event) {
+  if (entitled(viewer, event)) {
+    const { scope, ...rest } = event;
+    return rest;
+  }
+  return publicView(event);
+}
+
+function visibleEvents(viewer, limit = 60) {
+  return db.data.events.filter(e => canSee(viewer, e)).slice(0, limit).map(e => viewFor(viewer, e));
+}
+
+/** Partner webhooks get the anonymised form: they integrate with the network, not with people. */
+function webhookData(event) {
+  const pv = publicView(event);
+  return { message: pv.message, ...pv.payload };
+}
+
+const viewerOf = req => db.resolveToken(bearer(req))?.account ?? null;
+
+function statsFor(viewer) {
+  const full = computeStats();
+  if (viewer?.portal === 'admin') return full;
+  if (viewer?.portal === 'operator') {
+    const mine = db.data.sessions.filter(s => s.operatorId === viewer.orgId && s.status === 'completed');
+    return {
+      ...full,
+      revenueToday: mine.reduce((n, s) => n + s.cost, 0),
+      openAlerts: db.data.alerts.filter(a => !a.ack && (!a.operatorId || a.operatorId === viewer.orgId)).length,
+    };
+  }
+  return { ...full, revenueToday: null, openAlerts: 0 };
+}
+
+const anonQueue = q => ({
+  id: q.id,
+  stationId: q.stationId,
+  joined: q.joined,
+  notified: q.notified,
+  notifiedAt: q.notifiedAt,
+  connectorId: null,
+});
+
+/** The slice of shared state a given viewer is allowed to hold. */
+function stateFor(viewer) {
+  const d = db.data;
+  const queues = pruneQueues();
+  const publicOperators = d.operators.map(({ id, name, logo, stations, evse, status, integration, since, region }) => ({
+    id, name, logo, stations, evse, status, integration, since, region,
+  }));
+  const txFor = sessions => {
+    const ids = new Set(sessions.map(s => s.id));
+    return d.transactions.filter(t => ids.has(t.sessionId));
+  };
+  const base = {
+    stations: d.stations,
+    operators: publicOperators,
+    sessions: [],
+    transactions: [],
+    alerts: [],
+    vehicles: [],
+    employees: [],
+    wallets: {},
+    queues: queues.map(anonQueue),
+    events: visibleEvents(viewer),
+    stats: statsFor(viewer),
+    serverTime: new Date().toISOString(),
+  };
+  if (!viewer || viewer.portal === 'api') return base;
+
+  if (viewer.portal === 'admin') {
+    return {
+      ...base,
+      operators: d.operators,
+      sessions: d.sessions,
+      transactions: d.transactions,
+      alerts: d.alerts,
+      vehicles: d.vehicles,
+      employees: d.employees,
+      wallets: d.wallets,
+      queues,
+    };
+  }
+
+  const ownQueue = q => (q.userId === viewer.id ? q : anonQueue(q));
+
+  if (viewer.portal === 'operator') {
+    const sessions = d.sessions.filter(s => s.operatorId === viewer.orgId);
+    const ownStations = new Set(d.stations.filter(st => st.operatorId === viewer.orgId).map(st => st.id));
+    return {
+      ...base,
+      sessions,
+      transactions: txFor(sessions),
+      alerts: d.alerts.filter(a => !a.operatorId || a.operatorId === viewer.orgId),
+      queues: queues.map(q => (ownStations.has(q.stationId) ? q : anonQueue(q))),
+    };
+  }
+
+  if (viewer.portal === 'business') {
+    const sessions = d.sessions.filter(s => s.corporate || s.userId === viewer.id);
+    return {
+      ...base,
+      sessions,
+      transactions: txFor(sessions),
+      vehicles: d.vehicles,
+      employees: d.employees,
+      wallets: d.wallets[viewer.orgId] ? { [viewer.orgId]: d.wallets[viewer.orgId] } : {},
+      queues: queues.map(ownQueue),
+    };
+  }
+
+  // driver
+  const sessions = d.sessions.filter(s => s.userId === viewer.id);
+  return {
+    ...base,
+    sessions,
+    transactions: txFor(sessions),
+    vehicles: d.vehicles.filter(v => v.driverId === viewer.id),
+    wallets: d.wallets[viewer.id] ? { [viewer.id]: d.wallets[viewer.id] } : {},
+    queues: queues.map(ownQueue),
+  };
 }
 
 /** Records an event in the activity log and pushes it to every live portal. */
@@ -36,6 +267,7 @@ function emit({ type, portal, actor, message, entity = null, payload = {} }) {
     payload,
     ts: new Date().toISOString(),
   };
+  event.scope = scopeOf(event);
   db.data.events.unshift(event);
   if (db.data.events.length > 300) db.data.events.length = 300;
   recordDeliveries(event);
@@ -63,7 +295,7 @@ function recordDeliveries(event) {
       id: event.id,
       type: event.type,
       created: event.ts,
-      data: { actor: event.actor, portal: event.portal, message: event.message, entity: event.entity, ...event.payload },
+      data: webhookData(event),
     });
     const timestamp = Math.floor(Date.now() / 1000);
     const signature = crypto
@@ -90,7 +322,26 @@ function recordDeliveries(event) {
   if (db.data.deliveries.length > 200) db.data.deliveries.length = 200;
 }
 
+const streamTickets = new Map();
+
+/** Swaps a bearer token for a short-lived, single-use stream ticket. */
+api.post('/stream/ticket', requireAuth(), (req, res) => {
+  const now = Date.now();
+  for (const [k, v] of streamTickets) if (v.expires < now) streamTickets.delete(k);
+  const ticket = crypto.randomBytes(18).toString('hex');
+  streamTickets.set(ticket, { accountId: req.account.id, expires: now + 60_000 });
+  res.json({ ticket });
+});
+
 api.get('/stream', (req, res) => {
+  let viewer = null;
+  if (req.query.ticket) {
+    const entry = streamTickets.get(String(req.query.ticket));
+    streamTickets.delete(String(req.query.ticket));
+    viewer = entry && entry.expires >= Date.now() ? db.byId('accounts', entry.accountId) : null;
+    if (!viewer) return res.status(401).json({ error: 'Недействительный тикет' });
+  }
+
   res.set({
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache, no-transform',
@@ -101,7 +352,8 @@ api.get('/stream', (req, res) => {
   res.write(`retry: 3000\n\n`);
   res.write(`data: ${JSON.stringify({ type: 'connected', ts: new Date().toISOString() })}\n\n`);
 
-  clients.add(res);
+  const client = { res, viewer };
+  clients.add(client);
 
   // Render's proxy drops idle connections; a periodic comment keeps it warm.
   const ping = setInterval(() => {
@@ -114,7 +366,7 @@ api.get('/stream', (req, res) => {
 
   req.on('close', () => {
     clearInterval(ping);
-    clients.delete(res);
+    clients.delete(client);
   });
 });
 
@@ -141,6 +393,7 @@ function requireAuth(...portals) {
 
 /** Demo credentials are shown in the UI so the prototype stays explorable. */
 api.get('/auth/demo-credentials', (_req, res) => {
+  if (!DEMO_MODE) return res.status(404).json({ error: 'Not found' });
   res.json(
     DEMO_ACCOUNTS.map(a => ({
       portal: a.portal,
@@ -318,22 +571,8 @@ api.post('/auth/logout', (req, res) => {
 // Shared state — one snapshot every portal reads from.
 // ---------------------------------------------------------------------------
 
-api.get('/state', (_req, res) => {
-  const d = db.data;
-  res.json({
-    stations: d.stations,
-    operators: d.operators,
-    sessions: d.sessions,
-    transactions: d.transactions,
-    alerts: d.alerts,
-    vehicles: d.vehicles,
-    employees: d.employees,
-    wallets: d.wallets,
-    queues: pruneQueues(),
-    events: d.events.slice(0, 60),
-    stats: computeStats(),
-    serverTime: new Date().toISOString(),
-  });
+api.get('/state', (req, res) => {
+  res.json(stateFor(viewerOf(req)));
 });
 
 function computeStats() {
@@ -495,7 +734,7 @@ api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), (req, re
     payload: { stationId: station.id, connectorId: connector.id, operatorId: station.operatorId },
   });
 
-  res.json({ session, stats: computeStats() });
+  res.json({ session, stats: statsFor(req.account) });
 });
 
 api.post('/sessions/:id/stop', requireAuth('driver', 'business', 'admin', 'operator'), (req, res) => {
@@ -562,7 +801,7 @@ api.post('/sessions/:id/stop', requireAuth('driver', 'business', 'admin', 'opera
 
   promoteQueue(session.stationId, session.connectorId);
 
-  res.json({ session, transaction, stats: computeStats() });
+  res.json({ session, transaction, stats: statsFor(req.account) });
 });
 
 /** Live meter tick so an in-progress session grows for every watching portal. */
@@ -575,7 +814,7 @@ api.post('/sessions/:id/tick', requireAuth(), (req, res) => {
   session.cost = Math.round(session.energy * (session.price ?? 1800));
   db.save();
 
-  broadcast({
+  broadcast(withScope({
     id: `tick-${session.id}`,
     type: 'session.tick',
     portal: 'system',
@@ -584,7 +823,7 @@ api.post('/sessions/:id/tick', requireAuth(), (req, res) => {
     entity: session.id,
     payload: { energy: session.energy, cost: session.cost },
     ts: new Date().toISOString(),
-  });
+  }));
 
   res.json({ session });
 });
@@ -620,7 +859,7 @@ api.post('/stations/:id/connectors/:cid', requireAuth('operator', 'admin'), (req
     payload: { stationId: station.id, connectorId: connector.id, status },
   });
 
-  res.json({ station, stats: computeStats() });
+  res.json({ station, stats: statsFor(req.account) });
 });
 
 api.post('/alerts/:id/ack', requireAuth('operator', 'admin'), (req, res) => {
@@ -639,7 +878,7 @@ api.post('/alerts/:id/ack', requireAuth('operator', 'admin'), (req, res) => {
     entity: alert.id,
   });
 
-  res.json({ alert, stats: computeStats() });
+  res.json({ alert, stats: statsFor(req.account) });
 });
 
 api.post('/alerts', requireAuth('operator', 'admin'), (req, res) => {
@@ -667,7 +906,7 @@ api.post('/alerts', requireAuth('operator', 'admin'), (req, res) => {
     payload: { severity },
   });
 
-  res.json({ alert, stats: computeStats() });
+  res.json({ alert, stats: statsFor(req.account) });
 });
 
 api.post('/wallet/topup', requireAuth('driver', 'business'), (req, res) => {
@@ -1126,7 +1365,7 @@ api.post('/reports', requireAuth(), (req, res) => {
 
 api.get('/events', (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 60, 300);
-  res.json(db.data.events.slice(0, limit));
+  res.json(visibleEvents(viewerOf(req), limit));
 });
 
 api.post('/admin/reset', requireAuth('admin'), (req, res) => {
@@ -1137,7 +1376,7 @@ api.post('/admin/reset', requireAuth('admin'), (req, res) => {
     actor: req.account.name,
     message: 'Демо-данные сброшены к исходным',
   });
-  res.json({ ok: true, stats: computeStats() });
+  res.json({ ok: true, stats: statsFor(req.account) });
 });
 
 export { emit, computeStats };

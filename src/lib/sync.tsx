@@ -43,6 +43,30 @@ const EMPTY_SESSIONS: Record<Portal, Account | null> = {
   api: null,
 };
 
+/** Union of per-portal state slices, keyed by id. */
+function mergeStates(parts: PlatformState[]): PlatformState {
+  const byId = <T extends { id: string }>(pick: (p: PlatformState) => T[] | undefined) => {
+    const map = new Map<string, T>();
+    parts.forEach(p => (pick(p) ?? []).forEach(item => map.set(item.id, { ...map.get(item.id), ...item })));
+    return [...map.values()];
+  };
+  const richest = parts.find(p => p.stats.revenueToday !== null) ?? parts[0];
+  return {
+    ...parts[0],
+    operators: richest.operators,
+    sessions: byId(p => p.sessions),
+    transactions: byId(p => p.transactions),
+    alerts: byId(p => p.alerts),
+    vehicles: byId(p => p.vehicles),
+    employees: byId(p => p.employees),
+    // A named entry beats the anonymous copy of the same place in line.
+    queues: byId(p => p.queues),
+    events: byId(p => p.events).sort((a, b) => b.ts.localeCompare(a.ts)),
+    wallets: Object.assign({}, ...parts.map(p => p.wallets)),
+    stats: richest.stats,
+  };
+}
+
 export function SyncProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<PlatformState | null>(null);
   const [connection, setConnection] = useState<ConnectionState>('connecting');
@@ -52,18 +76,38 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const [sessions, setSessions] = useState<Record<Portal, Account | null>>(EMPTY_SESSIONS);
   const [lastError, setLastError] = useState<string | null>(null);
 
+  // refresh() is stable, so it reads the signed-in portals through a ref.
+  const sessionsRef = useRef(sessions);
+  sessionsRef.current = sessions;
+  const signedInPortals = (Object.keys(sessions) as Portal[]).filter(p => sessions[p]);
+  const portalKey = [...signedInPortals].sort().join(',');
+
   // Coalesces the refetches triggered by bursts of incoming events.
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /**
+   * The server scopes state to each token, so a browser signed into several
+   * portals fetches each slice and merges them — it never sees more than its
+   * own credentials allow.
+   */
   const refresh = useCallback(async () => {
     try {
-      const next = await apiClient.getState();
-      setState(next);
+      const portals = (Object.keys(sessionsRef.current) as Portal[]).filter(p => sessionsRef.current[p]);
+      const settled = portals.length
+        ? await Promise.allSettled(portals.map(p => apiClient.getState(p)))
+        : [];
+      const snapshots = settled.flatMap(r => (r.status === 'fulfilled' ? [r.value] : []));
+      setState(snapshots.length ? mergeStates(snapshots) : await apiClient.getState());
       setLastError(null);
     } catch (err) {
       setLastError(err instanceof Error ? err.message : 'Ошибка загрузки');
     }
   }, []);
+
+  // Signing in or out changes what this browser may see.
+  useEffect(() => {
+    void refresh();
+  }, [portalKey, refresh]);
 
   const scheduleRefresh = useCallback(() => {
     if (refreshTimer.current) return;
@@ -95,20 +139,44 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     });
   }, [refresh]);
 
-  // Live channel. EventSource reconnects on its own; we only mirror the status.
+  // Live channel. One stream per signed-in portal (or one anonymous stream),
+  // each opened with a single-use ticket because EventSource cannot send an
+  // Authorization header. Streams overlap, so events are de-duplicated by id.
+  const seenEventIds = useRef(new Set<string>());
   useEffect(() => {
-    let source: EventSource | null = null;
     let closed = false;
+    const sources = new Set<EventSource>();
+    const timers = new Set<ReturnType<typeof setTimeout>>();
+    const portals: (Portal | null)[] = portalKey ? (portalKey.split(',') as Portal[]) : [null];
 
-    const connect = () => {
+    const retry = (portal: Portal | null) => {
+      const t = setTimeout(() => {
+        timers.delete(t);
+        void open(portal);
+      }, 3000);
+      timers.add(t);
+    };
+
+    const open = async (portal: Portal | null) => {
       if (closed) return;
       setConnection('connecting');
-      source = new EventSource('/api/stream');
+      let url = '/api/stream';
+      if (portal) {
+        try {
+          const { ticket } = await apiClient.streamTicket(portal);
+          url += `?ticket=${ticket}`;
+        } catch {
+          retry(portal);
+          return;
+        }
+      }
+      if (closed) return;
 
+      const source = new EventSource(url);
+      sources.add(source);
       source.onopen = () => setConnection('live');
-
       source.onmessage = e => {
-        let event: SyncEvent | { type: string };
+        let event: SyncEvent | { type: string; id?: string };
         try {
           event = JSON.parse(e.data);
         } catch {
@@ -119,25 +187,30 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           return;
         }
         const full = event as SyncEvent;
+        if (seenEventIds.current.has(full.id)) return;
+        seenEventIds.current.add(full.id);
         setEvents(prev => [full, ...prev].slice(0, 80));
         setEventCount(n => n + 1);
         scheduleRefresh();
       };
-
+      // A used ticket cannot reconnect, so reopen with a fresh one.
       source.onerror = () => {
+        source.close();
+        sources.delete(source);
         setConnection('offline');
-        // Let the browser's own retry (server sends `retry: 3000`) handle it.
+        retry(portal);
       };
     };
 
-    connect();
+    portals.forEach(p => void open(p));
 
     return () => {
       closed = true;
-      source?.close();
+      sources.forEach(src => src.close());
+      timers.forEach(t => clearTimeout(t));
       if (refreshTimer.current) clearTimeout(refreshTimer.current);
     };
-  }, [scheduleRefresh]);
+  }, [portalKey, scheduleRefresh]);
 
   // Drives the server-side meter for whichever session is running, so every
   // portal watching it sees energy and cost climb. One ticker per browser is

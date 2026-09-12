@@ -305,7 +305,7 @@ describe('wallet', () => {
 
   test('top-up moves the server balance', async () => {
     const token = await login('driver');
-    const before = (await call('/state')).data.wallets['acc-driver'].balance;
+    const before = (await call('/state', { token })).data.wallets['acc-driver'].balance;
     const r = await call('/wallet/topup', { method: 'POST', token, body: { amount: 50000 } });
     assert.equal(r.status, 200);
     assert.equal(r.data.wallet.balance, before + 50000);
@@ -407,11 +407,11 @@ describe('station queue', () => {
 
     // The business session ends → the driver is promoted.
     assert.equal((await call(`/sessions/${bizSession}/stop`, { method: 'POST', token: biz })).status, 200);
-    let entry = (await call('/state')).data.queues.find(q => q.userId === 'acc-driver');
+    let entry = (await call('/state', { token: driver })).data.queues.find(q => q.userId === 'acc-driver');
     assert.equal(entry.notified, true);
     assert.equal(entry.connectorId, 'c8');
 
-    const ready = (await call('/events?limit=10')).data.find(e => e.type === 'queue.ready');
+    const ready = (await call('/events?limit=10', { token: driver })).data.find(e => e.type === 'queue.ready');
     assert.equal(ready?.payload.userId, 'acc-driver');
 
     // Someone else cannot grab the held connector…
@@ -421,7 +421,7 @@ describe('station queue', () => {
     // …but the driver whose turn it is can, and that clears the queue entry.
     const mine = await call('/sessions/start', { method: 'POST', token: driver, body: { stationId: 'st-003', connectorId: 'c8' } });
     assert.equal(mine.status, 200);
-    entry = (await call('/state')).data.queues.find(q => q.userId === 'acc-driver');
+    entry = (await call('/state', { token: driver })).data.queues.find(q => q.userId === 'acc-driver');
     assert.equal(entry, undefined);
 
     await call(`/sessions/${mine.data.session.id}/stop`, { method: 'POST', token: driver });
@@ -479,7 +479,7 @@ describe('driver issue reports', () => {
     assert.equal(r.data.alert.code, 'DRIVER_REPORT');
     assert.equal(r.data.alert.severity, 'warning');
 
-    const alerts = (await call('/state')).data.alerts;
+    const alerts = (await call('/state', { token: await login('operator') })).data.alerts;
     assert.ok(alerts.some(a => a.id === r.data.alert.id));
   });
 
@@ -533,5 +533,193 @@ describe('eco profile', () => {
     assert.ok(mine, 'caller not marked');
     assert.equal(mine.name, 'Alisher T.');
     assert.deepEqual(rows.map(r => r.rank), rows.map((_, i) => i + 1));
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+
+async function openStream(ticket) {
+  const ctrl = new AbortController();
+  const events = [];
+  const res = await fetch(`${BASE}/stream${ticket ? `?ticket=${ticket}` : ''}`, { signal: ctrl.signal });
+  if (res.status !== 200) {
+    ctrl.abort();
+    return { status: res.status, events, close() {} };
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  (async () => {
+    try {
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let i;
+        while ((i = buffer.indexOf('\n\n')) >= 0) {
+          const chunk = buffer.slice(0, i);
+          buffer = buffer.slice(i + 2);
+          for (const line of chunk.split('\n')) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              events.push(JSON.parse(line.slice(6)));
+            } catch {
+              /* keep-alive or partial frame */
+            }
+          }
+        }
+      }
+    } catch {
+      /* aborted */
+    }
+  })();
+  for (let i = 0; i < 40 && !events.some(e => e.type === 'connected'); i++) {
+    await new Promise(r => setTimeout(r, 50));
+  }
+  return { status: 200, events, close: () => ctrl.abort() };
+}
+
+const ticketFor = async token => (await call('/stream/ticket', { method: 'POST', token })).data.ticket;
+
+describe('data isolation', () => {
+  before(reset);
+
+  test('anonymous state carries no personal or financial data', async () => {
+    const d = (await call('/state')).data;
+    assert.ok(d.stations.length > 0);
+    assert.deepEqual(d.wallets, {});
+    for (const key of ['sessions', 'transactions', 'alerts', 'vehicles', 'employees']) {
+      assert.equal(d[key].length, 0, key);
+    }
+    assert.equal(d.operators[0].revenue, undefined);
+    assert.equal(d.stats.revenueToday, null);
+  });
+
+  test('a driver sees only their own records', async () => {
+    const d = (await call('/state', { token: await login('driver') })).data;
+    assert.ok(d.sessions.length > 0);
+    assert.ok(d.sessions.every(s => s.userId === 'acc-driver'));
+    assert.deepEqual(Object.keys(d.wallets), ['acc-driver']);
+    assert.equal(d.employees.length, 0);
+    assert.ok(d.vehicles.every(v => v.driverId === 'acc-driver'));
+    assert.equal(d.stats.revenueToday, null);
+  });
+
+  test('an operator sees only its own network', async () => {
+    const d = (await call('/state', { token: await login('operator') })).data;
+    assert.ok(d.sessions.every(s => s.operatorId === 'op-001'));
+    assert.ok(d.alerts.every(a => !a.operatorId || a.operatorId === 'op-001'));
+    assert.deepEqual(d.wallets, {});
+    assert.equal(d.employees.length, 0);
+  });
+
+  test('a fleet manager sees the fleet but not private drivers', async () => {
+    const d = (await call('/state', { token: await login('business') })).data;
+    assert.deepEqual(Object.keys(d.wallets), ['biz-001']);
+    assert.ok(d.employees.length > 0);
+    assert.ok(d.sessions.every(s => s.corporate || s.userId === 'acc-business'));
+  });
+
+  test('admin sees everything', async () => {
+    const d = (await call('/state', { token: await login('admin') })).data;
+    assert.ok('acc-driver' in d.wallets && 'biz-001' in d.wallets);
+    assert.ok(typeof d.stats.revenueToday === 'number');
+  });
+
+  test('mutation responses do not leak network revenue', async () => {
+    const token = await login('driver');
+    const s = await call('/sessions/start', { method: 'POST', token, body: { stationId: 'st-006', connectorId: 'c14' } });
+    assert.equal(s.data.stats.revenueToday, null);
+    await call(`/sessions/${s.data.session.id}/stop`, { method: 'POST', token });
+  });
+
+  test("other drivers' queue places are anonymous", async () => {
+    const biz = await login('business');
+    const admin = await login('admin');
+    const driver = await login('driver');
+    const a = await call('/sessions/start', { method: 'POST', token: biz, body: { stationId: 'st-003', connectorId: 'c8' } });
+    const b = await call('/sessions/start', { method: 'POST', token: admin, body: { stationId: 'st-003', connectorId: 'c9' } });
+    assert.equal((await call('/stations/st-003/queue', { method: 'POST', token: driver })).status, 200);
+
+    const seenByFleet = (await call('/state', { token: biz })).data.queues.find(q => q.stationId === 'st-003');
+    assert.equal(seenByFleet.userId, undefined);
+    assert.equal(seenByFleet.user, undefined);
+    const seenBySelf = (await call('/state', { token: driver })).data.queues.find(q => q.stationId === 'st-003');
+    assert.equal(seenBySelf.userId, 'acc-driver');
+
+    await call('/stations/st-003/queue', { method: 'DELETE', token: driver });
+    await call(`/sessions/${a.data.session.id}/stop`, { method: 'POST', token: biz });
+    await call(`/sessions/${b.data.session.id}/stop`, { method: 'POST', token: admin });
+  });
+
+  test('the event log hides private events and anonymises public ones', async () => {
+    const driver = await login('driver');
+    await call('/wallet/topup', { method: 'POST', token: driver, body: { amount: 1000 } });
+    const s = await call('/sessions/start', { method: 'POST', token: driver, body: { stationId: 'st-006', connectorId: 'c13' } });
+
+    const anon = (await call('/events?limit=50')).data;
+    assert.ok(!anon.some(e => e.type === 'wallet.topup'), 'anonymous reader saw a top-up');
+    assert.ok(!anon.some(e => e.type === 'auth.login'), 'anonymous reader saw a login');
+    const pubStart = anon.find(e => e.type === 'session.start');
+    assert.equal(pubStart.actor, 'ONE CHARGE');
+    assert.ok(!JSON.stringify(anon).includes('Alisher'), 'a name leaked to anonymous readers');
+
+    const own = (await call('/events?limit=50', { token: driver })).data;
+    assert.ok(own.some(e => e.type === 'wallet.topup'));
+
+    await call(`/sessions/${s.data.session.id}/stop`, { method: 'POST', token: driver });
+  });
+
+  test('live stream delivers only what each subscriber may see', async () => {
+    const driver = await login('driver');
+    const operator = await login('operator'); // op-001
+    const biz = await login('business');
+
+    const anon = await openStream();
+    const mine = await openStream(await ticketFor(driver));
+    const op = await openStream(await ticketFor(operator));
+    assert.equal(mine.status, 200);
+
+    await call('/wallet/topup', { method: 'POST', token: driver, body: { amount: 2000 } });
+    const s = await call('/sessions/start', { method: 'POST', token: biz, body: { stationId: 'st-006', connectorId: 'c14' } }); // op-002
+    await new Promise(r => setTimeout(r, 800));
+
+    assert.ok(mine.events.some(e => e.type === 'wallet.topup'), 'driver missed their own top-up');
+    assert.ok(!anon.events.some(e => e.type === 'wallet.topup'), 'anonymous stream saw a top-up');
+    assert.ok(!op.events.some(e => e.type === 'wallet.topup'), 'operator saw a driver top-up');
+
+    const competitorStart = op.events.find(e => e.type === 'session.start');
+    assert.ok(competitorStart, 'public session event missing');
+    assert.equal(competitorStart.actor, 'ONE CHARGE', "operator saw a name on a competitor's session");
+
+    anon.close();
+    mine.close();
+    op.close();
+    await call(`/sessions/${s.data.session.id}/stop`, { method: 'POST', token: biz });
+  });
+
+  test('stream tickets are single-use and forged ones are refused', async () => {
+    const ticket = await ticketFor(await login('driver'));
+    const first = await openStream(ticket);
+    assert.equal(first.status, 200);
+    first.close();
+    assert.equal((await openStream(ticket)).status, 401);
+    assert.equal((await openStream('forged')).status, 401);
+  });
+
+  test('partner webhooks receive anonymised payloads', async () => {
+    const api = await login('api');
+    const created = await call('/webhooks', {
+      method: 'POST',
+      token: api,
+      body: { url: 'https://privacy.example.uz/hook', events: ['session.start'] },
+    });
+    const driver = await login('driver');
+    const s = await call('/sessions/start', { method: 'POST', token: driver, body: { stationId: 'st-003', connectorId: 'c9' } });
+    const d = (await call('/webhooks/deliveries?limit=20', { token: api })).data.find(x => x.webhookId === created.data.webhook.id);
+    assert.ok(d);
+    assert.ok(!d.body.includes('Alisher'), 'driver name sent to a partner');
+    await call(`/sessions/${s.data.session.id}/stop`, { method: 'POST', token: driver });
   });
 });
