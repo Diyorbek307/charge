@@ -723,3 +723,72 @@ describe('data isolation', () => {
     await call(`/sessions/${s.data.session.id}/stop`, { method: 'POST', token: driver });
   });
 });
+
+
+describe('bookings', () => {
+  const inMinutes = m => new Date(Date.now() + m * 60_000).toISOString();
+  const book = (token, stationId, connectorId, startsAt, minutes) =>
+    call(`/stations/${stationId}/bookings`, { method: 'POST', token, body: { connectorId, startsAt, minutes } });
+
+  test('charges the fee and holds the connector for its owner', async () => {
+    await reset();
+    const driver = await login('driver');
+    const biz = await login('business');
+    const before = (await call('/state', { token: driver })).data.wallets['acc-driver'].balance;
+
+    const r = await book(driver, 'st-003', 'c8', inMinutes(0), 60);
+    assert.equal(r.status, 200);
+    assert.match(r.data.booking.code, /^BK-[0-9A-F]{6}$/);
+    assert.equal(r.data.wallet.balance, before - 2000);
+
+    const jump = await call('/sessions/start', { method: 'POST', token: biz, body: { stationId: 'st-003', connectorId: 'c8' } });
+    assert.equal(jump.status, 409, 'someone else took a booked connector');
+
+    const mine = await call('/sessions/start', { method: 'POST', token: driver, body: { stationId: 'st-003', connectorId: 'c8' } });
+    assert.equal(mine.status, 200);
+    const b = (await call('/state', { token: driver })).data.bookings.find(x => x.id === r.data.booking.id);
+    assert.equal(b.status, 'used');
+    await call(`/sessions/${mine.data.session.id}/stop`, { method: 'POST', token: driver });
+  });
+
+  test('refuses overlapping slots and a second active booking', async () => {
+    await reset();
+    const driver = await login('driver');
+    const biz = await login('business');
+    assert.equal((await book(driver, 'st-003', 'c9', inMinutes(60), 60)).status, 200);
+    assert.equal((await book(biz, 'st-003', 'c9', inMinutes(90), 30)).status, 409, 'overlap accepted');
+    assert.equal((await book(driver, 'st-006', 'c13', inMinutes(300), 30)).status, 409, 'second booking accepted');
+  });
+
+  test('cancelling before the window refunds the fee', async () => {
+    await reset();
+    const driver = await login('driver');
+    const before = (await call('/state', { token: driver })).data.wallets['acc-driver'].balance;
+    const r = await book(driver, 'st-006', 'c14', inMinutes(120), 30);
+    const c = await call(`/bookings/${r.data.booking.id}`, { method: 'DELETE', token: driver });
+    assert.equal(c.status, 200);
+    assert.equal(c.data.refunded, true);
+    assert.equal((await call('/state', { token: driver })).data.wallets['acc-driver'].balance, before);
+    assert.equal((await call(`/bookings/${r.data.booking.id}`, { method: 'DELETE', token: driver })).status, 409);
+  });
+
+  test("someone else cannot cancel your booking, and sees the slot but not you", async () => {
+    await reset();
+    const driver = await login('driver');
+    const biz = await login('business');
+    const r = await book(driver, 'st-006', 'c13', inMinutes(45), 30);
+    assert.equal((await call(`/bookings/${r.data.booking.id}`, { method: 'DELETE', token: biz })).status, 403);
+    const seen = (await call('/state', { token: biz })).data.bookings.find(b => b.id === r.data.booking.id);
+    assert.ok(seen, 'booked slot not visible');
+    assert.equal(seen.userId, undefined);
+    assert.equal(seen.user, undefined);
+  });
+
+  test('validates duration and start time', async () => {
+    await reset();
+    const driver = await login('driver');
+    assert.equal((await book(driver, 'st-003', 'c8', inMinutes(30), 5)).status, 400);
+    assert.equal((await book(driver, 'st-003', 'c8', inMinutes(-30), 60)).status, 400);
+    assert.equal((await book(driver, 'st-003', 'c8', inMinutes(60 * 30), 60)).status, 400);
+  });
+});

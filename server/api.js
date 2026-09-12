@@ -86,6 +86,12 @@ function scopeOf({ type, entity, payload = {} }) {
     case 'wallet.topup':
     case 'wallet.adjust':
       return entity === 'biz-001' ? { fleet: true } : { userId: entity };
+    case 'booking.create':
+    case 'booking.cancel':
+    case 'booking.expire': {
+      const b = db.byId('bookings', entity);
+      return { userId: b?.userId, operatorId: b?.operatorId, fleet: b?.walletId === 'biz-001' };
+    }
     case 'employee.limit':
       return { fleet: true };
     case 'operator.status':
@@ -166,6 +172,16 @@ function statsFor(viewer) {
   return { ...full, revenueToday: null, openAlerts: 0 };
 }
 
+const anonBooking = b => ({
+  id: b.id,
+  stationId: b.stationId,
+  connectorId: b.connectorId,
+  startsAt: b.startsAt,
+  endsAt: b.endsAt,
+  graceUntil: b.graceUntil,
+  status: b.status,
+});
+
 const anonQueue = q => ({
   id: q.id,
   stationId: q.stationId,
@@ -179,6 +195,11 @@ const anonQueue = q => ({
 function stateFor(viewer) {
   const d = db.data;
   const queues = pruneQueues();
+  const activeBookings = pruneBookings().filter(b => b.status === 'active');
+  const bookingsFor = v => [
+    ...d.bookings.filter(b => b.userId === v.id),
+    ...activeBookings.filter(b => b.userId !== v.id).map(anonBooking),
+  ];
   const publicOperators = d.operators.map(({ id, name, logo, stations, evse, status, integration, since, region }) => ({
     id, name, logo, stations, evse, status, integration, since, region,
   }));
@@ -196,6 +217,7 @@ function stateFor(viewer) {
     employees: [],
     wallets: {},
     queues: queues.map(anonQueue),
+    bookings: activeBookings.map(anonBooking),
     events: visibleEvents(viewer),
     stats: statsFor(viewer),
     serverTime: new Date().toISOString(),
@@ -213,6 +235,7 @@ function stateFor(viewer) {
       employees: d.employees,
       wallets: d.wallets,
       queues,
+      bookings: d.bookings,
     };
   }
 
@@ -227,6 +250,7 @@ function stateFor(viewer) {
       transactions: txFor(sessions),
       alerts: d.alerts.filter(a => !a.operatorId || a.operatorId === viewer.orgId),
       queues: queues.map(q => (ownStations.has(q.stationId) ? q : anonQueue(q))),
+      bookings: activeBookings.map(b => (ownStations.has(b.stationId) ? b : anonBooking(b))),
     };
   }
 
@@ -240,6 +264,7 @@ function stateFor(viewer) {
       employees: d.employees,
       wallets: d.wallets[viewer.orgId] ? { [viewer.orgId]: d.wallets[viewer.orgId] } : {},
       queues: queues.map(ownQueue),
+      bookings: bookingsFor(viewer),
     };
   }
 
@@ -252,6 +277,7 @@ function stateFor(viewer) {
     vehicles: d.vehicles.filter(v => v.driverId === viewer.id),
     wallets: d.wallets[viewer.id] ? { [viewer.id]: d.wallets[viewer.id] } : {},
     queues: queues.map(ownQueue),
+    bookings: bookingsFor(viewer),
   };
 }
 
@@ -674,6 +700,12 @@ api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), (req, re
     return res.status(409).json({ error: 'У вас уже идёт зарядка' });
   }
 
+  // A booking holds its connector for its owner around the booked window.
+  const booked = bookingHolding(station.id, connector.id);
+  if (booked && booked.userId !== account.id) {
+    return res.status(409).json({ error: 'Коннектор забронирован' });
+  }
+
   // A connector freed for the queue belongs to that driver until the hold lapses.
   pruneQueues();
   const holdsMine = db.data.queues.some(
@@ -717,6 +749,7 @@ api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), (req, re
   };
 
   connector.status = 'occupied';
+  if (booked) booked.status = 'used';
   // Starting here settles this driver's place in the station's queue.
   db.data.queues = db.data.queues.filter(q => !(q.stationId === station.id && q.userId === account.id));
   db.insert('sessions', session);
@@ -1158,6 +1191,157 @@ api.get('/eco/leaderboard', (req, res) => {
         me: r.userId === me,
       })),
   );
+});
+
+// ---------------------------------------------------------------------------
+// Bookings — reserve a connector for a time window.
+// ---------------------------------------------------------------------------
+
+const BOOKING_FEE = 2000;
+const BOOKING_GRACE_MS = 15 * 60_000;
+const BOOKING_LEAD_MS = 10 * 60_000;
+const BOOKING_HORIZON_MS = 24 * 60 * 60_000;
+
+const ms = iso => new Date(iso).getTime();
+const bookingEnd = b => Math.max(ms(b.endsAt), ms(b.graceUntil));
+
+/** No-shows lose their booking once the grace period passes. */
+function pruneBookings() {
+  const now = Date.now();
+  for (const b of db.data.bookings) {
+    if (b.status !== 'active' || now <= ms(b.graceUntil)) continue;
+    b.status = 'expired';
+    db.save();
+    emit({
+      type: 'booking.expire',
+      portal: 'system',
+      actor: 'ONE CHARGE',
+      message: `Бронь ${b.code} истекла — водитель не приехал`,
+      entity: b.id,
+      payload: { stationId: b.stationId, connectorId: b.connectorId },
+    });
+  }
+  return db.data.bookings;
+}
+
+/** The active booking holding a connector right now, if any. */
+function bookingHolding(stationId, connectorId, at = Date.now()) {
+  pruneBookings();
+  return (
+    db.data.bookings.find(
+      b =>
+        b.status === 'active' &&
+        b.stationId === stationId &&
+        b.connectorId === connectorId &&
+        ms(b.startsAt) - BOOKING_LEAD_MS <= at &&
+        at <= ms(b.graceUntil),
+    ) ?? null
+  );
+}
+
+api.post('/stations/:id/bookings', requireAuth('driver', 'business'), (req, res) => {
+  const station = db.byId('stations', req.params.id);
+  if (!station) return res.status(404).json({ error: 'Станция не найдена' });
+  const connector = station.connectors.find(c => c.id === req.body?.connectorId);
+  if (!connector) return res.status(404).json({ error: 'Коннектор не найден' });
+  if (connector.status === 'unavailable') return res.status(409).json({ error: 'Коннектор недоступен' });
+
+  const minutes = Number(req.body?.minutes);
+  if (!Number.isInteger(minutes) || minutes < 15 || minutes > 240) {
+    return res.status(400).json({ error: 'Длительность — от 15 минут до 4 часов' });
+  }
+  const startMs = ms(req.body?.startsAt);
+  const now = Date.now();
+  if (Number.isNaN(startMs)) return res.status(400).json({ error: 'Некорректное время начала' });
+  if (startMs < now - 60_000) return res.status(400).json({ error: 'Время начала уже прошло' });
+  if (startMs > now + BOOKING_HORIZON_MS) {
+    return res.status(400).json({ error: 'Бронировать можно не больше чем на сутки вперёд' });
+  }
+
+  pruneBookings();
+  const account = req.account;
+  if (db.data.bookings.some(b => b.status === 'active' && b.userId === account.id)) {
+    return res.status(409).json({ error: 'У вас уже есть активная бронь' });
+  }
+
+  const endMs = startMs + minutes * 60_000;
+  const graceMs = startMs + BOOKING_GRACE_MS;
+  const windowEnd = Math.max(endMs, graceMs);
+  const clash = db.data.bookings.some(
+    b =>
+      b.status === 'active' &&
+      b.stationId === station.id &&
+      b.connectorId === connector.id &&
+      ms(b.startsAt) < windowEnd &&
+      startMs < bookingEnd(b),
+  );
+  if (clash) return res.status(409).json({ error: 'Это время уже забронировано' });
+
+  const walletId = account.portal === 'business' ? 'biz-001' : account.id;
+  const wallet = db.data.wallets[walletId];
+  if (!wallet || wallet.balance < BOOKING_FEE) {
+    return res.status(402).json({ error: `Недостаточно средств для брони: ${BOOKING_FEE.toLocaleString('ru-RU')} сум` });
+  }
+  wallet.balance -= BOOKING_FEE;
+
+  const booking = {
+    id: db.nextId('booking', 'BK-'),
+    code: `BK-${crypto.randomBytes(3).toString('hex').toUpperCase()}`,
+    userId: account.id,
+    user: account.name,
+    walletId,
+    stationId: station.id,
+    stationName: station.name,
+    operatorId: station.operatorId,
+    connectorId: connector.id,
+    connectorType: connector.type,
+    power: connector.power,
+    startsAt: new Date(startMs).toISOString(),
+    endsAt: new Date(endMs).toISOString(),
+    graceUntil: new Date(graceMs).toISOString(),
+    minutes,
+    fee: BOOKING_FEE,
+    status: 'active',
+    created: new Date(now).toISOString(),
+  };
+  db.data.bookings.unshift(booking);
+  db.save();
+
+  emit({
+    type: 'booking.create',
+    portal: account.portal,
+    actor: account.name,
+    message: `Бронь ${booking.code} · ${station.name} · ${connector.type} · ${minutes} мин`,
+    entity: booking.id,
+    payload: { stationId: station.id, connectorId: connector.id },
+  });
+  res.json({ booking, wallet });
+});
+
+api.delete('/bookings/:id', requireAuth('driver', 'business', 'admin'), (req, res) => {
+  pruneBookings();
+  const booking = db.byId('bookings', req.params.id);
+  if (!booking) return res.status(404).json({ error: 'Бронь не найдена' });
+  if (req.account.portal !== 'admin' && booking.userId !== req.account.id) {
+    return res.status(403).json({ error: 'Нет прав на эту бронь' });
+  }
+  if (booking.status !== 'active') return res.status(409).json({ error: 'Бронь уже не активна' });
+
+  booking.status = 'cancelled';
+  // Cancelling before the window opens gets the fee back.
+  const refunded = Date.now() < ms(booking.startsAt);
+  if (refunded && db.data.wallets[booking.walletId]) db.data.wallets[booking.walletId].balance += booking.fee;
+  db.save();
+
+  emit({
+    type: 'booking.cancel',
+    portal: req.account.portal,
+    actor: req.account.name,
+    message: `Бронь ${booking.code} отменена${refunded ? ' · плата возвращена' : ''}`,
+    entity: booking.id,
+    payload: { stationId: booking.stationId, connectorId: booking.connectorId, refunded },
+  });
+  res.json({ booking, refunded });
 });
 
 api.post('/wallets/:id/balance', requireAuth('admin'), (req, res) => {

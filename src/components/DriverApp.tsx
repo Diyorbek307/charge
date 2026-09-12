@@ -15,6 +15,7 @@ import { Station } from '../data/mockData';
 import { useLiveStations, useLiveDriverSessions } from '../lib/live';
 import { useSync } from '../lib/sync';
 import EcoScreen, { GreenHourBanner } from './EcoScreen';
+import type { Booking } from '../lib/api';
 import AuthFlow from './AuthFlow';
 
 type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'cards' | 'loyalty' | 'referral' | 'app-settings' | 'wallet' | 'security' | 'support' | 'eco';
@@ -2774,13 +2775,48 @@ function FavoritesScreen({ onBack, onSelectStation }: { onBack: () => void; onSe
   );
 }
 
-function BookingScreen({ station, onBack, onConfirm }: { station: Station | null; onBack: () => void; onConfirm: () => void }) {
-  const [date, setDate] = useState('2026-09-05');
-  const [time, setTime] = useState('10:00');
+/** Next quarter hour at least 15 minutes out, in the browser's local time. */
+function nextBookableSlot() {
+  const d = new Date(Date.now() + 15 * 60_000);
+  d.setMinutes(Math.ceil(d.getMinutes() / 15) * 15, 0, 0);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return {
+    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  };
+}
+
+function BookingScreen({ station, onBack, onConfirm }: { station: Station | null; onBack: () => void; onConfirm: (booking: Booking) => void }) {
+  const { actions, refresh } = useSync();
+  const [slot] = useState(nextBookableSlot);
+  const [date, setDate] = useState(slot.date);
+  const [time, setTime] = useState(slot.time);
+  const [submitting, setSubmitting] = useState(false);
+  const [bookError, setBookError] = useState<string | null>(null);
   const [duration, setDuration] = useState(60);
   const [connector, setConnector] = useState(0);
 
   const freeConnectors = station?.connectors.filter(c => c.status === 'available') || [];
+  const submit = async () => {
+    const chosen = freeConnectors[connector];
+    if (!station || !chosen) return;
+    setSubmitting(true);
+    setBookError(null);
+    try {
+      const { booking } = await actions.createBooking('driver', station.id, {
+        connectorId: chosen.id,
+        startsAt: new Date(`${date}T${time}`).toISOString(),
+        minutes: duration,
+      });
+      await refresh();
+      onConfirm(booking);
+    } catch (err) {
+      setBookError(err instanceof Error ? err.message : 'Не удалось забронировать');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const estimatedCost = freeConnectors[connector]
     ? Math.round((freeConnectors[connector].power * duration / 60) * freeConnectors[connector].price)
     : 0;
@@ -2882,8 +2918,11 @@ function BookingScreen({ station, onBack, onConfirm }: { station: Station | null
         </div>
       </div>
       <div className="px-4 pb-6 pt-2">
-        <button onClick={onConfirm}
-          className="w-full bg-amber-500 hover:bg-amber-600 text-white rounded-2xl py-4 font-bold text-base transition-colors flex items-center justify-center gap-2">
+        {bookError && (
+          <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-2">{bookError}</p>
+        )}
+        <button onClick={submit} disabled={submitting || !freeConnectors[connector]}
+          className="w-full disabled:opacity-60 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl py-4 font-bold text-base transition-colors flex items-center justify-center gap-2">
           <CalendarCheck size={18} />Подтвердить бронь · 2 000 сум
         </button>
       </div>
@@ -2891,7 +2930,9 @@ function BookingScreen({ station, onBack, onConfirm }: { station: Station | null
   );
 }
 
-function BookingDoneScreen({ station, onClose }: { station: Station | null; onClose: () => void }) {
+function BookingDoneScreen({ station, booking, onClose }: { station: Station | null; booking: Booking | null; onClose: () => void }) {
+  const fmtTime = (iso?: string) =>
+    iso ? new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '—';
   return (
     <div className="h-full flex flex-col bg-slate-50">
       <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
@@ -2904,11 +2945,11 @@ function BookingDoneScreen({ station, onClose }: { station: Station | null; onCl
         <div className="w-full bg-white rounded-2xl border border-slate-100 p-4 mb-4 text-left">
           <p className="text-xs font-semibold text-slate-400 mb-3">ДЕТАЛИ БРОНИ</p>
           {[
-            ['Станция', station?.name || '—'],
-            ['Разъем', 'CCS2 · 150 кВт'],
-            ['Дата', '5 сент 2026'],
-            ['Время', '10:00 – 11:00'],
-            ['Номер брони', '#BK-7821'],
+            ['Станция', booking?.stationName || station?.name || '—'],
+            ['Разъем', booking ? `${booking.connectorType} · ${booking.power} кВт` : '—'],
+            ['Дата', booking ? new Date(booking.startsAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) : '—'],
+            ['Время', booking ? `${fmtTime(booking.startsAt)} – ${fmtTime(booking.endsAt)}` : '—'],
+            ['Номер брони', booking?.code ?? '—'],
             ['Статус', '🟡 Забронировано'],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between py-1.5 border-b border-slate-50 last:border-none text-sm">
@@ -4630,6 +4671,7 @@ export default function DriverApp() {
   ) ?? null;
 
   const [lastSummary, setLastSummary] = useState<{ energy: number; cost: number; minutes: number } | null>(null);
+  const [lastBooking, setLastBooking] = useState<Booking | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('map');
   const [screen, setScreen] = useState<Screen>('map');
@@ -4737,8 +4779,8 @@ export default function DriverApp() {
     if (screen === 'charging-active') return <ChargingActiveScreen station={selectedStation} onStop={stopCharging} />;
     if (screen === 'charging-done') return <ChargingDoneScreen station={selectedStation} onClose={handleBack} summary={lastSummary} />;
     if (screen === 'trip') return <TripPlannerScreen onBack={() => setScreen('map')} />;
-    if (screen === 'booking') return <BookingScreen station={selectedStation} onBack={() => setScreen('station')} onConfirm={() => setScreen('booking-done')} />;
-    if (screen === 'booking-done') return <BookingDoneScreen station={selectedStation} onClose={handleBack} />;
+    if (screen === 'booking') return <BookingScreen station={selectedStation} onBack={() => setScreen('station')} onConfirm={b => { setLastBooking(b); setScreen('booking-done'); }} />;
+    if (screen === 'booking-done') return <BookingDoneScreen station={selectedStation} booking={lastBooking} onClose={handleBack} />;
     if (screen === 'add-car') return <AddCarScreen onBack={() => setScreen('map')} onSave={() => setScreen('map')} />;
     if (screen === 'notifications') return <NotificationsScreen onBack={() => setScreen('map')} />;
     if (screen === 'reviews') return <ReviewsScreen station={selectedStation} onBack={() => setScreen('station')} />;

@@ -172,6 +172,7 @@ export interface PlatformState {
   employees: Employee[];
   wallets: Record<string, Wallet>;
   queues?: QueueEntry[];
+  bookings?: Booking[];
   events: SyncEvent[];
   stats: Stats;
   serverTime: string;
@@ -226,6 +227,25 @@ export interface LeaderRow {
   kwh: number;
   co2Kg: number;
   me: boolean;
+}
+
+export interface Booking {
+  id: string;
+  stationId: string;
+  connectorId: string;
+  startsAt: string;
+  endsAt: string;
+  graceUntil: string;
+  status: 'active' | 'used' | 'cancelled' | 'expired';
+  /** The fields below are present only on your own bookings. */
+  code?: string;
+  userId?: string;
+  user?: string;
+  stationName?: string;
+  connectorType?: string;
+  power?: number;
+  minutes?: number;
+  fee?: number;
 }
 
 export interface ReportRecord {
@@ -341,6 +361,10 @@ export const apiClient = {
     post<{ alert: Alert }>(`/stations/${stationId}/issues`, body, portal),
   ecoMe: (portal: Portal) => request<EcoProfile>('/eco/me', { portal }),
   ecoLeaderboard: (portal?: Portal) => request<LeaderRow[]>('/eco/leaderboard', { portal }),
+  createBooking: (portal: Portal, stationId: string, body: { connectorId: string; startsAt: string; minutes: number }) =>
+    post<{ booking: Booking; wallet: Wallet }>(`/stations/${stationId}/bookings`, body, portal),
+  cancelBooking: (portal: Portal, id: string) =>
+    request<{ booking: Booking; refunded: boolean }>(`/bookings/${id}`, { method: 'DELETE', portal }),
   joinQueue: (portal: Portal, stationId: string) =>
     post<{ entry: QueueEntry; position: number }>(`/stations/${stationId}/queue`, undefined, portal),
   leaveQueue: (portal: Portal, stationId: string) =>
