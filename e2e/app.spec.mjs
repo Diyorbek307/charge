@@ -83,3 +83,26 @@ test('an operator never sees a competitor network in the browser', async ({ page
   expect(state.sessions.every(s => s.operatorId === 'op-001')).toBeTruthy();
   expect(Object.keys(state.wallets)).toHaveLength(0);
 });
+
+test('a new driver signs up with an SMS code and lands in the app', async ({ page, request }) => {
+  await page.goto('/?portal=driver');
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click();
+  await page.locator('#driver-signup-name').fill('Madina Karimova');
+  await page.locator('#driver-signup-phone').fill('+998 93 555 44 33');
+  await page.getByRole('button', { name: /Получить SMS-код/ }).click();
+
+  // Demo mode shows the code instead of sending an SMS.
+  const notice = page.getByText(/Ваш код —/);
+  await expect(notice).toBeVisible();
+  const code = (await notice.textContent()).match(/(\d{6})/)[1];
+
+  await page.locator('#driver-signup-code').fill(code);
+  await page.locator('#driver-signup-password').fill('Zaryad2026');
+  await page.getByRole('button', { name: 'Зарегистрироваться' }).click();
+  await expect(page.locator('#driver-signup-code')).toHaveCount(0);
+  await expect(page.locator('#driver-login')).toHaveCount(0);
+
+  const token = await page.evaluate(() => localStorage.getItem('oc-token-driver'));
+  const me = await request.get('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
+  expect((await me.json()).user.name).toBe('Madina Karimova');
+});

@@ -8,6 +8,9 @@ interface Webhook {
   secret: string;
   active: boolean;
   created: string;
+  consecutiveFailures?: number;
+  disabledReason?: string;
+  lastDeliveryAt?: string;
 }
 
 interface Delivery {
@@ -17,9 +20,21 @@ interface Delivery {
   url: string;
   body: string;
   headers: Record<string, string>;
-  status: string;
+  status: 'pending' | 'retrying' | 'delivered' | 'failed' | 'cancelled';
+  attempts?: number;
+  responseStatus?: number | null;
+  lastError?: string | null;
+  nextAttemptAt?: number | null;
   ts: string;
 }
+
+const STATUS_STYLE: Record<Delivery['status'], { label: string; cls: string }> = {
+  pending: { label: 'в очереди', cls: 'text-slate-300 bg-slate-500/15' },
+  retrying: { label: 'повтор', cls: 'text-amber-300 bg-amber-500/15' },
+  delivered: { label: 'доставлено', cls: 'text-emerald-300 bg-emerald-500/15' },
+  failed: { label: 'ошибка', cls: 'text-rose-300 bg-rose-500/15' },
+  cancelled: { label: 'отменено', cls: 'text-slate-400 bg-slate-500/10' },
+};
 
 const token = () => {
   try {
@@ -45,12 +60,8 @@ async function call<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 /**
- * Live webhook sandbox.
- *
- * The platform signs every matching event and records exactly what it would
- * POST, but never performs the outbound request: this service is publicly
- * reachable, so calling arbitrary partner-supplied URLs would turn it into an
- * SSRF gadget. Partners get the signed payload and headers to verify against.
+ * Live webhooks: register an endpoint, watch each signed delivery go out,
+ * see retries and failures, and resend a failed one by hand.
  */
 export default function WebhooksLive() {
   const [hooks, setHooks] = useState<Webhook[]>([]);
@@ -120,9 +131,10 @@ export default function WebhooksLive() {
       </div>
 
       <p className="text-xs text-slate-400 leading-relaxed">
-        Каждое событие платформы подписывается HMAC-SHA256 и попадает в журнал ниже. Исходящий
-        запрос на ваш адрес не отправляется — сервис публичный, и вызов произвольных URL сделал бы
-        его SSRF-инструментом. Вы получаете точный payload и заголовки, чтобы проверить подпись.
+        Каждое событие подписывается HMAC-SHA256 и отправляется POST-запросом на ваш HTTPS-адрес.
+        Ответ 2xx — доставлено; ошибка сервера или таймаут — до 6 попыток с нарастающей паузой;
+        ответ 4xx — доставка прекращается. Внутренние и частные адреса запрещены, редиректы не
+        выполняются. Проверяйте подпись по заголовку X-OneCharge-Signature.
       </p>
 
       {/* Register */}
@@ -198,6 +210,10 @@ export default function WebhooksLive() {
               <p className="text-xs font-mono text-white break-all">{h.url}</p>
               <p className="text-[10px] text-slate-500 mt-1 font-mono">{h.events.join(' · ')}</p>
               <p className="text-[10px] text-slate-600 mt-0.5 font-mono">{h.secret}</p>
+              {h.disabledReason && !h.active && <p className="text-[10px] text-rose-400 mt-1">{h.disabledReason}</p>}
+              {!!h.consecutiveFailures && h.active && (
+                <p className="text-[10px] text-amber-400 mt-1">Неудачных доставок подряд: {h.consecutiveFailures}</p>
+              )}
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <button
@@ -241,7 +257,10 @@ export default function WebhooksLive() {
               onClick={() => setOpenDelivery(openDelivery === d.id ? null : d.id)}
               className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left hover:bg-slate-700/40 transition-colors"
             >
-              <span className="text-[10px] font-mono text-emerald-400 shrink-0">{d.status}</span>
+              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${(STATUS_STYLE[d.status] ?? STATUS_STYLE.pending).cls}`}>
+                {(STATUS_STYLE[d.status] ?? STATUS_STYLE.pending).label}
+                {d.responseStatus ? ` · ${d.responseStatus}` : ''}
+              </span>
               <span className="text-[11px] font-mono text-sky-300 shrink-0">{d.event}</span>
               <span className="text-[10px] text-slate-500 truncate flex-1">{d.url}</span>
               <span className="text-[10px] text-slate-600 shrink-0">
@@ -250,6 +269,23 @@ export default function WebhooksLive() {
             </button>
             {openDelivery === d.id && (
               <div className="px-3 pb-3 space-y-2 border-t border-slate-700/50 pt-2.5">
+                <div className="flex items-center justify-between gap-2 flex-wrap text-[10px] text-slate-400">
+                  <span>
+                    Попыток: {d.attempts ?? 0}
+                    {d.lastError ? <span className="text-rose-400"> · {d.lastError}</span> : null}
+                    {d.status === 'retrying' && d.nextAttemptAt
+                      ? ` · следующая в ${new Date(d.nextAttemptAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+                      : ''}
+                  </span>
+                  {(d.status === 'failed' || d.status === 'cancelled') && (
+                    <button
+                      onClick={() => call(`/webhooks/deliveries/${d.id}/retry`, { method: 'POST' }).then(refresh).catch(e => setError(e.message))}
+                      className="text-sky-400 hover:text-sky-300 font-semibold"
+                    >
+                      Отправить снова
+                    </button>
+                  )}
+                </div>
                 <div>
                   <p className="text-[10px] font-semibold text-slate-500 mb-1">HEADERS</p>
                   <pre className="bg-slate-950 rounded-lg p-2.5 text-[10px] font-mono text-slate-300 overflow-x-auto">

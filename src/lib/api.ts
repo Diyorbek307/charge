@@ -360,6 +360,14 @@ export const apiClient = {
   enable2fa: (portal: Portal, code: string) => post<{ enabled: boolean }>('/auth/2fa/enable', { code }, portal),
   disable2fa: (portal: Portal, code: string) => post<{ enabled: boolean }>('/auth/2fa/disable', { code }, portal),
 
+  smsStatus: () => request<{ configured: boolean; demo: boolean }>('/auth/sms/status'),
+  requestSmsCode: (phone: string, purpose: 'register' | 'reset') =>
+    post<{ sent: boolean; phone: string; demoCode?: string }>('/auth/sms/request', { phone, purpose }),
+  register: (phone: string, code: string, name: string, password: string) =>
+    post<{ token: string; user: Account }>('/auth/register', { phone, code, name, password }),
+  resetPassword: (phone: string, code: string, password: string) =>
+    post<{ reset: true; requires2fa?: boolean; token?: string; user?: Account }>('/auth/password/reset', { phone, code, password }),
+
   requestOtp: (phone: string) => post<{ sent: boolean; hint: string }>('/auth/otp/request', { phone }),
   verifyOtp: (phone: string, code: string) =>
     post<{ token: string; user: Account }>('/auth/otp/verify', { phone, code }),

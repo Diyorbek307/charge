@@ -4,6 +4,9 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { db, publicAccount } from './db.js';
 import { DEMO_ACCOUNTS } from './seed.js';
 import { generateSecret, verifyTotp, otpauthUri } from './totp.js';
+import { hashPassword } from './seed.js';
+import { normalizePhone, issueCode, consumeCode, PURPOSES, smsConfigured } from './sms.js';
+import { validateEndpoint, signedHeaders, kick as kickWebhooks } from './webhooks.js';
 
 export const api = express.Router();
 api.use(express.json());
@@ -56,6 +59,8 @@ function scopeOf({ type, entity, payload = {} }) {
   switch (type) {
     case 'auth.login':
     case 'auth.2fa':
+    case 'auth.register':
+    case 'auth.reset':
       return { userId: entity };
     case 'webhook.created':
       return { userId: actor?.id };
@@ -307,12 +312,8 @@ function emit({ type, portal, actor, message, entity = null, payload = {} }) {
 }
 
 /**
- * Signs the event for every webhook subscribed to it and records the delivery.
- *
- * Deliberately does not perform the outbound HTTP request: this service is
- * publicly reachable, and POSTing to an arbitrary user-supplied URL would make
- * it an SSRF gadget. Partners get the exact signed payload and headers they
- * would have received, which is what a sandbox needs.
+ * Queues a signed delivery for every webhook subscribed to the event. The
+ * worker in webhooks.js sends it, with address pinning and retries.
  */
 function recordDeliveries(event) {
   const hooks = (db.data.webhooks ?? []).filter(
@@ -327,29 +328,27 @@ function recordDeliveries(event) {
       created: event.ts,
       data: webhookData(event),
     });
-    const timestamp = Math.floor(Date.now() / 1000);
-    const signature = crypto
-      .createHmac('sha256', hook.secret)
-      .update(`${timestamp}.${body}`)
-      .digest('hex');
-
     db.data.deliveries.unshift({
       id: db.nextId('delivery', 'DLV-'),
       webhookId: hook.id,
       event: event.type,
       url: hook.url,
       body,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-OneCharge-Event': event.type,
-        'X-OneCharge-Timestamp': String(timestamp),
-        'X-OneCharge-Signature': `t=${timestamp},v1=${signature}`,
-      },
-      status: 'signed',
+      headers: signedHeaders(hook.secret, event.type, body),
+      status: 'pending',
+      attempts: 0,
+      nextAttemptAt: Date.now(),
+      responseStatus: null,
+      lastError: null,
       ts: new Date().toISOString(),
     });
   }
-  if (db.data.deliveries.length > 200) db.data.deliveries.length = 200;
+  // Trim settled history first; anything still in flight stays queued.
+  const list = db.data.deliveries;
+  for (let i = list.length - 1; list.length > 200 && i >= 0; i--) {
+    if (!['pending', 'retrying'].includes(list[i].status)) list.splice(i, 1);
+  }
+  kickWebhooks();
 }
 
 const streamTickets = new Map();
@@ -443,10 +442,9 @@ api.post('/auth/login', (req, res) => {
     return res.status(400).json({ error: 'Укажите портал, логин и пароль' });
   }
 
-  const account = db.find(
-    'accounts',
-    a => a.portal === portal && a.login === String(login).trim().toLowerCase(),
-  );
+  // Drivers sign in by phone, typed any which way.
+  const loginKey = portal === 'driver' ? (normalizePhone(login) ?? String(login).trim()) : String(login).trim().toLowerCase();
+  const account = db.find('accounts', a => a.portal === portal && a.login === loginKey);
   if (!account || !db.verifyPassword(account, String(password))) {
     return res.status(401).json({ error: 'Неверный логин или пароль' });
   }
@@ -562,8 +560,127 @@ api.post('/auth/2fa/disable', requireAuth(), (req, res) => {
   res.json({ enabled: false });
 });
 
-/** Driver portal keeps its phone + OTP flow; the code is fixed in demo mode. */
+// ---------------------------------------------------------------------------
+// Driver sign-up and password recovery by SMS code
+// ---------------------------------------------------------------------------
+
+const PASSWORD_MIN = 8;
+const clientKey = req => req.ip || req.socket?.remoteAddress || 'unknown';
+
+function passwordProblem(password) {
+  const p = String(password ?? '');
+  if (p.length < PASSWORD_MIN) return `Пароль — не короче ${PASSWORD_MIN} символов`;
+  if (p.length > 128) return 'Слишком длинный пароль';
+  if (!/\d/.test(p) || !/\p{L}/u.test(p)) return 'Пароль должен содержать буквы и цифры';
+  return null;
+}
+
+const findDriver = phone => db.find('accounts', a => a.portal === 'driver' && a.login === phone);
+
+api.get('/auth/sms/status', (_req, res) => {
+  res.json({ configured: smsConfigured(), demo: DEMO_MODE && !smsConfigured() });
+});
+
+api.post('/auth/sms/request', async (req, res) => {
+  const phone = normalizePhone(req.body?.phone);
+  const purpose = req.body?.purpose;
+  if (!phone) return res.status(400).json({ error: 'Введите номер в формате +998 XX XXX XX XX' });
+  if (!PURPOSES.includes(purpose)) return res.status(400).json({ error: 'Некорректный запрос' });
+
+  const exists = !!findDriver(phone);
+  if (purpose === 'register' && exists) {
+    return res.status(409).json({ error: 'Номер уже зарегистрирован — войдите или восстановите пароль' });
+  }
+  if (purpose === 'reset' && !exists) {
+    return res.status(404).json({ error: 'Аккаунт с таким номером не найден' });
+  }
+
+  const result = await issueCode(phone, purpose, clientKey(req));
+  if (!result.ok) {
+    if (result.retryAfter) res.set('Retry-After', String(result.retryAfter));
+    return res.status(result.status).json({ error: result.error });
+  }
+  res.json({ sent: true, phone, ...(result.demoCode ? { demoCode: result.demoCode } : {}) });
+});
+
+api.post('/auth/register', (req, res) => {
+  const phone = normalizePhone(req.body?.phone);
+  const name = String(req.body?.name ?? '').trim().replace(/\s+/g, ' ');
+  const password = req.body?.password;
+  if (!phone) return res.status(400).json({ error: 'Введите номер в формате +998 XX XXX XX XX' });
+  if (name.length < 2 || name.length > 60) return res.status(400).json({ error: 'Укажите имя (2–60 символов)' });
+  const weak = passwordProblem(password);
+  if (weak) return res.status(400).json({ error: weak });
+  if (findDriver(phone)) return res.status(409).json({ error: 'Номер уже зарегистрирован' });
+
+  const check = consumeCode(phone, 'register', req.body?.code);
+  if (!check.ok) return res.status(401).json({ error: check.error });
+
+  const { salt, hash } = hashPassword(String(password));
+  const initials = name.split(' ').slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('') || 'EV';
+  const account = {
+    id: `acc-${crypto.randomBytes(6).toString('hex')}`,
+    portal: 'driver',
+    login: phone,
+    salt,
+    hash,
+    otp: null,
+    name,
+    role: 'Водитель',
+    org: null,
+    orgId: null,
+    avatar: initials,
+    lastLogin: new Date().toISOString(),
+    created: new Date().toISOString(),
+    twoFactor: { enabled: false, secret: null, pending: null },
+  };
+  db.data.accounts.push(account);
+  db.data.wallets[account.id] = { balance: 0, currency: 'UZS', autoTopUp: false, threshold: 0, card: null };
+  const token = db.issueToken(account);
+  emit({
+    type: 'auth.register',
+    portal: 'driver',
+    actor: account.name,
+    message: `${account.name} зарегистрировался в Driver App`,
+    entity: account.id,
+  });
+  res.status(201).json({ token, user: publicAccount(account) });
+});
+
+api.post('/auth/password/reset', (req, res) => {
+  const phone = normalizePhone(req.body?.phone);
+  const password = req.body?.password;
+  if (!phone) return res.status(400).json({ error: 'Введите номер в формате +998 XX XXX XX XX' });
+  const weak = passwordProblem(password);
+  if (weak) return res.status(400).json({ error: weak });
+  const account = findDriver(phone);
+  if (!account) return res.status(401).json({ error: 'Код истёк — запросите новый' });
+
+  const check = consumeCode(phone, 'reset', req.body?.code);
+  if (!check.ok) return res.status(401).json({ error: check.error });
+
+  Object.assign(account, hashPassword(String(password)));
+  // Whoever held the old password is signed out everywhere.
+  db.data.tokens = db.data.tokens.filter(t => t.accountId !== account.id);
+  db.save();
+  emit({
+    type: 'auth.reset',
+    portal: 'driver',
+    actor: account.name,
+    message: `${account.name} сменил пароль по SMS`,
+    entity: account.id,
+  });
+
+  // An SMS code proves the phone, not the authenticator: 2FA still applies.
+  if (account.twoFactor?.enabled) return res.json({ reset: true, requires2fa: true });
+  const token = db.issueToken(account);
+  db.update('accounts', account.id, { lastLogin: new Date().toISOString() });
+  res.json({ reset: true, token, user: publicAccount(account) });
+});
+
+/** Legacy demo-only OTP sign-in with the fixed code from the seed. */
 api.post('/auth/otp/request', (req, res) => {
+  if (!DEMO_MODE) return res.status(404).json({ error: 'Not found' });
   const phone = String(req.body?.phone ?? '').replace(/[^\d+]/g, '');
   const account = db.find('accounts', a => a.portal === 'driver' && a.login === phone.toLowerCase());
   if (!account) return res.status(404).json({ error: 'Номер не найден. Используйте демо-номер.' });
@@ -571,6 +688,7 @@ api.post('/auth/otp/request', (req, res) => {
 });
 
 api.post('/auth/otp/verify', (req, res) => {
+  if (!DEMO_MODE) return res.status(404).json({ error: 'Not found' });
   const phone = String(req.body?.phone ?? '').replace(/[^\d+]/g, '');
   const code = String(req.body?.code ?? '');
   const account = db.find('accounts', a => a.portal === 'driver' && a.login === phone.toLowerCase());
@@ -1528,14 +1646,11 @@ api.get('/webhooks', requireAuth('api', 'admin'), (_req, res) => {
 
 api.post('/webhooks', requireAuth('api', 'admin'), (req, res) => {
   const { url, events } = req.body ?? {};
-  let parsed;
-  try {
-    parsed = new URL(String(url));
-  } catch {
-    return res.status(400).json({ error: 'Некорректный URL' });
-  }
-  if (parsed.protocol !== 'https:') {
-    return res.status(400).json({ error: 'Endpoint должен использовать HTTPS' });
+  const checked = validateEndpoint(url);
+  if (checked.error) return res.status(400).json({ error: checked.error });
+  const parsed = checked.url;
+  if ((db.data.webhooks ?? []).filter(w => w.owner === req.account.id).length >= 10) {
+    return res.status(400).json({ error: 'Не больше 10 endpoint’ов на аккаунт' });
   }
   const chosen = Array.isArray(events) ? events.filter(e => WEBHOOK_EVENTS.includes(e)) : [];
   if (chosen.length === 0) {
@@ -1581,9 +1696,16 @@ api.delete('/webhooks/:id', requireAuth('api', 'admin'), (req, res) => {
   res.json({ ok: true });
 });
 
+const lastTestAt = new Map();
+
 api.post('/webhooks/:id/test', requireAuth('api', 'admin'), (req, res) => {
   const hook = db.byId('webhooks', req.params.id);
   if (!hook) return res.status(404).json({ error: 'Webhook не найден' });
+  // Test sends hit a real server now; do not let the button become a flood.
+  if (Date.now() - (lastTestAt.get(hook.id) ?? 0) < 5000) {
+    return res.status(429).json({ error: 'Не чаще одного теста в 5 секунд' });
+  }
+  lastTestAt.set(hook.id, Date.now());
   emit({
     type: hook.events[0],
     portal: req.account.portal,
@@ -1598,6 +1720,21 @@ api.post('/webhooks/:id/test', requireAuth('api', 'admin'), (req, res) => {
 api.get('/webhooks/deliveries', requireAuth('api', 'admin'), (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 30, 200);
   res.json((db.data.deliveries ?? []).slice(0, limit));
+});
+
+api.post('/webhooks/deliveries/:id/retry', requireAuth('api', 'admin'), (req, res) => {
+  const delivery = (db.data.deliveries ?? []).find(d => d.id === req.params.id);
+  if (!delivery) return res.status(404).json({ error: 'Доставка не найдена' });
+  if (!['failed', 'cancelled'].includes(delivery.status)) {
+    return res.status(409).json({ error: 'Доставка ещё в очереди' });
+  }
+  const hook = db.byId('webhooks', delivery.webhookId);
+  if (!hook?.active) return res.status(409).json({ error: 'Webhook удалён или отключён' });
+  Object.assign(delivery, { status: 'pending', attempts: 0, nextAttemptAt: Date.now(), lastError: null });
+  hook.consecutiveFailures = 0;
+  db.save();
+  kickWebhooks();
+  res.json({ delivery });
 });
 
 // ---------------------------------------------------------------------------
