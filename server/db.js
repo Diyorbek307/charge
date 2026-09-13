@@ -9,45 +9,139 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', '.data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 
 /**
- * Tiny persistent document store.
+ * JSON file on local disk. Written to a temp file and renamed, so a crash
+ * mid-write never leaves a truncated database. Fine for local development;
+ * on Render's free tier the disk is wiped on every restart.
+ */
+class FileStore {
+  describe() {
+    return `file ${DB_FILE}`;
+  }
+
+  async load() {
+    if (!fs.existsSync(DB_FILE)) return null;
+    return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+  }
+
+  async write(json) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    const tmp = `${DB_FILE}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, json);
+    fs.renameSync(tmp, DB_FILE);
+  }
+
+  async close() {}
+}
+
+/**
+ * Postgres. The whole document lives in one JSONB row: the app already works
+ * on an in-memory document with debounced saves, so this buys real durability
+ * without rewriting every handler around queries.
  *
- * Everything lives in memory and is flushed to a single JSON file on a short
- * debounce, written to a temp file and renamed so a crash mid-write can never
- * leave a truncated database behind. Deliberately dependency-free: Render's
- * free tier gives us an ephemeral disk anyway, so a native engine would add
- * deploy risk without buying real durability.
+ * DATABASE_URL=postgres://… uses node-postgres (Neon, Supabase, Render PG).
+ * DATABASE_URL=pglite://<dir> uses PGlite, an embedded Postgres, for tests.
+ */
+class PostgresStore {
+  constructor(url) {
+    this.url = url;
+    this.client = null;
+  }
+
+  describe() {
+    return this.url.startsWith('pglite:') ? 'pglite (embedded postgres)' : `postgres ${this.url.replace(/\/\/[^@]*@/, '//***@')}`;
+  }
+
+  async #connect() {
+    if (this.client) return this.client;
+    if (this.url.startsWith('pglite:')) {
+      const { PGlite } = await import('@electric-sql/pglite');
+      const dir = this.url.slice('pglite://'.length);
+      this.pglite = dir ? new PGlite(dir) : new PGlite();
+      this.client = { query: (text, params) => this.pglite.query(text, params) };
+    } else {
+      const { default: pg } = await import('pg');
+      const local = /localhost|127\.0\.0\.1/.test(this.url) || /sslmode=disable/.test(this.url);
+      this.pool = new pg.Pool({
+        connectionString: this.url,
+        max: 3,
+        ssl: local ? false : { rejectUnauthorized: process.env.PGSSL_NO_VERIFY !== 'true' },
+      });
+      this.client = { query: (text, params) => this.pool.query(text, params) };
+    }
+    await this.client.query(
+      `CREATE TABLE IF NOT EXISTS onecharge_state (
+         id integer PRIMARY KEY,
+         doc jsonb NOT NULL,
+         updated_at timestamptz NOT NULL DEFAULT now()
+       )`,
+    );
+    return this.client;
+  }
+
+  async load() {
+    const client = await this.#connect();
+    const { rows } = await client.query('SELECT doc FROM onecharge_state WHERE id = 1');
+    return rows[0]?.doc ?? null;
+  }
+
+  async write(json) {
+    const client = await this.#connect();
+    await client.query(
+      `INSERT INTO onecharge_state (id, doc, updated_at) VALUES (1, $1::jsonb, now())
+       ON CONFLICT (id) DO UPDATE SET doc = EXCLUDED.doc, updated_at = now()`,
+      [json],
+    );
+  }
+
+  async close() {
+    await this.pool?.end();
+    await this.pglite?.close();
+  }
+}
+
+/**
+ * In-memory document store with pluggable persistence.
+ *
+ * Handlers mutate `db.data` synchronously and call save(); writes are
+ * debounced, serialised through a promise chain so they never overlap, and
+ * snapshotted at flush time so later mutations cannot tear a write.
  */
 class Database {
   constructor() {
-    this.data = this.#load();
+    const url = process.env.DATABASE_URL || '';
+    this.store = url ? new PostgresStore(url) : new FileStore();
+    this.data = null;
     this.flushTimer = null;
+    this.writing = Promise.resolve();
     this.listeners = new Set();
+    this.ready = this.#init();
   }
 
-  #load() {
+  async #init() {
+    let loaded = null;
     try {
-      if (fs.existsSync(DB_FILE)) {
-        const parsed = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-        if (parsed && parsed.__v === SCHEMA_VERSION) return parsed;
-        console.log(`[db] schema ${parsed?.__v} != ${SCHEMA_VERSION}, reseeding`);
-      }
+      loaded = await this.store.load();
     } catch (err) {
+      // A database we cannot reach must not be silently replaced with seed data.
+      if (this.store instanceof PostgresStore) throw err;
       console.warn('[db] load failed, reseeding:', err.message);
     }
-    const fresh = seed();
-    this.#write(fresh);
-    return fresh;
+    if (loaded && loaded.__v === SCHEMA_VERSION) {
+      this.data = loaded;
+    } else {
+      if (loaded) console.log(`[db] schema ${loaded.__v} != ${SCHEMA_VERSION}, reseeding`);
+      this.data = seed();
+      await this.store.write(JSON.stringify(this.data));
+    }
+    console.log(`[db] ready · ${this.store.describe()}`);
   }
 
-  #write(data) {
-    try {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-      const tmp = `${DB_FILE}.${process.pid}.tmp`;
-      fs.writeFileSync(tmp, JSON.stringify(data));
-      fs.renameSync(tmp, DB_FILE);
-    } catch (err) {
-      console.warn('[db] persist failed:', err.message);
-    }
+  #queueWrite() {
+    const json = JSON.stringify(this.data);
+    this.writing = this.writing
+      .then(() => this.store.write(json))
+      .catch(err => console.warn('[db] persist failed:', err.message));
+    return this.writing;
   }
 
   /** Debounced flush — callers mutate `db.data` then call this. */
@@ -55,13 +149,28 @@ class Database {
     if (this.flushTimer) return;
     this.flushTimer = setTimeout(() => {
       this.flushTimer = null;
-      this.#write(this.data);
+      void this.#queueWrite();
     }, 250);
+  }
+
+  /** Writes anything pending right now; awaited on shutdown. */
+  async flush() {
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+      await this.#queueWrite();
+    }
+    await this.writing;
+  }
+
+  async close() {
+    await this.flush();
+    await this.store.close();
   }
 
   reset() {
     this.data = seed();
-    this.#write(this.data);
+    void this.#queueWrite();
     return this.data;
   }
 

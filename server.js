@@ -2,6 +2,7 @@ import express from "express";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { api } from "./server/api.js";
+import { db } from "./server/db.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -27,6 +28,27 @@ app.get("*", (req, res, next) => {
   res.sendFile(join(distDir, "index.html"));
 });
 
-app.listen(PORT, () => {
+// Load the database before accepting traffic, so no request sees empty state.
+await db.ready;
+
+const server = app.listen(PORT, () => {
   console.log(`ONE CHARGE UZ running on port ${PORT}`);
 });
+
+// Render sends SIGTERM on every deploy; flush pending writes before exiting.
+let shuttingDown = false;
+async function shutdown(reason) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[server] ${reason} — flushing and shutting down`);
+  server.close();
+  try {
+    await db.close();
+  } finally {
+    process.exit(0);
+  }
+}
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+// Windows has no real SIGTERM for child processes; tests ask over IPC instead.
+if (process.send) process.on("message", m => m === "shutdown" && shutdown("IPC shutdown"));
