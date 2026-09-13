@@ -248,6 +248,22 @@ export interface Booking {
   fee?: number;
 }
 
+export interface PaymentProvider {
+  id: 'payme' | 'click';
+  name: string;
+  configured: boolean;
+  live: boolean;
+}
+
+export interface PaymentOrder {
+  id: string;
+  provider: 'payme' | 'click';
+  amount: number;
+  status: 'pending' | 'paid' | 'cancelled' | 'expired';
+  created: string;
+  paidAt: string | null;
+}
+
 export interface ReportRecord {
   id: string;
   name: string;
@@ -365,6 +381,11 @@ export const apiClient = {
     post<{ booking: Booking; wallet: Wallet }>(`/stations/${stationId}/bookings`, body, portal),
   cancelBooking: (portal: Portal, id: string) =>
     request<{ booking: Booking; refunded: boolean }>(`/bookings/${id}`, { method: 'DELETE', portal }),
+  paymentProviders: () => request<PaymentProvider[]>('/payments/providers'),
+  createTopUpOrder: (portal: Portal, provider: 'payme' | 'click', amount: number) =>
+    post<{ order: PaymentOrder; checkoutUrl: string; sandbox: boolean }>('/payments/topup', { provider, amount }, portal),
+  sandboxConfirm: (portal: Portal, id: string) =>
+    post<{ order: PaymentOrder; balance: number | null }>(`/payments/order/${id}/sandbox-confirm`, undefined, portal),
   joinQueue: (portal: Portal, stationId: string) =>
     post<{ entry: QueueEntry; position: number }>(`/stations/${stationId}/queue`, undefined, portal),
   leaveQueue: (portal: Portal, stationId: string) =>

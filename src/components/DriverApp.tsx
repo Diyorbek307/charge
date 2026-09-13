@@ -15,6 +15,7 @@ import { Station } from '../data/mockData';
 import { useLiveStations, useLiveDriverSessions } from '../lib/live';
 import { useSync } from '../lib/sync';
 import EcoScreen, { GreenHourBanner } from './EcoScreen';
+import PushToggle from './PushToggle';
 import type { Booking } from '../lib/api';
 import AuthFlow from './AuthFlow';
 
@@ -1386,14 +1387,16 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
   const [showTopUp, setShowTopUp] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState('');
-  const [selectedCard, setSelectedCard] = useState(0);
+  const [provider, setProvider] = useState<'payme' | 'click'>('payme');
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
   const [topUpSuccess, setTopUpSuccess] = useState(false);
   const [autoRecharge, setAutoRecharge] = useState(true);
 
   const quickAmounts = [10000, 20000, 50000, 100000];
-  const cards = [
-    { label: 'Humo •••• 4521', color: 'from-orange-400 to-orange-600', letter: 'H' },
-    { label: 'Uzcard •••• 8832', color: 'from-blue-400 to-blue-600', letter: 'U' },
+  const providers = [
+    { id: 'payme' as const, name: 'Payme', letter: 'P', color: '#00B3B3' },
+    { id: 'click' as const, name: 'Click', letter: 'C', color: '#0073FF' },
   ];
 
   const transactions = [
@@ -1406,22 +1409,36 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
     { id: 'W-1036', type: 'charge', amount: -75820, label: 'Зарядка — SolarStation Bukhara', date: '31 авг, 16:10' },
   ];
 
+  /**
+   * The wallet is credited only once the provider confirms the payment. With
+   * a merchant account that happens on the provider's checkout page; until
+   * one exists, the sandbox runs the same confirmation path server-side.
+   */
   const doTopUp = async () => {
     const amt = selectedAmount || parseInt(customAmount) || 0;
     if (amt < 5000) return;
+    setPaying(true);
+    setPayError(null);
     try {
-      await actions.topUp('driver', amt);
+      const { order, checkoutUrl, sandbox } = await actions.createTopUpOrder('driver', provider, amt);
+      if (!sandbox) {
+        window.location.href = checkoutUrl;
+        return;
+      }
+      await actions.sandboxConfirm('driver', order.id);
       await refresh();
-    } catch {
-      /* balance falls back to the server's value on the next snapshot */
+      setTopUpSuccess(true);
+      setTimeout(() => {
+        setShowTopUp(false);
+        setTopUpSuccess(false);
+        setSelectedAmount(null);
+        setCustomAmount('');
+      }, 2000);
+    } catch (err) {
+      setPayError(err instanceof Error ? err.message : 'Оплата не прошла');
+    } finally {
+      setPaying(false);
     }
-    setTopUpSuccess(true);
-    setTimeout(() => {
-      setShowTopUp(false);
-      setTopUpSuccess(false);
-      setSelectedAmount(null);
-      setCustomAmount('');
-    }, 2000);
   };
 
   return (
@@ -1547,28 +1564,30 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
                   className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-sky-400 placeholder:text-slate-300"
                 />
 
-                {/* Card selector */}
+                {/* Payment provider */}
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-slate-500">КАРТА ДЛЯ ОПЛАТЫ</p>
-                  {cards.map((card, idx) => (
-                    <button key={card.label} onClick={() => setSelectedCard(idx)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-colors ${selectedCard === idx ? 'border-sky-400 bg-sky-50' : 'border-slate-100 bg-white'}`}>
-                      <div className={`w-8 h-5 bg-gradient-to-r ${card.color} rounded flex items-center justify-center`}>
-                        <span className="text-white text-xs font-bold">{card.letter}</span>
-                      </div>
-                      <span className="text-sm font-medium text-slate-800 flex-1 text-left">{card.label}</span>
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${selectedCard === idx ? 'border-sky-500' : 'border-slate-300'}`}>
-                        {selectedCard === idx && <div className="w-2 h-2 rounded-full bg-sky-500" />}
-                      </div>
-                    </button>
-                  ))}
+                  <p className="text-xs font-semibold text-slate-500">СПОСОБ ОПЛАТЫ</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {providers.map(p => (
+                      <button key={p.id} onClick={() => setProvider(p.id)} aria-pressed={provider === p.id}
+                        className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-sm font-bold transition-colors ${provider === p.id ? 'border-sky-400 bg-sky-50 text-slate-900' : 'border-slate-100 bg-white text-slate-500'}`}>
+                        <span className="w-6 h-6 rounded-lg grid place-items-center text-white text-xs" style={{ background: p.color }}>{p.letter}</span>
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-slate-400">Кошелёк пополнится после подтверждения платежа от {provider === 'payme' ? 'Payme' : 'Click'}</p>
                 </div>
+
+                {payError && (
+                  <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{payError}</p>
+                )}
 
                 <button
                   onClick={doTopUp}
-                  disabled={!(selectedAmount || (parseInt(customAmount) >= 5000))}
+                  disabled={paying || !(selectedAmount || (parseInt(customAmount) >= 5000))}
                   className="w-full py-3.5 bg-sky-500 text-white rounded-2xl font-bold text-sm disabled:opacity-40 active:scale-95 transition-all">
-                  Пополнить{selectedAmount ? ` ${selectedAmount.toLocaleString()} сум` : customAmount ? ` ${parseInt(customAmount).toLocaleString()} сум` : ''}
+                  {paying ? 'Подтверждаем оплату…' : `Оплатить через ${provider === 'payme' ? 'Payme' : 'Click'}`}{!paying && (selectedAmount ? ` ${selectedAmount.toLocaleString()} сум` : customAmount ? ` ${parseInt(customAmount).toLocaleString()} сум` : '')}
                 </button>
               </>
             )}
@@ -2015,6 +2034,8 @@ function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
           </div>
           <ChevronRight size={16} className="text-green-100" />
         </button>
+
+        <PushToggle portal="driver" />
 
         {/* Payments */}
         <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">

@@ -302,6 +302,7 @@ function emit({ type, portal, actor, message, entity = null, payload = {} }) {
   recordDeliveries(event);
   db.save();
   broadcast(event);
+  pushHook?.(event);
   return event;
 }
 
@@ -696,6 +697,12 @@ function findConnector(stationId, connectorId) {
 let gateway = null;
 export function setGateway(g) {
   gateway = g;
+}
+
+/** Push delivery hook, registered by server/push.js. */
+let pushHook = null;
+export function setPushHook(fn) {
+  pushHook = fn;
 }
 
 /**

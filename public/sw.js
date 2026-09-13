@@ -4,7 +4,7 @@
  * and stay entirely out of the way of the live-sync channel.
  */
 
-const VERSION = 'oc-v3';
+const VERSION = 'oc-v4';
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const DATA_CACHE = `${VERSION}-data`;
@@ -105,4 +105,38 @@ self.addEventListener('fetch', event => {
         .catch(() => caches.match('/').then(hit => hit || Response.error())),
     );
   }
+});
+
+// ---------------------------------------------------------------------------
+// Web Push
+// ---------------------------------------------------------------------------
+
+self.addEventListener('push', event => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : '' };
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'ONE CHARGE UZ', {
+      body: data.body || '',
+      tag: data.tag,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      data: { url: data.url || '/' },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url || '/', self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windows => {
+      const open = windows.find(w => new URL(w.url).origin === self.location.origin);
+      if (open) return open.focus().then(w => (w.navigate ? w.navigate(target) : w));
+      return self.clients.openWindow(target);
+    }),
+  );
 });

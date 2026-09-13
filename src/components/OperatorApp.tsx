@@ -17,6 +17,7 @@ import { useSync } from '../lib/sync';
 import { useI18n } from '../lib/i18n';
 import SidebarThemeToggle from './SidebarThemeToggle';
 import ExportButton from './ExportButton';
+import PushToggle from './PushToggle';
 import AnimatedCounter from './AnimatedCounter';
 import AIChat from './AIChat';
 
@@ -2090,6 +2091,8 @@ function AlertsPage() {
           Все прочитано
         </button>
       </div>
+
+      <PushToggle portal="operator" compact />
 
       {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
