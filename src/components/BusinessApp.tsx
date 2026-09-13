@@ -1675,7 +1675,7 @@ export default function BusinessApp({ onBack }: { onBack: () => void }) {
       {sidebarOpen && <div onClick={() => setSidebarOpen(false)} className="md:hidden fixed inset-0 bg-black/40 z-20" />}
       <Sidebar current={page} onChange={setPage} onBack={onBack} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 overflow-hidden relative">
-        <button onClick={() => setSidebarOpen(true)} className="md:hidden absolute top-3 left-3 z-10 p-2 bg-white rounded-xl border border-slate-200 shadow-sm text-slate-600">
+        <button onClick={() => setSidebarOpen(true)} aria-label="Открыть меню" className="md:hidden absolute top-3 left-3 z-10 p-2 bg-white rounded-xl border border-slate-200 shadow-sm text-slate-600">
           <Menu size={18} />
         </button>
         {renderPage()}

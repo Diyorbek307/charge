@@ -4,3 +4,5 @@ dist/
 .env
 npm-debug.log*
 .DS_Store
+test-results/
+playwright-report/
