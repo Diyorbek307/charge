@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
+import { setPageLanguage } from './domTranslate';
 
 export type Lang = 'ru' | 'uz' | 'en';
 
@@ -600,6 +601,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.lang = lang;
+    // Everything not covered by a t() key is translated by phrase on the page.
+    void setPageLanguage(lang);
   }, [lang]);
 
   // Keeps split-view iframes and other tabs of this app in the same language.
