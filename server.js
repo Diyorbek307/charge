@@ -3,6 +3,7 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { api } from "./server/api.js";
 import { db } from "./server/db.js";
+import { attachOcpp } from "./server/ocpp.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -34,6 +35,9 @@ await db.ready;
 const server = app.listen(PORT, () => {
   console.log(`ONE CHARGE UZ running on port ${PORT}`);
 });
+
+// OCPP 1.6-J charge points connect over WebSocket on the same port.
+attachOcpp(server);
 
 // Render sends SIGTERM on every deploy; flush pending writes before exiting.
 let shuttingDown = false;

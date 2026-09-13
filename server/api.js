@@ -92,6 +92,9 @@ function scopeOf({ type, entity, payload = {} }) {
       const b = db.byId('bookings', entity);
       return { userId: b?.userId, operatorId: b?.operatorId, fleet: b?.walletId === 'biz-001' };
     }
+    case 'ocpp.online':
+    case 'ocpp.offline':
+      return { operatorId: stationOperator(entity), public: true };
     case 'employee.limit':
       return { fleet: true };
     case 'operator.status':
@@ -686,25 +689,37 @@ function findConnector(stationId, connectorId) {
 // Charging sessions — the flow that ties all portals together.
 // ---------------------------------------------------------------------------
 
-api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), (req, res) => {
-  const { stationId, connectorId } = req.body ?? {};
-  const { station, connector } = findConnector(stationId, connectorId);
-  if (!station || !connector) return res.status(404).json({ error: 'Коннектор не найден' });
-  if (connector.status === 'occupied') return res.status(409).json({ error: 'Коннектор уже занят' });
-  if (connector.status === 'unavailable') return res.status(409).json({ error: 'Коннектор недоступен' });
+/**
+ * Charge-point gateway (OCPP). Registered by server/ocpp.js at startup and
+ * injected here, so this module never imports the WebSocket layer.
+ */
+let gateway = null;
+export function setGateway(g) {
+  gateway = g;
+}
 
-  const account = req.account;
+/**
+ * Opens a charging session after every business rule the API enforces. The
+ * REST API and the OCPP central system both go through here, so a charge
+ * point cannot bypass a rule a driver in the app would hit.
+ *
+ * Returns { session }, { ok: true } for a dry run, or { status, error }.
+ */
+export function beginSession(account, stationId, connectorId, opts = {}) {
+  const { source = 'app', ocppTransactionId = null, meterStartWh = null, dryRun = false } = opts;
+  const { station, connector } = findConnector(stationId, connectorId);
+  if (!station || !connector) return { status: 404, error: 'Коннектор не найден' };
+  if (connector.status === 'occupied') return { status: 409, error: 'Коннектор уже занят' };
+  if (connector.status === 'unavailable') return { status: 409, error: 'Коннектор недоступен' };
 
   // One car, one plug: without this a single account could occupy the network.
   if (db.data.sessions.some(s => s.status === 'active' && s.userId === account.id)) {
-    return res.status(409).json({ error: 'У вас уже идёт зарядка' });
+    return { status: 409, error: 'У вас уже идёт зарядка' };
   }
 
   // A booking holds its connector for its owner around the booked window.
   const booked = bookingHolding(station.id, connector.id);
-  if (booked && booked.userId !== account.id) {
-    return res.status(409).json({ error: 'Коннектор забронирован' });
-  }
+  if (booked && booked.userId !== account.id) return { status: 409, error: 'Коннектор забронирован' };
 
   // A connector freed for the queue belongs to that driver until the hold lapses.
   pruneQueues();
@@ -712,19 +727,20 @@ api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), (req, re
     q => q.stationId === station.id && q.userId === account.id && q.notified,
   );
   if (!holdsMine && unheldFree(station) <= 0) {
-    return res.status(409).json({ error: 'Коннектор удерживается для водителя из очереди' });
+    return { status: 409, error: 'Коннектор удерживается для водителя из очереди' };
   }
 
-  // Refuse to start what the wallet cannot pay for; otherwise stop() clamps
+  // Refuse to start what the wallet cannot pay for; otherwise settlement clamps
   // the balance at zero and the charge is effectively free.
   const walletId = account.portal === 'business' ? 'biz-001' : account.id;
   const wallet = db.data.wallets[walletId];
   const minimum = connector.price * MIN_PREPAID_KWH;
   if (wallet && wallet.balance < minimum) {
-    return res.status(402).json({
-      error: `Недостаточно средств: нужно минимум ${minimum.toLocaleString('ru-RU')} сум`,
-    });
+    return { status: 402, error: `Недостаточно средств: нужно минимум ${minimum.toLocaleString('ru-RU')} сум` };
   }
+  if (dryRun) return { ok: true };
+
+  const band = tariffBand(tashkentHour());
   const session = {
     id: db.nextId('session', 'S-'),
     userId: account.id,
@@ -742,10 +758,13 @@ api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), (req, re
     power: connector.power,
     // Price is locked at start with the tariff band in effect right now.
     basePrice: connector.price,
-    multiplier: tariffBand(tashkentHour()).multiplier,
-    price: Math.round(connector.price * tariffBand(tashkentHour()).multiplier),
+    multiplier: band.multiplier,
+    price: Math.round(connector.price * band.multiplier),
     status: 'active',
     corporate: account.portal === 'business',
+    source,
+    ocppTransactionId,
+    meterStartWh,
   };
 
   connector.status = 'occupied';
@@ -767,20 +786,38 @@ api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), (req, re
     payload: { stationId: station.id, connectorId: connector.id, operatorId: station.operatorId },
   });
 
-  res.json({ session, stats: statsFor(req.account) });
+  return { session };
+}
+
+api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), async (req, res) => {
+  const { stationId, connectorId } = req.body ?? {};
+
+  // A station connected over OCPP is the source of truth: ask it to start, and
+  // the session opens when it reports StartTransaction.
+  if (gateway?.isConnected(stationId)) {
+    const check = beginSession(req.account, stationId, connectorId, { dryRun: true });
+    if (check.error) return res.status(check.status).json({ error: check.error });
+    const accepted = await gateway.remoteStart(stationId, connectorId, req.account.id);
+    if (!accepted) return res.status(502).json({ error: 'Станция не приняла команду запуска' });
+    return res.status(202).json({ pending: true, stats: statsFor(req.account) });
+  }
+
+  const result = beginSession(req.account, stationId, connectorId);
+  if (result.error) return res.status(result.status).json({ error: result.error });
+  res.json({ session: result.session, stats: statsFor(req.account) });
 });
 
-api.post('/sessions/:id/stop', requireAuth('driver', 'business', 'admin', 'operator'), (req, res) => {
-  const session = db.byId('sessions', req.params.id);
-  if (!session) return res.status(404).json({ error: 'Сессия не найдена' });
-  if (!canControlSession(req.account, session)) {
-    return res.status(403).json({ error: 'Нет прав на эту сессию' });
-  }
-  if (session.status !== 'active') return res.status(409).json({ error: 'Сессия уже завершена' });
-
+/**
+ * Closes a session and settles it. Energy comes from the charge point's meter
+ * when it reports one, otherwise from the demo charging curve.
+ */
+export function completeSession(session, actor, { energyKwh = null } = {}) {
   const minutes = Math.max(1, (Date.now() - new Date(session.start).getTime()) / 60000);
   // Demo charging curve: ~85% of rated power, capped so short demos stay readable.
-  const energy = round(Math.min((session.power ?? 50) * 0.85 * (minutes / 60), 80), 1);
+  const energy =
+    energyKwh === null
+      ? round(Math.min((session.power ?? 50) * 0.85 * (minutes / 60), 80), 1)
+      : round(Math.max(0, energyKwh), 1);
   const cost = Math.round(energy * (session.price ?? 1800));
 
   session.status = 'completed';
@@ -825,15 +862,34 @@ api.post('/sessions/:id/stop', requireAuth('driver', 'business', 'admin', 'opera
 
   emit({
     type: 'session.stop',
-    portal: req.account.portal,
-    actor: req.account.name,
+    portal: actor.portal,
+    actor: actor.name,
     message: `Зарядка завершена · ${session.stationName} · ${energy} кВт·ч · ${cost.toLocaleString('ru-RU')} сум`,
     entity: session.id,
     payload: { transactionId: transaction.id, operatorId: session.operatorId, energy, cost },
   });
 
   promoteQueue(session.stationId, session.connectorId);
+  return { session, transaction };
+}
 
+api.post('/sessions/:id/stop', requireAuth('driver', 'business', 'admin', 'operator'), async (req, res) => {
+  const session = db.byId('sessions', req.params.id);
+  if (!session) return res.status(404).json({ error: 'Сессия не найдена' });
+  if (!canControlSession(req.account, session)) {
+    return res.status(403).json({ error: 'Нет прав на эту сессию' });
+  }
+  if (session.status !== 'active') return res.status(409).json({ error: 'Сессия уже завершена' });
+
+  // A charge under OCPP control is stopped by the charge point, which then
+  // reports the final meter reading.
+  if (session.source === 'ocpp' && gateway?.isConnected(session.stationId)) {
+    const accepted = await gateway.remoteStop(session.stationId, session.ocppTransactionId);
+    if (!accepted) return res.status(502).json({ error: 'Станция не приняла команду остановки' });
+    return res.status(202).json({ pending: true, session, stats: statsFor(req.account) });
+  }
+
+  const { transaction } = completeSession(session, req.account);
   res.json({ session, transaction, stats: statsFor(req.account) });
 });
 
@@ -841,6 +897,8 @@ api.post('/sessions/:id/stop', requireAuth('driver', 'business', 'admin', 'opera
 api.post('/sessions/:id/tick', requireAuth(), (req, res) => {
   const session = db.byId('sessions', req.params.id);
   if (!session || session.status !== 'active') return res.status(404).json({ error: 'Нет активной сессии' });
+  // A charge point connected over OCPP owns the meter for its sessions.
+  if (session.source === 'ocpp') return res.json({ session });
 
   const minutes = Math.max(0, (Date.now() - new Date(session.start).getTime()) / 60000);
   session.energy = round(Math.min((session.power ?? 50) * 0.85 * (minutes / 60), 80), 1);
@@ -848,7 +906,7 @@ api.post('/sessions/:id/tick', requireAuth(), (req, res) => {
   db.save();
 
   broadcast(withScope({
-    id: `tick-${session.id}`,
+    id: `tick-${session.id}-${Date.now()}`,
     type: 'session.tick',
     portal: 'system',
     actor: 'OCPP',
@@ -1343,6 +1401,34 @@ api.delete('/bookings/:id', requireAuth('driver', 'business', 'admin'), (req, re
   });
   res.json({ booking, refunded });
 });
+
+// ---------------------------------------------------------------------------
+// OCPP charge points
+// ---------------------------------------------------------------------------
+
+api.get('/ocpp/chargepoints', requireAuth('operator', 'admin'), (req, res) => {
+  const all = gateway ? gateway.list() : [];
+  res.json(req.account.portal === 'admin' ? all : all.filter(cp => cp.operatorId === req.account.orgId));
+});
+
+/** Applies a charge point's meter reading to a running session and fans it out. */
+export function meterSession(session, energyKwh) {
+  session.energy = round(Math.max(0, energyKwh), 1);
+  session.cost = Math.round(session.energy * (session.price ?? 1800));
+  db.save();
+  broadcast(
+    withScope({
+      id: `tick-${session.id}-${Date.now()}`,
+      type: 'session.tick',
+      portal: 'system',
+      actor: 'OCPP',
+      message: `MeterValues · ${session.energy} кВт·ч`,
+      entity: session.id,
+      payload: { energy: session.energy, cost: session.cost },
+      ts: new Date().toISOString(),
+    }),
+  );
+}
 
 api.post('/wallets/:id/balance', requireAuth('admin'), (req, res) => {
   const balance = Number(req.body?.balance);
