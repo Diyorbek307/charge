@@ -1001,6 +1001,7 @@ api.post('/alerts', requireAuth('operator', 'admin'), (req, res) => {
 });
 
 api.post('/wallet/topup', requireAuth('driver', 'business'), (req, res) => {
+  if (!DEMO_MODE) return res.status(403).json({ error: 'Пополнение только через Payme или Click' });
   const amount = Number(req.body?.amount);
   if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ error: 'Некорректная сумма' });
 

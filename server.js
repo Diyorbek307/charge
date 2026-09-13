@@ -4,6 +4,7 @@ import { dirname, join } from "path";
 import { api } from "./server/api.js";
 import { db } from "./server/db.js";
 import { attachOcpp } from "./server/ocpp.js";
+import { paymentsApi } from "./server/payments.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -18,6 +19,8 @@ app.get("/health", (_req, res) => {
 });
 
 // REST API + live-синхронизация (SSE)
+// Payme / Click merchant callbacks and top-up orders.
+app.use("/api/payments", paymentsApi);
 app.use("/api", api);
 
 // Статика собранного Vite-приложения
