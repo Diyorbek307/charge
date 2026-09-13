@@ -676,10 +676,10 @@ function FinancePage() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: t('lbl2.revenueSep2'), value: '184.5M', sub: '+4.7% к авг', color: 'text-slate-900', trend: true },
-            { label: t('lbl2.oneChargeCommission'), value: '5.5M', sub: '3% · вычтено', color: 'text-red-500', trend: false },
-            { label: t('lbl2.payout'), value: '178.9M', sub: 'до 07.09.2026', color: 'text-green-600', trend: false },
-            { label: t('lbl2.sessionsTotal2'), value: '3 120', sub: 'сентябрь', color: 'text-sky-600', trend: false },
+            { label: t('lbl2.revenueSep2'), value: '184.5M', sub: t('sub.47VsAug'), color: 'text-slate-900', trend: true },
+            { label: t('lbl2.oneChargeCommission'), value: '5.5M', sub: t('sub.3Deducted'), color: 'text-red-500', trend: false },
+            { label: t('lbl2.payout'), value: '178.9M', sub: t('sub.until07092026'), color: 'text-green-600', trend: false },
+            { label: t('lbl2.sessionsTotal2'), value: '3 120', sub: t('sub.september'), color: 'text-sky-600', trend: false },
           ].map(c => (
             <div key={c.label} className="bg-white rounded-xl border border-slate-100 p-4">
               <p className="text-xs text-slate-400 mb-1">{c.label}</p>
@@ -716,11 +716,11 @@ function FinancePage() {
           <h3 className="text-sm font-semibold text-slate-700 mb-4">Схема расчётов</h3>
           <div className="flex items-center gap-2 text-sm flex-wrap">
             {[
-              { label: t('lbl2.user'), sub: 'оплачивает', bg: 'bg-sky-50 border-sky-200 text-sky-700' },
+              { label: t('lbl2.user'), sub: t('sub.pays'), bg: 'bg-sky-50 border-sky-200 text-sky-700' },
               null,
               { label: 'ONE CHARGE', sub: 'удерживает 3%', bg: 'bg-slate-50 border-slate-200 text-slate-700' },
               null,
-              { label: 'GreenCharge UZ', sub: 'получает D+2', bg: 'bg-green-50 border-green-200 text-green-700' },
+              { label: 'GreenCharge UZ', sub: t('sub.receivesD2'), bg: 'bg-green-50 border-green-200 text-green-700' },
             ].map((item, i) => item === null
               ? <div key={i} className="flex flex-col items-center gap-0.5 text-slate-300">
                   <div className="h-0.5 w-8 bg-slate-200" />
@@ -1563,10 +1563,10 @@ function CustomersPage() {
         {/* KPI row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: t('lbl2.uniqueCustomers'), value: '1 284', sub: '+42 этой неделе', bg: 'bg-sky-50', ic: 'text-sky-500', icon: <Users size={14} /> },
-            { label: t('lbl2.averageTicket'), value: `${(avgCheck / 1000).toFixed(0)}K сум`, sub: 'за сессию', bg: 'bg-emerald-50', ic: 'text-emerald-600', icon: <DollarSign size={14} /> },
-            { label: t('lbl2.repeatVisits'), value: '78%', sub: 'в течение месяца', bg: 'bg-violet-50', ic: 'text-violet-500', icon: <Activity size={14} /> },
-            { label: t('lbl2.averageRating'), value: avgRating, sub: 'по отзывам клиентов', bg: 'bg-amber-50', ic: 'text-amber-500', icon: <Star size={14} /> },
+            { label: t('lbl2.uniqueCustomers'), value: '1 284', sub: t('sub.42ThisWeek'), bg: 'bg-sky-50', ic: 'text-sky-500', icon: <Users size={14} /> },
+            { label: t('lbl2.averageTicket'), value: `${(avgCheck / 1000).toFixed(0)}K сум`, sub: t('sub.perSession'), bg: 'bg-emerald-50', ic: 'text-emerald-600', icon: <DollarSign size={14} /> },
+            { label: t('lbl2.repeatVisits'), value: '78%', sub: t('sub.withinAMonth'), bg: 'bg-violet-50', ic: 'text-violet-500', icon: <Activity size={14} /> },
+            { label: t('lbl2.averageRating'), value: avgRating, sub: t('sub.fromCustomerReviews'), bg: 'bg-amber-50', ic: 'text-amber-500', icon: <Star size={14} /> },
           ].map(k => (
             <div key={k.label} className="bg-white rounded-2xl p-4 border border-slate-100/80 hover:shadow-md transition-all" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <div className="flex items-start justify-between mb-3">
@@ -1865,10 +1865,10 @@ function HelpPage() {
   ];
 
   const contacts = [
-    { icon: '📧', label: 'Email поддержки', value: 'operator@onecharge.uz', sub: 'Ответ в течение 2 часов' },
-    { icon: '📱', label: t('lbl2.phone'), value: '+998 71 200-00-01', sub: 'Пн–Пт 9:00–18:00' },
-    { icon: '💬', label: 'Telegram', value: '@onecharge_support', sub: 'Онлайн 24/7' },
-    { icon: '📖', label: t('lbl2.documentation'), value: 'docs.onecharge.uz', sub: 'API, OCPI, вебхуки' },
+    { icon: '📧', label: 'Email поддержки', value: 'operator@onecharge.uz', sub: t('sub.replyWithin2Hours') },
+    { icon: '📱', label: t('lbl2.phone'), value: '+998 71 200-00-01', sub: t('sub.monFri9001800') },
+    { icon: '💬', label: 'Telegram', value: '@onecharge_support', sub: t('sub.online247') },
+    { icon: '📖', label: t('lbl2.documentation'), value: 'docs.onecharge.uz', sub: t('sub.apiOcpiWebhooks') },
   ];
 
   return (
@@ -1887,10 +1887,10 @@ function HelpPage() {
       {/* Quick links */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { icon: '📖', label: t('lbl2.documentation'), sub: 'API, OCPI, руководства', color: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8' },
-          { icon: '🎓', label: t('lbl2.training'), sub: 'Видеоуроки и вебинары', color: '#F5F3FF', border: '#DDD6FE', text: '#6D28D9' },
-          { icon: '🐛', label: t('lbl2.bugReport'), sub: 'Сообщить о проблеме', color: '#FEF2F2', border: '#FECACA', text: '#DC2626' },
-          { icon: '💡', label: t('lbl2.ideas'), sub: 'Предложить улучшение', color: '#FFFBEB', border: '#FDE68A', text: '#D97706' },
+          { icon: '📖', label: t('lbl2.documentation'), sub: t('sub.apiOcpiGuides'), color: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8' },
+          { icon: '🎓', label: t('lbl2.training'), sub: t('sub.videoLessonsAndWebinars'), color: '#F5F3FF', border: '#DDD6FE', text: '#6D28D9' },
+          { icon: '🐛', label: t('lbl2.bugReport'), sub: t('sub.reportAProblem'), color: '#FEF2F2', border: '#FECACA', text: '#DC2626' },
+          { icon: '💡', label: t('lbl2.ideas'), sub: t('sub.suggestAnImprovement'), color: '#FFFBEB', border: '#FDE68A', text: '#D97706' },
         ].map(c => (
           <button key={c.label} className="rounded-2xl p-4 text-left hover:scale-[1.02] active:scale-98 transition-all"
             style={{ background: c.color, border: `1px solid ${c.border}`, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>

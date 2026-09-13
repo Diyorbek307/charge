@@ -222,10 +222,10 @@ function AdminDashboard() {
       {/* National KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: t('lbl2.operators'), num: 4, sub: '3 активных', icon: <Building2 size={14} />, bg: 'bg-sky-50', ic: 'text-sky-500' },
-          { label: t('lbl2.stations'), num: 108, sub: '96 онлайн', icon: <MapPin size={14} />, bg: 'bg-emerald-50', ic: 'text-emerald-600' },
-          { label: 'EVSE', num: 276, sub: '38 активны сейчас', icon: <Zap size={14} />, bg: 'bg-amber-50', ic: 'text-amber-500' },
-          { label: t('lbl2.users'), num: 14218, sub: '+420 этой неделе', icon: <Users size={14} />, bg: 'bg-violet-50', ic: 'text-violet-500' },
+          { label: t('lbl2.operators'), num: 4, sub: t('sub.3Active'), icon: <Building2 size={14} />, bg: 'bg-sky-50', ic: 'text-sky-500' },
+          { label: t('lbl2.stations'), num: 108, sub: t('sub.96Online'), icon: <MapPin size={14} />, bg: 'bg-emerald-50', ic: 'text-emerald-600' },
+          { label: 'EVSE', num: 276, sub: t('sub.38ActiveNow'), icon: <Zap size={14} />, bg: 'bg-amber-50', ic: 'text-amber-500' },
+          { label: t('lbl2.users'), num: 14218, sub: t('sub.420ThisWeek'), icon: <Users size={14} />, bg: 'bg-violet-50', ic: 'text-violet-500' },
         ].map((k, i) => (
           <div key={k.label} className="bg-white rounded-2xl p-4 border border-slate-100/80 hover:shadow-md transition-all enter-up"
             style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)', animationDelay: `${i * 60}ms` }}>
@@ -243,10 +243,10 @@ function AdminDashboard() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: t('lbl2.revenueSep'), num: 394.1, suffix: 'M', sub: '+19% vs авг.', positive: true },
-          { label: t('lbl2.oneChargeCommissions'), num: 12.8, suffix: 'M', sub: 'средн. 3.25%', positive: true },
-          { label: t('lbl2.failedSessions'), num: 14, suffix: '', sub: '0.05% от общего', positive: false },
-          { label: t('lbl2.paymentErrors'), num: 7, suffix: '', sub: 'требуют проверки', positive: false },
+          { label: t('lbl2.revenueSep'), num: 394.1, suffix: 'M', sub: t('sub.19VsAug'), positive: true },
+          { label: t('lbl2.oneChargeCommissions'), num: 12.8, suffix: 'M', sub: t('sub.avg325'), positive: true },
+          { label: t('lbl2.failedSessions'), num: 14, suffix: '', sub: t('sub.005OfTotal'), positive: false },
+          { label: t('lbl2.paymentErrors'), num: 7, suffix: '', sub: t('sub.needReview'), positive: false },
         ].map((k, i) => (
           <div key={k.label} className="bg-white rounded-2xl p-4 border border-slate-100/80 hover:shadow-md transition-all enter-up"
             style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)', animationDelay: `${i * 60 + 240}ms` }}>
@@ -1179,7 +1179,7 @@ function AnalyticsPage() {
             {[
               { label: 'CAGR пользователей', value: '+187%', sub: 'янв → сен 2026', color: 'text-sky-600' },
               { label: 'CAGR сессий', value: '+171%', sub: 'янв → сен 2026', color: 'text-green-600' },
-              { label: t('lbl2.forecastToDec2026'), value: '22k+ users', sub: 'при текущей динамике', color: 'text-violet-600' },
+              { label: t('lbl2.forecastToDec2026'), value: '22k+ users', sub: t('sub.atTheCurrentTrend'), color: 'text-violet-600' },
             ].map(k => (
               <div key={k.label} className="bg-white rounded-xl border border-slate-100 p-4 text-center">
                 <p className={`text-xl font-bold mono ${k.color}`}>{k.value}</p>
@@ -1682,10 +1682,10 @@ function UsersPage() {
         {/* KPI */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: t('lbl2.totalAccounts'), value: '14 218', sub: 'все платформы', bg: 'bg-slate-50', ic: 'text-slate-500', icon: <Users size={14} /> },
-            { label: t('lbl2.active2'), value: String(active + 12840), sub: 'подтверждённые телефоны', bg: 'bg-emerald-50', ic: 'text-emerald-600', icon: <UserCheck size={14} /> },
-            { label: t('lbl2.newIn7Days'), value: '284', sub: '+18% к прошлой неделе', bg: 'bg-violet-50', ic: 'text-violet-500', icon: <ArrowUp size={14} /> },
-            { label: t('lbl2.blocked'), value: String(suspended + 10), sub: 'превышение лимитов', bg: 'bg-red-50', ic: 'text-red-500', icon: <AlertTriangle size={14} /> },
+            { label: t('lbl2.totalAccounts'), value: '14 218', sub: t('sub.allPlatforms'), bg: 'bg-slate-50', ic: 'text-slate-500', icon: <Users size={14} /> },
+            { label: t('lbl2.active2'), value: String(active + 12840), sub: t('sub.verifiedPhones'), bg: 'bg-emerald-50', ic: 'text-emerald-600', icon: <UserCheck size={14} /> },
+            { label: t('lbl2.newIn7Days'), value: '284', sub: t('sub.18VsLastWeek'), bg: 'bg-violet-50', ic: 'text-violet-500', icon: <ArrowUp size={14} /> },
+            { label: t('lbl2.blocked'), value: String(suspended + 10), sub: t('sub.limitOverruns'), bg: 'bg-red-50', ic: 'text-red-500', icon: <AlertTriangle size={14} /> },
           ].map(k => (
             <div key={k.label} className="bg-white rounded-2xl p-4 border border-slate-100/80 hover:shadow-md transition-all" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <div className="flex items-start justify-between mb-3">
@@ -1917,10 +1917,10 @@ function SettlementPage() {
         {/* KPI */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: t('lbl2.paidOutAug'), value: `${(totalPaidMonth / 1000000).toFixed(1)}M`, sub: '4 оператора', color: 'text-green-600', bg: 'bg-green-50 border-green-100' },
-            { label: t('lbl2.awaitingPayout'), value: `${(totalPending / 1000000).toFixed(1)}M`, sub: 'дата: 9 сент 2026', color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100' },
-            { label: t('lbl2.commissionAug'), value: `${((totalPaidMonth * 0.031) / 1000000).toFixed(1)}M`, sub: '~3.1% средняя', color: 'text-violet-600', bg: 'bg-violet-50 border-violet-100' },
-            { label: t('lbl2.nextD2'), value: '9 сент', sub: '3 инвойса', color: 'text-slate-800', bg: 'bg-slate-50 border-slate-200' },
+            { label: t('lbl2.paidOutAug'), value: `${(totalPaidMonth / 1000000).toFixed(1)}M`, sub: t('sub.4Operators'), color: 'text-green-600', bg: 'bg-green-50 border-green-100' },
+            { label: t('lbl2.awaitingPayout'), value: `${(totalPending / 1000000).toFixed(1)}M`, sub: t('sub.date9Sep2026'), color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100' },
+            { label: t('lbl2.commissionAug'), value: `${((totalPaidMonth * 0.031) / 1000000).toFixed(1)}M`, sub: t('sub.31Average'), color: 'text-violet-600', bg: 'bg-violet-50 border-violet-100' },
+            { label: t('lbl2.nextD2'), value: '9 сент', sub: t('sub.3Invoices'), color: 'text-slate-800', bg: 'bg-slate-50 border-slate-200' },
           ].map(k => (
             <div key={k.label} className={`border rounded-2xl p-4 ${k.bg}`}>
               <p className="text-xs text-slate-500 mb-0.5">{k.label}</p>
@@ -1935,10 +1935,10 @@ function SettlementPage() {
           <p className="text-xs font-semibold text-slate-400 mb-4 tracking-wider">ЦИКЛ ВЫПЛАТЫ</p>
           <div className="flex items-stretch gap-0">
             {[
-              { step: 'T', label: t('lbl2.transaction'), sub: 'Оплата пользователя', color: 'bg-sky-500' },
-              { step: 'T+1', label: t('lbl2.verification'), sub: 'CDR валидация, fraud check', color: 'bg-violet-500' },
-              { step: 'T+2', label: t('lbl2.settlement'), sub: 'Формирование инвойса', color: 'bg-amber-500' },
-              { step: 'D+2', label: t('lbl2.bankTransfer'), sub: 'IBAN оператора', color: 'bg-green-500' },
+              { step: 'T', label: t('lbl2.transaction'), sub: t('sub.userPayment'), color: 'bg-sky-500' },
+              { step: 'T+1', label: t('lbl2.verification'), sub: t('sub.cdrValidationFraudCheck'), color: 'bg-violet-500' },
+              { step: 'T+2', label: t('lbl2.settlement'), sub: t('sub.invoiceGeneration'), color: 'bg-amber-500' },
+              { step: 'D+2', label: t('lbl2.bankTransfer'), sub: t('sub.operatorIban'), color: 'bg-green-500' },
             ].map((s, i, arr) => (
               <div key={s.step} className="flex items-center flex-1">
                 <div className="flex-1">
@@ -2159,10 +2159,10 @@ function GlobalTariffsPage() {
       {/* Summary stat row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: t('lbl2.averageDcFast'), value: `${Math.round(regionData.reduce((s, r) => s + r.dcFast, 0) / regionData.length).toLocaleString()} сум`, sub: 'по сети' },
-          { label: t('lbl2.averageAc'), value: `${Math.round(regionData.reduce((s, r) => s + r.acStd, 0) / regionData.length).toLocaleString()} сум`, sub: 'по сети' },
+          { label: t('lbl2.averageDcFast'), value: `${Math.round(regionData.reduce((s, r) => s + r.dcFast, 0) / regionData.length).toLocaleString()} сум`, sub: t('sub.acrossTheNetwork') },
+          { label: t('lbl2.averageAc'), value: `${Math.round(regionData.reduce((s, r) => s + r.acStd, 0) / regionData.length).toLocaleString()} сум`, sub: t('sub.acrossTheNetwork') },
           { label: t('lbl2.activeRules'), value: String(rules.filter(r => r.active).length), sub: `из ${rules.length}` },
-          { label: t('lbl2.regions'), value: String(regionData.length), sub: 'охвачено' },
+          { label: t('lbl2.regions'), value: String(regionData.length), sub: t('sub.covered') },
         ].map(s => (
           <div key={s.label} className="bg-white border border-slate-100 rounded-2xl p-4">
             <p className="text-xs text-slate-400 mb-0.5">{s.label}</p>
@@ -3197,12 +3197,12 @@ function AdminSettingsPage() {
         <h3 className="text-sm font-semibold text-slate-700 mb-4">Уведомления</h3>
         <div className="space-y-3">
           {([
-            { key: 'fraud', label: 'Fraud-оповещения', sub: 'Подозрительные операции' },
-            { key: 'operators', label: t('lbl2.newOperators'), sub: 'Заявки на подключение' },
-            { key: 'payments', label: t('lbl2.payments'), sub: 'Ошибки и возвраты' },
-            { key: 'cdrErrors', label: 'CDR ошибки', sub: 'Ошибки валидации CDR' },
-            { key: 'system', label: t('lbl2.system'), sub: 'Обновления платформы' },
-            { key: 'emailDigest', label: 'Email дайджест', sub: 'Еженедельная сводка' },
+            { key: 'fraud', label: 'Fraud-оповещения', sub: t('sub.suspiciousOperations') },
+            { key: 'operators', label: t('lbl2.newOperators'), sub: t('sub.connectionRequests') },
+            { key: 'payments', label: t('lbl2.payments'), sub: t('sub.errorsAndRefunds') },
+            { key: 'cdrErrors', label: 'CDR ошибки', sub: t('sub.cdrValidationErrors') },
+            { key: 'system', label: t('lbl2.system'), sub: t('sub.platformUpdates') },
+            { key: 'emailDigest', label: 'Email дайджест', sub: t('sub.weeklySummary') },
           ] as const).map(item => (
             <div key={item.key} className="flex items-center justify-between">
               <div>
@@ -3478,10 +3478,10 @@ function SystemHealthPage() {
       {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: t('lbl2.totalOcpp'), value: `${totalConnected}/${totalStations}`, sub: 'станций онлайн' },
-          { label: 'API RPS', value: '67 / сек', sub: 'текущий трафик' },
-          { label: 'Avg Latency', value: '51 мс', sub: 'средняя задержка' },
-          { label: 'Uptime 30д', value: '99.8%', sub: 'доступность' },
+          { label: t('lbl2.totalOcpp'), value: `${totalConnected}/${totalStations}`, sub: t('sub.stationsOnline') },
+          { label: 'API RPS', value: '67 / сек', sub: t('sub.currentTraffic') },
+          { label: 'Avg Latency', value: '51 мс', sub: t('sub.averageLatency') },
+          { label: 'Uptime 30д', value: '99.8%', sub: t('sub.availability') },
         ].map(kpi => (
           <div key={kpi.label} className="bg-white rounded-xl border border-slate-100 p-4">
             <p className="text-xs text-slate-400 mb-1">{kpi.label}</p>

@@ -301,12 +301,12 @@ function DashboardPage() {
       {/* ── KPI Row (6 tiles) ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {([
-          { label: t('lbl2.vehicles'), num: 5, sub: '4 активны', icon: <Car size={13} />, grad: 'linear-gradient(135deg,#EEF2FF,#E0E7FF)', ic: '#6366F1', trend: null },
-          { label: t('lbl2.chargesSep'), num: 278, sub: '+15% к авг.', icon: <Zap size={13} />, grad: 'linear-gradient(135deg,#F0F9FF,#DBEAFE)', ic: '#3B82F6', trend: 15 },
-          { label: t('lbl2.totalKwh2'), num: 1842, sub: 'за сентябрь', icon: <Activity size={13} />, grad: 'linear-gradient(135deg,#F0FDF4,#DCFCE7)', ic: '#22C55E', trend: 8 },
+          { label: t('lbl2.vehicles'), num: 5, sub: t('sub.4Active'), icon: <Car size={13} />, grad: 'linear-gradient(135deg,#EEF2FF,#E0E7FF)', ic: '#6366F1', trend: null },
+          { label: t('lbl2.chargesSep'), num: 278, sub: t('sub.15VsAug'), icon: <Zap size={13} />, grad: 'linear-gradient(135deg,#F0F9FF,#DBEAFE)', ic: '#3B82F6', trend: 15 },
+          { label: t('lbl2.totalKwh2'), num: 1842, sub: t('sub.forSeptember'), icon: <Activity size={13} />, grad: 'linear-gradient(135deg,#F0FDF4,#DCFCE7)', ic: '#22C55E', trend: 8 },
           { label: t('lbl2.budgetUsed'), num: spentPct, sub: `${(SPENT/1000000).toFixed(1)}M из 14M сум`, icon: <Target size={13} />, grad: 'linear-gradient(135deg,#FFFBEB,#FEF3C7)', ic: '#F59E0B', trend: null },
-          { label: 'CO₂ сэкономлено', num: 24, sub: 'тонн × 100г CO₂/км', icon: <Leaf size={13} />, grad: 'linear-gradient(135deg,#F0FDF4,#DCFCE7)', ic: '#10B981', trend: 22 },
-          { label: t('lbl2.employees'), num: 18, sub: '2 у лимита', icon: <Users size={13} />, grad: 'linear-gradient(135deg,#FDF4FF,#FAE8FF)', ic: '#A855F7', trend: null },
+          { label: 'CO₂ сэкономлено', num: 24, sub: t('sub.tonnes100gCoKm'), icon: <Leaf size={13} />, grad: 'linear-gradient(135deg,#F0FDF4,#DCFCE7)', ic: '#10B981', trend: 22 },
+          { label: t('lbl2.employees'), num: 18, sub: t('sub.2NearLimit'), icon: <Users size={13} />, grad: 'linear-gradient(135deg,#FDF4FF,#FAE8FF)', ic: '#A855F7', trend: null },
         ] as const).map((k, i) => (
           <div key={k.label} className="rounded-2xl p-4 enter-up"
             style={{ background: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04),inset 0 1px 0 rgba(255,255,255,0.9)', border: '1px solid rgba(226,232,240,0.7)', animationDelay: `${i * 55}ms` }}>
@@ -701,10 +701,10 @@ function FleetPage() {
         {/* KPI row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: t('lbl2.totalVehicles'), value: '5', sub: '4 активных', bg: 'bg-indigo-50', ic: 'text-indigo-500', icon: <Car size={14} /> },
+            { label: t('lbl2.totalVehicles'), value: '5', sub: t('sub.4Active2'), bg: 'bg-indigo-50', ic: 'text-indigo-500', icon: <Car size={14} /> },
             { label: t('lbl2.chargingNow'), value: String(chargingNow), sub: `${fleetVehicles.filter(v=>v.status==='driving').length} в поездке`, bg: 'bg-sky-50', ic: 'text-sky-500', icon: <Zap size={14} /> },
-            { label: t('lbl2.kwhThisWeek'), value: totalKwh.toLocaleString(), sub: 'по всему парку', bg: 'bg-emerald-50', ic: 'text-emerald-600', icon: <Activity size={14} /> },
-            { label: t('lbl2.expensesSep'), value: `${(totalCost / 1000000).toFixed(1)}M`, sub: 'сум · весь парк', bg: 'bg-amber-50', ic: 'text-amber-500', icon: <DollarSign size={14} /> },
+            { label: t('lbl2.kwhThisWeek'), value: totalKwh.toLocaleString(), sub: t('sub.acrossTheFleet'), bg: 'bg-emerald-50', ic: 'text-emerald-600', icon: <Activity size={14} /> },
+            { label: t('lbl2.expensesSep'), value: `${(totalCost / 1000000).toFixed(1)}M`, sub: t('sub.uzsWholeFleet'), bg: 'bg-amber-50', ic: 'text-amber-500', icon: <DollarSign size={14} /> },
           ].map(k => (
             <div key={k.label} className="bg-white rounded-2xl p-4 border border-slate-100/80 hover:shadow-md transition-all" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <div className="flex items-start justify-between mb-3">
@@ -922,9 +922,9 @@ function EmployeesPage() {
         {/* KPI row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: t('lbl2.employees'), value: String(employees.length), sub: 'с корп. лимитом', bg: 'bg-indigo-50', ic: 'text-indigo-500', icon: <Users size={14} /> },
-            { label: t('lbl2.overLimit'), value: String(overLimit), sub: 'требуют внимания', bg: 'bg-red-50', ic: 'text-red-500', icon: <AlertTriangle size={14} /> },
-            { label: 'Avg. использование', value: `${avgUtil}%`, sub: 'от лимита', bg: 'bg-amber-50', ic: 'text-amber-500', icon: <Activity size={14} /> },
+            { label: t('lbl2.employees'), value: String(employees.length), sub: t('sub.withCorporateLimit'), bg: 'bg-indigo-50', ic: 'text-indigo-500', icon: <Users size={14} /> },
+            { label: t('lbl2.overLimit'), value: String(overLimit), sub: t('sub.needAttention'), bg: 'bg-red-50', ic: 'text-red-500', icon: <AlertTriangle size={14} /> },
+            { label: 'Avg. использование', value: `${avgUtil}%`, sub: t('sub.ofLimit'), bg: 'bg-amber-50', ic: 'text-amber-500', icon: <Activity size={14} /> },
             { label: t('lbl2.spendLimit'), value: `${((totalSpent / totalLimit) * 100).toFixed(0)}%`, sub: `${(totalSpent / 1000000).toFixed(1)}M из ${(totalLimit / 1000000).toFixed(1)}M сум`, bg: 'bg-emerald-50', ic: 'text-emerald-600', icon: <DollarSign size={14} /> },
           ].map(k => (
             <div key={k.label} className="bg-white rounded-2xl p-4 border border-slate-100/80 hover:shadow-md transition-all" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
@@ -1212,8 +1212,8 @@ function ExpensesPage() {
         {[
           { label: t('lbl2.totalSpend'), value: `${(total / 1000000).toFixed(2)} млн сум`, sub: `за ${period === 'week' ? 'неделю' : period === 'month' ? 'месяц' : 'квартал'}`, trend: +12.4, color: 'text-violet-600' },
           { label: t('lbl2.kwhCharged'), value: `${totalKwh.toFixed(0)} кВт·ч`, sub: `${expenseRows.length} сессий`, trend: +8.1, color: 'text-sky-600' },
-          { label: t('lbl2.avgCost'), value: `${Math.round(total / totalKwh).toLocaleString()}`, sub: 'сум / кВт·ч', trend: -1.2, color: 'text-slate-900' },
-          { label: t('lbl2.topBySpend'), value: 'Bobur M.', sub: '5 546 400 сум', trend: null, color: 'text-amber-600' },
+          { label: t('lbl2.avgCost'), value: `${Math.round(total / totalKwh).toLocaleString()}`, sub: t('sub.uzsKwh'), trend: -1.2, color: 'text-slate-900' },
+          { label: t('lbl2.topBySpend'), value: 'Bobur M.', sub: t('sub.5546400Uzs'), trend: null, color: 'text-amber-600' },
         ].map(k => (
           <div key={k.label} className="bg-white rounded-xl border border-slate-100 p-4">
             <p className="text-xs text-slate-400 mb-1">{k.label}</p>
@@ -1571,12 +1571,12 @@ function BusinessSettingsPage() {
         </div>
         <div className="divide-y divide-slate-50">
           {([
-            { key: 'limit80', label: t('lbl2.limit80'), sub: 'Когда сотрудник использовал 80% лимита' },
-            { key: 'limit95', label: t('lbl2.limit95'), sub: 'Предупреждение об исчерпании лимита' },
-            { key: 'chargeStart', label: t('lbl2.chargeStart'), sub: 'Push при каждой новой зарядке' },
-            { key: 'chargeEnd', label: t('lbl2.chargeComplete'), sub: 'Итоговый отчёт по сессии' },
-            { key: 'newEmployee', label: t('lbl2.newEmployee'), sub: 'При добавлении пользователя' },
-            { key: 'invoice', label: t('lbl2.invoice'), sub: 'Еженедельный инвойс на email' },
+            { key: 'limit80', label: t('lbl2.limit80'), sub: t('sub.whenAnEmployeeHasUsed80OfTheLimit') },
+            { key: 'limit95', label: t('lbl2.limit95'), sub: t('sub.limitExhaustionWarning') },
+            { key: 'chargeStart', label: t('lbl2.chargeStart'), sub: t('sub.pushOnEveryNewCharge') },
+            { key: 'chargeEnd', label: t('lbl2.chargeComplete'), sub: t('sub.sessionSummaryReport') },
+            { key: 'newEmployee', label: t('lbl2.newEmployee'), sub: t('sub.whenAUserIsAdded') },
+            { key: 'invoice', label: t('lbl2.invoice'), sub: t('sub.weeklyInvoiceByEmail') },
           ] as const).map(n => (
             <div key={n.key} className="px-5 py-3 flex items-center justify-between gap-4">
               <div>
