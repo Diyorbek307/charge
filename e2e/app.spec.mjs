@@ -7,14 +7,16 @@ test.beforeEach(async ({ request }) => {
 
 test('landing page renders and switches language', async ({ page }) => {
   await page.goto('/');
-  const changelog = page.getByRole('button', { name: /Отлично, поехали/ });
-  if (await changelog.isVisible().catch(() => false)) await changelog.click();
+  const h1 = page.getByRole('heading', { level: 1 });
+  await expect(h1).toContainText('В одном приложении.');
+  await page.getByRole('radio', { name: 'EN' }).first().click();
+  await expect(h1).toContainText('One app.');
+  await page.getByRole('radio', { name: 'UZ' }).first().click();
+  await expect(h1).toContainText('Bitta ilovada.');
 
-  await expect(page.getByText('Одно приложение.')).toBeVisible();
-  await page.getByRole('radio', { name: 'EN' }).click();
-  await expect(page.getByText('One app.')).toBeVisible();
-  await page.getByRole('radio', { name: 'UZ' }).click();
-  await expect(page.getByText('Bitta ilova.')).toBeVisible();
+  // The hero's demo button opens the Driver App sign-in.
+  await page.getByRole('button', { name: /Demoni sinab ko‘ring/ }).click();
+  await expect(page.locator('#driver-login')).toBeVisible();
 });
 
 test('a driver charges end to end and the session is billed', async ({ page, request }) => {
