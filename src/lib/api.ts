@@ -312,6 +312,40 @@ export const tokenStore = {
   },
 };
 
+export type LeadKind = 'driver' | 'operator' | 'fleet' | 'partner';
+export type LeadStatus = 'new' | 'contacted' | 'won' | 'lost' | 'spam';
+
+export interface Lead {
+  id: string;
+  kind: LeadKind;
+  name: string;
+  phone: string;
+  company: string;
+  city: string;
+  size: string;
+  message: string;
+  lang: string;
+  consentAt: string;
+  created: string;
+  updated?: string;
+  status: LeadStatus;
+  note: string;
+}
+
+export interface LeadInput {
+  kind: LeadKind;
+  name: string;
+  phone: string;
+  company?: string;
+  city?: string;
+  size?: string;
+  message?: string;
+  consent: boolean;
+  lang: string;
+  /** Honeypot — always empty from a real form. */
+  website?: string;
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -413,6 +447,11 @@ export const apiClient = {
     post<{ operator: OperatorRecord }>(`/operators/${id}/status`, { status }, portal),
 
   resetDemo: (portal: Portal) => post<{ ok: boolean }>('/admin/reset', undefined, portal),
+
+  submitLead: (body: LeadInput) => post<{ ok: boolean; duplicate?: boolean }>('/leads', body),
+  listLeads: (portal: Portal) => request<{ leads: Lead[] }>('/leads', { portal }),
+  updateLead: (portal: Portal, id: string, patch: { status?: LeadStatus; note?: string }) =>
+    request<Lead>(`/leads/${id}`, { method: 'PATCH', body: JSON.stringify(patch), portal }),
 
   listReports: (portal: Portal, name: string) =>
     request<ReportRecord[]>(`/reports?name=${encodeURIComponent(name)}&limit=5`, { portal }),

@@ -9,6 +9,17 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', '.data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 
 /**
+ * Collections holding real people's data rather than demo fixtures. A demo
+ * reset or a schema reseed replaces everything else but carries these over.
+ */
+const KEEP = ['leads'];
+const carry = (from, into) => {
+  for (const key of KEEP) if (Array.isArray(from?.[key])) into[key] = from[key];
+  into.counters.lead = Math.max(into.counters.lead ?? 1, from?.counters?.lead ?? 1);
+  return into;
+};
+
+/**
  * JSON file on local disk. Written to a temp file and renamed, so a crash
  * mid-write never leaves a truncated database. Fine for local development;
  * on Render's free tier the disk is wiped on every restart.
@@ -130,7 +141,7 @@ class Database {
       this.data = loaded;
     } else {
       if (loaded) console.log(`[db] schema ${loaded.__v} != ${SCHEMA_VERSION}, reseeding`);
-      this.data = seed();
+      this.data = carry(loaded, seed());
       await this.store.write(JSON.stringify(this.data));
     }
     console.log(`[db] ready · ${this.store.describe()}`);
@@ -169,7 +180,7 @@ class Database {
   }
 
   reset() {
-    this.data = seed();
+    this.data = carry(this.data, seed());
     void this.#queueWrite();
     return this.data;
   }

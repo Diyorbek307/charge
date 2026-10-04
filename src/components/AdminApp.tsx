@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react';
+import { Inbox } from 'lucide-react';
+import LeadsPage from './LeadsPage';
 import {
   LayoutDashboard, MapPin, Users, Activity, DollarSign, BarChart2,
   Settings, LogOut, Zap, ArrowUp, AlertTriangle, Shield,
@@ -26,7 +28,7 @@ import {
 import AnimatedCounter from './AnimatedCounter';
 import AIChat from './AIChat';
 
-type Page = 'dashboard' | 'map' | 'operators' | 'users' | 'sessions' | 'payments' | 'settlement' | 'analytics' | 'ai' | 'fraud' | 'cdr' | 'commissions' | 'tariffs_global' | 'audit' | 'roles' | 'settings' | 'system_health';
+type Page = 'dashboard' | 'map' | 'operators' | 'leads' | 'users' | 'sessions' | 'payments' | 'settlement' | 'analytics' | 'ai' | 'fraud' | 'cdr' | 'commissions' | 'tariffs_global' | 'audit' | 'roles' | 'settings' | 'system_health';
 
 const statusBg: Record<string, string> = {
   active: 'bg-green-100 text-green-700',
@@ -56,6 +58,7 @@ function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current:
       label: t('nav.group.operations'),
       items: [
         { id: 'operators' as Page, label: t('nav.operators'), icon: <Building2 size={14} /> },
+        { id: 'leads' as Page, label: 'Заявки', icon: <Inbox size={14} /> },
         { id: 'users' as Page, label: t('nav.users'), icon: <Users size={14} /> },
         { id: 'sessions' as Page, label: t('nav.sessions'), icon: <Activity size={14} /> },
       ],
@@ -94,7 +97,7 @@ function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current:
       {/* Brand */}
       <div className="px-4 pt-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="flex items-center gap-2.5 mb-4">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #8B5CF6, #7C3AED)' }}>
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #4F6BFF, #3B4FE0)' }}>
             <Zap size={15} className="text-white" />
           </div>
           <div>
@@ -103,7 +106,7 @@ function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current:
           </div>
         </div>
         <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
-          <div className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white" style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' }}>A</div>
+          <div className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white" style={{ background: 'linear-gradient(135deg, #4F6BFF, #2F3DB8)' }}>A</div>
           <div className="flex-1 min-w-0">
             <p className="text-white text-xs font-semibold truncate">Super Admin</p>
             <p className="text-[10px] truncate" style={{ color: 'rgba(148,163,184,0.5)' }}>ONE CHARGE UZ</p>
@@ -124,7 +127,7 @@ function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current:
                   <button key={item.id} onClick={() => { onChange(item.id); onClose?.(); }}
                     className="w-full flex items-center gap-2.5 px-3 py-[7px] rounded-xl text-[13px] transition-all relative"
                     style={active ? {
-                      background: 'rgba(139,92,246,0.15)',
+                      background: 'rgba(79, 107, 255,0.15)',
                       color: '#C4B5FD',
                       fontWeight: 600,
                     } : {
@@ -271,15 +274,15 @@ function AdminDashboard() {
             <AreaChart data={revenueData}>
               <defs>
                 <linearGradient id="adminGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#0EA5E9" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#0EA5E9" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#0AAF97" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#0AAF97" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #E2E8F0' }} />
-              <Area type="monotone" dataKey="revenue" stroke="#0EA5E9" fill="url(#adminGrad)" strokeWidth={2.5} dot={false} />
+              <Area type="monotone" dataKey="revenue" stroke="#0AAF97" fill="url(#adminGrad)" strokeWidth={2.5} dot={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -461,7 +464,7 @@ function LiveMapPage() {
                     <animate attributeName="opacity" from="0.5" to="0" dur="2s" repeatCount="indefinite" />
                   </circle>
                 )}
-                <text x={st.x + 4} y={st.y + 1} fontSize="2" fill="#475569" fontWeight="500" fontFamily="DM Sans, sans-serif">
+                <text x={st.x + 4} y={st.y + 1} fontSize="2" fill="#475569" fontWeight="500" fontFamily="Manrope, sans-serif">
                   {st.name.split(' ')[0]}
                 </text>
               </g>
@@ -952,7 +955,7 @@ const regionData = [
 ];
 
 const connectorPie = [
-  { name: 'CCS2', value: 168, color: '#0EA5E9' },
+  { name: 'CCS2', value: 168, color: '#0AAF97' },
   { name: 'Type 2', value: 76, color: '#22C55E' },
   { name: 'CHAdeMO', value: 24, color: '#F59E0B' },
   { name: 'Type 1', value: 8, color: '#94A3B8' },
@@ -1037,7 +1040,7 @@ function AnalyticsPage() {
                   <XAxis dataKey="hour" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #E2E8F0' }} />
-                  <Line type="monotone" dataKey="sessions" stroke="#0EA5E9" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="sessions" stroke="#0AAF97" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -1162,12 +1165,12 @@ function AnalyticsPage() {
                 <YAxis yAxisId="u" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
                 <YAxis yAxisId="s" orientation="right" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #E2E8F0' }} />
-                <Line yAxisId="u" type="monotone" dataKey="users" stroke="#0EA5E9" strokeWidth={2} dot={{ r: 3 }} name="Пользователи" />
+                <Line yAxisId="u" type="monotone" dataKey="users" stroke="#0AAF97" strokeWidth={2} dot={{ r: 3 }} name="Пользователи" />
                 <Line yAxisId="s" type="monotone" dataKey="sessions" stroke="#22C55E" strokeWidth={2} dot={{ r: 3 }} name="Сессии" />
               </LineChart>
             </ResponsiveContainer>
             <div className="flex gap-4 mt-2 justify-center">
-              {[{ color: '#0EA5E9', label: t('lbl2.users') }, { color: '#22C55E', label: t('lbl2.sessionsPerMonth') }].map(l => (
+              {[{ color: '#0AAF97', label: t('lbl2.users') }, { color: '#22C55E', label: t('lbl2.sessionsPerMonth') }].map(l => (
                 <div key={l.label} className="flex items-center gap-1.5 text-xs text-slate-500">
                   <div className="w-3 h-0.5 rounded" style={{ backgroundColor: l.color }} />
                   {l.label}
@@ -1298,7 +1301,7 @@ function AIInsightsPage() {
         <div className="px-4 py-4 flex items-center gap-3 shrink-0"
           style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)' }}>
           <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: 'linear-gradient(135deg, #7C3AED, #8B5CF6)', boxShadow: '0 4px 12px rgba(139,92,246,0.4)' }}>
+            style={{ background: 'linear-gradient(135deg, #3B4FE0, #4F6BFF)', boxShadow: '0 4px 12px rgba(79, 107, 255,0.4)' }}>
             <Brain size={14} className="text-white" />
           </div>
           <div>
@@ -1316,13 +1319,13 @@ function AIInsightsPage() {
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} gap-2`}>
               {m.role === 'ai' && (
                 <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-                  style={{ background: 'linear-gradient(135deg, #7C3AED, #8B5CF6)' }}>
+                  style={{ background: 'linear-gradient(135deg, #3B4FE0, #4F6BFF)' }}>
                   <Brain size={10} className="text-white" />
                 </div>
               )}
               <div className="max-w-[80%] rounded-2xl px-3 py-2"
                 style={m.role === 'user'
-                  ? { background: 'linear-gradient(135deg, #7C3AED, #8B5CF6)', borderRadius: '14px 14px 4px 14px' }
+                  ? { background: 'linear-gradient(135deg, #3B4FE0, #4F6BFF)', borderRadius: '14px 14px 4px 14px' }
                   : { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '4px 14px 14px 14px' }}>
                 <p className="text-[12px] leading-relaxed text-slate-200">{m.role === 'ai' ? renderBold(m.text) : m.text}</p>
                 {m.ts !== '—' && <p className="text-[9px] text-slate-600 mt-1">{m.ts}</p>}
@@ -1332,7 +1335,7 @@ function AIInsightsPage() {
           {typing && (
             <div className="flex items-end gap-2">
               <div className="w-6 h-6 rounded-lg flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #7C3AED, #8B5CF6)' }}>
+                style={{ background: 'linear-gradient(135deg, #3B4FE0, #4F6BFF)' }}>
                 <Brain size={10} className="text-white" />
               </div>
               <div className="flex items-center gap-1 px-3 py-2.5 rounded-2xl"
@@ -1353,7 +1356,7 @@ function AIInsightsPage() {
             {['Ферганская долина', 'Ночной тариф', 'Fraud риски', 'Топ станция'].map(c => (
               <button key={c} onClick={() => send(c)}
                 className="text-[10px] px-2 py-1 rounded-lg border transition-all hover:opacity-80"
-                style={{ background: 'rgba(139,92,246,0.12)', borderColor: 'rgba(139,92,246,0.28)', color: '#A78BFA' }}>
+                style={{ background: 'rgba(79, 107, 255,0.12)', borderColor: 'rgba(79, 107, 255,0.28)', color: '#8DA2FF' }}>
                 {c}
               </button>
             ))}
@@ -1370,7 +1373,7 @@ function AIInsightsPage() {
               className="flex-1 bg-transparent text-xs text-white placeholder:text-slate-600 outline-none" />
             <button onClick={() => send(input)} disabled={!input.trim()}
               className="w-6 h-6 rounded-lg flex items-center justify-center transition-all disabled:opacity-30"
-              style={{ background: input.trim() ? 'linear-gradient(135deg, #7C3AED, #8B5CF6)' : 'rgba(255,255,255,0.06)' }}>
+              style={{ background: input.trim() ? 'linear-gradient(135deg, #3B4FE0, #4F6BFF)' : 'rgba(255,255,255,0.06)' }}>
               <Send size={11} className="text-white" />
             </button>
           </div>
@@ -2261,7 +2264,7 @@ function GlobalTariffsPage() {
             return (
               <div key={r.city} className="flex-1 flex flex-col items-center gap-1">
                 <span className="text-[10px] font-mono text-slate-500">{r.dcFast.toLocaleString()}</span>
-                <div className="w-full rounded-t-lg transition-all" style={{ height: `${Math.max(20, pct * 80)}px`, background: `linear-gradient(180deg, #38BDF8, #0284C7)` }} />
+                <div className="w-full rounded-t-lg transition-all" style={{ height: `${Math.max(20, pct * 80)}px`, background: `linear-gradient(180deg, #20D4B6, #078C7C)` }} />
                 <span className="text-[10px] text-slate-400 text-center leading-tight">{r.region}</span>
               </div>
             );
@@ -2380,15 +2383,15 @@ function CommissionsPage() {
                 <AreaChart data={commissionHistory} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="commGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#38BDF8" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#38BDF8" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#20D4B6" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#20D4B6" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                   <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => (v / 1000000).toFixed(0) + 'M'} />
                   <Tooltip formatter={(v: unknown) => (v as number).toLocaleString() + ' сум'} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
-                  <Area type="monotone" dataKey="revenue" stroke="#38BDF8" strokeWidth={2} fill="url(#commGrad)" dot={false} />
+                  <Area type="monotone" dataKey="revenue" stroke="#20D4B6" strokeWidth={2} fill="url(#commGrad)" dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
               <div className="mt-4">
@@ -3124,7 +3127,7 @@ function AdminSettingsPage() {
         <h3 className="text-sm font-semibold text-slate-700 mb-4">Профиль</h3>
         <div className="flex items-center gap-4 mb-5">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-bold shrink-0"
-            style={{ background: 'linear-gradient(135deg, #8B5CF6, #7C3AED)' }}>
+            style={{ background: 'linear-gradient(135deg, #4F6BFF, #3B4FE0)' }}>
             RN
           </div>
           <div>
@@ -3314,7 +3317,7 @@ function AuthFlow({ onLogin }: { onLogin: () => void }) {
         <div className="w-full max-w-sm mx-auto px-6">
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 shadow-lg" style={{ background: 'linear-gradient(135deg, #8B5CF6, #7C3AED)' }}>
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 shadow-lg" style={{ background: 'linear-gradient(135deg, #4F6BFF, #3B4FE0)' }}>
               <Zap size={26} className="text-white" />
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">ONE CHARGE UZ</h1>
@@ -3349,7 +3352,7 @@ function AuthFlow({ onLogin }: { onLogin: () => void }) {
             </div>
             <button type="submit"
               className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95"
-              style={{ background: 'linear-gradient(135deg, #8B5CF6, #7C3AED)', boxShadow: '0 4px 20px rgba(139,92,246,0.4)' }}>
+              style={{ background: 'linear-gradient(135deg, #4F6BFF, #3B4FE0)', boxShadow: '0 4px 20px rgba(79, 107, 255,0.4)' }}>
               Войти
             </button>
           </form>
@@ -3363,8 +3366,8 @@ function AuthFlow({ onLogin }: { onLogin: () => void }) {
       <div className="w-full max-w-sm mx-auto px-6 flex flex-col items-center">
         {/* Shield icon with glow */}
         <div className="relative mb-6">
-          <div className="absolute inset-0 rounded-full blur-xl" style={{ background: 'rgba(139,92,246,0.4)', transform: 'scale(1.5)' }} />
-          <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #8B5CF6, #7C3AED)', boxShadow: '0 0 32px rgba(139,92,246,0.5)' }}>
+          <div className="absolute inset-0 rounded-full blur-xl" style={{ background: 'rgba(79, 107, 255,0.4)', transform: 'scale(1.5)' }} />
+          <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #4F6BFF, #3B4FE0)', boxShadow: '0 0 32px rgba(79, 107, 255,0.5)' }}>
             <Shield size={28} className="text-white" />
           </div>
         </div>
@@ -3385,11 +3388,11 @@ function AuthFlow({ onLogin }: { onLogin: () => void }) {
               className="w-11 h-14 text-center text-2xl font-bold mono border-2 rounded-xl outline-none transition-colors"
               style={{
                 background: 'rgba(255,255,255,0.07)',
-                borderColor: digit ? '#8B5CF6' : 'rgba(255,255,255,0.12)',
+                borderColor: digit ? '#4F6BFF' : 'rgba(255,255,255,0.12)',
                 color: 'white',
               }}
-              onFocus={e => (e.target.style.borderColor = '#8B5CF6')}
-              onBlur={e => (e.target.style.borderColor = digit ? '#8B5CF6' : 'rgba(255,255,255,0.12)')}
+              onFocus={e => (e.target.style.borderColor = '#4F6BFF')}
+              onBlur={e => (e.target.style.borderColor = digit ? '#4F6BFF' : 'rgba(255,255,255,0.12)')}
             />
           ))}
         </div>
@@ -3399,8 +3402,8 @@ function AuthFlow({ onLogin }: { onLogin: () => void }) {
           disabled={!otpFilled}
           className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all mb-4"
           style={{
-            background: otpFilled ? 'linear-gradient(135deg, #8B5CF6, #7C3AED)' : 'rgba(255,255,255,0.08)',
-            boxShadow: otpFilled ? '0 4px 20px rgba(139,92,246,0.4)' : 'none',
+            background: otpFilled ? 'linear-gradient(135deg, #4F6BFF, #3B4FE0)' : 'rgba(255,255,255,0.08)',
+            boxShadow: otpFilled ? '0 4px 20px rgba(79, 107, 255,0.4)' : 'none',
             color: otpFilled ? 'white' : 'rgba(148,163,184,0.4)',
           }}>
           Подтвердить
@@ -3410,7 +3413,7 @@ function AuthFlow({ onLogin }: { onLogin: () => void }) {
           onClick={() => { if (countdown === 0) { setCountdown(30); setOtp(Array(6).fill('')); } }}
           disabled={countdown > 0}
           className="text-sm mb-4 transition-colors"
-          style={{ color: countdown > 0 ? 'rgba(148,163,184,0.35)' : 'rgba(139,92,246,0.9)' }}>
+          style={{ color: countdown > 0 ? 'rgba(148,163,184,0.35)' : 'rgba(79, 107, 255,0.9)' }}>
           {countdown > 0 ? `Отправить код повторно (${countdown}с)` : 'Отправить код повторно'}
         </button>
 
@@ -3526,15 +3529,15 @@ function SystemHealthPage() {
           <AreaChart data={apiMetrics}>
             <defs>
               <linearGradient id="rpsGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#38BDF8" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#38BDF8" stopOpacity={0} />
+                <stop offset="5%" stopColor="#20D4B6" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#20D4B6" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
             <XAxis dataKey="time" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
             <YAxis hide />
             <Tooltip formatter={(v: unknown) => [`${v as number} req/s`, 'RPS']} />
-            <Area type="monotone" dataKey="rps" stroke="#38BDF8" strokeWidth={2} fill="url(#rpsGrad)" dot={false} />
+            <Area type="monotone" dataKey="rps" stroke="#20D4B6" strokeWidth={2} fill="url(#rpsGrad)" dot={false} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -3594,7 +3597,7 @@ export default function AdminApp({ onBack }: { onBack: () => void }) {
 
   const renderPage = () => {
     const pages: Record<string, ReactNode> = {
-      map: <LiveMapPage />, operators: <OperatorsPage />, users: <UsersPage />,
+      map: <LiveMapPage />, operators: <OperatorsPage />, leads: <LeadsPage />, users: <UsersPage />,
       settlement: <SettlementPage />, commissions: <CommissionsPage />, tariffs_global: <GlobalTariffsPage />,
       sessions: <AdminSessionsPage />, payments: <PaymentsPage />,
       analytics: <AnalyticsPage />, ai: <AIInsightsPage />, fraud: <FraudPage />,

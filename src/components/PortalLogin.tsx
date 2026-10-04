@@ -6,9 +6,9 @@ import type { Portal } from '../lib/api';
 import DriverAccountForm from './DriverAccountForm';
 
 const THEME: Record<Portal, { grad: string; accent: string; ring: string; glow: string }> = {
-  driver: { grad: 'from-sky-500 to-cyan-400', accent: 'text-sky-400', ring: 'focus:border-sky-400/60 focus:ring-sky-400/20', glow: 'rgba(14,165,233,0.35)' },
+  driver: { grad: 'from-sky-500 to-cyan-400', accent: 'text-sky-400', ring: 'focus:border-sky-400/60 focus:ring-sky-400/20', glow: 'rgba(10, 175, 151,0.35)' },
   operator: { grad: 'from-emerald-500 to-green-400', accent: 'text-emerald-400', ring: 'focus:border-emerald-400/60 focus:ring-emerald-400/20', glow: 'rgba(16,185,129,0.35)' },
-  admin: { grad: 'from-violet-500 to-purple-400', accent: 'text-violet-400', ring: 'focus:border-violet-400/60 focus:ring-violet-400/20', glow: 'rgba(139,92,246,0.35)' },
+  admin: { grad: 'from-violet-500 to-purple-400', accent: 'text-violet-400', ring: 'focus:border-violet-400/60 focus:ring-violet-400/20', glow: 'rgba(79, 107, 255,0.35)' },
   business: { grad: 'from-indigo-500 to-violet-500', accent: 'text-indigo-400', ring: 'focus:border-indigo-400/60 focus:ring-indigo-400/20', glow: 'rgba(99,102,241,0.35)' },
   api: { grad: 'from-slate-500 to-slate-400', accent: 'text-slate-300', ring: 'focus:border-slate-400/60 focus:ring-slate-400/20', glow: 'rgba(100,116,139,0.3)' },
 };

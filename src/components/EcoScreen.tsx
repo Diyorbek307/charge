@@ -5,7 +5,7 @@ import type { EcoProfile, LeaderRow, TariffForecast } from '../lib/api';
 
 const BAND_STYLE: Record<string, { bar: string; label: string }> = {
   green: { bar: '#22C55E', label: 'Зелёный' },
-  day: { bar: '#38BDF8', label: 'Дневной' },
+  day: { bar: '#20D4B6', label: 'Дневной' },
   standard: { bar: '#94A3B8', label: 'Обычный' },
   peak: { bar: '#F97316', label: 'Пик' },
 };

@@ -19,6 +19,24 @@ test('landing page renders and switches language', async ({ page }) => {
   await expect(page.locator('#driver-login')).toBeVisible();
 });
 
+test('the landing feed shows a charge starting and ending on the network', async ({ page, request }) => {
+  await page.goto('/');
+  const feed = page.locator('#network .lp-feed');
+  await feed.scrollIntoViewIfNeeded();
+  await expect(page.locator('#network .lp-st').first()).toBeVisible();
+
+  const token = await apiToken(request, 'driver');
+  const headers = { Authorization: `Bearer ${token}` };
+  const start = await request.post('/api/sessions/start', { headers, data: { stationId: 'st-003', connectorId: 'c8' } });
+  expect(start.ok()).toBeTruthy();
+  await expect(feed.getByText('Началась зарядка')).toBeVisible();
+  await expect(feed.getByText(/Samarqand Gateway/).first()).toBeVisible();
+
+  const { session } = await start.json();
+  expect((await request.post(`/api/sessions/${session.id}/stop`, { headers })).ok()).toBeTruthy();
+  await expect(feed.getByText('Разъём освободился')).toBeVisible();
+});
+
 test('a driver charges end to end and the session is billed', async ({ page, request }) => {
   await signIn(page, 'driver');
   await skipOnboarding(page);

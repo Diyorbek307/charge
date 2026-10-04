@@ -46,7 +46,7 @@ export function exportCsv(baseName: string, headers: string[], rows: CsvValue[][
 
 const text = (v: CsvValue) => (v === null || v === undefined ? '' : String(v));
 
-const FONT = '"DM Sans", "Segoe UI", system-ui, sans-serif';
+const FONT = '"Manrope", "Segoe UI", system-ui, sans-serif';
 const ROW_H = 34;
 const HEAD_H = 40;
 const PAD = 14;

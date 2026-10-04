@@ -6,6 +6,7 @@ import { DEMO_ACCOUNTS } from './seed.js';
 import { generateSecret, verifyTotp, otpauthUri } from './totp.js';
 import { hashPassword } from './seed.js';
 import { normalizePhone, issueCode, consumeCode, PURPOSES, smsConfigured } from './sms.js';
+import { submitLead, listLeads, updateLead, LEAD_KINDS } from './leads.js';
 import { validateEndpoint, signedHeaders, kick as kickWebhooks } from './webhooks.js';
 
 export const api = express.Router();
@@ -1781,6 +1782,41 @@ api.post('/reports', requireAuth(), (req, res) => {
 api.get('/events', (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 60, 300);
   res.json(visibleEvents(viewerOf(req), limit));
+});
+
+// ---------------------------------------------------------------------------
+// Leads from the landing page: launch waitlist and partner requests.
+// ---------------------------------------------------------------------------
+
+const LEAD_LABEL = { driver: 'Лист ожидания', operator: 'Оператор станций', fleet: 'Автопарк', partner: 'Партнёр' };
+
+api.post('/leads', (req, res) => {
+  const result = submitLead(req.body, clientKey(req));
+  if (result.retryAfter) res.set('Retry-After', String(result.retryAfter));
+  if (result.lead) {
+    const l = result.lead;
+    // Admin-only: lead.* has no rule in scopeOf, so it never goes public.
+    emit({
+      type: 'lead.new',
+      portal: 'system',
+      actor: l.name,
+      message: `Новая заявка · ${LEAD_LABEL[l.kind]}${l.company ? ` · ${l.company}` : ''}`,
+      entity: l.id,
+      payload: { kind: l.kind },
+    });
+  }
+  res.status(result.status).json(result.body);
+});
+
+api.get('/leads', requireAuth('admin'), (_req, res) => {
+  res.json({ leads: listLeads(), kinds: LEAD_KINDS });
+});
+
+api.patch('/leads/:id', requireAuth('admin'), (req, res) => {
+  const lead = updateLead(req.params.id, req.body ?? {});
+  if (!lead) return res.status(404).json({ error: 'Заявка не найдена' });
+  if (lead.error) return res.status(400).json({ error: lead.error });
+  res.json(lead);
 });
 
 api.post('/admin/reset', requireAuth('admin'), (req, res) => {

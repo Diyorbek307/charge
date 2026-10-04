@@ -4,9 +4,9 @@ import { useSync } from '../lib/sync';
 import type { SyncEvent } from '../lib/api';
 
 const STYLE: Record<string, { color: string; label: string }> = {
-  driver: { color: '#38BDF8', label: 'DRIVER' },
+  driver: { color: '#20D4B6', label: 'DRIVER' },
   operator: { color: '#34D399', label: 'OPERATOR' },
-  admin: { color: '#A78BFA', label: 'ADMIN' },
+  admin: { color: '#8DA2FF', label: 'ADMIN' },
   business: { color: '#818CF8', label: 'BUSINESS' },
   api: { color: '#94A3B8', label: 'API' },
   system: { color: '#FBBF24', label: 'OCPP' },

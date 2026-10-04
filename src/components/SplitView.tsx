@@ -6,9 +6,9 @@ import { useI18n } from '../lib/i18n';
 type PaneId = 'driver' | 'operator' | 'admin' | 'business' | 'api' | 'architecture';
 
 const PANES: { id: PaneId; label: string; color: string }[] = [
-  { id: 'driver', label: 'Driver App', color: '#38BDF8' },
+  { id: 'driver', label: 'Driver App', color: '#20D4B6' },
   { id: 'operator', label: 'Operator Portal', color: '#34D399' },
-  { id: 'admin', label: 'Admin Center', color: '#A78BFA' },
+  { id: 'admin', label: 'Admin Center', color: '#8DA2FF' },
   { id: 'business', label: 'Business Portal', color: '#818CF8' },
   { id: 'api', label: 'Partner API', color: '#94A3B8' },
   { id: 'architecture', label: 'Архитектура', color: '#2DD4BF' },
@@ -80,13 +80,13 @@ export default function SplitView({ onClose }: { onClose: () => void }) {
   const dot = connection === 'live' ? '#34D399' : connection === 'connecting' ? '#FBBF24' : '#F87171';
 
   return (
-    <div className="fixed inset-0 z-[300] flex flex-col bg-slate-950" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+    <div className="fixed inset-0 z-[300] flex flex-col bg-slate-950" style={{ fontFamily: 'Manrope, sans-serif' }}>
       {/* Toolbar */}
       <div className="flex items-center gap-2 sm:gap-3 px-3 py-2.5 border-b border-white/10 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <div
             className="w-7 h-7 rounded-lg grid place-items-center shrink-0"
-            style={{ background: 'linear-gradient(135deg,#38BDF8,#0284C7)' }}
+            style={{ background: 'linear-gradient(135deg,#20D4B6,#078C7C)' }}
           >
             <Zap size={14} className="text-white" />
           </div>

@@ -1070,7 +1070,7 @@ export default function ApiDocsApp({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <div className="h-full flex bg-slate-900" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+    <div className="h-full flex bg-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
       {/* Sidebar */}
       <div className="w-60 bg-slate-950 flex flex-col shrink-0 border-r border-slate-800">
         <div className="px-4 py-5 border-b border-slate-800">

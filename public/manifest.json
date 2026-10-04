@@ -1,12 +1,12 @@
 {
-  "name": "ONE CHARGE UZ",
-  "short_name": "ONE CHARGE",
-  "description": "Национальная платформа зарядной инфраструктуры Узбекистана",
+  "name": "IpakVolt — зарядка электромобилей",
+  "short_name": "IpakVolt",
+  "description": "Вся зарядка Узбекистана в одном приложении",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0F172A",
-  "theme_color": "#0EA5E9",
+  "background_color": "#04060c",
+  "theme_color": "#04060c",
   "lang": "ru",
   "icons": [
     {
@@ -20,21 +20,40 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ],
-  "categories": ["utilities", "navigation"],
+  "categories": [
+    "utilities",
+    "navigation"
+  ],
   "shortcuts": [
     {
       "name": "Найти станцию",
       "short_name": "Карта",
       "url": "/?tab=map",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Начать зарядку",
       "short_name": "QR скан",
       "url": "/?scan=true",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

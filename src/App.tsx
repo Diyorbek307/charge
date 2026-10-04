@@ -22,8 +22,8 @@ import type { Portal as AuthPortal } from './lib/api';
 type Portal = 'selector' | 'driver' | 'operator' | 'admin' | 'business' | 'api' | 'architecture';
 
 const FLOW_LABELS = [
-  { label: 'OCPP 2.0.1', color: '#38BDF8' },
-  { label: 'REST / OCPI', color: '#A78BFA' },
+  { label: 'OCPP 2.0.1', color: '#20D4B6' },
+  { label: 'REST / OCPI', color: '#8DA2FF' },
   { label: 'OCPI 2.3.0', color: '#34D399' },
   { label: 'OCPP 2.0.1', color: '#FBBF24' },
   { label: 'Payment Token', color: '#FB7185' },
@@ -133,7 +133,7 @@ function ArchitectureDiagram({ onBack }: { onBack: () => void }) {
   ];
 
   return (
-    <div className="h-full flex flex-col bg-slate-950 overflow-auto" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+    <div className="h-full flex flex-col bg-slate-950 overflow-auto" style={{ fontFamily: 'Manrope, sans-serif' }}>
       <div className="px-6 py-4 border-b border-slate-800 flex items-center gap-4 shrink-0">
         <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors">
           <ArrowRight size={14} className="rotate-180" />Назад
@@ -258,7 +258,7 @@ function PortalLoading() {
       <div className="flex flex-col items-center gap-3">
         <div
           className="w-9 h-9 rounded-xl grid place-items-center"
-          style={{ background: 'linear-gradient(135deg,#38BDF8,#0284C7)', animation: 'pulse 1.6s ease-in-out infinite' }}
+          style={{ background: 'linear-gradient(135deg,#20D4B6,#078C7C)', animation: 'pulse 1.6s ease-in-out infinite' }}
         >
           <Zap size={17} className="text-white" />
         </div>
@@ -312,7 +312,7 @@ export default function App() {
         <div className="h-full flex items-center justify-center relative overflow-hidden" style={{ background: 'radial-gradient(ellipse at 50% 30%, #0f1e3a 0%, #080d19 50%, #050810 100%)' }}>
           {/* Animated ambient orbs */}
           <div className="absolute pointer-events-none">
-            <div className="anim-orb-1" style={{ position: 'absolute', top: -200, left: -100, width: 500, height: 500, background: 'radial-gradient(circle, rgba(14,165,233,0.12) 0%, transparent 65%)', borderRadius: '50%', filter: 'blur(30px)' }} />
+            <div className="anim-orb-1" style={{ position: 'absolute', top: -200, left: -100, width: 500, height: 500, background: 'radial-gradient(circle, rgba(10, 175, 151,0.12) 0%, transparent 65%)', borderRadius: '50%', filter: 'blur(30px)' }} />
             <div className="anim-orb-3" style={{ position: 'absolute', bottom: -100, right: -100, width: 400, height: 400, background: 'radial-gradient(circle, rgba(52,211,153,0.08) 0%, transparent 65%)', borderRadius: '50%', filter: 'blur(30px)' }} />
           </div>
           {/* Dot grid overlay */}
@@ -381,7 +381,7 @@ export default function App() {
       )}
       {portal === 'architecture' && <ArchitectureDiagram onBack={() => setPortal('selector')} />}
       </Suspense>
-      <SyncToasts />
+      {portal !== 'selector' && <SyncToasts />}
       {!embedded && (
         <CommandPalette
           onNavigate={p => setPortal(p as Portal)}

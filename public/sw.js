@@ -4,12 +4,12 @@
  * and stay entirely out of the way of the live-sync channel.
  */
 
-const VERSION = 'oc-v4';
+const VERSION = 'oc-v5';
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const DATA_CACHE = `${VERSION}-data`;
 
-const SHELL = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png'];
+const SHELL = ['/', '/manifest.json', '/favicon.svg', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -119,7 +119,7 @@ self.addEventListener('push', event => {
     data = { body: event.data ? event.data.text() : '' };
   }
   event.waitUntil(
-    self.registration.showNotification(data.title || 'ONE CHARGE UZ', {
+    self.registration.showNotification(data.title || 'IpakVolt', {
       body: data.body || '',
       tag: data.tag,
       icon: '/icon-192.png',

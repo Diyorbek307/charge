@@ -23,6 +23,13 @@ export interface HeroScene {
   setScroll(p: number): void;
   /** City labels are DOM nodes the scene positions every frame. */
   setLabels(els: Map<string, HTMLElement>): void;
+  /**
+   * Hover picking. Pass the pointer in canvas pixels (or null when it leaves);
+   * the scene keeps `tip` pinned above the hovered beam every frame and
+   * reports the hovered station id when it changes.
+   */
+  setHover(px: { x: number; y: number } | null): void;
+  setTooltip(tip: HTMLElement | null, onChange: (id: string | null) => void): void;
   resize(w: number, h: number): void;
   setRunning(on: boolean): void;
   dispose(): void;
@@ -339,8 +346,12 @@ export function createHeroScene(canvas: HTMLCanvasElement, opts: { lite: boolean
   const freeMat = beamMat(MINT.clone());
   const busyMat = beamMat(GOLD.clone());
 
+  const beams: { id: string; mesh: THREE.Mesh }[] = [];
+  let hovered: string | null = null;
+
   function setStations(stations: SceneStation[]) {
     beamGroup.clear();
+    beams.length = 0;
     // Several stations share a city; fan them out a little so each beam reads.
     const seen = new Map<string, number>();
     for (const s of stations) {
@@ -352,6 +363,7 @@ export function createHeroScene(canvas: HTMLCanvasElement, opts: { lite: boolean
       beam.position.set(x + n * 0.09, TOP, z + n * 0.05);
       beam.scale.set(1, 1.1 + Math.min(s.power, 350) / 150 * 1.4, 1);
       beamGroup.add(beam);
+      beams.push({ id: s.id, mesh: beam });
     }
   }
 
@@ -425,6 +437,46 @@ export function createHeroScene(canvas: HTMLCanvasElement, opts: { lite: boolean
 
   let labels = new Map<string, HTMLElement>();
   const tmp = new THREE.Vector3();
+
+  // ── Hover picking: nearest beam to the pointer in screen space ──
+  let pointerPx: { x: number; y: number } | null = null;
+  let tip: HTMLElement | null = null;
+  let onHover: (id: string | null) => void = () => {};
+  const toScreen = (v: THREE.Vector3, w: number, h: number) => {
+    v.project(camera);
+    return { x: ((v.x + 1) / 2) * w, y: ((1 - v.y) / 2) * h };
+  };
+
+  function pickAndPlace() {
+    const w = renderer.domElement.clientWidth;
+    const h = renderer.domElement.clientHeight;
+    let best: { id: string; d: number; top: { x: number; y: number }; mesh: THREE.Mesh } | null = null;
+    if (pointerPx) {
+      for (const b of beams) {
+        const base = toScreen(b.mesh.localToWorld(tmp.set(0, 0, 0)), w, h);
+        const top = toScreen(b.mesh.localToWorld(tmp.set(0, 1, 0)), w, h);
+        // Distance from the pointer to the beam's on-screen segment.
+        const dx = top.x - base.x, dy = top.y - base.y;
+        const t = Math.max(0, Math.min(1, ((pointerPx.x - base.x) * dx + (pointerPx.y - base.y) * dy) / (dx * dx + dy * dy || 1)));
+        const d = Math.hypot(pointerPx.x - (base.x + t * dx), pointerPx.y - (base.y + t * dy));
+        if (d < 22 && (!best || d < best.d)) best = { id: b.id, d, top, mesh: b.mesh };
+      }
+    }
+    for (const b of beams) {
+      const target = best && b.mesh === best.mesh ? 2.2 : 1;
+      b.mesh.scale.x += (target - b.mesh.scale.x) * 0.25;
+      b.mesh.scale.z = b.mesh.scale.x;
+    }
+    const id = best?.id ?? null;
+    if (id !== hovered) {
+      hovered = id;
+      onHover(id);
+    }
+    if (tip) {
+      tip.style.opacity = best ? '1' : '0';
+      if (best) tip.style.transform = `translate(${best.top.x}px, ${best.top.y}px)`;
+    }
+  }
   function placeLabels() {
     const w = renderer.domElement.clientWidth;
     const h = renderer.domElement.clientHeight;
@@ -458,6 +510,7 @@ export function createHeroScene(canvas: HTMLCanvasElement, opts: { lite: boolean
     stars.rotation.y = elapsed * 0.004;
     composer.render();
     placeLabels();
+    pickAndPlace();
   }
 
   let running = false;
@@ -496,6 +549,14 @@ export function createHeroScene(canvas: HTMLCanvasElement, opts: { lite: boolean
     setLabels(els) {
       labels = els;
       if (!running) render(0);
+    },
+    setHover(px) {
+      pointerPx = px;
+      if (!running || opts.still) render(0);
+    },
+    setTooltip(el, cb) {
+      tip = el;
+      onHover = cb;
     },
     resize,
     setRunning,

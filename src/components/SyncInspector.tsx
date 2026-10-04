@@ -5,9 +5,9 @@ import { useI18n } from '../lib/i18n';
 import type { SyncEvent } from '../lib/api';
 
 const PORTAL_STYLE: Record<string, { label: string; color: string; bg: string }> = {
-  driver: { label: 'DRIVER', color: '#38BDF8', bg: 'rgba(56,189,248,0.12)' },
+  driver: { label: 'DRIVER', color: '#20D4B6', bg: 'rgba(32, 212, 182,0.12)' },
   operator: { label: 'OPERATOR', color: '#34D399', bg: 'rgba(52,211,153,0.12)' },
-  admin: { label: 'ADMIN', color: '#A78BFA', bg: 'rgba(167,139,250,0.12)' },
+  admin: { label: 'ADMIN', color: '#8DA2FF', bg: 'rgba(167,139,250,0.12)' },
   business: { label: 'BUSINESS', color: '#818CF8', bg: 'rgba(129,140,248,0.12)' },
   api: { label: 'API', color: '#94A3B8', bg: 'rgba(148,163,184,0.12)' },
   system: { label: 'OCPP', color: '#FBBF24', bg: 'rgba(251,191,36,0.12)' },

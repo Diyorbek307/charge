@@ -8,10 +8,10 @@ type PortalType = 'admin' | 'operator' | 'business';
 const CONFIG = {
   admin: {
     name: 'Admin AI Analyst',
-    accent: '#8B5CF6',
-    accentBg: 'rgba(139,92,246,0.12)',
-    accentBorder: 'rgba(139,92,246,0.28)',
-    gradient: 'linear-gradient(135deg, #7C3AED, #8B5CF6)',
+    accent: '#4F6BFF',
+    accentBg: 'rgba(79, 107, 255,0.12)',
+    accentBorder: 'rgba(79, 107, 255,0.28)',
+    gradient: 'linear-gradient(135deg, #3B4FE0, #4F6BFF)',
     greeting: 'Привет! Я AI-аналитик платформы ONE CHARGE. Могу ответить на любые вопросы по выручке, операторам, мошенничеству и трафику.',
     chips: ['Топ операторы', 'Выручка за неделю', 'Fraud за 24ч', 'Загрузка EVSE', 'Прогноз на октябрь'],
     answers: {

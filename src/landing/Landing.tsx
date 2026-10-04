@@ -3,15 +3,19 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from
 import {
   ArrowRight, ArrowUpRight, Battery, BellRing, CalendarClock, Check, ChevronDown, Columns2, Leaf, Lock,
   Map as MapIcon, Menu, Minus, Moon, Network, Route, ScanLine, Server, ShieldCheck, Smartphone, Users,
-  Wallet, Webhook, X, Zap, Languages, MessageSquareWarning, KeyRound, Car, Building2, Code2, Apple, Play,
+  Wallet, Webhook, X, Zap, Languages, MessageSquareWarning, KeyRound, Car, Building2, Code2, Apple, Play, ScrollText,
 } from 'lucide-react';
 import { useI18n, LANGS, type Lang } from '../lib/i18n';
 import { useSync } from '../lib/sync';
-import { apiClient, type TariffForecast, type TariffHour } from '../lib/api';
+import { apiClient, type Station, type TariffForecast, type TariffHour } from '../lib/api';
 import { BRAND } from '../brand';
 import { COPY, CARS, type LandingCopy } from './content';
 import { Logo, LogoMark } from './Logo';
 import type { SceneStation } from './heroScene';
+import Join from './Join';
+import LegalPage, { LEGAL_IDS, legalHref } from './LegalPage';
+import type { LegalDocId } from './legal';
+import { track } from './analytics';
 import './landing.css';
 
 const HeroCanvas = lazy(() => import('./HeroCanvas'));
@@ -103,7 +107,7 @@ function LangPills() {
   return (
     <div role="radiogroup" aria-label="Язык · Til · Language" className="lp-langs">
       {LANGS.map(l => (
-        <button key={l.id} role="radio" aria-checked={l.id === lang} title={l.full} onClick={() => setLang(l.id)}>
+        <button key={l.id} role="radio" aria-checked={l.id === lang} title={l.full} onClick={() => { setLang(l.id); track('lang', { lang: l.id }); }}>
           {l.label}
         </button>
       ))}
@@ -111,20 +115,22 @@ function LangPills() {
   );
 }
 
-function Nav({ c, scrolled, onDemo }: { c: LandingCopy; scrolled: boolean; onDemo: () => void }) {
+function Nav({ c, scrolled, onDemo, base }: { c: LandingCopy; scrolled: boolean; onDemo: () => void; base: string }) {
   const [open, setOpen] = useState(false);
   const links = [
     ['#how', c.nav.drivers],
+    ['#network', c.nav.map],
     ['#platform', c.nav.business],
     ['#platform', c.nav.operators],
     ['#pricing', c.nav.pricing],
     ['#compare', c.nav.compare],
+    ['#join', c.nav.join],
     ['#faq', c.nav.faq],
-  ] as const;
+  ].map(([h, l]) => [base + h, l] as const);
   return (
     <header className={`lp-nav ${scrolled ? 'is-solid' : ''} ${open ? 'is-open' : ''}`}>
       <div className="lp-wrap lp-nav-in">
-        <a href="#top" className="lp-nav-logo" aria-label={BRAND.name}><Logo /></a>
+        <a href={base ? '/' : '#top'} className="lp-nav-logo" aria-label={BRAND.name}><Logo /></a>
         <nav className="lp-nav-links" aria-label="Main">
           {links.map(([h, l], i) => <a key={i} href={h}>{l}</a>)}
         </nav>
@@ -157,7 +163,7 @@ function HeroPoster() {
   return <div className="lp-hero-poster" aria-hidden="true" />;
 }
 
-function Hero({ c, lang, scrollEl, onDemo }: { c: LandingCopy; lang: Lang; scrollEl: HTMLElement | null; onDemo: () => void }) {
+function Hero({ c, lang, scrollEl, onDemo, onPick }: { c: LandingCopy; lang: Lang; scrollEl: HTMLElement | null; onDemo: () => void; onPick: () => void }) {
   const { state } = useSync();
   const [webgl, setWebgl] = useState(true);
   const onFail = useCallback(() => setWebgl(false), []);
@@ -181,13 +187,32 @@ function Hero({ c, lang, scrollEl, onDemo }: { c: LandingCopy; lang: Lang; scrol
     [c],
   );
   const st = state?.stats;
+  const renderTip = useCallback(
+    (id: string) => {
+      const s = state?.stations.find(x => x.id === id);
+      if (!s) return null;
+      const free = s.connectors.filter(k => k.status === 'available').length;
+      return (
+        <>
+          <b>{s.name}</b>
+          <span>{s.city} · {s.operator}</span>
+          <span className="lp-tip-row">
+            <em className={free ? 'is-free' : 'is-full'}>{free}/{s.connectors.length} {c.network.freeOf}</em>
+            <em>{Math.max(...s.connectors.map(k => k.power))} {c.phone.kw}</em>
+          </span>
+          <small>{c.network.open} →</small>
+        </>
+      );
+    },
+    [state?.stations, c],
+  );
 
   return (
     <section className="lp-hero" id="top">
       <HeroPoster />
       {webgl && (
         <Suspense fallback={null}>
-          <HeroCanvas stations={stations} cities={cities} scrollEl={scrollEl} onFail={onFail} />
+          <HeroCanvas stations={stations} cities={cities} scrollEl={scrollEl} onFail={onFail} renderTip={renderTip} onPick={onPick} />
         </Suspense>
       )}
       <div className="lp-hero-fade" aria-hidden="true" />
@@ -388,7 +413,7 @@ function FeatureVisual({ id }: { id: string }) {
   if (id === 'green')
     return (
       <div className="lp-fv lp-fv-bars">
-        {[7, 7, 7, 7, 7, 7, 7, 10, 10, 10, 9, 9, 9, 9, 9, 9, 9, 9, 12.5, 12.5, 12.5, 12.5, 10, 7].map((v, i) => (
+        {[7, 7, 7, 7, 7, 7, 7, 10, 10, 10, 9, 9, 9, 9, 9, 9, 9, 12.5, 12.5, 12.5, 12.5, 12.5, 10, 7].map((v, i) => (
           <span key={i} style={{ height: `${v * 7}%` }} className={v === 7 ? 'is-g' : v > 11 ? 'is-p' : ''} />
         ))}
       </div>
@@ -422,24 +447,158 @@ function Features({ c }: { c: LandingCopy }) {
   );
 }
 
+// ───────────────────────── Live network ─────────────────────────
+
+type ActivityKind = 'start' | 'stop' | 'reserved' | 'offline';
+type Activity = { id: string; kind: ActivityKind; station: string; city: string; connector: string; at: Date };
+
+/**
+ * Builds a public activity feed by diffing connector statuses between live
+ * updates — the anonymous state carries no session events, and a feed built
+ * from statuses names no driver.
+ */
+function useActivity(stations: Station[] | undefined, kw: string) {
+  const prev = useRef<Map<string, string> | null>(null);
+  const [feed, setFeed] = useState<Activity[]>([]);
+  useEffect(() => {
+    if (!stations) return;
+    const next = new Map<string, string>();
+    const fresh: Activity[] = [];
+    for (const st of stations) {
+      for (const k of st.connectors) {
+        const key = `${st.id}:${k.id}`;
+        next.set(key, k.status);
+        const was = prev.current?.get(key);
+        if (was === undefined || was === k.status) continue;
+        const kind: ActivityKind | null =
+          k.status === 'occupied' ? 'start'
+          : k.status === 'reserved' ? 'reserved'
+          : k.status === 'unavailable' ? 'offline'
+          : was === 'occupied' || was === 'reserved' ? 'stop'
+          : null;
+        if (kind) fresh.push({ id: `${key}:${Date.now()}`, kind, station: st.name, city: st.city, connector: `${k.type} · ${k.power} ${kw}`, at: new Date() });
+      }
+    }
+    prev.current = next;
+    if (fresh.length) setFeed(f => [...fresh.reverse(), ...f].slice(0, 7));
+  }, [stations, kw]);
+  return feed;
+}
+
+const ACT_ICON: Record<ActivityKind, ReactNode> = {
+  start: <Zap size={14} />, stop: <Check size={14} />, reserved: <CalendarClock size={14} />, offline: <X size={14} />,
+};
+
+function LiveNetwork({ c, lang, fc, onOpen }: { c: LandingCopy; lang: Lang; fc: TariffForecast; onOpen: () => void }) {
+  const { state } = useSync();
+  const stations = state?.stations;
+  const feed = useActivity(stations, c.phone.kw);
+  const [filter, setFilter] = useState<'all' | 'free' | 'fast'>('all');
+  const shown = (stations ?? []).filter(st =>
+    filter === 'free' ? st.connectors.some(k => k.status === 'available')
+    : filter === 'fast' ? st.connectors.some(k => k.power >= 50)
+    : true,
+  );
+  const time = (d: Date) =>
+    d.toLocaleTimeString(lang === 'en' ? 'en-GB' : 'ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  return (
+    <section className="lp-sec" id="network">
+      <div className="lp-wrap">
+        <SectionHead kicker={c.network.kicker} title={c.network.title} sub={c.network.sub} />
+        <div className="lp-net">
+          <div>
+            <div className="lp-chips rv" role="group" aria-label={c.network.kicker}>
+              {(['all', 'free', 'fast'] as const).map(f => (
+                <button key={f} aria-pressed={filter === f} onClick={() => setFilter(f)}>{c.network.filters[f]}</button>
+              ))}
+            </div>
+            <div className="lp-net-grid">
+              {shown.map(st => {
+                const free = st.connectors.filter(k => k.status === 'available').length;
+                const min = Math.min(...st.connectors.map(k => k.price));
+                return (
+                  <article key={st.id} className="lp-card lp-st">
+                    <div className="lp-st-head">
+                      <div>
+                        <h3>{st.name}</h3>
+                        <p>{st.city} · {st.operator}</p>
+                      </div>
+                      <span className={`lp-st-free ${free ? 'is-free' : 'is-full'}`}>{free}/{st.connectors.length} {c.network.freeOf}</span>
+                    </div>
+                    <ul className="lp-st-conns">
+                      {st.connectors.map(k => (
+                        <li key={k.id} className={`is-${k.status}`}>
+                          <i />
+                          <span>{k.type}</span>
+                          <b>{k.power} {c.phone.kw}</b>
+                          <em>{c.network.status[k.status]}</em>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="lp-st-foot">
+                      <span>
+                        <b>{fmt(min * fc.current.multiplier, lang)}</b> {c.network.perKwh}
+                        {fc.current.multiplier !== 1 && <small className={`is-${fc.current.band}`}>×{fc.current.multiplier}</small>}
+                      </span>
+                      <button className="lp-st-open" onClick={onOpen}>{c.network.open}<ArrowUpRight size={14} /></button>
+                    </div>
+                  </article>
+                );
+              })}
+              {stations && shown.length === 0 && <p className="lp-note">{c.network.none}</p>}
+            </div>
+          </div>
+          <aside className="lp-card lp-feed rv" aria-live="polite">
+            <p className="lp-live"><span className="lp-dot" />{c.network.feed}</p>
+            {feed.length === 0 ? (
+              <p className="lp-feed-empty">{c.network.empty}</p>
+            ) : (
+              <ol>
+                {feed.map(a => (
+                  <li key={a.id} className={`is-${a.kind}`}>
+                    <span className="lp-feed-ic">{ACT_ICON[a.kind]}</span>
+                    <div>
+                      <b>{c.network.ev[a.kind]}</b>
+                      <span>{a.station} · {a.city}</span>
+                      <small>{a.connector} · {time(a.at)}</small>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </aside>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ───────────────────────── Pricing: green hours + calculator ─────────────────────────
 
 function fallbackForecast(): TariffForecast {
   const band = (h: number): TariffHour['band'] =>
-    h >= 23 || h < 7 ? 'green' : h < 10 ? 'standard' : h < 18 ? 'day' : 'peak';
+    h >= 23 || h < 7 ? 'green' : h >= 17 && h < 22 ? 'peak' : h >= 10 && h < 17 ? 'day' : 'standard';
   const mult = { green: 0.7, standard: 1, day: 0.9, peak: 1.25 } as const;
   const hours = Array.from({ length: 24 }, (_, h) => ({ hour: h, band: band(h), multiplier: mult[band(h)] }));
   const now = Number(new Intl.DateTimeFormat('en-GB', { hour: 'numeric', hour12: false, timeZone: 'Asia/Tashkent' }).format(new Date())) % 24;
   return { timezone: 'Asia/Tashkent', currentHour: now, current: hours[now], hours, bestWindow: { from: 23, to: 7, multiplier: 0.7, startsInHours: 0 } };
 }
 
-function GreenHours({ c }: { c: LandingCopy }) {
+/** Green-hour forecast from the server, refreshed every 10 minutes; rule-based until it arrives. */
+function useForecast() {
   const [fc, setFc] = useState<TariffForecast>(fallbackForecast);
   useEffect(() => {
     let alive = true;
-    apiClient.tariffForecast().then(f => alive && setFc(f)).catch(() => {});
-    return () => { alive = false; };
+    const load = () => apiClient.tariffForecast().then(f => alive && setFc(f)).catch(() => {});
+    load();
+    const t = setInterval(load, 10 * 60_000);
+    return () => { alive = false; clearInterval(t); };
   }, []);
+  return fc;
+}
+
+function GreenHours({ c, fc }: { c: LandingCopy; fc: TariffForecast }) {
   return (
     <div className="lp-card lp-green rv">
       <div className="lp-green-head">
@@ -556,11 +715,11 @@ function Calculator({ c, lang }: { c: LandingCopy; lang: Lang }) {
   );
 }
 
-function Pricing({ c, lang }: { c: LandingCopy; lang: Lang }) {
+function Pricing({ c, lang, fc }: { c: LandingCopy; lang: Lang; fc: TariffForecast }) {
   return (
     <section className="lp-sec" id="pricing">
       <div className="lp-wrap lp-pricing">
-        <GreenHours c={c} />
+        <GreenHours c={c} fc={fc} />
         <Calculator c={c} lang={lang} />
       </div>
     </section>
@@ -764,6 +923,7 @@ function AppSection({ c, onDemo }: { c: LandingCopy; onDemo: () => void }) {
               <span className="lp-store" aria-disabled="true"><Apple size={22} /><span><small>{c.app.soon}</small>App Store</span></span>
               <span className="lp-store" aria-disabled="true"><Play size={20} /><span><small>{c.app.soon}</small>Google Play</span></span>
               <button className="lp-btn lp-btn-primary" onClick={onDemo}><Smartphone size={16} />{c.app.web}</button>
+              <a className="lp-btn lp-btn-ghost" href="#join"><BellRing size={16} />{c.join.submit.driver}</a>
             </div>
           </div>
           <div className="lp-app-phone"><Phone c={c} variant="charge" /></div>
@@ -813,7 +973,7 @@ function Cta({ c, onDemo, onSplit }: { c: LandingCopy; onDemo: () => void; onSpl
   );
 }
 
-function Footer({ c, onOpen }: { c: LandingCopy; onOpen: (p: LandingTarget) => void }) {
+function Footer({ c, onOpen, base }: { c: LandingCopy; onOpen: (p: LandingTarget) => void; base: string }) {
   const L = c.footer.links;
   return (
     <footer className="lp-footer">
@@ -833,14 +993,15 @@ function Footer({ c, onOpen }: { c: LandingCopy; onOpen: (p: LandingTarget) => v
         <div>
           <p className="lp-footer-h">{c.footer.platform}</p>
           <button onClick={() => onOpen('architecture')}><Network size={14} />{L.arch}</button>
-          <a href="#roadmap"><Route size={14} />{L.roadmap}</a>
-          <a href="#security"><ShieldCheck size={14} />{L.security}</a>
-          <a href="#faq"><ChevronDown size={14} />{L.faq}</a>
+          <a href={`${base}#roadmap`}><Route size={14} />{L.roadmap}</a>
+          <a href={`${base}#security`}><ShieldCheck size={14} />{L.security}</a>
+          <a href={`${base}#faq`}><ChevronDown size={14} />{L.faq}</a>
         </div>
         <div>
           <p className="lp-footer-h">{c.footer.company}</p>
           <a href={`mailto:${BRAND.email}`}><ArrowUpRight size={14} />{L.contact}</a>
           <span className="lp-footer-muted">{BRAND.email}</span>
+          {LEGAL_IDS.map(d => <a key={d} href={legalHref(d)}><ScrollText size={14} />{c.legal[d]}</a>)}
         </div>
       </div>
       <div className="lp-wrap lp-footer-base">
@@ -854,11 +1015,24 @@ function Footer({ c, onOpen }: { c: LandingCopy; onOpen: (p: LandingTarget) => v
 
 // ───────────────────────── Page ─────────────────────────
 
+/** ?doc=offer|privacy|terms shows a legal document inside the landing shell. */
+function docFromUrl(): LegalDocId | null {
+  try {
+    const d = new URLSearchParams(window.location.search).get('doc');
+    return LEGAL_IDS.includes(d as LegalDocId) ? (d as LegalDocId) : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function Landing({ onSelect, onSplitView }: { onSelect: (p: LandingTarget) => void; onSplitView: () => void }) {
   const { lang } = useI18n();
+  const [doc] = useState(docFromUrl);
+  const base = doc ? '/' : '';
   const c = COPY[lang] ?? COPY.ru;
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
   const [scrolled, setScrolled] = useState(false);
+  const fc = useForecast();
   useReveal(root);
 
   useEffect(() => {
@@ -871,31 +1045,55 @@ export default function Landing({ onSelect, onSplitView }: { onSelect: (p: Landi
   useEffect(() => {
     const prev = document.title;
     document.title = c.meta.title;
-    return () => { document.title = prev; };
-  }, [c]);
+    const desc = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    const prevDesc = desc?.content;
+    if (desc) desc.content = c.network.meta;
+    // FAQPage structured data, so search results can show the answers.
+    const ld = document.createElement('script');
+    ld.type = 'application/ld+json';
+    ld.text = JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        { '@type': 'Organization', name: BRAND.name, url: `https://${BRAND.domain}`, logo: `https://${BRAND.domain}/icon-512.png`, areaServed: 'UZ' },
+        { '@type': 'FAQPage', inLanguage: lang, mainEntity: c.faq.items.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) },
+      ],
+    });
+    document.head.appendChild(ld);
+    return () => {
+      document.title = prev;
+      if (desc && prevDesc !== undefined) desc.content = prevDesc;
+      ld.remove();
+    };
+  }, [c, lang]);
 
-  const demo = () => onSelect('driver');
+  const open = (p: LandingTarget, from: string) => { track('portal', { portal: p, from }); onSelect(p); };
+  const demo = () => open('driver', 'cta');
+  const openFrom = (from: string) => (p: LandingTarget) => open(p, from);
 
   return (
     <div ref={setRoot} className="lp" data-no-translate>
-      <Nav c={c} scrolled={scrolled} onDemo={demo} />
+      <Nav c={c} scrolled={scrolled || !!doc} onDemo={demo} base={base} />
       <main>
-        <Hero c={c} lang={lang} scrollEl={root} onDemo={demo} />
+        {doc ? <LegalPage c={c} id={doc} /> : <>
+        <Hero c={c} lang={lang} scrollEl={root} onDemo={demo} onPick={() => open('driver', 'map')} />
         <Strip c={c} />
         <Problem c={c} />
         <How c={c} />
         <Features c={c} />
-        <Pricing c={c} lang={lang} />
+        <LiveNetwork c={c} lang={lang} fc={fc} onOpen={demo} />
+        <Pricing c={c} lang={lang} fc={fc} />
         <RouteSection c={c} lang={lang} />
         <Compare c={c} />
-        <Audiences c={c} onOpen={onSelect} onSplit={onSplitView} />
+        <Audiences c={c} onOpen={openFrom('platform')} onSplit={onSplitView} />
         <Security c={c} />
         <Roadmap c={c} />
         <AppSection c={c} onDemo={demo} />
+        <Join c={c} lang={lang} privacyHref={legalHref('privacy')} />
         <Faq c={c} />
         <Cta c={c} onDemo={demo} onSplit={onSplitView} />
+        </>}
       </main>
-      <Footer c={c} onOpen={onSelect} />
+      <Footer c={c} onOpen={openFrom('footer')} base={base} />
     </div>
   );
 }

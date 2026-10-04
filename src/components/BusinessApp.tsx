@@ -141,8 +141,8 @@ const SPENT = 9400000;
 
 const deptBreakdown = [
   { dept: 'Логистика', spend: 3280000, pct: 35, color: '#6366F1' },
-  { dept: 'Продажи', spend: 1880000, pct: 20, color: '#8B5CF6' },
-  { dept: 'Маркетинг', spend: 1692000, pct: 18, color: '#A78BFA' },
+  { dept: 'Продажи', spend: 1880000, pct: 20, color: '#4F6BFF' },
+  { dept: 'Маркетинг', spend: 1692000, pct: 18, color: '#8DA2FF' },
   { dept: 'IT', spend: 1128000, pct: 12, color: '#818CF8' },
   { dept: 'HR', spend: 940000, pct: 10, color: '#C4B5FD' },
 ];
@@ -169,7 +169,7 @@ const activityFeed = [
   { Icon: Zap, color: '#10B981', bg: '#ECFDF5', borderColor: '#A7F3D0', time: 'сейчас', event: 'Зарядка начата', detail: 'Nilufar K. · Ioniq 6 · Yunusobod Mall' },
   { Icon: CheckCircle, color: '#6366F1', bg: '#EEF2FF', borderColor: '#C7D2FE', time: '23 мин', event: 'Зарядка завершена', detail: 'Alisher T. · BYD Han · 42 кВт·ч' },
   { Icon: AlertTriangle, color: '#F59E0B', bg: '#FFFBEB', borderColor: '#FDE68A', time: '2 ч', event: 'Лимит 87%', detail: 'Dilshod R. · 521K из 600K сум' },
-  { Icon: Navigation, color: '#0EA5E9', bg: '#F0F9FF', borderColor: '#BAE6FD', time: '4 ч', event: 'Авто выехало', detail: 'Bobur M. · Tesla Model 3 · ~120 км' },
+  { Icon: Navigation, color: '#0AAF97', bg: '#F0F9FF', borderColor: '#92FBE1', time: '4 ч', event: 'Авто выехало', detail: 'Bobur M. · Tesla Model 3 · ~120 км' },
   { Icon: CheckCircle, color: '#6366F1', bg: '#EEF2FF', borderColor: '#C7D2FE', time: '5 ч', event: 'Зарядка завершена', detail: 'Kamola A. · BYD Atto 3 · 54 кВт·ч' },
 ];
 
@@ -345,7 +345,7 @@ function DashboardPage() {
                 <defs>
                   <linearGradient id="budgetGrad" x1="0" y1="0" x2="1" y2="1">
                     <stop offset="0%" stopColor="#6366F1" />
-                    <stop offset="100%" stopColor="#A78BFA" />
+                    <stop offset="100%" stopColor="#8DA2FF" />
                   </linearGradient>
                 </defs>
                 <circle cx="60" cy="60" r={R} fill="none" stroke="#F1F5F9" strokeWidth="10" />
@@ -485,7 +485,7 @@ function DashboardPage() {
                 <p className="text-[10px] text-slate-400 w-5 text-right font-medium">{d.day}</p>
                 <div className="flex-1 h-5 bg-slate-100 rounded-lg overflow-hidden">
                   <div className="h-full rounded-lg transition-all duration-700 flex items-center px-2"
-                    style={{ width: `${d.pct}%`, background: d.pct > 80 ? 'linear-gradient(90deg,#6366F1,#818CF8)' : d.pct > 50 ? 'linear-gradient(90deg,#8B5CF6,#A78BFA)' : 'linear-gradient(90deg,#C4B5FD,#DDD6FE)' }}>
+                    style={{ width: `${d.pct}%`, background: d.pct > 80 ? 'linear-gradient(90deg,#6366F1,#818CF8)' : d.pct > 50 ? 'linear-gradient(90deg,#4F6BFF,#8DA2FF)' : 'linear-gradient(90deg,#C4B5FD,#DDD6FE)' }}>
                     <span className="text-[9px] text-white font-semibold leading-none">{d.pct}%</span>
                   </div>
                 </div>
@@ -539,7 +539,7 @@ function DashboardPage() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${s.pct}%`, background: 'linear-gradient(90deg,#6366F1,#A78BFA)' }} />
+                    <div className="h-full rounded-full" style={{ width: `${s.pct}%`, background: 'linear-gradient(90deg,#6366F1,#8DA2FF)' }} />
                   </div>
                   <span className="text-[9px] text-slate-400 mono w-6">{s.sessions}</span>
                   <span className="text-[9px] text-slate-300">{s.type}</span>
@@ -560,7 +560,7 @@ function DashboardPage() {
             {fleetVehicles.map(v => {
               const bc = v.battery < 30 ? '#EF4444' : v.battery < 60 ? '#F59E0B' : '#22C55E';
               const stBg: Record<string, string> = { available: '#F0FDF4', charging: '#F0F9FF', driving: '#F5F3FF', low: '#FEF2F2' };
-              const stIc: Record<string, string> = { available: '#22C55E', charging: '#0EA5E9', driving: '#7C3AED', low: '#EF4444' };
+              const stIc: Record<string, string> = { available: '#22C55E', charging: '#0AAF97', driving: '#3B4FE0', low: '#EF4444' };
               const stLabel: Record<string, string> = { available: '✓', charging: '⚡', driving: '→', low: '!' };
               return (
                 <div key={v.id} className="flex items-center gap-2.5">
@@ -1250,7 +1250,7 @@ function ExpensesPage() {
                   <XAxis dataKey="day" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis hide />
                   <Tooltip formatter={(v: unknown) => [`${((v as number)/1000000).toFixed(2)} млн`, 'Расход']} />
-                  <Bar dataKey="cost" fill="#8B5CF6" radius={[4,4,0,0]} />
+                  <Bar dataKey="cost" fill="#4F6BFF" radius={[4,4,0,0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -1368,15 +1368,15 @@ function ExpensesPage() {
             <AreaChart data={weeklyTrend}>
               <defs>
                 <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#4F6BFF" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#4F6BFF" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
               <XAxis dataKey="week" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
               <YAxis tickFormatter={(v: number) => `${(v/1000000).toFixed(0)}M`} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
               <Tooltip formatter={(v: unknown) => [`${((v as number)/1000000).toFixed(2)} млн сум`, 'Расходы']} />
-              <Area type="monotone" dataKey="cost" stroke="#8B5CF6" strokeWidth={2.5} fill="url(#expGrad)" dot={false} activeDot={{ r: 5, fill: '#8B5CF6' }} />
+              <Area type="monotone" dataKey="cost" stroke="#4F6BFF" strokeWidth={2.5} fill="url(#expGrad)" dot={false} activeDot={{ r: 5, fill: '#4F6BFF' }} />
             </AreaChart>
           </ResponsiveContainer>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">

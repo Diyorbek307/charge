@@ -210,7 +210,7 @@ function DashboardPage() {
 
       {/* Live power strip */}
       <div className="relative overflow-hidden bg-gradient-to-r from-sky-500 via-sky-500 to-sky-600 rounded-2xl px-5 py-4 flex items-center justify-between text-white enter-up delay-100"
-        style={{ boxShadow: '0 4px 24px rgba(14,165,233,0.3)' }}>
+        style={{ boxShadow: '0 4px 24px rgba(10, 175, 151,0.3)' }}>
         <div className="beam-sweep opacity-60" />
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
@@ -255,15 +255,15 @@ function DashboardPage() {
             <AreaChart data={revenueData}>
               <defs>
                 <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#0EA5E9" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#0EA5E9" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#0AAF97" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#0AAF97" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }} />
-              <Area type="monotone" dataKey="revenue" stroke="#0EA5E9" fill="url(#revenueGrad)" strokeWidth={2} dot={false} />
+              <Area type="monotone" dataKey="revenue" stroke="#0AAF97" fill="url(#revenueGrad)" strokeWidth={2} dot={false} />
               <Area type="monotone" dataKey="sessions" stroke="#22C55E" fill="none" strokeWidth={2} dot={false} strokeDasharray="4 2" />
             </AreaChart>
           </ResponsiveContainer>
@@ -303,7 +303,7 @@ function DashboardPage() {
             <XAxis dataKey="hour" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
             <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #E2E8F0' }} />
-            <Bar dataKey="sessions" fill="#0EA5E9" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="sessions" fill="#0AAF97" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -700,14 +700,14 @@ function FinancePage() {
             <AreaChart data={revenueMonthly}>
               <defs>
                 <linearGradient id="finGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#0EA5E9" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#0EA5E9" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#0AAF97" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#0AAF97" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis dataKey="m" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis hide domain={[80, 200]} />
               <Tooltip formatter={(v: unknown) => [`${(v as number)}M сум`, 'Выручка']} />
-              <Area type="monotone" dataKey="v" stroke="#0EA5E9" strokeWidth={2} fill="url(#finGrad)" dot={{ r: 3, fill: '#0EA5E9' }} />
+              <Area type="monotone" dataKey="v" stroke="#0AAF97" strokeWidth={2} fill="url(#finGrad)" dot={{ r: 3, fill: '#0AAF97' }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -1889,7 +1889,7 @@ function HelpPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { icon: '📖', label: t('lbl2.documentation'), sub: t('sub.apiOcpiGuides'), color: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8' },
-          { icon: '🎓', label: t('lbl2.training'), sub: t('sub.videoLessonsAndWebinars'), color: '#F5F3FF', border: '#DDD6FE', text: '#6D28D9' },
+          { icon: '🎓', label: t('lbl2.training'), sub: t('sub.videoLessonsAndWebinars'), color: '#F5F3FF', border: '#DDD6FE', text: '#2F3DB8' },
           { icon: '🐛', label: t('lbl2.bugReport'), sub: t('sub.reportAProblem'), color: '#FEF2F2', border: '#FECACA', text: '#DC2626' },
           { icon: '💡', label: t('lbl2.ideas'), sub: t('sub.suggestAnImprovement'), color: '#FFFBEB', border: '#FDE68A', text: '#D97706' },
         ].map(c => (
