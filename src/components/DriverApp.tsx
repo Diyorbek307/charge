@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
 import {
   MapPin, Navigation, Search, Filter, Zap, Clock, Star, ChevronRight, Home,
   X, Battery, BatteryCharging, Scan, History,
@@ -13,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Station } from '../data/mockData';
 import { useLiveStations, useLiveDriverSessions } from '../lib/live';
+import DriverMap from './DriverMap';
 import { useSync } from '../lib/sync';
 import EcoScreen, { GreenHourBanner } from './EcoScreen';
 import PushToggle from './PushToggle';
@@ -34,156 +33,6 @@ const statusLabel: Record<string, string> = {
   unavailable: 'Недоступно',
   reserved: 'Забронировано',
 };
-
-function createStationIcon(color: string) {
-  const html = `<div style="width:32px;height:32px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;">
-    <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:12px solid white;margin-bottom:2px;"></div>
-  </div>`;
-  return L.divIcon({
-    html,
-    className: '',
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -20],
-  });
-}
-
-function UzbekistanMap({ onSelectStation }: { onSelectStation: (s: Station) => void }) {
-  const stations = useLiveStations();
-  const [filter, setFilter] = useState('all');
-  const [search, setSearch] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-
-  useEffect(() => {
-    // Fix Leaflet default icon paths broken by bundlers
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    });
-  }, []);
-
-  const filtered = stations.filter(s => {
-    if (filter !== 'all' && s.status !== filter) return false;
-    if (search && !s.name.toLowerCase().includes(search.toLowerCase()) && !s.city.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
-
-  return (
-    <div className="relative w-full h-full" style={{ fontFamily: 'Manrope, sans-serif' }}>
-      {/* Leaflet map */}
-      <MapContainer
-        center={[41.2, 68.0]}
-        zoom={6}
-        style={{ height: '100%', width: '100%' }}
-        zoomControl={false}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        {filtered.map(station => (
-          <Marker
-            key={station.id}
-            position={[station.geoLat, station.geoLng]}
-            icon={createStationIcon(statusColor[station.status])}
-            eventHandlers={{ click: () => onSelectStation(station) }}
-          >
-            <Popup>
-              <div style={{ fontFamily: 'Manrope, sans-serif', minWidth: 140 }}>
-                <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 2px 0', color: '#0F172A' }}>{station.name}</p>
-                <p style={{ fontSize: 12, margin: 0, color: '#64748B' }}>{station.connectors[0].power} кВт · {station.connectors[0].price.toLocaleString()} сум</p>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
-
-      {/* Top search bar — overlaid */}
-      <div className="absolute top-3 left-3 right-3 z-[1000]">
-        <div className="bg-white rounded-2xl shadow-lg flex items-center gap-2 px-3 py-2.5 border border-slate-100">
-          <Search size={16} className="text-slate-400 shrink-0" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Станция или адрес..."
-            className="flex-1 text-sm outline-none bg-transparent text-slate-800 placeholder:text-slate-400"
-          />
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`p-1.5 rounded-lg transition-colors ${showFilters ? 'bg-sky-500 text-white' : 'bg-slate-100 text-slate-600'}`}
-          >
-            <Filter size={14} />
-          </button>
-        </div>
-
-        {showFilters && (
-          <div className="mt-2 bg-white rounded-2xl shadow-lg p-3 border border-slate-100 space-y-3" style={{ animation: 'enter-up 0.2s ease both' }}>
-            <div>
-              <p className="text-xs font-semibold text-slate-500 mb-2">СТАТУС</p>
-              <div className="flex gap-1.5 flex-wrap">
-                {['all', 'available', 'occupied', 'reserved'].map(f => (
-                  <button key={f} onClick={() => setFilter(f)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${filter === f ? 'bg-sky-500 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                    {f === 'all' ? 'Все' : statusLabel[f]}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500 mb-2">ТИП РАЗЪЁМА</p>
-              <div className="flex gap-1.5 flex-wrap">
-                {['Все', 'CCS2', 'Type 2', 'CHAdeMO', 'GB/T'].map(c => (
-                  <button key={c}
-                    className="px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-100 text-slate-600 hover:bg-sky-50 hover:text-sky-600 transition-colors">
-                    {c}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500 mb-2">МОЩНОСТЬ</p>
-              <div className="flex gap-1.5">
-                {[{ label: 'Все', sub: '' }, { label: 'AC ≤22кВт', sub: 'Медленная' }, { label: 'DC 50кВт', sub: 'Быстрая' }, { label: 'DC 150кВт+', sub: 'Сверхбыстрая' }].map(p => (
-                  <button key={p.label}
-                    className="flex-1 py-1.5 rounded-xl text-center bg-slate-100 hover:bg-violet-50 hover:text-violet-700 transition-colors">
-                    <p className="text-xs font-semibold text-slate-700">{p.label}</p>
-                    {p.sub && <p className="text-[10px] text-slate-400">{p.sub}</p>}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button onClick={() => setShowFilters(false)} className="flex-1 py-2 bg-sky-500 text-white text-xs font-semibold rounded-xl hover:bg-sky-600 transition-colors">
-                Применить
-              </button>
-              <button onClick={() => { setFilter('all'); setShowFilters(false); }} className="px-4 py-2 bg-slate-100 text-slate-500 text-xs font-medium rounded-xl hover:bg-slate-200 transition-colors">
-                Сброс
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Legend */}
-      <div className="absolute bottom-20 right-3 bg-white/90 backdrop-blur rounded-xl shadow-sm border border-slate-100 p-2 space-y-1 z-[1000]">
-        {Object.entries(statusColor).map(([k, v]) => (
-          <div key={k} className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: v }} />
-            <span className="text-xs text-slate-600">{statusLabel[k]}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* My location button */}
-      <button className="absolute bottom-20 left-3 bg-white rounded-xl shadow-md p-2.5 border border-slate-100 z-[1000]">
-        <Navigation size={18} className="text-sky-500" />
-      </button>
-    </div>
-  );
-}
 
 function StationDetailSheet({ station, onClose, onStartCharging, onBook, onReviews, onReport }: { station: Station; onClose: () => void; onStartCharging: () => void; onBook: () => void; onReviews: () => void; onReport: () => void }) {
   const free = station.connectors.filter(c => c.status === 'available').length;
@@ -4823,7 +4672,7 @@ export default function DriverApp() {
 
     return (
       <div className="relative w-full h-full">
-        <UzbekistanMap onSelectStation={handleSelectStation} />
+        <DriverMap onSelectStation={handleSelectStation} />
         {/* QR scan FAB */}
         {screen === 'map' && (
           <button onClick={() => setScreen('qr-scan')}

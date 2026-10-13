@@ -158,7 +158,7 @@ paymentsApi.post('/topup', (req, res) => {
     click: null,
   };
   orders().unshift(order);
-  if (orders().length > 500) orders().length = 500;
+  if (orders().length > 3000) orders().length = 3000;
   db.save();
 
   const live = provider === 'payme' ? PAYME.live : CLICK.live;

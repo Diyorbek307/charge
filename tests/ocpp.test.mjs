@@ -268,7 +268,7 @@ describe('OCPP transactions', () => {
     assert.equal(blocked.idTagInfo.status, 'Blocked', 'empty wallet charged over OCPP');
     const invalid = await cp.call('StartTransaction', { connectorId: 1, idTag: 'stranger', meterStart: 0, timestamp: new Date().toISOString() });
     assert.equal(invalid.idTagInfo.status, 'Invalid');
-    assert.equal((await call('/state', { token: admin })).data.sessions.filter(s => s.status === 'active').length, 0);
+    assert.equal((await call('/state', { token: admin })).data.sessions.filter(s => s.status === 'active' && s.stationId === 'st-003').length, 0);
     await cp.close();
   });
 

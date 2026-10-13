@@ -41,17 +41,10 @@ export async function skipOnboarding(page) {
   await expect(page.getByRole('button', { name: /^Далее/ })).toHaveCount(0);
 }
 
-/** Opens a station's sheet from the map by tapping markers until it shows. */
+/** Opens a station's sheet the way a driver would: search, then tap the result. */
 export async function openStation(page, stationName) {
   await page.getByRole('button', { name: 'Карта', exact: true }).click();
-  const markers = page.locator('.leaflet-marker-icon');
-  await expect(markers.first()).toBeVisible();
-  const count = await markers.count();
-  for (let i = 0; i < count; i++) {
-    await markers.nth(i).click({ force: true });
-    if (await page.getByText(stationName).first().isVisible().catch(() => false)) {
-      if (await page.getByRole('button', { name: /Начать зарядку|Встать в очередь|Ваша очередь/ }).first().isVisible().catch(() => false)) return;
-    }
-  }
-  throw new Error(`could not open station ${stationName} from the map`);
+  await page.getByRole('textbox', { name: 'Поиск станции' }).fill(stationName);
+  await page.getByRole('option', { name: new RegExp(stationName) }).first().click();
+  await expect(page.getByRole('button', { name: /Начать зарядку|Встать в очередь|Ваша очередь/ }).first()).toBeVisible();
 }

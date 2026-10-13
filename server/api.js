@@ -7,6 +7,7 @@ import { generateSecret, verifyTotp, otpauthUri } from './totp.js';
 import { hashPassword } from './seed.js';
 import { normalizePhone, issueCode, consumeCode, PURPOSES, smsConfigured } from './sms.js';
 import { submitLead, listLeads, updateLead, LEAD_KINDS } from './leads.js';
+import { analyticsFor, adminUsers, setUserStatus, isBlocked } from './analytics.js';
 import { validateEndpoint, signedHeaders, kick as kickWebhooks } from './webhooks.js';
 
 export const api = express.Router();
@@ -171,7 +172,8 @@ function statsFor(viewer) {
   const full = computeStats();
   if (viewer?.portal === 'admin') return full;
   if (viewer?.portal === 'operator') {
-    const mine = db.data.sessions.filter(s => s.operatorId === viewer.orgId && s.status === 'completed');
+    const since = todayStart();
+    const mine = db.data.sessions.filter(s => s.operatorId === viewer.orgId && s.status === 'completed' && Date.parse(s.start) >= since);
     return {
       ...full,
       revenueToday: mine.reduce((n, s) => n + s.cost, 0),
@@ -216,6 +218,12 @@ function stateFor(viewer) {
     const ids = new Set(sessions.map(s => s.id));
     return d.transactions.filter(t => ids.has(t.sessionId));
   };
+  // Every running session plus the most recent ones; the full history is
+  // served by /analytics so the live snapshot stays small.
+  const recent = (list, n = 150) => {
+    const running = list.filter(s => s.status === 'active');
+    return [...running, ...list.filter(s => s.status !== 'active').slice(0, n)];
+  };
   const base = {
     stations: d.stations,
     operators: publicOperators,
@@ -237,8 +245,8 @@ function stateFor(viewer) {
     return {
       ...base,
       operators: d.operators,
-      sessions: d.sessions,
-      transactions: d.transactions,
+      sessions: recent(d.sessions),
+      transactions: d.transactions.slice(0, 150),
       alerts: d.alerts,
       vehicles: d.vehicles,
       employees: d.employees,
@@ -251,7 +259,7 @@ function stateFor(viewer) {
   const ownQueue = q => (q.userId === viewer.id ? q : anonQueue(q));
 
   if (viewer.portal === 'operator') {
-    const sessions = d.sessions.filter(s => s.operatorId === viewer.orgId);
+    const sessions = recent(d.sessions.filter(s => s.operatorId === viewer.orgId));
     const ownStations = new Set(d.stations.filter(st => st.operatorId === viewer.orgId).map(st => st.id));
     return {
       ...base,
@@ -264,7 +272,7 @@ function stateFor(viewer) {
   }
 
   if (viewer.portal === 'business') {
-    const sessions = d.sessions.filter(s => s.corporate || s.userId === viewer.id);
+    const sessions = recent(d.sessions.filter(s => s.corporate || s.userId === viewer.id));
     return {
       ...base,
       sessions,
@@ -278,7 +286,7 @@ function stateFor(viewer) {
   }
 
   // driver
-  const sessions = d.sessions.filter(s => s.userId === viewer.id);
+  const sessions = recent(d.sessions.filter(s => s.userId === viewer.id));
   return {
     ...base,
     sessions,
@@ -449,6 +457,7 @@ api.post('/auth/login', (req, res) => {
   if (!account || !db.verifyPassword(account, String(password))) {
     return res.status(401).json({ error: 'Неверный логин или пароль' });
   }
+  if (isBlocked(account.id)) return res.status(403).json({ error: 'Аккаунт заблокирован — обратитесь в поддержку' });
 
   // With 2FA on, the password only earns a short-lived challenge.
   if (account.twoFactor?.enabled) {
@@ -694,6 +703,7 @@ api.post('/auth/otp/verify', (req, res) => {
   const code = String(req.body?.code ?? '');
   const account = db.find('accounts', a => a.portal === 'driver' && a.login === phone.toLowerCase());
   if (!account || account.otp !== code) return res.status(401).json({ error: 'Неверный код' });
+  if (isBlocked(account.id)) return res.status(403).json({ error: 'Аккаунт заблокирован — обратитесь в поддержку' });
 
   const token = db.issueToken(account);
   db.update('accounts', account.id, { lastLogin: new Date().toISOString() });
@@ -724,10 +734,15 @@ api.get('/state', (req, res) => {
   res.json(stateFor(viewerOf(req)));
 });
 
+/** Midnight in Tashkent (UTC+5, no DST) for "today" figures. */
+const todayStart = () => Math.floor((Date.now() + 5 * 3600_000) / 86400_000) * 86400_000 - 5 * 3600_000;
+
 function computeStats() {
   const d = db.data;
+  const since = todayStart();
   const active = d.sessions.filter(s => s.status === 'active');
-  const completed = d.sessions.filter(s => s.status === 'completed');
+  const today = d.sessions.filter(s => Date.parse(s.start) >= since);
+  const completed = today.filter(s => s.status === 'completed');
   const evseTotal = d.stations.reduce((n, s) => n + s.connectors.length, 0);
   const evseOnline = d.stations.reduce(
     (n, s) => n + s.connectors.filter(c => c.status !== 'unavailable').length,
@@ -735,7 +750,7 @@ function computeStats() {
   );
   return {
     activeSessions: active.length,
-    totalSessions: d.sessions.length,
+    totalSessions: today.length,
     energyToday: round(completed.reduce((n, s) => n + s.energy, 0) + active.reduce((n, s) => n + s.energy, 0)),
     revenueToday: completed.reduce((n, s) => n + s.cost, 0),
     evseTotal,
@@ -968,7 +983,7 @@ export function completeSession(session, actor, { energyKwh = null } = {}) {
     userId: session.userId,
     user: session.user,
     amount: cost,
-    method: session.corporate ? 'Корпоративный счёт' : 'Humo',
+    method: session.corporate ? 'Корпоративный счёт' : 'Кошелёк',
     status: 'completed',
     time: session.end,
   };
@@ -982,6 +997,13 @@ export function completeSession(session, actor, { energyKwh = null } = {}) {
   if (operator) {
     operator.revenue += cost;
     operator.sessions += 1;
+  }
+
+  const employee = session.corporate ? db.find('employees', e => e.driverId === session.userId) : null;
+  if (employee) {
+    employee.spent += cost;
+    employee.sessions += 1;
+    employee.status = employee.spent > employee.limit ? 'warning' : 'active';
   }
 
   db.save();
@@ -1364,18 +1386,19 @@ api.get('/eco/leaderboard', (req, res) => {
     const [first, last] = String(n).split(' ');
     return last ? `${first} ${last[0]}.` : first;
   };
-  res.json(
-    [...totals.values()]
-      .sort((a, b) => b.kwh - a.kwh)
-      .slice(0, 10)
-      .map((r, i) => ({
-        rank: i + 1,
-        name: shortName(r.name),
-        kwh: round(r.kwh, 1),
-        co2Kg: round(r.kwh * CO2_KG_PER_KWH, 1),
-        me: r.userId === me,
-      })),
-  );
+  const ranked = [...totals.values()]
+    .sort((a, b) => b.kwh - a.kwh)
+    .map((r, i) => ({
+      rank: i + 1,
+      name: shortName(r.name),
+      kwh: round(r.kwh, 1),
+      co2Kg: round(r.kwh * CO2_KG_PER_KWH, 1),
+      me: r.userId === me,
+    }));
+  // Top ten, plus the caller's own row with their real rank if they are lower.
+  const top = ranked.slice(0, 10);
+  const mine = ranked.find(r => r.me);
+  res.json(mine && mine.rank > 10 ? [...top, mine] : top);
 });
 
 // ---------------------------------------------------------------------------
@@ -1817,6 +1840,33 @@ api.patch('/leads/:id', requireAuth('admin'), (req, res) => {
   if (!lead) return res.status(404).json({ error: 'Заявка не найдена' });
   if (lead.error) return res.status(400).json({ error: lead.error });
   res.json(lead);
+});
+
+// ---------------------------------------------------------------------------
+// Analytics — every dashboard figure, computed from sessions, scoped by role.
+// ---------------------------------------------------------------------------
+
+api.get('/analytics', requireAuth('admin', 'operator', 'business', 'driver'), (req, res) => {
+  res.json(analyticsFor(req.account, { days: req.query.days }));
+});
+
+api.get('/admin/users', requireAuth('admin'), (_req, res) => {
+  res.json(adminUsers());
+});
+
+api.post('/admin/users/:id/status', requireAuth('admin'), (req, res) => {
+  const status = req.body?.status;
+  if (!['active', 'blocked'].includes(status)) return res.status(400).json({ error: 'Некорректный статус' });
+  const user = setUserStatus(req.params.id, status);
+  if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+  emit({
+    type: 'user.status',
+    portal: 'admin',
+    actor: req.account.name,
+    message: `${status === 'blocked' ? 'Заблокирован' : 'Разблокирован'} пользователь ${user.name ?? req.params.id}`,
+    entity: req.params.id,
+  });
+  res.json({ id: req.params.id, status });
 });
 
 api.post('/admin/reset', requireAuth('admin'), (req, res) => {

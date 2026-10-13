@@ -532,7 +532,10 @@ describe('eco profile', () => {
     const mine = rows.find(r => r.me);
     assert.ok(mine, 'caller not marked');
     assert.equal(mine.name, 'Alisher T.');
-    assert.deepEqual(rows.map(r => r.rank), rows.map((_, i) => i + 1));
+    // The top ten are ranked 1..10; the caller's row keeps its real rank.
+    const top = rows.filter(r => !r.me || r.rank <= 10);
+    assert.deepEqual(top.map(r => r.rank), top.map((_, i) => i + 1));
+    assert.ok(rows.length <= 11);
   });
 });
 
