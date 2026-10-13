@@ -346,6 +346,28 @@ export interface LeadInput {
   website?: string;
 }
 
+export interface AdminUser {
+  id: string;
+  name: string;
+  phone: string;
+  car: string;
+  city: string;
+  registered: string | null;
+  status: 'active' | 'blocked';
+  selfRegistered?: boolean;
+  sessions: number;
+  spent: number;
+  last: string | null;
+}
+
+export interface AdminUsers {
+  total: number;
+  active: number;
+  newWeek: number;
+  blocked: number;
+  users: AdminUser[];
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -447,6 +469,13 @@ export const apiClient = {
     post<{ operator: OperatorRecord }>(`/operators/${id}/status`, { status }, portal),
 
   resetDemo: (portal: Portal) => post<{ ok: boolean }>('/admin/reset', undefined, portal),
+
+  refundTransaction: (portal: Portal, id: string) => post<{ transaction: Transaction }>(`/transactions/${id}/refund`, undefined, portal),
+  setCommission: (portal: Portal, id: string, rate: number) => post<{ operator: OperatorRecord }>(`/operators/${id}/commission`, { rate }, portal),
+  adminUsers: (portal: Portal) => request<AdminUsers>('/admin/users', { portal }),
+  setUserStatus: (portal: Portal, id: string, status: 'active' | 'blocked') =>
+    post<{ id: string; status: string }>(`/admin/users/${id}/status`, { status }, portal),
+  events: (portal: Portal, limit = 300) => request<SyncEvent[]>(`/events?limit=${limit}`, { portal }),
 
   submitLead: (body: LeadInput) => post<{ ok: boolean; duplicate?: boolean }>('/leads', body),
   listLeads: (portal: Portal) => request<{ leads: Lead[] }>('/leads', { portal }),

@@ -11,7 +11,7 @@
  * reset produces the same network with fresh dates.
  */
 
-const HISTORY_DAYS = 45;
+const HISTORY_DAYS = 60;
 const MONTHS_BEFORE = 5;
 
 function rng(seed) {
@@ -224,14 +224,15 @@ export function buildHistory({ stations, customers, now }) {
 
   // The network grew through the period: newer weeks are a little busier.
   const startDay = new Date(now - HISTORY_DAYS * 86400_000);
-  for (let d = 0; d < HISTORY_DAYS; d++) {
+  // Through today: today's sessions run up to twenty minutes ago.
+  for (let d = 0; d <= HISTORY_DAYS; d++) {
     // Midnight in Tashkent of the d-th day, so hours and weekdays are local.
     const t = startDay.getTime() + d * 86400_000;
     const midnight = Math.floor((t + TASHKENT_MS) / 86400_000) * 86400_000 - TASHKENT_MS;
     const growth = 0.82 + 0.18 * (d / HISTORY_DAYS);
     const weekday = new Date(midnight + TASHKENT_MS).getUTCDay();
     for (const st of stations) {
-      const expected = st.popularity * 1.6 * growth * WEEKDAY_WEIGHT[weekday] * (0.75 + st.connectors.length * 0.12);
+      const expected = st.popularity * 2.3 * growth * WEEKDAY_WEIGHT[weekday] * (0.75 + st.connectors.length * 0.12);
       const count = Math.floor(expected + r());
       for (let k = 0; k < count; k++) {
         const hour = pickWeighted(r, HOURS, h => HOUR_WEIGHT[h]);
@@ -248,8 +249,10 @@ export function buildHistory({ stations, customers, now }) {
 
         const failed = r() < 0.025;
         const dc = connector.power >= 50;
-        const energy = failed ? 0 : round(dc ? 12 + r() * 46 : 6 + r() * 22, 1);
-        const kw = dc ? connector.power * (0.45 + r() * 0.3) : connector.power * 0.9;
+        const energy = failed ? 0 : round(dc ? 12 + r() * 46 : 8 + r() * 26, 1);
+        // DC tapers well below the charger's rating; on AC the car's onboard
+        // charger (7–11 kW) is the limit, so AC sessions last hours.
+        const kw = dc ? connector.power * (0.45 + r() * 0.3) : Math.min(connector.power, r() < 0.6 ? 11 : 7.4) * 0.95;
         const minutes = failed ? 1 : Math.max(8, Math.round((energy / kw) * 60 + r() * 6));
         const multiplier = bandMultiplier(hour);
         const price = Math.round(connector.price * multiplier);
@@ -271,6 +274,7 @@ export function buildHistory({ stations, customers, now }) {
           multiplier,
           price,
           status: failed ? 'failed' : 'completed',
+          commissionRate: op(st.operatorId).commission,
           // Fleet drivers charge the company car on the corporate account; the
           // demo driver also charges privately about half the time.
           corporate: customer.fleet && (customer.id !== 'acc-driver' || r() < 0.5),
@@ -320,6 +324,7 @@ export function buildHistory({ stations, customers, now }) {
       multiplier,
       price,
       status: 'active',
+      commissionRate: op(st.operatorId).commission,
       corporate: false,
       source: 'app',
     });
@@ -398,23 +403,29 @@ export function buildMonthly({ sessions, now }) {
     row.revenue += s.cost;
     perOp.set(s.operatorId, row);
   }
+  // Roll-ups cover the months up to and including the one in which the
+  // detailed history starts (that month is only partly detailed); later
+  // months are computed from sessions, so the two never overlap.
   const out = [];
   const d = new Date(now + TASHKENT_MS);
-  for (let m = MONTHS_BEFORE + 1; m >= 2; m--) {
-    const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - m + 1, 1));
+  const start = new Date(now - HISTORY_DAYS * 86400_000 + TASHKENT_MS);
+  const startOffset = (d.getUTCFullYear() - start.getUTCFullYear()) * 12 + d.getUTCMonth() - start.getUTCMonth();
+  for (let m = startOffset + MONTHS_BEFORE - 1; m >= startOffset; m--) {
+    const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - m, 1));
     const month = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
     for (const o of OPERATORS) {
       const base = perOp.get(o.id);
       if (!base) continue;
       const since = Date.parse(o.since);
       if (date.getTime() < since) continue;
-      const factor = Math.pow(0.86, m - 1) * (0.94 + r() * 0.12);
+      const factor = Math.pow(0.86, m) * (0.94 + r() * 0.12);
       out.push({
         month,
         operatorId: o.id,
         sessions: Math.round(base.sessions * factor),
         energy: Math.round(base.energy * factor),
         revenue: Math.round(base.revenue * factor),
+        commissionRate: o.commission,
       });
     }
   }

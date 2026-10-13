@@ -50,7 +50,7 @@ function totalsOf(list, stations, periodDays) {
   const users = new Map();
   for (const s of done) users.set(s.userId, (users.get(s.userId) ?? 0) + 1);
   const repeat = [...users.values()].filter(n => n > 1).length;
-  const commission = done.reduce((n, s) => n + s.cost * (rateOf(s.operatorId) / 100), 0);
+  const commission = done.reduce((n, s) => n + s.cost * (rateFor(s) / 100), 0);
   // Share of connector-hours spent charging over the period.
   const evse = stations.reduce((n, st) => n + st.connectors.length, 0);
   const utilization = evse ? (minutes / 60) / (evse * 24 * periodDays) : 0;
@@ -77,11 +77,15 @@ function rateOf(operatorId) {
   return db.byId('operators', operatorId)?.commission ?? 3;
 }
 
+/** The rate locked on the session; older records fall back to the current one. */
+const rateFor = s => s.commissionRate ?? rateOf(s.operatorId);
+
 const pct = (now, before) => (before ? round(((now - before) / before) * 100, 1) : null);
 
 export function analyticsFor(viewer, { days = 30 } = {}) {
   const now = Date.now();
-  const span = Math.min(Math.max(Number(days) || 30, 1), 45);
+  // History is 60 days, so a period and the one before it fit up to 30 days.
+  const span = Math.min(Math.max(Number(days) || 30, 1), 30);
   const from = tkMidnight(now) - (span - 1) * DAY;
   const prevFrom = from - span * DAY;
 
@@ -104,6 +108,8 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
     const list = done.filter(s => tkDate(Date.parse(s.start)) === key);
     daily.push({
       date: key,
+      // Today is still running; charts leave it out so the line does not dive.
+      partial: key === tkDate(now),
       sessions: list.length,
       energy: round(list.reduce((n, s) => n + s.energy, 0), 1),
       revenue: list.reduce((n, s) => n + s.cost, 0),
@@ -141,6 +147,7 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
         connectors: st.connectors.length,
         free: st.connectors.filter(c => c.status === 'available').length,
         sessions: list.length,
+        failed: inRange.filter(s => s.stationId === st.id && s.status === 'failed').length,
         energy: round(list.reduce((n, s) => n + s.energy, 0), 1),
         revenue: list.reduce((n, s) => n + s.cost, 0),
         utilization: round(((minutes / 60) / (st.connectors.length * 24 * span)) * 100, 1),
@@ -199,7 +206,7 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
       row.sessions += m.sessions;
       row.energy += m.energy;
       row.revenue += m.revenue;
-      row.commission += Math.round(m.revenue * (rateOf(m.operatorId) / 100));
+      row.commission += Math.round(m.revenue * ((m.commissionRate ?? rateOf(m.operatorId)) / 100));
       monthly.set(m.month, row);
     }
   }
@@ -211,7 +218,7 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
     row.sessions += 1;
     row.energy = round(row.energy + s.energy, 1);
     row.revenue += s.cost;
-    row.commission += Math.round(s.cost * (rateOf(s.operatorId) / 100));
+    row.commission += Math.round(s.cost * (rateFor(s) / 100));
     monthly.set(key, row);
   }
   const months = [...monthly.values()].sort((a, b) => a.month.localeCompare(b.month)).slice(-6);
@@ -246,6 +253,35 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
     operators,
     monthly: months,
   };
+
+  if (viewer?.portal === 'admin' || viewer?.portal === 'operator') result.invoices = invoicesFor(operatorIds, scoped, now);
+
+  // Money in: wallet top-ups through the payment providers.
+  if (viewer?.portal === 'admin') {
+    const pays = (db.data.payments ?? []).filter(p => Date.parse(p.created) >= from);
+    const paid = pays.filter(p => p.status === 'paid');
+    const by = provider => {
+      const list = paid.filter(p => p.provider === provider);
+      return { count: list.length, amount: list.reduce((n, p) => n + p.amount, 0) };
+    };
+    result.payments = {
+      count: paid.length,
+      amount: paid.reduce((n, p) => n + p.amount, 0),
+      payme: by('payme'),
+      click: by('click'),
+      cancelled: pays.filter(p => p.status === 'cancelled' || p.status === 'expired').length,
+      pending: pays.filter(p => p.status === 'pending').length,
+      recent: (db.data.payments ?? []).slice(0, 40).map(p => ({
+        id: p.id,
+        provider: p.provider,
+        userId: p.userId,
+        user: (db.data.customers ?? []).find(c => c.id === p.userId)?.name ?? db.byId('accounts', p.userId)?.name ?? p.userId,
+        amount: p.amount,
+        status: p.status,
+        created: p.created,
+      })),
+    };
+  }
 
   // Customers: full contact for the admin, masked for operators.
   if (viewer?.portal === 'admin' || viewer?.portal === 'operator') {
@@ -308,8 +344,72 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
 }
 
 /**
+ * Monthly statements per operator for the last four months. A month is paid
+ * out on the 2nd of the next month (D+2 after close); the current month is
+ * still accruing.
+ */
+function invoicesFor(operatorIds, sessions, now) {
+  const months = [];
+  const d = new Date(now + TZ);
+  for (let m = 3; m >= 0; m--) {
+    const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - m, 1));
+    months.push(`${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`);
+  }
+  const current = monthKey(now);
+  const rollups = db.data.monthly ?? [];
+  const out = [];
+  for (const month of months) {
+    for (const id of operatorIds) {
+      const o = db.byId('operators', id);
+      if (!o || o.status !== 'active') continue;
+      const roll = rollups.find(r => r.month === month && r.operatorId === id);
+      let sessionsN = 0;
+      let revenue = 0;
+      let energy = 0;
+      let commission = 0;
+      if (roll) {
+        sessionsN = roll.sessions;
+        revenue = roll.revenue;
+        energy = roll.energy;
+        commission = Math.round(revenue * ((roll.commissionRate ?? o.commission) / 100));
+      } else {
+        for (const s of sessions) {
+          if (s.operatorId !== id || s.status !== 'completed' || monthKey(Date.parse(s.start)) !== month) continue;
+          sessionsN += 1;
+          revenue += s.cost;
+          energy += s.energy;
+          commission += s.cost * (rateFor(s) / 100);
+        }
+        commission = Math.round(commission);
+      }
+      if (!sessionsN) continue;
+      const [y, mm] = month.split('-').map(Number);
+      const payDate = Date.UTC(y, mm, 2, 6) - TZ; // 2nd of next month, 11:00 Tashkent
+      const status = month === current ? 'accruing' : now >= payDate ? 'paid' : 'processing';
+      out.push({
+        id: `INV-${o.name.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase()}-${month.slice(2).replace('-', '')}`,
+        operatorId: id,
+        operator: o.name,
+        logo: o.logo,
+        month,
+        sessions: sessionsN,
+        energy: Math.round(energy),
+        revenue,
+        commissionRate: revenue ? Math.round((commission / revenue) * 1000) / 10 : o.commission,
+        commission,
+        payout: revenue - commission,
+        status,
+        payDate: new Date(payDate).toISOString(),
+        iban: o.iban,
+      });
+    }
+  }
+  return out.reverse();
+}
+
+/**
  * The admin's user directory: seeded customers plus drivers who signed up
- * through SMS, with their activity over the last 45 days.
+ * through SMS, with their activity over the last 60 days.
  */
 export function adminUsers() {
   const accounts = db.data.accounts.filter(a => a.portal === 'driver');

@@ -108,9 +108,32 @@ describe('analytics', () => {
   test('the live state carries recent sessions, not the whole history', async () => {
     const admin = await login('admin');
     const state = (await call('/state', { token: admin })).data;
-    const a = (await call('/analytics?days=45', { token: admin })).data;
-    assert.ok(state.sessions.length <= 160);
+    const a = (await call('/analytics?days=30', { token: admin })).data;
+    assert.ok(state.sessions.filter(s => s.status !== 'active').length <= 150);
     assert.ok(a.totals.sessions > state.sessions.length);
+  });
+});
+
+describe('commission', () => {
+  test('a new rate applies to new sessions only, and stays in range', async () => {
+    const admin = await login('admin');
+    const before = (await call('/analytics', { token: admin })).data.operators.find(o => o.id === 'op-001');
+    assert.equal((await call('/operators/op-001/commission', { method: 'POST', token: admin, body: { rate: 5 } })).status, 200);
+    const after = (await call('/analytics', { token: admin })).data.operators.find(o => o.id === 'op-001');
+    assert.equal(after.commissionRate, 5);
+    assert.equal(after.commission, before.commission, 'history was recharged at the new rate');
+    assert.equal((await call('/operators/op-001/commission', { method: 'POST', token: admin, body: { rate: 25 } })).status, 400);
+    assert.equal((await call('/operators/op-001/commission', { method: 'POST', token: await login('operator'), body: { rate: 1 } })).status, 403);
+  });
+
+  test('refunds go back to the wallet once', async () => {
+    const admin = await login('admin');
+    const state = (await call('/state', { token: admin })).data;
+    const txn = state.transactions.find(t => t.status === 'completed' && t.amount > 0 && t.method === 'Кошелёк');
+    const first = await call(`/transactions/${txn.id}/refund`, { method: 'POST', token: admin });
+    assert.equal(first.status, 200);
+    assert.equal(first.data.transaction.status, 'refunded');
+    assert.equal((await call(`/transactions/${txn.id}/refund`, { method: 'POST', token: admin })).status, 409);
   });
 });
 

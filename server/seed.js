@@ -90,6 +90,36 @@ const station = (id, name, operator, operatorId, address, city, geoLat, geoLng, 
   image: extra.image ?? 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=800&h=400&fit=crop&auto=format',
 });
 
+/** A believable recent audit trail; new actions are appended by the server. */
+function auditTrail(ago) {
+  const rows = [
+    [25, 'auth.login', 'admin', 'Nodira Baxtiyorova', 'Вход в Admin Control Center', null],
+    [70, 'alert.ack', 'operator', 'Sardor Yusupov', 'Принято оповещение AL-004 · Namangan Industrial', 'AL-004'],
+    [180, 'tariff.update', 'operator', 'Sardor Yusupov', 'Chilonzor Energy Park · CCS2 180 кВт: 2 000 → 2 100 сум/кВт·ч', 'st-007'],
+    [320, 'ocpp.online', 'system', 'OCPP', 'Navoiy M-37 Hub подключилась · OCPP 1.6-J · прошивка 2.4.1', 'st-025'],
+    [610, 'user.status', 'admin', 'Nodira Baxtiyorova', 'Заблокирован пользователь · 4 отменённых платежа подряд', null],
+    [900, 'operator.status', 'system', 'Xorazm Energiya', 'Xorazm Energiya подал заявку на подключение · 6 станций в Xorazm', 'op-005'],
+    [1440, 'system.backup', 'system', 'Backup', 'Резервная копия базы создана · 14 дней хранения', null],
+    [1700, 'commission.update', 'admin', 'Nodira Baxtiyorova', 'Комиссия EcoVolt: 3,0% → 2,8% по договору от 01.10', 'op-002'],
+    [2600, 'settlement.paid', 'system', 'Settlement', 'Закрыт расчёт за прошлый месяц · 4 инвойса отправлены в банк', null],
+    [2900, 'webhook.created', 'api', 'Integration Partner', 'Подписка на session.start, session.stop, evse.status', 'wh-001'],
+    [4300, 'station.added', 'operator', 'SilkRoad EV', 'Добавлена станция Jizzax M-39 Stop · 3 разъёма до 150 кВт', 'st-026'],
+    [7200, 'system.backup', 'system', 'Backup', 'Резервная копия базы создана · 14 дней хранения', null],
+    [9100, 'operator.status', 'admin', 'Nodira Baxtiyorova', 'Nukus Power: статус «На ревью» → «Активен»', 'op-004'],
+  ];
+  return rows.map(([minutes, type, portal, actor, message, entity], i) => ({
+    id: `EV-A${String(rows.length - i).padStart(3, '0')}`,
+    type,
+    portal,
+    actor,
+    message,
+    entity,
+    payload: {},
+    ts: ago(minutes),
+    scope: {},
+  }));
+}
+
 export function seed(now = Date.now()) {
   const accounts = DEMO_ACCOUNTS.map(a => {
     const { salt, hash } = hashPassword(a.password);
@@ -222,7 +252,7 @@ export function seed(now = Date.now()) {
     vehicles,
     employees,
     wallets,
-    events: [],
+    events: auditTrail(ago),
     webhooks: [
       {
         id: 'wh-001',

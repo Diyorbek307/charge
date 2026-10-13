@@ -93,6 +93,9 @@ function scopeOf({ type, entity, payload = {} }) {
     case 'wallet.topup':
     case 'wallet.adjust':
       return entity === 'biz-001' ? { fleet: true } : { userId: entity };
+    case 'wallet.refund':
+      // The driver who was refunded sees it; nobody else but the admin.
+      return { userId: payload.userId };
     case 'booking.create':
     case 'booking.cancel':
     case 'booking.expire': {
@@ -105,6 +108,7 @@ function scopeOf({ type, entity, payload = {} }) {
     case 'employee.limit':
       return { fleet: true };
     case 'operator.status':
+    case 'commission.update':
       return { operatorId: entity };
     case 'system.reset':
       return { public: true };
@@ -852,6 +856,9 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
   if (!station || !connector) return { status: 404, error: 'Коннектор не найден' };
   if (connector.status === 'occupied') return { status: 409, error: 'Коннектор уже занят' };
   if (connector.status === 'unavailable') return { status: 409, error: 'Коннектор недоступен' };
+  if (db.byId('operators', station.operatorId)?.status === 'suspended') {
+    return { status: 409, error: 'Сеть оператора временно приостановлена' };
+  }
 
   // One car, one plug: without this a single account could occupy the network.
   if (db.data.sessions.some(s => s.status === 'active' && s.userId === account.id)) {
@@ -901,6 +908,8 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     basePrice: connector.price,
     multiplier: band.multiplier,
     price: Math.round(connector.price * band.multiplier),
+    // Platform commission is locked at start too, so a rate change is not retroactive.
+    commissionRate: db.byId('operators', station.operatorId)?.commission ?? 3,
     status: 'active',
     corporate: account.portal === 'business',
     source,
@@ -1634,11 +1643,32 @@ api.post('/operators/:id/status', requireAuth('admin'), (req, res) => {
     type: 'operator.status',
     portal: 'admin',
     actor: req.account.name,
-    message: `Оператор ${operator.name} → ${status}`,
+    message: `Оператор ${operator.name}: ${{ active: 'активен', pending: 'на ревью', suspended: 'приостановлен' }[status]}`,
     entity: operator.id,
     payload: { status },
   });
 
+  res.json({ operator });
+});
+
+/** Platform commission for one operator, in percent of each paid charge. */
+api.post('/operators/:id/commission', requireAuth('admin'), (req, res) => {
+  const rate = Math.round(Number(req.body?.rate) * 10) / 10;
+  if (!Number.isFinite(rate) || rate < 0.5 || rate > 10) return res.status(400).json({ error: 'Ставка от 0,5 до 10%' });
+  const operator = db.byId('operators', req.params.id);
+  if (!operator) return res.status(404).json({ error: 'Оператор не найден' });
+  const before = operator.commission;
+  operator.commission = rate;
+  operator.commissionChanged = new Date().toISOString();
+  db.save();
+  emit({
+    type: 'commission.update',
+    portal: 'admin',
+    actor: req.account.name,
+    message: `Комиссия ${operator.name}: ${String(before).replace('.', ',')}% → ${String(rate).replace('.', ',')}%`,
+    entity: operator.id,
+    payload: { before, rate },
+  });
   res.json({ operator });
 });
 
@@ -1848,6 +1878,30 @@ api.patch('/leads/:id', requireAuth('admin'), (req, res) => {
 
 api.get('/analytics', requireAuth('admin', 'operator', 'business', 'driver'), (req, res) => {
   res.json(analyticsFor(req.account, { days: req.query.days }));
+});
+
+/** Refunds a charge to the wallet it was paid from. Once per transaction. */
+api.post('/transactions/:id/refund', requireAuth('admin'), (req, res) => {
+  const txn = db.byId('transactions', req.params.id);
+  if (!txn) return res.status(404).json({ error: 'Транзакция не найдена' });
+  if (txn.status !== 'completed' || !txn.amount) return res.status(409).json({ error: 'Вернуть можно только оплаченную зарядку' });
+  const session = db.byId('sessions', txn.sessionId);
+  const walletId = session?.corporate ? 'biz-001' : txn.userId;
+  const wallet = (db.data.wallets[walletId] ??= { balance: 0, currency: 'UZS', autoTopUp: false, threshold: 0, card: null });
+  wallet.balance += txn.amount;
+  txn.status = 'refunded';
+  txn.refundedAt = new Date().toISOString();
+  txn.refundedBy = req.account.name;
+  db.save();
+  emit({
+    type: 'wallet.refund',
+    portal: 'admin',
+    actor: req.account.name,
+    message: `Возврат ${txn.amount.toLocaleString('ru-RU')} сум · ${txn.id} · ${txn.user}`,
+    entity: txn.id,
+    payload: { amount: txn.amount, userId: txn.userId },
+  });
+  res.json({ transaction: txn });
 });
 
 api.get('/admin/users', requireAuth('admin'), (_req, res) => {
