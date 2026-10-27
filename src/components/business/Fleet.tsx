@@ -77,7 +77,7 @@ export default function BusinessFleet() {
           <div className="px-5 pb-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div><p className="text-xs text-slate-400">Водитель</p><p className="font-semibold text-slate-800">{selected.driver}</p></div>
             <div><p className="text-xs text-slate-400">Средняя цена</p><p className="font-semibold text-slate-800 tabular-nums">{`${num(sel.price)} сум/кВт·ч`}</p></div>
-            <div><p className="text-xs text-slate-400">Ночных зарядок</p><p className="font-semibold text-slate-800 tabular-nums">{`${sel.night} из ${sel.list.length}`}</p></div>
+            <div><p className="text-xs text-slate-400">Ночных зарядок</p><p className="font-semibold text-slate-800 tabular-nums">{`${sel.night} / ${sel.list.length}`}</p></div>
             <div><p className="text-xs text-slate-400">Пробег</p><p className="font-semibold text-slate-800 tabular-nums">{`${num(selected.odo)} км`}</p></div>
           </div>
           {sel.list.length === 0 ? (

@@ -110,6 +110,24 @@ after(() => {
   }
 });
 
+describe('partner data API', () => {
+  test('lists stations with filters, and only to partner or admin tokens', async () => {
+    const key = await partner();
+    const all = await call('/partner/stations', { token: key });
+    assert.equal(all.status, 200);
+    assert.ok(all.data.total >= 6);
+    const s = all.data.items[0];
+    assert.ok(s.location.lat && s.connectors[0].powerKw && s.connectors[0].priceUzsPerKwh);
+    const fast = (await call('/partner/stations?minPower=100', { token: key })).data;
+    assert.ok(fast.items.every(x => x.connectors.some(c => c.powerKw >= 100)));
+    assert.ok(fast.total < all.data.total);
+    const one = await call(`/partner/stations/${s.id}`, { token: key });
+    assert.equal(one.data.id, s.id);
+    assert.equal((await call('/partner/stations/nope', { token: key })).status, 404);
+    assert.equal((await call('/partner/stations')).status, 401);
+  });
+});
+
 describe('webhook delivery', () => {
   test('a signed event reaches the partner and verifies with the secret', async () => {
     const token = await partner();

@@ -93,7 +93,7 @@ export default function BusinessEmployees() {
                     ) : (
                       <>
                         <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="text-xs tabular-nums text-slate-600">{`${money(e.spentMonth, false)} из ${money(e.limit)}`}</span>
+                          <span className="text-xs tabular-nums text-slate-600"><span>{money(e.spentMonth, false)}</span> / <span>{money(e.limit)}</span></span>
                           <span className="flex items-center gap-1.5">
                             {e.share >= 1 ? <Pill tone="red">превышен</Pill> : e.share >= 0.8 ? <Pill tone="amber">{`${num(e.share * 100, 0)}%`}</Pill> : null}
                             <button

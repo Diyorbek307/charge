@@ -2028,6 +2028,53 @@ const WEBHOOK_EVENTS = [
 
 api.get('/webhooks/events', (_req, res) => res.json(WEBHOOK_EVENTS));
 
+// ---------------------------------------------------------------------------
+// Partner data API — read-only, for navigators, fleet software and roaming.
+// Stable field names in English; prices in UZS per kWh before the time-of-day
+// multiplier (see /tariffs/forecast).
+// ---------------------------------------------------------------------------
+
+function partnerStation(st) {
+  const statuses = st.connectors.map(c => c.status);
+  const status = statuses.includes('available') ? 'available' : statuses.every(x => x === 'unavailable') ? 'unavailable' : 'occupied';
+  const operator = db.byId('operators', st.operatorId);
+  return {
+    id: st.id,
+    name: st.name,
+    operator: { id: st.operatorId, name: st.operator },
+    address: st.address,
+    city: st.city,
+    location: { lat: st.geoLat, lng: st.geoLng },
+    hours: st.hours,
+    amenities: st.amenities ?? [],
+    rating: st.rating,
+    reviews: st.reviews ?? 0,
+    status,
+    // A suspended operator's stations take no new charges.
+    accepting: operator?.status !== 'suspended' && status !== 'unavailable',
+    connectors: st.connectors.map(c => ({ id: c.id, type: c.type, powerKw: c.power, priceUzsPerKwh: c.price, status: c.status })),
+  };
+}
+
+api.get('/partner/stations', requireAuth('api', 'admin'), (req, res) => {
+  const { city, status, type } = req.query;
+  const minPower = Number(req.query.minPower) || 0;
+  const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 200);
+  const offset = Math.max(Number(req.query.offset) || 0, 0);
+  let list = db.data.stations.map(partnerStation);
+  if (city) list = list.filter(s => s.city.toLowerCase() === String(city).toLowerCase());
+  if (status) list = list.filter(s => s.status === status);
+  if (type) list = list.filter(s => s.connectors.some(c => c.type.toLowerCase() === String(type).toLowerCase()));
+  if (minPower) list = list.filter(s => s.connectors.some(c => c.powerKw >= minPower));
+  res.json({ total: list.length, limit, offset, items: list.slice(offset, offset + limit), updated: new Date().toISOString() });
+});
+
+api.get('/partner/stations/:id', requireAuth('api', 'admin'), (req, res) => {
+  const st = db.byId('stations', req.params.id);
+  if (!st) return res.status(404).json({ error: 'Станция не найдена' });
+  res.json(partnerStation(st));
+});
+
 api.get('/webhooks', requireAuth('api', 'admin'), (_req, res) => {
   res.json(
     (db.data.webhooks ?? []).map(w => ({
