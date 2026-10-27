@@ -78,7 +78,7 @@ export default function AdminPayments() {
               <span className="w-2.5 h-10 rounded-full" style={{ background: PROVIDER[k].color }} />
               <div>
                 <p className="text-sm font-bold text-slate-900">{PROVIDER[k].label}</p>
-                <p className="text-xs text-slate-500 tabular-nums">{money(p[k].amount)} · {num(p[k].count)} платежей · {num(p.amount ? (p[k].amount / p.amount) * 100 : 0, 1)}%</p>
+                <p className="text-xs text-slate-500 tabular-nums">{`${money(p[k].amount)} · ${num(p[k].count)} платежей · ${num(p.amount ? (p[k].amount / p.amount) * 100 : 0, 1)}%`}</p>
               </div>
             </div>
           ))}
@@ -122,7 +122,7 @@ export default function AdminPayments() {
                         {t.status === 'completed' && t.amount > 0 && (
                           confirm === t.id ? (
                             <span className="inline-flex gap-1">
-                              <button disabled={busy === t.id} onClick={() => refund(t.id)} className="px-2.5 py-1 rounded-lg bg-amber-500 text-white text-xs font-semibold disabled:opacity-50">Вернуть {money(t.amount)}</button>
+                              <button disabled={busy === t.id} onClick={() => refund(t.id)} className="px-2.5 py-1 rounded-lg bg-amber-500 text-white text-xs font-semibold disabled:opacity-50">{`Вернуть ${money(t.amount)}`}</button>
                               <button onClick={() => setConfirm(null)} className="px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600">Отмена</button>
                             </span>
                           ) : (

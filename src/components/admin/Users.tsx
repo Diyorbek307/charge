@@ -123,7 +123,7 @@ export default function AdminUsers() {
                         <span className="w-8 h-8 rounded-xl bg-sky-50 text-sky-700 text-xs font-bold flex items-center justify-center shrink-0">{initials(u.name)}</span>
                         <div className="min-w-0">
                           <p className="font-semibold text-slate-800 truncate">{u.name}</p>
-                          <p className="text-[11px] text-slate-400">{u.city || '—'} · с {u.registered ? dateShort(u.registered) : '—'}{u.selfRegistered ? ' · через SMS' : ''}</p>
+                          <p className="text-[11px] text-slate-400">{`${u.city || '—'} · с ${u.registered ? dateShort(u.registered) : '—'}${u.selfRegistered ? ' · через SMS' : ''}`}</p>
                         </div>
                       </div>
                     </td>

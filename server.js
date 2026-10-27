@@ -7,6 +7,7 @@ import { attachOcpp } from "./server/ocpp.js";
 import { paymentsApi } from "./server/payments.js";
 import { pushApi, attachPush } from "./server/push.js";
 import { startWebhookWorker } from "./server/webhooks.js";
+import { startDemoLife } from "./server/demoLife.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -49,6 +50,8 @@ const server = app.listen(PORT, () => {
 attachOcpp(server);
 attachPush();
 startWebhookWorker();
+// The demo network keeps charging on its own; tests turn this off.
+if (process.env.DEMO_MODE !== "false" && process.env.DEMO_SIMULATION !== "false") startDemoLife();
 
 // Render sends SIGTERM on every deploy; flush pending writes before exiting.
 let shuttingDown = false;

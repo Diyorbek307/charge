@@ -72,7 +72,7 @@ before(async () => {
 
   dataDir = mkdtempSync(join(tmpdir(), 'oc-push-'));
   server = spawn(process.execPath, ['server.js'], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, PUSH_ALLOW_HOSTS: `127.0.0.1:${pushPort}`, PUSH_ALLOW_HTTP: 'true' },
+    env: { ...process.env, DEMO_SIMULATION: 'false', PORT: String(PORT), DATA_DIR: dataDir, PUSH_ALLOW_HOSTS: `127.0.0.1:${pushPort}`, PUSH_ALLOW_HTTP: 'true' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   await waitFor(async () => {

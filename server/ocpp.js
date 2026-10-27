@@ -30,6 +30,34 @@ const OCPP_ACTOR = { portal: 'system', name: 'OCPP' };
 /** stationId -> { ws, pending: Map<uid, { resolve }> } */
 const chargePoints = new Map();
 
+/**
+ * Recent OCPP traffic, for the operator's integration screen: what each
+ * charge point sent and what the central system asked of it.
+ */
+const LOG_MAX = 300;
+const trafficLog = [];
+function record(stationId, dir, action, detail = '') {
+  trafficLog.unshift({ ts: new Date().toISOString(), stationId, dir, action, detail });
+  if (trafficLog.length > LOG_MAX) trafficLog.length = LOG_MAX;
+}
+
+/** One-line summary of a payload, for the log. */
+function summary(action, p = {}) {
+  if (action === 'StatusNotification') return `#${p.connectorId} → ${p.status}${p.errorCode && p.errorCode !== 'NoError' ? ` (${p.errorCode})` : ''}`;
+  if (action === 'MeterValues') {
+    const wh = Number(p.meterValue?.[0]?.sampledValue?.[0]?.value);
+    return Number.isFinite(wh) ? `#${p.connectorId} · ${(wh / 1000).toFixed(1)} кВт·ч` : `#${p.connectorId}`;
+  }
+  if (action === 'StartTransaction') return `#${p.connectorId} · ${p.idTag}`;
+  if (action === 'StopTransaction') return `tx ${p.transactionId} · ${p.reason ?? 'Local'}`;
+  if (action === 'BootNotification') return `${p.chargePointVendor ?? ''} ${p.chargePointModel ?? ''}`.trim();
+  if (action === 'Reset') return p.type;
+  if (action === 'TriggerMessage') return p.requestedMessage;
+  if (action === 'UnlockConnector' || action === 'RemoteStartTransaction') return `#${p.connectorId}`;
+  if (action === 'RemoteStopTransaction') return `tx ${p.transactionId}`;
+  return '';
+}
+
 /** OCPP connector status -> the status the rest of the platform uses. */
 const STATUS_MAP = {
   Available: 'available',
@@ -97,14 +125,17 @@ function call(stationId, action, payload) {
   const cp = chargePoints.get(stationId);
   if (!cp) return Promise.resolve(null);
   const uid = crypto.randomUUID();
+  record(stationId, 'out', action, summary(action, payload));
   return new Promise(resolve => {
     const timer = setTimeout(() => {
       cp.pending.delete(uid);
+      record(stationId, 'in', action, 'нет ответа');
       resolve(null);
     }, CALL_TIMEOUT_MS);
     cp.pending.set(uid, {
       resolve: value => {
         clearTimeout(timer);
+        if (value) record(stationId, 'in', action, value.status ?? 'OK');
         resolve(value);
       },
     });
@@ -285,6 +316,7 @@ function onConnect(stationId, ws) {
 
     if (type === CALL) {
       const [, , action, payload] = frame;
+      record(stationId, 'in', action, summary(action, payload ?? {}));
       const handler = handlers[action];
       if (!handler) {
         send(cp, [ERROR, uid, 'NotImplemented', `Unsupported action ${action}`, {}]);
@@ -342,6 +374,30 @@ async function remoteStop(stationId, transactionId) {
   return result?.status === 'Accepted';
 }
 
+const COMMANDS = {
+  Reset: p => ({ type: p.type === 'Hard' ? 'Hard' : 'Soft' }),
+  TriggerMessage: p => ({ requestedMessage: ['StatusNotification', 'Heartbeat', 'MeterValues', 'BootNotification'].includes(p.requestedMessage) ? p.requestedMessage : 'StatusNotification' }),
+  UnlockConnector: (p, station) => ({ connectorId: Math.max(1, indexOfConnector(station, p.connectorId) || Number(p.connectorId) || 1) }),
+};
+
+/**
+ * Maintenance commands an operator may send. Resolves with the charge
+ * point's answer, or null when it is offline or does not reply in time.
+ */
+async function command(stationId, action, params = {}) {
+  const build = COMMANDS[action];
+  const station = db.byId('stations', stationId);
+  if (!build || !station) return { error: 'unknown' };
+  if (!chargePoints.has(stationId)) return { error: 'offline' };
+  const result = await call(stationId, action, build(params, station));
+  return result ? { result } : { error: 'timeout' };
+}
+
+function log(stationIds) {
+  const allowed = stationIds ? new Set(stationIds) : null;
+  return trafficLog.filter(e => !allowed || allowed.has(e.stationId)).slice(0, 100);
+}
+
 function list() {
   return [...chargePoints.keys()].map(id => {
     const s = db.byId('stations', id);
@@ -382,6 +438,6 @@ export function attachOcpp(server) {
     });
   });
 
-  setGateway({ isConnected, remoteStart, remoteStop, list });
+  setGateway({ isConnected, remoteStart, remoteStop, list, command, log });
   return wss;
 }

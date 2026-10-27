@@ -58,7 +58,7 @@ const reset = async () => {
 before(async () => {
   dataDir = mkdtempSync(join(tmpdir(), 'oc-test-'));
   server = spawn(process.execPath, ['server.js'], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir },
+    env: { ...process.env, DEMO_SIMULATION: 'false', PORT: String(PORT), DATA_DIR: dataDir },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   // Wait for the server to accept requests.
@@ -539,6 +539,32 @@ describe('eco profile', () => {
   });
 });
 
+
+describe('operator self-service', () => {
+  test('an operator changes a price on its own connector only, within limits', async () => {
+    const op = await login('operator');
+    const ok = await call('/stations/st-001/connectors/c1/price', { method: 'POST', token: op, body: { price: 2150 } });
+    assert.equal(ok.status, 200);
+    assert.equal(ok.data.station.connectors.find(c => c.id === 'c1').price, 2150);
+    assert.equal((await call('/stations/st-003/connectors/c8/price', { method: 'POST', token: op, body: { price: 1000 } })).status, 403);
+    assert.equal((await call('/stations/st-001/connectors/c1/price', { method: 'POST', token: op, body: { price: 99 } })).status, 400);
+  });
+
+  test('a new station joins the operator network but stays unavailable until OCPP', async () => {
+    const op = await login('operator');
+    const body = { name: 'Test Hub Chilonzor', city: 'Toshkent', address: 'Chilonzor 9-kvartal', geoLat: 41.28, geoLng: 69.2, connectors: [{ type: 'CCS2', power: 120, price: 2000 }, { type: 'Type2', power: 22, price: 1200 }] };
+    const res = await call('/stations', { method: 'POST', token: op, body });
+    assert.equal(res.status, 201);
+    assert.equal(res.data.station.operatorId, 'op-001');
+    assert.ok(res.data.station.connectors.every(c => c.status === 'unavailable'));
+    assert.equal(res.data.ocpp.url, `/ocpp/${res.data.station.id}`);
+    assert.equal((await call('/stations', { method: 'POST', token: op, body })).status, 409, 'duplicate name accepted');
+    assert.equal((await call('/stations', { method: 'POST', token: op, body: { ...body, name: 'Elsewhere', geoLat: 55, geoLng: 37 } })).status, 400);
+    assert.equal((await call('/stations', { method: 'POST', token: await login('driver'), body })).status, 403);
+    const pub = (await call('/state')).data.stations.find(s => s.id === res.data.station.id);
+    assert.ok(pub, 'new station not on the public map');
+  });
+});
 
 // ---------------------------------------------------------------------------
 

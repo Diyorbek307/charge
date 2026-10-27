@@ -11,9 +11,10 @@ type S = Session & { basePrice?: number; multiplier?: number };
 
 const minutesOf = (s: Session) => ((s.end ? Date.parse(s.end) : Date.now()) - Date.parse(s.start)) / 60000;
 
-export default function AdminSessions() {
+/** Sessions table for the admin (whole network) or an operator (own stations). */
+export default function AdminSessions({ portal = 'admin' }: { portal?: 'admin' | 'operator' }) {
   const { state, actions } = useSync();
-  const { data } = useAnalytics('admin', 30);
+  const { data } = useAnalytics(portal, 30);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<'all' | 'active' | 'completed' | 'failed'>('all');
   const [operator, setOperator] = useState('all');
@@ -39,7 +40,7 @@ export default function AdminSessions() {
     setBusy(id);
     setError('');
     try {
-      await actions.stopSession('admin', id);
+      await actions.stopSession(portal, id);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -59,7 +60,7 @@ export default function AdminSessions() {
         <ExportButton
           name="sessions"
           title="Сессии зарядки"
-          portal="admin"
+          portal={portal}
           headers={['ID', 'Водитель', 'Станция', 'Оператор', 'Разъём', 'Начало', 'Окончание', 'кВт·ч', 'Цена, сум/кВт·ч', 'Сумма, сум', 'Статус']}
           rows={shown.map(s => [s.id, s.user, s.stationName, s.operator, s.connector, s.start, s.end ?? '', s.energy, s.price ?? '', s.cost, STATUS_PILL[s.status]?.label ?? s.status])}
         />
@@ -67,7 +68,7 @@ export default function AdminSessions() {
     >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Kpi label="Сессии сегодня" value={today ? num(today.sessions) : '—'} sub={today ? `${num(today.energy, 0)} кВт·ч` : ''} icon={<Activity size={14} />} tone="sky" />
-        <Kpi label="Заряжаются сейчас" value={num(running)} sub={`${state?.stats.evseOnline ?? 0} разъёмов онлайн`} icon={<Zap size={14} />} tone="emerald" />
+        <Kpi label="Заряжаются сейчас" value={num(running)} sub={data ? `${data.network.online} из ${data.network.connectors} разъёмов онлайн` : ""} icon={<Zap size={14} />} tone="emerald" />
         <Kpi label="Ошибки сегодня" value={today ? num(today.failed) : '—'} sub={data ? `успешных ${num(data.totals.successRate, 1)}% за 30 дней` : ''} icon={<AlertTriangle size={14} />} tone={today && today.failed ? 'amber' : 'slate'} />
         <Kpi label="Выручка сегодня" value={today ? money(today.revenue, false) : '—'} sub="сум" icon={<Wallet size={14} />} tone="violet" />
       </div>
@@ -87,10 +88,12 @@ export default function AdminSessions() {
               { id: 'failed', label: 'Ошибки' },
             ]}
           />
-          <select value={operator} onChange={e => setOperator(e.target.value)} aria-label="Оператор" className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-700">
-            <option value="all">Все операторы</option>
-            {(state?.operators ?? []).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
+          {portal === 'admin' && (
+            <select value={operator} onChange={e => setOperator(e.target.value)} aria-label="Оператор" className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-700">
+              <option value="all">Все операторы</option>
+              {(state?.operators ?? []).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+          )}
         </div>
         {shown.length === 0 ? (
           <Empty text="Сессий по этим условиям нет" />

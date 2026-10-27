@@ -35,6 +35,7 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 60_000,
     env: {
+      DEMO_SIMULATION: 'false',
       PORT: String(PORT),
       DATA_DIR: mkdtempSync(join(tmpdir(), 'oc-e2e-')),
     },

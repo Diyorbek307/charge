@@ -14,7 +14,7 @@
 const HISTORY_DAYS = 60;
 const MONTHS_BEFORE = 5;
 
-function rng(seed) {
+export function rng(seed) {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;
@@ -184,7 +184,7 @@ const short = name => {
 // ---------------------------------------------------------------------------
 
 /** Relative demand by Tashkent hour: low at night, peaks at lunch and evening. */
-const HOUR_WEIGHT = [0.35, 0.25, 0.18, 0.14, 0.14, 0.22, 0.45, 0.8, 1.05, 1.0, 0.95, 1.0, 1.15, 1.2, 1.05, 1.0, 1.1, 1.35, 1.55, 1.5, 1.3, 1.05, 0.8, 0.55];
+export const HOUR_WEIGHT = [0.35, 0.25, 0.18, 0.14, 0.14, 0.22, 0.45, 0.8, 1.05, 1.0, 0.95, 1.0, 1.15, 1.2, 1.05, 1.0, 1.1, 1.35, 1.55, 1.5, 1.3, 1.05, 0.8, 0.55];
 const HOURS = [...Array(24).keys()];
 const WEEKDAY_WEIGHT = [0.9, 1.0, 1.02, 1.0, 1.08, 1.15, 0.95]; // Sun..Sat
 
@@ -210,50 +210,70 @@ function pickWeighted(r, items, weight) {
  * sessions running right now (one per occupied connector), and Payme/Click
  * top-ups. Returns them newest first, as the live collections are kept.
  */
-export function buildHistory({ stations, customers, now }) {
-  const r = rng(2026);
+/** How long a charge of this much energy takes on this connector. */
+export function chargeMinutes(connector, energy, r) {
+  const dc = connector.power >= 50;
+  // DC tapers well below the charger's rating; on AC the car's onboard
+  // charger (7–11 kW) is the limit, so AC sessions last hours.
+  const kw = dc ? connector.power * (0.45 + r() * 0.3) : Math.min(connector.power, r() < 0.6 ? 11 : 7.4) * 0.95;
+  return Math.max(8, Math.round((energy / kw) * 60 + r() * 6));
+}
+
+/**
+ * Average power a car actually draws: DC tapers to about 60% of the
+ * charger's rating; on AC the car's onboard charger (~11 kW) is the limit.
+ */
+export const effectiveKw = power => (power >= 50 ? power * 0.6 : Math.min(power, 11) * 0.95);
+
+/** Energy delivered after some minutes on the demo charging curve. */
+export const demoEnergy = (power, minutes) => round(Math.min(effectiveKw(power) * (minutes / 60), 80), 1);
+
+export const plannedEnergy = (connector, r) => round(connector.power >= 50 ? 12 + r() * 46 : 8 + r() * 26, 1);
+
+/**
+ * Completed (and a few failed) sessions that started in [from, to), with the
+ * network's daily, weekly and hourly rhythm. Used for the seeded history and
+ * to fill gaps when a demo server has been asleep.
+ */
+export function sessionsBetween({ stations, customers, from, to, r, growthAt = () => 1 }) {
   const sessions = [];
   const byCity = new Map();
   for (const c of customers) {
+    if (c.status !== 'active') continue;
     const list = byCity.get(c.city) ?? [];
     list.push(c);
     byCity.set(c.city, list);
   }
   const fleet = customers.filter(c => c.fleet && c.id !== 'acc-driver');
   const active = customers.filter(c => c.status === 'active');
+  const weight = c => c.activity ?? 1;
 
-  // The network grew through the period: newer weeks are a little busier.
-  const startDay = new Date(now - HISTORY_DAYS * 86400_000);
-  // Through today: today's sessions run up to twenty minutes ago.
-  for (let d = 0; d <= HISTORY_DAYS; d++) {
-    // Midnight in Tashkent of the d-th day, so hours and weekdays are local.
-    const t = startDay.getTime() + d * 86400_000;
+  for (let t = from; t < to + 86400_000; t += 86400_000) {
+    // Midnight in Tashkent of this day, so hours and weekdays are local.
     const midnight = Math.floor((t + TASHKENT_MS) / 86400_000) * 86400_000 - TASHKENT_MS;
-    const growth = 0.82 + 0.18 * (d / HISTORY_DAYS);
+    if (midnight >= to) break;
+    const growth = growthAt(midnight);
     const weekday = new Date(midnight + TASHKENT_MS).getUTCDay();
     for (const st of stations) {
-      const expected = st.popularity * 2.3 * growth * WEEKDAY_WEIGHT[weekday] * (0.75 + st.connectors.length * 0.12);
+      if (!st.connectors.length) continue;
+      const expected = (st.popularity ?? 1) * 2.3 * growth * WEEKDAY_WEIGHT[weekday] * (0.75 + st.connectors.length * 0.12);
       const count = Math.floor(expected + r());
       for (let k = 0; k < count; k++) {
         const hour = pickWeighted(r, HOURS, h => HOUR_WEIGHT[h]);
         const startMs = midnight + hour * 3600_000 + Math.floor(r() * 3600_000);
-        if (startMs > now - 20 * 60_000) continue;
+        if (startMs < from || startMs >= to) continue;
         const connector = st.connectors[Math.floor(r() * st.connectors.length)];
         const locals = byCity.get(st.city) ?? [];
         // Mostly locals, sometimes travellers; fleet cars on Tashkent DC.
         let customer;
-        if (st.city === 'Toshkent' && connector.power >= 60 && r() < 0.12) customer = fleet[Math.floor(r() * fleet.length)];
-        else if (locals.length && r() < 0.78) customer = pickWeighted(r, locals.filter(c => c.status === 'active'), c => c.activity);
-        else customer = pickWeighted(r, active, c => c.activity);
+        if (st.city === 'Toshkent' && connector.power >= 60 && fleet.length && r() < 0.12) customer = fleet[Math.floor(r() * fleet.length)];
+        else if (locals.length && r() < 0.78) customer = pickWeighted(r, locals, weight);
+        else customer = pickWeighted(r, active, weight);
         if (!customer) continue;
 
         const failed = r() < 0.025;
-        const dc = connector.power >= 50;
-        const energy = failed ? 0 : round(dc ? 12 + r() * 46 : 8 + r() * 26, 1);
-        // DC tapers well below the charger's rating; on AC the car's onboard
-        // charger (7–11 kW) is the limit, so AC sessions last hours.
-        const kw = dc ? connector.power * (0.45 + r() * 0.3) : Math.min(connector.power, r() < 0.6 ? 11 : 7.4) * 0.95;
-        const minutes = failed ? 1 : Math.max(8, Math.round((energy / kw) * 60 + r() * 6));
+        const energy = failed ? 0 : plannedEnergy(connector, r);
+        const minutes = failed ? 1 : chargeMinutes(connector, energy, r);
         const multiplier = bandMultiplier(hour);
         const price = Math.round(connector.price * multiplier);
         sessions.push({
@@ -274,7 +294,7 @@ export function buildHistory({ stations, customers, now }) {
           multiplier,
           price,
           status: failed ? 'failed' : 'completed',
-          commissionRate: op(st.operatorId).commission,
+          commissionRate: op(st.operatorId)?.commission ?? 3,
           // Fleet drivers charge the company car on the corporate account; the
           // demo driver also charges privately about half the time.
           corporate: customer.fleet && (customer.id !== 'acc-driver' || r() < 0.5),
@@ -283,6 +303,24 @@ export function buildHistory({ stations, customers, now }) {
       }
     }
   }
+
+  return sessions;
+}
+
+export function buildHistory({ stations, customers, now }) {
+  const r = rng(2026);
+  const active = customers.filter(c => c.status === 'active');
+  // The network grew through the period: newer weeks are a little busier;
+  // today's sessions run up to twenty minutes ago.
+  const from = now - HISTORY_DAYS * 86400_000;
+  const sessions = sessionsBetween({
+    stations,
+    customers,
+    from,
+    to: now - 20 * 60_000,
+    r,
+    growthAt: t => 0.82 + 0.18 * Math.min(1, Math.max(0, (t - from) / (HISTORY_DAYS * 86400_000))),
+  });
 
   // A busy-but-not-full network right now: some connectors are mid-session.
   const running = [];
@@ -302,10 +340,11 @@ export function buildHistory({ stations, customers, now }) {
     while (customer.fleet || occupiedBy.has(customer.id));
     occupiedBy.add(customer.id);
     const minutesAgo = 4 + Math.floor(r() * 40);
+    const planned = chargeMinutes(connector, plannedEnergy(connector, r), r);
     const hour = new Date(now + TASHKENT_MS).getUTCHours();
     const multiplier = bandMultiplier(hour);
     const price = Math.round(connector.price * multiplier);
-    const energy = round(Math.min(connector.power * 0.85 * (minutesAgo / 60), 80), 1);
+    const energy = demoEnergy(connector.power, minutesAgo);
     running.push({
       userId: customer.id,
       user: short(customer.name),
@@ -326,7 +365,8 @@ export function buildHistory({ stations, customers, now }) {
       status: 'active',
       commissionRate: op(st.operatorId).commission,
       corporate: false,
-      source: 'app',
+      source: 'demo',
+      plannedEnd: new Date(now + Math.max(5, planned - minutesAgo) * 60_000).toISOString(),
     });
   }
   // A handful of chargers are down for maintenance.

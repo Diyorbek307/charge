@@ -44,6 +44,8 @@ export interface Station {
   hours: string;
   amenities: string[];
   image: string;
+  /** Set once a charger has connected over OCPP, or while a new station awaits it. */
+  ocpp?: { online?: boolean; awaiting?: boolean; lastSeen?: string; connectedAt?: string };
 }
 
 export interface Session {
@@ -346,6 +348,27 @@ export interface LeadInput {
   website?: string;
 }
 
+export interface ChargePointInfo {
+  stationId: string;
+  name: string;
+  operatorId: string | null;
+  online?: boolean;
+  connectedAt?: string;
+  lastSeen?: string;
+  vendor?: string;
+  model?: string;
+  firmware?: string;
+  connectors: { ocppConnectorId: number; id: string; status: string }[];
+}
+
+export interface OcppLogEntry {
+  ts: string;
+  stationId: string;
+  dir: 'in' | 'out';
+  action: string;
+  detail: string;
+}
+
 export interface AdminUser {
   id: string;
   name: string;
@@ -472,6 +495,14 @@ export const apiClient = {
 
   refundTransaction: (portal: Portal, id: string) => post<{ transaction: Transaction }>(`/transactions/${id}/refund`, undefined, portal),
   setCommission: (portal: Portal, id: string, rate: number) => post<{ operator: OperatorRecord }>(`/operators/${id}/commission`, { rate }, portal),
+  setConnectorPrice: (portal: Portal, stationId: string, connectorId: string, price: number) =>
+    post<{ station: Station }>(`/stations/${stationId}/connectors/${connectorId}/price`, { price }, portal),
+  addStation: (portal: Portal, body: { name: string; city: string; address: string; geoLat: number; geoLng: number; hours?: string; connectors: { type: string; power: number; price: number }[] }) =>
+    post<{ station: Station; ocpp: { url: string; login: string } }>('/stations', body, portal),
+  ocppChargepoints: (portal: Portal) => request<ChargePointInfo[]>('/ocpp/chargepoints', { portal }),
+  ocppLog: (portal: Portal) => request<OcppLogEntry[]>('/ocpp/log', { portal }),
+  ocppCommand: (portal: Portal, stationId: string, body: { action: string; type?: string; requestedMessage?: string; connectorId?: string }) =>
+    post<{ status: string }>(`/ocpp/chargepoints/${stationId}/command`, body, portal),
   adminUsers: (portal: Portal) => request<AdminUsers>('/admin/users', { portal }),
   setUserStatus: (portal: Portal, id: string, status: 'active' | 'blocked') =>
     post<{ id: string; status: string }>(`/admin/users/${id}/status`, { status }, portal),

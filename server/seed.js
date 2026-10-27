@@ -3,7 +3,7 @@ import { OPERATORS, buildStations, buildCustomers, buildHistory, buildMonthly } 
 
 // Bump when the shape below changes so existing stores reseed instead of
 // silently serving a stale schema.
-export const SCHEMA_VERSION = 12;
+export const SCHEMA_VERSION = 13;
 
 export function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   const hash = crypto.scryptSync(password, salt, 32).toString('hex');
@@ -259,7 +259,8 @@ export function seed(now = Date.now()) {
         url: 'https://partner.example.uz/hooks/one-charge',
         events: ['session.start', 'session.stop', 'evse.status'],
         secret: 'whsec_' + crypto.randomBytes(16).toString('hex'),
-        active: true,
+        // Off by default: the demo should not post to a third-party domain.
+        active: false,
         created: ago(60 * 24 * 32),
         owner: 'acc-partner',
       },
@@ -269,6 +270,8 @@ export function seed(now = Date.now()) {
     queues: [],
     bookings: [],
     payments: history.payments,
+    // Generated history runs up to here; the demo simulation fills in after it.
+    historyUntil: new Date(now - 20 * 60_000).toISOString(),
     counters: { session: history.counters.session, txn: history.counters.txn, alert: 5, event: 1, webhook: 2, delivery: 1, report: 1, queue: 1, booking: 1 },
   };
 }

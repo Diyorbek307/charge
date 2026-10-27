@@ -158,6 +158,14 @@ export function money(n: number, unit = true) {
   return unit ? `${out} сум` : out;
 }
 
+/** money() with the units of the given language, for text built outside the phrase tables. */
+export function moneyIn(lang: 'ru' | 'en' | 'uz', n: number) {
+  const out = money(n);
+  if (lang === 'en') return out.replace(/ млрд/, ' bn').replace(/ млн/, ' mln').replace(/ сум$/, ' UZS');
+  if (lang === 'uz') return out.replace(/ млрд/, ' mlrd').replace(/ млн/, ' mln').replace(/ сум$/, ' so‘m');
+  return out;
+}
+
 export const num = (n: number, digits = 0) => n.toLocaleString(ru, { maximumFractionDigits: digits, minimumFractionDigits: digits });
 
 /** "+12,4%" / "−3,1%" / "" when there is nothing to compare with. */

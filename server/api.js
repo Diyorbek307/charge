@@ -8,6 +8,7 @@ import { hashPassword } from './seed.js';
 import { normalizePhone, issueCode, consumeCode, PURPOSES, smsConfigured } from './sms.js';
 import { submitLead, listLeads, updateLead, LEAD_KINDS } from './leads.js';
 import { analyticsFor, adminUsers, setUserStatus, isBlocked } from './analytics.js';
+import { demoEnergy } from './history.js';
 import { validateEndpoint, signedHeaders, kick as kickWebhooks } from './webhooks.js';
 
 export const api = express.Router();
@@ -102,6 +103,10 @@ function scopeOf({ type, entity, payload = {} }) {
       const b = db.byId('bookings', entity);
       return { userId: b?.userId, operatorId: b?.operatorId, fleet: b?.walletId === 'biz-001' };
     }
+    case 'ocpp.command':
+    case 'tariff.update':
+    case 'station.added':
+      return { operatorId: stationOperator(entity) };
     case 'ocpp.online':
     case 'ocpp.offline':
       return { operatorId: stationOperator(entity), public: true };
@@ -304,6 +309,11 @@ function stateFor(viewer) {
 
 /** Records an event in the activity log and pushes it to every live portal. */
 function emit({ type, portal, actor, message, entity = null, payload = {} }) {
+  if (payload?.simulated) {
+    const live = withScope({ id: `sim-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, type, portal, actor, message, entity, payload, ts: new Date().toISOString() });
+    broadcast(live);
+    return live;
+  }
   const event = {
     id: db.nextId('event', 'EV-'),
     type,
@@ -851,7 +861,7 @@ export function setPushHook(fn) {
  * Returns { session }, { ok: true } for a dry run, or { status, error }.
  */
 export function beginSession(account, stationId, connectorId, opts = {}) {
-  const { source = 'app', ocppTransactionId = null, meterStartWh = null, dryRun = false } = opts;
+  const { source = 'app', ocppTransactionId = null, meterStartWh = null, dryRun = false, simulated = false } = opts;
   const { station, connector } = findConnector(stationId, connectorId);
   if (!station || !connector) return { status: 404, error: 'Коннектор не найден' };
   if (connector.status === 'occupied') return { status: 409, error: 'Коннектор уже занят' };
@@ -912,7 +922,7 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     commissionRate: db.byId('operators', station.operatorId)?.commission ?? 3,
     status: 'active',
     corporate: account.portal === 'business',
-    source,
+    source: simulated ? 'demo' : source,
     ocppTransactionId,
     meterStartWh,
   };
@@ -933,7 +943,7 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     actor: account.name,
     message: `Старт зарядки · ${station.name} · ${connector.type} ${connector.power} кВт`,
     entity: session.id,
-    payload: { stationId: station.id, connectorId: connector.id, operatorId: station.operatorId },
+    payload: { stationId: station.id, connectorId: connector.id, operatorId: station.operatorId, ...(simulated ? { simulated: true } : {}) },
   });
 
   return { session };
@@ -961,12 +971,13 @@ api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), async (r
  * Closes a session and settles it. Energy comes from the charge point's meter
  * when it reports one, otherwise from the demo charging curve.
  */
-export function completeSession(session, actor, { energyKwh = null } = {}) {
+export function completeSession(session, actor, { energyKwh = null, simulated = false } = {}) {
   const minutes = Math.max(1, (Date.now() - new Date(session.start).getTime()) / 60000);
-  // Demo charging curve: ~85% of rated power, capped so short demos stay readable.
+  // Demo charging curve: what a car really draws (DC tapers, AC is capped by
+  // the onboard charger), capped at 80 kWh so short demos stay readable.
   const energy =
     energyKwh === null
-      ? round(Math.min((session.power ?? 50) * 0.85 * (minutes / 60), 80), 1)
+      ? demoEnergy(session.power ?? 50, minutes)
       : round(Math.max(0, energyKwh), 1);
   const cost = Math.round(energy * (session.price ?? 1800));
 
@@ -1023,7 +1034,7 @@ export function completeSession(session, actor, { energyKwh = null } = {}) {
     actor: actor.name,
     message: `Зарядка завершена · ${session.stationName} · ${energy} кВт·ч · ${cost.toLocaleString('ru-RU')} сум`,
     entity: session.id,
-    payload: { transactionId: transaction.id, operatorId: session.operatorId, energy, cost },
+    payload: { transactionId: transaction.id, operatorId: session.operatorId, energy, cost, ...(simulated ? { simulated: true } : {}) },
   });
 
   promoteQueue(session.stationId, session.connectorId);
@@ -1058,7 +1069,7 @@ api.post('/sessions/:id/tick', requireAuth(), (req, res) => {
   if (session.source === 'ocpp') return res.json({ session });
 
   const minutes = Math.max(0, (Date.now() - new Date(session.start).getTime()) / 60000);
-  session.energy = round(Math.min((session.power ?? 50) * 0.85 * (minutes / 60), 80), 1);
+  session.energy = demoEnergy(session.power ?? 50, minutes);
   session.cost = Math.round(session.energy * (session.price ?? 1800));
   db.save();
 
@@ -1568,6 +1579,138 @@ api.delete('/bookings/:id', requireAuth('driver', 'business', 'admin'), (req, re
 api.get('/ocpp/chargepoints', requireAuth('operator', 'admin'), (req, res) => {
   const all = gateway ? gateway.list() : [];
   res.json(req.account.portal === 'admin' ? all : all.filter(cp => cp.operatorId === req.account.orgId));
+});
+
+/** An operator may manage only its own stations; the admin manages all. */
+function ownStation(req, res) {
+  const station = db.byId('stations', req.params.id);
+  if (!station) {
+    res.status(404).json({ error: 'Станция не найдена' });
+    return null;
+  }
+  if (req.account.portal === 'operator' && station.operatorId !== req.account.orgId) {
+    res.status(403).json({ error: 'Это станция другого оператора' });
+    return null;
+  }
+  return station;
+}
+
+/** Base price per kWh for one connector. Running sessions keep their locked price. */
+api.post('/stations/:id/connectors/:cid/price', requireAuth('operator', 'admin'), (req, res) => {
+  const station = ownStation(req, res);
+  if (!station) return;
+  const connector = station.connectors.find(c => c.id === req.params.cid);
+  if (!connector) return res.status(404).json({ error: 'Разъём не найден' });
+  const price = Math.round(Number(req.body?.price));
+  if (!Number.isFinite(price) || price < 300 || price > 5000) return res.status(400).json({ error: 'Цена от 300 до 5 000 сум за кВт·ч' });
+  const before = connector.price;
+  connector.price = price;
+  db.save();
+  emit({
+    type: 'tariff.update',
+    portal: req.account.portal,
+    actor: req.account.name,
+    message: `${station.name} · ${connector.type} ${connector.power} кВт: ${before.toLocaleString('ru-RU')} → ${price.toLocaleString('ru-RU')} сум/кВт·ч`,
+    entity: station.id,
+    payload: { connectorId: connector.id, before, price },
+  });
+  res.json({ station });
+});
+
+const CONNECTOR_TYPES = ['CCS2', 'Type2', 'GB/T DC', 'CHAdeMO'];
+
+/**
+ * Registers a new station for the caller's network. It stays unavailable to
+ * drivers until the charger itself connects over OCPP and reports in.
+ */
+api.post('/stations', requireAuth('operator'), (req, res) => {
+  const b = req.body ?? {};
+  const text = (v, max) => String(v ?? '').trim().replace(/\s+/g, ' ').slice(0, max);
+  const name = text(b.name, 60);
+  const city = text(b.city, 40);
+  const address = text(b.address, 120);
+  const lat = Number(b.geoLat);
+  const lng = Number(b.geoLng);
+  if (name.length < 3) return res.status(400).json({ error: 'Название — от 3 символов' });
+  if (city.length < 2) return res.status(400).json({ error: 'Укажите город' });
+  if (address.length < 5) return res.status(400).json({ error: 'Укажите адрес' });
+  if (!(lat > 37 && lat < 46 && lng > 55.9 && lng < 73.2)) return res.status(400).json({ error: 'Координаты должны быть в пределах Узбекистана' });
+  if (db.data.stations.some(s => s.name.toLowerCase() === name.toLowerCase())) return res.status(409).json({ error: 'Станция с таким названием уже есть' });
+  const specs = Array.isArray(b.connectors) ? b.connectors.slice(0, 8) : [];
+  if (!specs.length) return res.status(400).json({ error: 'Добавьте хотя бы один разъём' });
+  for (const c of specs) {
+    if (!CONNECTOR_TYPES.includes(c.type)) return res.status(400).json({ error: 'Неизвестный тип разъёма' });
+    if (!(Number(c.power) >= 3.7 && Number(c.power) <= 400)) return res.status(400).json({ error: 'Мощность от 3,7 до 400 кВт' });
+    if (!(Number(c.price) >= 300 && Number(c.price) <= 5000)) return res.status(400).json({ error: 'Цена от 300 до 5 000 сум за кВт·ч' });
+  }
+
+  const operator = db.byId('operators', req.account.orgId);
+  const nextStation = Math.max(...db.data.stations.map(s => Number(s.id.slice(3)) || 0)) + 1;
+  let nextConnector = Math.max(...db.data.stations.flatMap(s => s.connectors.map(c => Number(c.id.slice(1)) || 0))) + 1;
+  const connectors = specs.map(c => ({ id: `c${nextConnector++}`, type: c.type, power: Number(c.power), status: 'unavailable', price: Math.round(Number(c.price)) }));
+  const station = {
+    id: `st-${String(nextStation).padStart(3, '0')}`,
+    name,
+    operator: operator.name,
+    operatorId: operator.id,
+    address,
+    city,
+    lat: Math.round(((45.6 - lat) / 8.4) * 100),
+    lng: Math.round(((lng - 56) / 17.2) * 100),
+    geoLat: lat,
+    geoLng: lng,
+    connectors,
+    rating: 0,
+    reviews: 0,
+    totalPower: Math.max(...connectors.map(c => c.power)),
+    hours: text(b.hours, 20) || '24/7',
+    amenities: [],
+    image: 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=800&h=400&fit=crop&auto=format',
+    ocpp: { online: false, awaiting: true },
+  };
+  db.data.stations.push(station);
+  operator.stations = db.data.stations.filter(s => s.operatorId === operator.id).length;
+  operator.evse += connectors.length;
+  db.save();
+  emit({
+    type: 'station.added',
+    portal: 'operator',
+    actor: req.account.name,
+    message: `Добавлена станция ${station.name} · ${connectors.length} разъём(а) · ожидает подключения OCPP`,
+    entity: station.id,
+    payload: { stationId: station.id },
+  });
+  res.status(201).json({ station, ocpp: { url: `/ocpp/${station.id}`, login: station.id } });
+});
+
+/** Recent OCPP frames for the caller's stations. */
+api.get('/ocpp/log', requireAuth('operator', 'admin'), (req, res) => {
+  const own = req.account.portal === 'admin' ? null : db.data.stations.filter(s => s.operatorId === req.account.orgId).map(s => s.id);
+  res.json(gateway ? gateway.log(own) : []);
+});
+
+/** Maintenance command to a connected charge point: Reset, TriggerMessage, UnlockConnector. */
+api.post('/ocpp/chargepoints/:id/command', requireAuth('operator', 'admin'), async (req, res) => {
+  const station = db.byId('stations', req.params.id);
+  if (!station) return res.status(404).json({ error: 'Станция не найдена' });
+  if (req.account.portal === 'operator' && station.operatorId !== req.account.orgId) {
+    return res.status(403).json({ error: 'Это станция другого оператора' });
+  }
+  const { action, ...params } = req.body ?? {};
+  if (!gateway) return res.status(503).json({ error: 'OCPP недоступен' });
+  const out = await gateway.command(station.id, action, params);
+  if (out.error === 'unknown') return res.status(400).json({ error: 'Неизвестная команда' });
+  if (out.error === 'offline') return res.status(409).json({ error: 'Станция не подключена по OCPP' });
+  if (out.error === 'timeout') return res.status(504).json({ error: 'Станция не ответила' });
+  emit({
+    type: 'ocpp.command',
+    portal: req.account.portal,
+    actor: req.account.name,
+    message: `${action}${params.type ? ` (${params.type})` : ''} → ${station.name}: ${out.result.status ?? 'OK'}`,
+    entity: station.id,
+    payload: { action, status: out.result.status ?? null },
+  });
+  res.json({ status: out.result.status ?? 'Accepted', result: out.result });
 });
 
 /** Applies a charge point's meter reading to a running session and fans it out. */

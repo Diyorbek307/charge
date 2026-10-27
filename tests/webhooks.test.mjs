@@ -81,6 +81,7 @@ before(async () => {
   server = spawn(process.execPath, ['server.js'], {
     env: {
       ...process.env,
+      DEMO_SIMULATION: 'false',
       PORT: String(PORT),
       DATA_DIR: dataDir,
       WEBHOOK_ALLOW_HOSTS: `127.0.0.1:${receiverPort}`,

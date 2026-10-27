@@ -111,7 +111,7 @@ class ChargePoint {
 before(async () => {
   dataDir = mkdtempSync(join(tmpdir(), 'oc-ocpp-'));
   server = spawn(process.execPath, ['server.js'], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, OCPP_PASSWORD },
+    env: { ...process.env, DEMO_SIMULATION: 'false', PORT: String(PORT), DATA_DIR: dataDir, OCPP_PASSWORD },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   await waitFor(async () => {
@@ -340,6 +340,39 @@ describe('OCPP transactions', () => {
     ctrl.abort();
 
     await cp.call('StopTransaction', { transactionId: start.transactionId, meterStop: 6000, timestamp: new Date().toISOString() });
+    await cp.close();
+  });
+});
+
+describe('OCPP maintenance', () => {
+  test('an operator resets and triggers its own charge point; replies are logged', async () => {
+    await reset();
+    const cp = await ChargePoint.connect('st-001'); // GreenCharge UZ, op-001
+    cp.handlers.Reset = p => ({ status: p.type === 'Soft' ? 'Accepted' : 'Rejected' });
+    cp.handlers.TriggerMessage = () => ({ status: 'Accepted' });
+    const operator = await login('operator');
+
+    const soft = await call('/ocpp/chargepoints/st-001/command', { method: 'POST', token: operator, body: { action: 'Reset', type: 'Soft' } });
+    assert.equal(soft.status, 200);
+    assert.equal(soft.data.status, 'Accepted');
+    const trig = await call('/ocpp/chargepoints/st-001/command', { method: 'POST', token: operator, body: { action: 'TriggerMessage', requestedMessage: 'StatusNotification' } });
+    assert.equal(trig.data.status, 'Accepted');
+
+    const log = (await call('/ocpp/log', { token: operator })).data;
+    assert.ok(log.some(e => e.action === 'Reset' && e.dir === 'out'));
+    assert.ok(log.some(e => e.action === 'Reset' && e.dir === 'in' && e.detail === 'Accepted'));
+    assert.ok(log.every(e => e.stationId === 'st-001'), 'log leaks other networks');
+    await cp.close();
+  });
+
+  test('commands are refused for another network, an offline station or an unknown action', async () => {
+    await reset();
+    const cp = await ChargePoint.connect('st-003'); // SilkRoad EV
+    const operator = await login('operator');
+    assert.equal((await call('/ocpp/chargepoints/st-003/command', { method: 'POST', token: operator, body: { action: 'Reset' } })).status, 403);
+    assert.equal((await call('/ocpp/chargepoints/st-005/command', { method: 'POST', token: operator, body: { action: 'Reset' } })).status, 409);
+    const admin = await login('admin');
+    assert.equal((await call('/ocpp/chargepoints/st-003/command', { method: 'POST', token: admin, body: { action: 'FirmwareFlash' } })).status, 400);
     await cp.close();
   });
 });

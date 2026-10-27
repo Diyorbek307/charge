@@ -40,7 +40,7 @@ export default function AdminOverview({ onNavigate }: { onNavigate: (page: strin
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <Card title="Выручка по дням" right={<span className="text-xs text-slate-400">сум · {num(t.completed)} сессий</span>} className="xl:col-span-2">
+        <Card title="Выручка по дням" right={<span className="text-xs text-slate-400">{`сум · ${num(t.completed)} сессий`}</span>} className="xl:col-span-2">
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={data.daily.filter(d => !d.partial)}>
               <defs>
@@ -69,7 +69,7 @@ export default function AdminOverview({ onNavigate }: { onNavigate: (page: strin
                 <span className="text-lg" aria-hidden="true">{o.logo}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-slate-800 truncate">{o.name}</p>
-                  <p className="text-xs text-slate-400">{o.stations} ст. · {o.evse} разъёмов · {num(o.completed)} сесс.</p>
+                  <p className="text-xs text-slate-400">{`${o.stations} ст. · ${o.evse} разъёмов · ${num(o.completed)} сесс.`}</p>
                 </div>
                 {o.status === 'active' ? (
                   <span className="text-xs font-semibold text-slate-700 tabular-nums text-right">
@@ -100,7 +100,7 @@ export default function AdminOverview({ onNavigate }: { onNavigate: (page: strin
           </ResponsiveContainer>
         </Card>
 
-        <Card title="Оповещения" right={<span className="text-xs text-slate-400">{openAlerts.length} открыто</span>}>
+        <Card title="Оповещения" right={<span className="text-xs text-slate-400">{`${openAlerts.length} открыто`}</span>}>
           {openAlerts.length === 0 ? (
             <p className="text-sm text-slate-400 py-6 text-center">Открытых оповещений нет</p>
           ) : (
@@ -122,7 +122,7 @@ export default function AdminOverview({ onNavigate }: { onNavigate: (page: strin
 
       <Card
         pad={false}
-        title={<span className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />Заряжаются сейчас · {running.length}</span>}
+        title={<span className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />{`Заряжаются сейчас · ${running.length}`}</span>}
         right={<button onClick={() => onNavigate('sessions')} className="text-xs text-sky-600 font-semibold inline-flex items-center gap-1">Все сессии <ArrowRight size={12} /></button>}
       >
         {running.length === 0 ? (

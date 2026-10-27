@@ -17,7 +17,7 @@ const DATABASE_URL = `pglite://${dataDir.replace(/\\/g, '/')}`;
 
 async function boot(port) {
   const child = spawn(process.execPath, ['server.js'], {
-    env: { ...process.env, PORT: String(port), DATABASE_URL, DATA_DIR: '' },
+    env: { ...process.env, DEMO_SIMULATION: 'false', PORT: String(port), DATABASE_URL, DATA_DIR: '' },
     stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
   });
   let log = '';

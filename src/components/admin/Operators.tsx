@@ -71,7 +71,7 @@ export default function AdminOperators({ onNavigate }: { onNavigate: (page: stri
                   </div>
                   <p className="text-xs text-slate-500 mt-1">{o.region}</p>
                   <p className="text-xs text-slate-400 mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                    <span className="inline-flex items-center gap-1"><Calendar size={11} />с {dateShort(o.since)}</span>
+                    <span className="inline-flex items-center gap-1"><Calendar size={11} />{`с ${dateShort(o.since)}`}</span>
                     <a href={`mailto:${o.contact}`} className="inline-flex items-center gap-1 hover:text-sky-600"><Mail size={11} />{o.contact}</a>
                   </p>
                 </div>
@@ -103,7 +103,7 @@ export default function AdminOperators({ onNavigate }: { onNavigate: (page: stri
                   <div className="text-right shrink-0">
                     <p className="text-sm font-bold text-slate-900 tabular-nums">{money(o.revenue)}</p>
                     <p className="text-[11px] text-slate-400">
-                      комиссия {num(o.commissionRate, 1)}% · {money(o.commission)}
+                      {`комиссия ${num(o.commissionRate, 1)}% · ${money(o.commission)}`}
                     </p>
                   </div>
                 </div>
@@ -120,13 +120,13 @@ export default function AdminOperators({ onNavigate }: { onNavigate: (page: stri
                 {o.status === 'active' && (
                   confirm === o.id ? (
                     <>
-                      <p className="flex-1 text-xs text-red-600">Водители не смогут начать зарядку на станциях {o.name}. Приостановить?</p>
+                      <p className="flex-1 text-xs text-red-600">{`Водители не смогут начать зарядку на станциях ${o.name}. Приостановить?`}</p>
                       <button disabled={busy === o.id} onClick={() => setStatus(o.id, 'suspended')} className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600 disabled:opacity-50">Приостановить</button>
                       <button onClick={() => setConfirm(null)} className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-semibold">Отмена</button>
                     </>
                   ) : (
                     <>
-                      <p className="flex-1 text-xs text-slate-400">Выплаты на {o.iban}</p>
+                      <p className="flex-1 text-xs text-slate-400">{`Выплаты на ${o.iban}`}</p>
                       <button onClick={() => setConfirm(o.id)} className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50">Приостановить</button>
                     </>
                   )

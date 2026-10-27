@@ -36,7 +36,7 @@ const login = async portal =>
 before(async () => {
   dataDir = mkdtempSync(join(tmpdir(), 'oc-analytics-'));
   server = spawn(process.execPath, ['server.js'], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir },
+    env: { ...process.env, DEMO_SIMULATION: 'false', PORT: String(PORT), DATA_DIR: dataDir },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   const until = Date.now() + 15000;

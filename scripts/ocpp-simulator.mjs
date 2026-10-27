@@ -109,6 +109,28 @@ const inbound = {
     setImmediate(() => stopTransaction(entry[0]).catch(e => log('stop failed:', e.message)));
     return { status: 'Accepted' };
   },
+  // A soft reset waits for running charges to finish; a hard one cuts them.
+  Reset(p) {
+    setTimeout(async () => {
+      if (p.type === 'Hard') for (const c of [...active.keys()]) await stopTransaction(c, 'HardReset').catch(() => {});
+      if (!active.size) {
+        log('rebooting…');
+        ws.close(1000, 'Reset');
+      }
+    }, 500);
+    return { status: 'Accepted' };
+  },
+  TriggerMessage(p) {
+    setTimeout(async () => {
+      if (p.requestedMessage === 'Heartbeat') await call('Heartbeat', {}).catch(() => {});
+      else if (p.requestedMessage === 'BootNotification') await call('BootNotification', { chargePointVendor: 'OneCharge', chargePointModel: 'Simulator' }).catch(() => {});
+      else for (let c = 1; c <= CONNECTORS; c++) await status(c, active.has(c) ? 'Charging' : 'Available');
+    }, 100);
+    return { status: 'Accepted' };
+  },
+  UnlockConnector(p) {
+    return { status: active.has(Number(p.connectorId)) ? 'UnlockFailed' : 'Unlocked' };
+  },
 };
 
 function connect() {
@@ -150,8 +172,9 @@ function connect() {
     clearInterval(heartbeat);
     for (const tx of active.values()) clearInterval(tx.timer);
     active.clear();
-    log(`disconnected (${code}), reconnecting in 5s`);
-    setTimeout(connect, 5000);
+    const wait = code === 1000 ? 1500 : 5000;
+    log(`disconnected (${code}), reconnecting in ${wait / 1000}s`);
+    setTimeout(connect, wait);
   });
 
   ws.on('error', err => log('socket error:', err.message));

@@ -160,10 +160,10 @@ export function BarList({ rows, color = '#0AAF97' }: { rows: { key: string; labe
 }
 
 export function Pagination({ page, pages, onPage, total, label = 'записей' }: { page: number; pages: number; onPage: (p: number) => void; total: number; label?: string }) {
-  if (pages <= 1) return <p className="px-5 py-3 text-xs text-slate-400">{total} {label}</p>;
+  if (pages <= 1) return <p className="px-5 py-3 text-xs text-slate-400">{`${total} ${label}`}</p>;
   return (
     <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-slate-50 text-xs text-slate-500">
-      <span>{total} {label} · страница {page} из {pages}</span>
+      <span>{`${total} ${label} · страница ${page} из ${pages}`}</span>
       <div className="flex gap-1">
         <button onClick={() => onPage(page - 1)} disabled={page <= 1} aria-label="Назад" className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-50">
           <ChevronLeft size={14} />

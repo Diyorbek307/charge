@@ -30,7 +30,7 @@ const requestCode = (phone, purpose) => call('/auth/sms/request', { method: 'POS
 before(async () => {
   dataDir = mkdtempSync(join(tmpdir(), 'oc-accounts-'));
   server = spawn(process.execPath, ['server.js'], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, ESKIZ_EMAIL: '', ESKIZ_PASSWORD: '' },
+    env: { ...process.env, DEMO_SIMULATION: 'false', PORT: String(PORT), DATA_DIR: dataDir, ESKIZ_EMAIL: '', ESKIZ_PASSWORD: '' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   const until = Date.now() + 15000;
