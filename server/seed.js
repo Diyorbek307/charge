@@ -1,9 +1,9 @@
 import crypto from 'node:crypto';
-import { OPERATORS, buildStations, buildCustomers, buildHistory, buildMonthly } from './history.js';
+import { OPERATORS, buildStations, buildCustomers, buildHistory, buildMonthly, plantIncidents } from './history.js';
 
 // Bump when the shape below changes so existing stores reseed instead of
 // silently serving a stale schema.
-export const SCHEMA_VERSION = 14;
+export const SCHEMA_VERSION = 15;
 
 export function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   const hash = crypto.scryptSync(password, salt, 32).toString('hex');
@@ -177,6 +177,7 @@ export function seed(now = Date.now()) {
   const stations = buildStations(baseStations);
   const customers = buildCustomers(now);
   const history = buildHistory({ stations, customers, now });
+  plantIncidents({ history, stations, customers, now });
   const sessions = history.sessions;
   const transactions = history.transactions;
   const monthly = buildMonthly({ sessions, now });

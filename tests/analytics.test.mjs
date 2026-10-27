@@ -239,6 +239,51 @@ describe('account self-service', () => {
   });
 });
 
+describe('admin tools', () => {
+  test('risk signals point at their records and can be reviewed', async () => {
+    const admin = await login('admin');
+    const report = (await call('/admin/risk', { token: admin })).data;
+    const rules = new Set(report.findings.map(f => f.rule));
+    for (const r of ['failed_starts', 'impossible_energy', 'parallel_sessions', 'abandoned_payments']) assert.ok(rules.has(r), `no ${r} signal`);
+    assert.ok(report.findings.every(f => f.refs.length > 0 && f.detail));
+    const f = report.findings.find(x => !x.review);
+    assert.equal((await call(`/admin/risk/${encodeURIComponent(f.id)}/review`, { method: 'POST', token: admin, body: { decision: 'maybe' } })).status, 400);
+    assert.equal((await call(`/admin/risk/${encodeURIComponent(f.id)}/review`, { method: 'POST', token: admin, body: { decision: 'dismissed' } })).status, 200);
+    const after = (await call('/admin/risk', { token: admin })).data;
+    assert.equal(after.open, report.open - 1);
+    assert.equal((await call('/admin/risk', { token: await login('operator') })).status, 403);
+  });
+
+  test('charge records are checked, and the impossible reading is caught', async () => {
+    const cdr = (await call('/admin/cdr?days=30', { token: await login('admin') })).data;
+    assert.ok(cdr.checked > 100);
+    assert.ok(cdr.issues.some(i => i.check === 'energy'));
+    assert.equal(cdr.passed, cdr.checked - new Set(cdr.issues.map(i => i.sessionId)).size);
+  });
+
+  test('tariff windows are validated and drive the forecast', async () => {
+    const admin = await login('admin');
+    const { bands } = (await call('/admin/tariff-bands', { token: admin })).data;
+    assert.equal(bands.length, 3);
+    const overlap = bands.map(b => (b.band === 'day' ? { ...b, from: 9, to: 20 } : b));
+    assert.equal((await call('/admin/tariff-bands', { method: 'PUT', token: admin, body: { bands: overlap } })).status, 400);
+    const cheaper = bands.map(b => (b.band === 'green' ? { ...b, multiplier: 0.6 } : b));
+    assert.equal((await call('/admin/tariff-bands', { method: 'PUT', token: admin, body: { bands: cheaper } })).status, 200);
+    const forecast = (await call('/tariffs/forecast')).data;
+    assert.equal(forecast.hours.find(h => h.hour === 2).multiplier, 0.6);
+    await call('/admin/tariff-bands', { method: 'PUT', token: admin, body: { bands } });
+  });
+
+  test('health and staff accounts are admin-only', async () => {
+    const admin = await login('admin');
+    const health = (await call('/admin/health', { token: admin })).data;
+    assert.ok(health.uptimeSec >= 0 && health.records.stations > 0 && typeof health.webhooks.pending === 'number');
+    const accounts = (await call('/admin/accounts', { token: admin })).data;
+    assert.ok(accounts.some(a => a.portal === 'operator') && accounts.every(a => a.portal !== 'driver' && !('hash' in a)));
+    assert.equal((await call('/admin/health', { token: await login('business') })).status, 403);
+  });
+});
+
 describe('admin users', () => {
   test('lists drivers with activity; only the admin may', async () => {
     const admin = await login('admin');

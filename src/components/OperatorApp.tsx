@@ -21,6 +21,8 @@ import { useI18n } from '../lib/i18n';
 import SidebarThemeToggle from './SidebarThemeToggle';
 import PushToggle from './PushToggle';
 import AIChat from './AIChat';
+import AccountSettings from './admin/AccountSettings';
+import { BRAND } from '../brand';
 
 type Page = 'dashboard' | 'stations' | 'sessions' | 'alerts' | 'tariffs' | 'finance' | 'customers' | 'integration' | 'settings' | 'help';
 
@@ -333,295 +335,73 @@ function StationDetailPage({ stationId, onBack }: { stationId: string; onBack: (
   );
 }
 
-function SettingsPage() {
-  const { t } = useI18n();
-  const [showKey, setShowKey] = useState(false);
-  const apiKey = 'oc_live_GreenChargeUZ_k9X2mP4nQ8rL1vT7wS3eA5hY6uN0jF';
-  const [copied, setCopied] = useState(false);
-
-  const copy = (text: string) => {
-    navigator.clipboard?.writeText(text).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
-  return (
-    <div className="p-6 space-y-5 overflow-y-auto h-full">
-      <h1 className="text-xl font-bold text-slate-900">{t('page.settingsApi')}</h1>
-
-      {/* API Keys */}
-      <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-50 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2"><Shield size={15} className="text-sky-500" />API Ключи</h3>
-          <button className="flex items-center gap-1.5 text-xs text-sky-500 font-medium">
-            <Plus size={12} />Новый ключ
-          </button>
-        </div>
-        <div className="p-5 space-y-4">
-          <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-semibold text-slate-700">Production Key</span>
-                <span className="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full">live</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono text-slate-600 flex-1 truncate">
-                  {showKey ? apiKey : apiKey.slice(0, 20) + '•'.repeat(20)}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 mt-0.5">Создан: 15 мар 2024 · Использований: 841 293</p>
-            </div>
-            <button onClick={() => setShowKey(v => !v)} className="p-2 text-slate-400 hover:text-slate-600">
-              {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
-            </button>
-            <button onClick={() => copy(apiKey)} className={`p-2 rounded-lg transition-colors ${copied ? 'text-green-500' : 'text-slate-400 hover:text-slate-600'}`}>
-              {copied ? <CheckCircle size={14} /> : <Copy size={14} />}
-            </button>
-          </div>
-          <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-semibold text-slate-700">Sandbox Key</span>
-                <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full">test</span>
-              </div>
-              <span className="text-xs font-mono text-slate-400">oc_test_GreenChargeUZ_sandbox_••••••••••</span>
-            </div>
-            <button className="p-2 text-slate-400 hover:text-red-400"><Trash2 size={14} /></button>
-          </div>
-        </div>
-      </div>
-
-      {/* Webhooks */}
-      <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-50 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2"><Globe size={15} className="text-sky-500" />Webhooks</h3>
-          <button className="flex items-center gap-1.5 text-xs text-sky-500 font-medium"><Plus size={12} />Добавить</button>
-        </div>
-        <div className="p-5 space-y-3">
-          {[
-            { url: 'https://api.greencharge.uz/webhooks/sessions', events: ['session.start', 'session.stop', 'session.fail'], active: true },
-            { url: 'https://api.greencharge.uz/webhooks/payments', events: ['payment.success', 'payment.failed'], active: true },
-          ].map((wh, i) => (
-            <div key={i} className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-slate-800 mono text-xs mb-1">{wh.url}</p>
-                <div className="flex gap-1.5 flex-wrap">
-                  {wh.events.map(e => (
-                    <span key={e} className="text-xs px-2 py-0.5 bg-sky-50 text-sky-600 rounded-lg border border-sky-100">{e}</span>
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                <span className="text-xs text-green-600">Активен</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* OCPI Credentials */}
-      <div className="bg-white rounded-2xl border border-slate-100 p-5">
-        <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2"><Lock size={15} className="text-sky-500" />OCPI Credentials</h3>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { label: 'OCPI URL', value: 'https://ocpi.onecharge.uz/ocpi/2.3' },
-            { label: 'Token A (ONE CHARGE)', value: 'eyJhbGc...••••••••' },
-            { label: 'Token B (GreenCharge)', value: 'Bearer oc_ocpi_gc_••••' },
-            { label: t('lbl2.version'), value: 'OCPI 2.3.0' },
-          ].map(row => (
-            <div key={row.label} className="bg-slate-50 rounded-xl p-3">
-              <p className="text-xs text-slate-400 mb-1">{row.label}</p>
-              <p className="text-sm font-medium text-slate-800 mono text-xs">{row.value}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Company Info */}
-      <div className="bg-white rounded-2xl border border-slate-100 p-5">
-        <h3 className="text-sm font-semibold text-slate-700 mb-4">Реквизиты компании</h3>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { label: t('lbl2.name'), value: 'GreenCharge UZ LLC' },
-            { label: t('lbl2.taxId'), value: '312 847 120' },
-            { label: 'Email', value: 'tech@greencharge.uz' },
-            { label: 'IBAN', value: 'UZ21 0080 8000 0000 0001 2345 67' },
-            { label: t('lbl2.bank'), value: 'Kapitalbank' },
-            { label: 'Settlement', value: 'D+2 · SWIFT' },
-          ].map(row => (
-            <div key={row.label}>
-              <p className="text-xs text-slate-400">{row.label}</p>
-              <p className="text-sm font-medium text-slate-800">{row.value}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function HelpPage() {
-  const { t } = useI18n();
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [ticketSent, setTicketSent] = useState(false);
-  const [ticketText, setTicketText] = useState('');
+function HelpPage({ onNavigate }: { onNavigate: (page: string) => void }) {
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [topic, setTopic] = useState('Станция');
+  const [text, setText] = useState('');
 
   const faqs = [
-    { q: 'Как добавить новую зарядную станцию?', a: 'Перейдите в раздел «Станции» → кнопка «+ Добавить станцию». Заполните адрес, координаты, тип разъёмов и мощность. После проверки модератором станция появится на карте ONE CHARGE в течение 24 часов.' },
-    { q: 'Как настроить тарифы на зарядку?', a: 'В разделе «Тарифы» нажмите «Создать тариф». Укажите цену за кВт·ч, возможные ночные/дневные тарифы и тарифы для подписчиков ONE CHARGE+. Изменения применяются немедленно.' },
-    { q: 'Что значит статус EVSE «Недоступно»?', a: 'Статус «Недоступно» означает, что коннектор не отвечает по OCPP более 5 минут. Возможные причины: отключение питания, сбой сети, ошибка прошивки. Рекомендуем провести физический осмотр станции.' },
-    { q: 'Когда происходит Settlement (выплата)?', a: 'Выплата происходит на D+2 от даты транзакции. Комиссия ONE CHARGE составляет 2.5%. Средства поступают на указанный IBAN в рабочие дни. Детали в разделе «Финансы → Settlement».' },
-    { q: 'Как подключить OCPI к другой сети?', a: 'В разделе «Интеграция» выберите «OCPI Hub». Запросите bilateral agreement с партнёром. После подтверждения администратором ONE CHARGE ваши локации появятся в роуминговой сети.' },
-    { q: 'Как работает Fraud Detection?', a: 'Платформа ONE CHARGE автоматически анализирует каждую транзакцию. Подозрительные сессии (аномальная мощность, повторные ошибки авторизации) блокируются и отправляются на ручную проверку.' },
+    { q: 'Как добавить новую зарядную станцию?', a: 'Раздел «Станции» → «Добавить станцию»: название, адрес, координаты и разъёмы с мощностью и ценой. Станция сразу появляется в кабинете со статусом «Ждёт подключения»; водители увидят её, когда устройство подключится по OCPP (раздел «Интеграция»).' },
+    { q: 'Как поменять цену?', a: 'Раздел «Тарифы»: цена за кВт·ч задаётся для каждого разъёма и действует для новых зарядок. Ночной (×0.7), дневной (×0.9) и пиковый (×1.25) множители — общие для всей сети, их задаёт администратор платформы.' },
+    { q: 'Что значит статус разъёма «Недоступен»?', a: 'Станция сообщила по OCPP, что разъём неисправен, потеряла связь, или разъём отключили вручную в кабинете. Проверьте журнал OCPP в разделе «Интеграция» — оттуда же можно перезагрузить станцию или запросить статус.' },
+    { q: 'Когда приходит выплата?', a: 'Раз в месяц: 2-го числа за прошлый месяц, за вычетом комиссии платформы по вашему договору. Комиссия фиксируется в момент старта каждой зарядки, поэтому её изменение не пересчитывает прошлые сессии. Акты — в разделе «Финансы».' },
+    { q: 'Водитель пишет, что зарядка не запустилась', a: 'Найдите его сессию в разделе «Сессии» или оповещение в «Оповещениях». Неудачные запуски видны в аналитике станции. Если разъём завис — команда «Разблокировать» в «Интеграции».' },
+    { q: 'Роуминг с другими сетями (OCPI)', a: 'Пока не подключён — в дорожной карте платформы. Сейчас ваши станции видны всем водителям приложения и партнёрам через Partner API.' },
   ];
 
-  const contacts = [
-    { icon: '📧', label: 'Email поддержки', value: 'operator@onecharge.uz', sub: t('sub.replyWithin2Hours') },
-    { icon: '📱', label: t('lbl2.phone'), value: '+998 71 200-00-01', sub: t('sub.monFri9001800') },
-    { icon: '💬', label: 'Telegram', value: '@onecharge_support', sub: t('sub.online247') },
-    { icon: '📖', label: t('lbl2.documentation'), value: 'docs.onecharge.uz', sub: t('sub.apiOcpiWebhooks') },
-  ];
+  const mail = `mailto:${BRAND.email}?subject=${encodeURIComponent(`[${topic}] Оператор`)}&body=${encodeURIComponent(text)}`;
 
   return (
-    <div className="p-6 space-y-5 overflow-y-auto h-full">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('page.help')}</h1>
-          <p className="text-sm text-slate-400 inter mt-0.5">Документация, FAQ и контакты команды ONE CHARGE</p>
-        </div>
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl" style={{ background: '#ECFDF5', border: '1px solid #A7F3D0' }}>
-          <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" style={{ animation: 'pulse 1.5s ease-in-out infinite' }} />
-          <span className="text-xs font-semibold text-emerald-700">Поддержка онлайн</span>
-        </div>
+    <div className="p-4 md:p-6 pb-28 space-y-5 overflow-y-auto h-full">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Помощь</h1>
+        <p className="text-sm text-slate-400 mt-0.5">Частые вопросы и связь с командой платформы</p>
       </div>
 
-      {/* Quick links */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { icon: '📖', label: t('lbl2.documentation'), sub: t('sub.apiOcpiGuides'), color: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8' },
-          { icon: '🎓', label: t('lbl2.training'), sub: t('sub.videoLessonsAndWebinars'), color: '#F5F3FF', border: '#DDD6FE', text: '#2F3DB8' },
-          { icon: '🐛', label: t('lbl2.bugReport'), sub: t('sub.reportAProblem'), color: '#FEF2F2', border: '#FECACA', text: '#DC2626' },
-          { icon: '💡', label: t('lbl2.ideas'), sub: t('sub.suggestAnImprovement'), color: '#FFFBEB', border: '#FDE68A', text: '#D97706' },
+          { label: 'Подключить станцию', sub: 'OCPP 1.6-J, симулятор', page: 'integration' },
+          { label: 'Цены разъёмов', sub: 'Тарифы и окна', page: 'tariffs' },
+          { label: 'Выплаты и акты', sub: 'Финансы', page: 'finance' },
+          { label: 'Оповещения', sub: 'Проблемы на станциях', page: 'alerts' },
         ].map(c => (
-          <button key={c.label} className="rounded-2xl p-4 text-left hover:scale-[1.02] active:scale-98 transition-all"
-            style={{ background: c.color, border: `1px solid ${c.border}`, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-            <div className="text-2xl mb-2">{c.icon}</div>
-            <p className="text-sm font-bold" style={{ color: c.text }}>{c.label}</p>
-            <p className="text-xs mt-0.5" style={{ color: c.text + 'aa' }}>{c.sub}</p>
+          <button key={c.label} onClick={() => onNavigate(c.page)} className="rounded-2xl p-4 text-left bg-white border border-slate-100 hover:border-sky-200">
+            <p className="text-sm font-bold text-slate-800">{c.label}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{c.sub}</p>
           </button>
         ))}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        {/* FAQ */}
-        <div className="col-span-3 bg-white rounded-2xl border border-slate-100 overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-          <div className="px-5 py-4 border-b border-slate-50">
-            <h3 className="text-sm font-bold text-slate-800">Частые вопросы</h3>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-100 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-50"><h3 className="text-sm font-bold text-slate-800">Частые вопросы</h3></div>
           <div className="divide-y divide-slate-50">
             {faqs.map((f, i) => (
-              <div key={i}>
-                <button onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full px-5 py-3.5 flex items-center justify-between gap-3 hover:bg-slate-50/60 transition-colors text-left">
+              <div key={f.q}>
+                <button onClick={() => setOpenFaq(openFaq === i ? null : i)} aria-expanded={openFaq === i} className="w-full px-5 py-3.5 flex items-center justify-between gap-3 hover:bg-slate-50/60 text-left">
                   <p className="text-sm font-medium text-slate-800">{f.q}</p>
                   <span className="text-slate-400 text-lg shrink-0 transition-transform" style={{ transform: openFaq === i ? 'rotate(45deg)' : '' }}>+</span>
                 </button>
-                {openFaq === i && (
-                  <div className="px-5 pb-4" style={{ animation: 'enter-up 0.2s ease both' }}>
-                    <p className="text-sm text-slate-500 leading-relaxed">{f.a}</p>
-                  </div>
-                )}
+                {openFaq === i && <p className="px-5 pb-4 text-sm text-slate-500 leading-relaxed">{f.a}</p>}
               </div>
             ))}
           </div>
         </div>
 
-        {/* Right column */}
-        <div className="col-span-2 space-y-4">
-          {/* Contacts */}
-          <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-            <div className="px-5 py-4 border-b border-slate-50">
-              <h3 className="text-sm font-bold text-slate-800">Контакты</h3>
-            </div>
-            <div className="p-4 space-y-3">
-              {contacts.map(c => (
-                <div key={c.label} className="flex items-center gap-3">
-                  <span className="text-lg shrink-0">{c.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-400">{c.label}</p>
-                    <p className="text-sm font-semibold text-emerald-600 truncate">{c.value}</p>
-                  </div>
-                  <p className="text-[10px] text-slate-400 shrink-0 text-right">{c.sub}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Ticket form */}
-          <div className="bg-white rounded-2xl border border-slate-100 p-4 space-y-3" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-            <h3 className="text-sm font-bold text-slate-800">Написать в поддержку</h3>
-            {ticketSent ? (
-              <div className="flex flex-col items-center py-4 gap-2">
-                <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
-                  <CheckCircle size={20} className="text-emerald-500" />
-                </div>
-                <p className="text-sm font-semibold text-emerald-700">Обращение отправлено!</p>
-                <p className="text-xs text-slate-400 text-center">Ответим в течение 2 часов на email оператора</p>
-                <button onClick={() => { setTicketSent(false); setTicketText(''); }} className="text-xs text-emerald-600 font-medium mt-1">Новое обращение</button>
-              </div>
-            ) : (
-              <>
-                <select className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-emerald-400 text-slate-700 bg-white">
-                  <option>Технический вопрос</option>
-                  <option>Проблема с выплатой</option>
-                  <option>Проблема с OCPI/OCPP</option>
-                  <option>Добавление станции</option>
-                  <option>Другое</option>
-                </select>
-                <textarea value={ticketText} onChange={e => setTicketText(e.target.value)}
-                  placeholder="Опишите проблему подробно..."
-                  rows={3}
-                  className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-emerald-400 resize-none text-slate-700 placeholder:text-slate-300" />
-                <button onClick={() => ticketText.trim() && setTicketSent(true)}
-                  disabled={!ticketText.trim()}
-                  className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all active:scale-95 disabled:opacity-40"
-                  style={{ background: 'linear-gradient(135deg,#10B981,#059669)' }}>
-                  Отправить
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* System status */}
-      <div className="bg-white rounded-2xl border border-slate-100 p-5" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-slate-800">Статус платформы</h3>
-          <span className="text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-1 rounded-lg">Все системы работают</span>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {[
-            { label: 'API Gateway', status: '✅', uptime: '99.98%' },
-            { label: 'OCPP Server', status: '✅', uptime: '99.95%' },
-            { label: 'Payment Engine', status: '✅', uptime: '100%' },
-            { label: 'OCPI Hub', status: '⚠️', uptime: '98.2%' },
-            { label: 'CDR Processing', status: '✅', uptime: '99.99%' },
-          ].map(s => (
-            <div key={s.label} className="text-center p-3 bg-slate-50 rounded-xl">
-              <p className="text-xl mb-1">{s.status}</p>
-              <p className="text-xs font-semibold text-slate-700">{s.label}</p>
-              <p className="text-[10px] text-slate-400 mono mt-0.5">{s.uptime}</p>
-            </div>
-          ))}
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 p-4 space-y-3 self-start">
+          <h3 className="text-sm font-bold text-slate-800">Написать команде платформы</h3>
+          <select value={topic} onChange={e => setTopic(e.target.value)} aria-label="Тема" className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-slate-700">
+            {['Станция', 'Выплаты', 'Интеграция OCPP', 'Договор и реквизиты', 'Другое'].map(x => <option key={x}>{x}</option>)}
+          </select>
+          <textarea value={text} onChange={e => setText(e.target.value)} rows={5} placeholder="Опишите вопрос; для станции укажите её ID" aria-label="Сообщение" className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 resize-none text-slate-700" />
+          <a href={mail} className={`block text-center w-full py-2.5 rounded-xl text-sm font-semibold text-white bg-sky-500 ${text.trim() ? '' : 'pointer-events-none opacity-40'}`}>Открыть письмо</a>
+          <p className="text-xs text-slate-400">{`Откроется ваша почта с готовым письмом на ${BRAND.email}.`}</p>
         </div>
       </div>
     </div>
   );
 }
 
-/** Human titles for alert codes; OCPP faults carry the charger's error code. */
 function alertTitle(code: string) {
   const known: Record<string, string> = {
     EVSE_UNAVAILABLE: 'Разъём не отвечает',
@@ -846,7 +626,7 @@ export default function OperatorApp({ onBack }: { onBack: () => void }) {
       stations: station ? <StationDetailPage stationId={station} onBack={() => setStation(null)} /> : <OperatorStations onOpen={setStation} />,
       sessions: <AdminSessions portal="operator" />, alerts: <AlertsPage />, tariffs: <OperatorTariffs />,
       finance: <OperatorFinance />, customers: <OperatorCustomers />,
-      integration: <OperatorIntegration />, settings: <SettingsPage />, help: <HelpPage />,
+      integration: <OperatorIntegration />, settings: <AccountSettings portal="operator" />, help: <HelpPage onNavigate={go} />,
     };
     return (
       <div key={page + (station ?? '')} className="animate-fade-in h-full">

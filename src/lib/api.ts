@@ -29,6 +29,36 @@ export interface Car {
   maxKw: number;
 }
 
+export interface RiskFinding {
+  id: string;
+  rule: 'failed_starts' | 'impossible_energy' | 'parallel_sessions' | 'abandoned_payments' | 'repeated_refunds';
+  risk: 'critical' | 'high' | 'medium';
+  userId: string;
+  user: string;
+  detail: string;
+  at: string;
+  refs: string[];
+  review: { decision: 'confirmed' | 'dismissed'; by: string; at: string; note: string } | null;
+}
+export interface RiskReport { checked: { sessions: number; payments: number }; open: number; findings: RiskFinding[] }
+export interface CdrIssue { sessionId: string; check: string; detail: string; station: string; operator: string; start: string; cost: number }
+export interface CdrReport { days: number; checked: number; passed: number; energy: number; amount: number; issues: CdrIssue[] }
+export interface TariffBand { band: 'green' | 'day' | 'peak'; from: number; to: number; multiplier: number }
+export interface StaffAccount { id: string; portal: Portal; name: string; login: string; role: string; org: string | null; lastLogin: string | null; twoFactor: boolean; devices: number }
+export interface SystemHealth {
+  uptimeSec: number;
+  node: string;
+  memoryMb: { rss: number; heap: number };
+  storage: 'postgres' | 'file';
+  demo: { mode: boolean; simulation: boolean };
+  records: Record<string, number>;
+  live: { sseClients: number; activeSessions: number; eventsLastHour: number; tokens: number };
+  ocpp: { connected: number };
+  webhooks: { endpoints: number; active: number; pending: number; failed: number; delivered: number; lastError: { url: string; error: string; at: string } | null };
+  sms: boolean;
+  time: string;
+}
+
 export interface SignedInDevice {
   id: string;
   device: string;
@@ -487,6 +517,14 @@ export const apiClient = {
     post<{ token: string; user: Account }>('/auth/otp/verify', { phone, code }),
 
   me: (portal: Portal) => request<{ user: Account }>('/auth/me', { portal }),
+  riskReport: (portal: Portal) => request<RiskReport>('/admin/risk', { portal }),
+  reviewRisk: (portal: Portal, id: string, decision: 'confirmed' | 'dismissed', block = false) =>
+    post<{ review: RiskFinding['review'] }>(`/admin/risk/${encodeURIComponent(id)}/review`, { decision, block }, portal),
+  cdrReport: (portal: Portal, days = 30) => request<CdrReport>(`/admin/cdr?days=${days}`, { portal }),
+  tariffBands: (portal: Portal) => request<{ bands: TariffBand[] }>('/admin/tariff-bands', { portal }),
+  setTariffBands: (portal: Portal, bands: TariffBand[]) => request<{ bands: TariffBand[] }>('/admin/tariff-bands', { method: 'PUT', body: JSON.stringify({ bands }), portal }),
+  staffAccounts: (portal: Portal) => request<StaffAccount[]>('/admin/accounts', { portal }),
+  systemHealth: (portal: Portal) => request<SystemHealth>('/admin/health', { portal }),
   devices: (portal: Portal) => request<SignedInDevice[]>('/auth/sessions', { portal }),
   signOutOthers: (portal: Portal) => post<{ revoked: number }>('/auth/sessions/revoke-others', undefined, portal),
   changePassword: (portal: Portal, current: string, next: string) => post<{ ok: boolean }>('/auth/password', { current, next }, portal),

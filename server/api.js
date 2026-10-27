@@ -9,6 +9,7 @@ import { normalizePhone, issueCode, consumeCode, PURPOSES, smsConfigured } from 
 import { submitLead, listLeads, updateLead, LEAD_KINDS } from './leads.js';
 import { analyticsFor, adminUsers, setUserStatus, isBlocked, monthSpend } from './analytics.js';
 import { demoEnergy } from './history.js';
+import { riskReport, reviewFinding, cdrReport, bandFor, tariffBands, setTariffBands } from './admin.js';
 import { validateEndpoint, signedHeaders, kick as kickWebhooks } from './webhooks.js';
 
 export const api = express.Router();
@@ -1460,12 +1461,8 @@ function tashkentHour(date = new Date()) {
   return (date.getUTCHours() + TASHKENT_UTC_OFFSET) % 24;
 }
 
-function tariffBand(hour) {
-  if (hour >= 23 || hour < 7) return { band: 'green', multiplier: 0.7 };
-  if (hour >= 17 && hour < 22) return { band: 'peak', multiplier: 1.25 };
-  if (hour >= 10 && hour < 17) return { band: 'day', multiplier: 0.9 };
-  return { band: 'standard', multiplier: 1 };
-}
+/** The admin sets the windows (server/admin.js); hours outside them are standard. */
+const tariffBand = hour => bandFor(hour);
 
 api.get('/tariffs/forecast', (_req, res) => {
   const now = tashkentHour();
@@ -2289,6 +2286,106 @@ api.post('/transactions/:id/refund', requireAuth('admin'), (req, res) => {
     payload: { amount: txn.amount, userId: txn.userId },
   });
   res.json({ transaction: txn });
+});
+
+// ---------------------------------------------------------------------------
+// Admin tools: risk signals, charge-record checks, tariff windows, health
+// ---------------------------------------------------------------------------
+
+api.get('/admin/risk', requireAuth('admin'), (_req, res) => res.json(riskReport()));
+
+api.post('/admin/risk/:id/review', requireAuth('admin'), (req, res) => {
+  const decision = req.body?.decision;
+  if (!['confirmed', 'dismissed'].includes(decision)) return res.status(400).json({ error: 'Решение: confirmed или dismissed' });
+  const finding = riskReport().findings.find(f => f.id === req.params.id);
+  if (!finding) return res.status(404).json({ error: 'Сигнал не найден' });
+  const review = reviewFinding(finding.id, decision, req.account, req.body?.note);
+  if (decision === 'confirmed' && req.body?.block && finding.userId) setUserStatus(finding.userId, 'blocked');
+  emit({
+    type: 'risk.review',
+    portal: 'admin',
+    actor: req.account.name,
+    message: `${decision === 'confirmed' ? 'Подтверждён' : 'Отклонён'} сигнал риска · ${finding.user}${decision === 'confirmed' && req.body?.block ? ' · аккаунт заблокирован' : ''}`,
+    entity: finding.id,
+  });
+  res.json({ review });
+});
+
+api.get('/admin/cdr', requireAuth('admin'), (req, res) => res.json(cdrReport(Date.now(), Math.min(Math.max(Number(req.query.days) || 30, 1), 60))));
+
+api.get('/admin/tariff-bands', requireAuth('admin'), (_req, res) => res.json({ bands: tariffBands() }));
+
+api.put('/admin/tariff-bands', requireAuth('admin'), (req, res) => {
+  const result = setTariffBands(req.body?.bands);
+  if (result.error) return res.status(400).json({ error: result.error });
+  emit({
+    type: 'tariff.bands',
+    portal: 'admin',
+    actor: req.account.name,
+    message: `Тарифные окна: ${result.bands.map(b => `${b.band} ${b.from}–${b.to} ×${b.multiplier}`).join(', ')}`,
+    entity: 'tariff-bands',
+  });
+  res.json(result);
+});
+
+/** Staff accounts of every portal — drivers are under /admin/users. */
+api.get('/admin/accounts', requireAuth('admin'), (_req, res) => {
+  res.json(
+    db.data.accounts
+      .filter(a => a.portal !== 'driver')
+      .map(a => ({
+        id: a.id,
+        portal: a.portal,
+        name: a.name,
+        login: a.login,
+        role: a.role,
+        org: a.org,
+        lastLogin: a.lastLogin ?? null,
+        twoFactor: !!a.twoFactor?.enabled,
+        devices: db.data.tokens.filter(t => t.accountId === a.id).length,
+      })),
+  );
+});
+
+const startedAt = Date.now();
+
+api.get('/admin/health', requireAuth('admin'), (_req, res) => {
+  const mem = process.memoryUsage();
+  const hourAgo = Date.now() - 3600_000;
+  const deliveries = db.data.deliveries ?? [];
+  const lastFailed = deliveries.find(d => d.status === 'failed');
+  res.json({
+    uptimeSec: Math.round((Date.now() - startedAt) / 1000),
+    node: process.version,
+    memoryMb: { rss: Math.round(mem.rss / 1048576), heap: Math.round(mem.heapUsed / 1048576) },
+    storage: process.env.DATABASE_URL ? 'postgres' : 'file',
+    demo: { mode: DEMO_MODE, simulation: DEMO_MODE && process.env.DEMO_SIMULATION !== 'false' },
+    records: {
+      stations: db.data.stations.length,
+      sessions: db.data.sessions.length,
+      transactions: db.data.transactions.length,
+      events: db.data.events.length,
+      accounts: db.data.accounts.length,
+      customers: (db.data.customers ?? []).length,
+    },
+    live: {
+      sseClients: clients.size,
+      activeSessions: db.data.sessions.filter(s => s.status === 'active').length,
+      eventsLastHour: db.data.events.filter(e => Date.parse(e.ts) >= hourAgo).length,
+      tokens: db.data.tokens.length,
+    },
+    ocpp: { connected: gateway?.list?.().length ?? 0 },
+    webhooks: {
+      endpoints: (db.data.webhooks ?? []).length,
+      active: (db.data.webhooks ?? []).filter(w => w.active).length,
+      pending: deliveries.filter(d => d.status === 'pending' || d.status === 'retrying').length,
+      failed: deliveries.filter(d => d.status === 'failed').length,
+      delivered: deliveries.filter(d => d.status === 'delivered').length,
+      lastError: lastFailed ? { url: lastFailed.url, error: lastFailed.lastError, at: lastFailed.ts } : null,
+    },
+    sms: smsConfigured(),
+    time: new Date().toISOString(),
+  });
 });
 
 api.get('/admin/users', requireAuth('admin'), (_req, res) => {

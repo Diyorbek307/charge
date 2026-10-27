@@ -247,6 +247,9 @@ export function sessionsBetween({ stations, customers, from, to, r, growthAt = (
   const fleet = customers.filter(c => c.fleet && c.id !== 'acc-driver');
   const active = customers.filter(c => c.status === 'active');
   const weight = c => c.activity ?? 1;
+  // Charging windows already taken per customer: one car charges in one place at a time.
+  const busy = new Map();
+  const free = (id, a, b) => !(busy.get(id) ?? []).some(([x, y]) => a < y && b > x);
 
   for (let t = from; t < to + 86400_000; t += 86400_000) {
     // Midnight in Tashkent of this day, so hours and weekdays are local.
@@ -265,15 +268,20 @@ export function sessionsBetween({ stations, customers, from, to, r, growthAt = (
         const connector = st.connectors[Math.floor(r() * st.connectors.length)];
         const locals = byCity.get(st.city) ?? [];
         // Mostly locals, sometimes travellers; fleet cars on Tashkent DC.
-        let customer;
-        if (st.city === 'Toshkent' && connector.power >= 60 && fleet.length && r() < 0.12) customer = fleet[Math.floor(r() * fleet.length)];
-        else if (locals.length && r() < 0.78) customer = pickWeighted(r, locals, weight);
-        else customer = pickWeighted(r, active, weight);
-        if (!customer) continue;
-
         const failed = r() < 0.025;
         const energy = failed ? 0 : plannedEnergy(connector, r);
         const minutes = failed ? 1 : chargeMinutes(connector, energy, r);
+        const endMs = startMs + minutes * 60_000;
+        let customer = null;
+        for (let tries = 0; tries < 4 && !customer; tries++) {
+          let pick;
+          if (st.city === 'Toshkent' && connector.power >= 60 && fleet.length && r() < 0.12) pick = fleet[Math.floor(r() * fleet.length)];
+          else if (locals.length && r() < 0.78) pick = pickWeighted(r, locals, weight);
+          else pick = pickWeighted(r, active, weight);
+          if (pick && free(pick.id, startMs, endMs)) customer = pick;
+        }
+        if (!customer) continue;
+        busy.set(customer.id, [...(busy.get(customer.id) ?? []), [startMs, endMs]]);
         const multiplier = bandMultiplier(hour);
         const price = Math.round(connector.price * multiplier);
         sessions.push({
@@ -426,6 +434,101 @@ export function buildHistory({ stations, customers, now }) {
     payments,
     counters: { session: n, txn: t },
   };
+}
+
+/**
+ * A few things going wrong, so the risk and charge-record pages have
+ * something real to find: a driver whose starts keep failing, a meter that
+ * reported more than the charger can deliver, one account on two chargers at
+ * once, and a string of abandoned top-ups.
+ */
+export function plantIncidents({ history, stations, customers, now }) {
+  const people = customers.filter(c => c.status === 'active' && !c.fleet && c.id !== 'acc-driver');
+  const [a, b, c, d] = [people[17], people[41], people[63], people[88]].filter(Boolean);
+  if (!d) return;
+  let n = history.counters.session;
+  let t = history.counters.txn;
+  const dc = stations.filter(st => st.connectors.some(k => k.power >= 50));
+  const at = (daysAgo, hour, minute = 0) => {
+    const day = Math.floor((now - daysAgo * 86400_000 + TASHKENT_MS) / 86400_000) * 86400_000 - TASHKENT_MS;
+    return day + hour * 3600_000 + minute * 60_000;
+  };
+  const session = (customer, st, connector, startMs, minutes, energy, status) => {
+    const multiplier = bandMultiplier(new Date(startMs + TASHKENT_MS).getUTCHours());
+    const price = Math.round(connector.price * multiplier);
+    const s = {
+      id: `S-${n++}`,
+      userId: customer.id,
+      user: short(customer.name),
+      stationId: st.id,
+      stationName: st.name,
+      operator: st.operator,
+      operatorId: st.operatorId,
+      connectorId: connector.id,
+      connector: connector.type,
+      start: new Date(startMs).toISOString(),
+      end: new Date(startMs + minutes * 60_000).toISOString(),
+      energy,
+      cost: Math.round(energy * price),
+      power: connector.power,
+      basePrice: connector.price,
+      multiplier,
+      price,
+      status,
+      commissionRate: op(st.operatorId)?.commission ?? 3,
+      corporate: false,
+      source: 'app',
+    };
+    history.sessions.unshift(s);
+    history.transactions.unshift({
+      id: `TXN-${t++}`,
+      sessionId: s.id,
+      userId: s.userId,
+      user: s.user,
+      amount: s.cost,
+      method: 'Кошелёк',
+      status: status === 'failed' ? 'failed' : 'completed',
+      time: s.end,
+    });
+  };
+  const fast = st => st.connectors.find(k => k.power >= 50) ?? st.connectors[0];
+
+  // 1. Four failed starts in five days, on three stations.
+  [[4, 9], [3, 19], [2, 8], [1, 20]].forEach(([day, hour], i) => {
+    const st = dc[(i % 3) + 2];
+    if (st) session(a, st, fast(st), at(day, hour, 10 * i), 1, 0, 'failed');
+  });
+  // 2. 58 kWh reported in 25 minutes on a 60 kW connector.
+  const sixty = stations.find(st => st.connectors.some(k => k.power >= 50 && k.power <= 60)) ?? dc[0];
+  const k60 = sixty.connectors.find(k => k.power >= 50 && k.power <= 60) ?? fast(sixty);
+  session(b, sixty, k60, at(2, 14, 5), 25, 58, 'completed');
+  // 3. The same account on two chargers in two cities at once.
+  const [x, y] = [dc.find(st => st.city === 'Toshkent'), dc.find(st => st.city === 'Samarqand')];
+  if (x && y) {
+    session(c, x, fast(x), at(3, 18, 0), 50, 30.2, 'completed');
+    session(c, y, fast(y), at(3, 18, 20), 40, 24.6, 'completed');
+  }
+  // 4. Four top-ups abandoned in ten hours.
+  for (let i = 0; i < 4; i++) {
+    const created = now - (10 - i * 2.5) * 3600_000;
+    history.payments.unshift({
+      id: `PAY-RISK${String(i + 1).padStart(6, '0')}`,
+      provider: i % 2 ? 'click' : 'payme',
+      userId: d.id,
+      walletId: d.id,
+      amount: [500000, 1000000, 1000000, 2000000][i],
+      status: 'cancelled',
+      created: new Date(created).toISOString(),
+      paidAt: null,
+      payme: null,
+      click: null,
+      seeded: true,
+    });
+  }
+  history.sessions.sort((p, q) => q.start.localeCompare(p.start));
+  history.payments.sort((p, q) => q.created.localeCompare(p.created));
+  history.counters.session = n;
+  history.counters.txn = t;
 }
 
 /**
