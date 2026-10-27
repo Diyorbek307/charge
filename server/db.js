@@ -117,6 +117,11 @@ class PostgresStore {
  * debounced, serialised through a promise chain so they never overlap, and
  * snapshotted at flush time so later mutations cannot tear a write.
  */
+/** A sign-in unused for this long expires. */
+const TOKEN_DAYS = 60;
+/** Devices one account may stay signed in on. */
+const TOKENS_PER_ACCOUNT = 20;
+
 class Database {
   constructor() {
     const url = process.env.DATABASE_URL || '';
@@ -227,16 +232,24 @@ class Database {
     return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
   }
 
-  issueToken(account) {
+  issueToken(account, req = null) {
     const token = crypto.randomBytes(24).toString('hex');
+    const now = new Date().toISOString();
     this.data.tokens.unshift({
       token,
       accountId: account.id,
       portal: account.portal,
-      issued: new Date().toISOString(),
+      issued: now,
+      lastSeen: now,
+      // Shown in the account's device list, nothing else.
+      agent: String(req?.get?.('user-agent') ?? '').slice(0, 200),
     });
-    // Keep the token table from growing without bound in a long-lived process.
-    if (this.data.tokens.length > 200) this.data.tokens.length = 200;
+    // Sign-ins expire after TOKEN_DAYS idle; the cap only guards memory, per account.
+    const mine = this.data.tokens.filter(t => t.accountId === account.id);
+    if (mine.length > TOKENS_PER_ACCOUNT) {
+      const drop = new Set(mine.slice(TOKENS_PER_ACCOUNT).map(t => t.token));
+      this.data.tokens = this.data.tokens.filter(t => !drop.has(t.token));
+    }
     this.save();
     return token;
   }
@@ -245,6 +258,16 @@ class Database {
     if (!token) return null;
     const entry = this.data.tokens.find(t => t.token === token);
     if (!entry) return null;
+    const seen = Date.parse(entry.lastSeen ?? entry.issued);
+    if (Date.now() - seen > TOKEN_DAYS * 86400_000) {
+      this.revokeToken(token);
+      return null;
+    }
+    // Recorded at most every few minutes, so reads do not turn into writes.
+    if (Date.now() - seen > 5 * 60_000) {
+      entry.lastSeen = new Date().toISOString();
+      this.save();
+    }
     const account = this.byId('accounts', entry.accountId);
     return account ? { account, entry } : null;
   }

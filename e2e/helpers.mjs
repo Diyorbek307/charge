@@ -31,10 +31,10 @@ export async function signIn(page, portal) {
 
 /** The Driver App shows a three-step first-run carousel; walk past it if it is there. */
 export async function skipOnboarding(page) {
-  const welcome = page.getByRole('heading', { name: /Добро пожаловать в ONE CHARGE/ });
+  const welcome = page.getByRole('heading', { name: /^Добро пожаловать в / });
   if (!(await welcome.isVisible({ timeout: 3000 }).catch(() => false))) return;
   for (let i = 0; i < 4; i++) {
-    const next = page.getByRole('button', { name: /^(Далее|Готово — начать)/ });
+    const next = page.getByRole('button', { name: /^(Далее|Готово — к карте)/ });
     if (!(await next.isVisible().catch(() => false))) break;
     await next.click();
   }

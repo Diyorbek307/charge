@@ -92,7 +92,7 @@ export default function SyncInspector() {
         <button
           onClick={() => setOpen(true)}
           aria-label={t('sync.open')}
-          className="fixed z-[150] bottom-4 right-4 flex items-center gap-2 rounded-full border border-white/12 bg-slate-950/85 backdrop-blur px-3.5 py-2.5 shadow-2xl hover:border-white/25 transition-colors"
+          className="fixed z-[150] bottom-4 right-4 hidden sm:flex items-center gap-2 rounded-full border border-white/12 bg-slate-950/85 backdrop-blur px-3.5 py-2.5 shadow-2xl hover:border-white/25 transition-colors"
         >
           <span className="relative flex items-center justify-center">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: dot, boxShadow: `0 0 8px ${dot}` }} />

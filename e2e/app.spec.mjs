@@ -45,7 +45,7 @@ test('a driver charges end to end and the session is billed', async ({ page, req
   await page.getByRole('button', { name: 'Начать зарядку' }).first().click();
   await page.getByRole('button', { name: 'Удалённо' }).click();
   await page.getByRole('button', { name: /Подтвердить и начать зарядку/ }).click();
-  await expect(page.getByText(/ЗАРЯДКА АКТИВНА/i)).toBeVisible();
+  await expect(page.getByText(/ИДЁТ ЗАРЯДКА/i)).toBeVisible();
 
   const token = await apiToken(request, 'driver');
   const auth = { headers: { Authorization: `Bearer ${token}` } };
@@ -54,11 +54,16 @@ test('a driver charges end to end and the session is billed', async ({ page, req
   expect(active?.stationName).toBe('Samarqand Gateway');
 
   await page.getByRole('button', { name: 'Остановить зарядку' }).click();
-  await expect(page.getByText('Зарядка завершена!')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Зарядка завершена' })).toBeVisible();
+  // The receipt is the real session, and the rating reaches the station.
+  await expect(page.getByText(active.id).first()).toBeVisible();
+  await page.getByRole('radio', { name: '5 из 5' }).click();
+  await expect(page.getByText('Спасибо! Ваша оценка 5/5 учтена в рейтинге станции')).toBeVisible();
 
   state = await (await request.get('/api/state', auth)).json();
   expect(state.sessions.find(s => s.id === active.id).status).toBe('completed');
   expect(state.transactions.some(t => t.sessionId === active.id)).toBeTruthy();
+  expect(state.sessions.find(s => s.id === active.id).rating).toBe(5);
 });
 
 test('a wallet top-up goes through the Payme sandbox and credits the balance', async ({ page, request }) => {

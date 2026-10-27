@@ -309,7 +309,7 @@ export default function App() {
       <Suspense fallback={<PortalLoading />}>
       {portal === 'selector' && <Landing onSelect={setPortal} onSplitView={() => setSplitView(true)} />}
       {portal === 'driver' && (
-        <div className="h-full flex items-center justify-center relative overflow-hidden" style={{ background: 'radial-gradient(ellipse at 50% 30%, #0f1e3a 0%, #080d19 50%, #050810 100%)' }}>
+        <div className="h-full flex items-center justify-center relative overflow-clip" style={{ background: 'radial-gradient(ellipse at 50% 30%, #0f1e3a 0%, #080d19 50%, #050810 100%)' }}>
           {/* Animated ambient orbs */}
           <div className="absolute pointer-events-none">
             <div className="anim-orb-1" style={{ position: 'absolute', top: -200, left: -100, width: 500, height: 500, background: 'radial-gradient(circle, rgba(10, 175, 151,0.12) 0%, transparent 65%)', borderRadius: '50%', filter: 'blur(30px)' }} />
@@ -318,13 +318,13 @@ export default function App() {
           {/* Dot grid overlay */}
           <div className="absolute inset-0 dot-grid opacity-30 pointer-events-none" />
           {/* Ambient glow behind device */}
-          <div className="absolute w-96 h-96 bg-sky-500/8 rounded-full blur-[100px] pointer-events-none" style={{ animation: 'charge-glow 4s ease-in-out infinite' }} />
+          <div className="absolute w-96 max-w-full h-96 bg-sky-500/8 rounded-full blur-[100px] pointer-events-none" style={{ animation: 'charge-glow 4s ease-in-out infinite' }} />
           {/* Mobile device frame */}
-          <div className="relative z-10" style={{ width: 'min(390px, 100vw)', height: 'min(844px, 90vh)', maxWidth: '100%' }}>
-            {/* Device body */}
-            <div className="absolute inset-0 rounded-[42px] shadow-[0_32px_80px_rgba(0,0,0,0.6),0_0_0_2px_rgba(255,255,255,0.08)] overflow-hidden" style={{ background: 'linear-gradient(135deg, #2a2a2e 0%, #1a1a1e 100%)' }}>
-              <div className="absolute inset-[2px] bg-black rounded-[40px] overflow-hidden">
-                <div className="w-full h-full bg-white rounded-[40px] overflow-hidden">
+          <div className="relative z-10 w-full h-full sm:w-[390px] sm:h-[min(844px,90vh)]">
+            {/* Device body — only drawn around the app on wider screens */}
+            <div className="absolute inset-0 sm:rounded-[42px] sm:shadow-[0_32px_80px_rgba(0,0,0,0.6),0_0_0_2px_rgba(255,255,255,0.08)] overflow-hidden" style={{ background: 'linear-gradient(135deg, #2a2a2e 0%, #1a1a1e 100%)' }}>
+              <div className="absolute inset-0 sm:inset-[2px] bg-black sm:rounded-[40px] overflow-hidden">
+                <div className="w-full h-full bg-white sm:rounded-[40px] overflow-hidden">
                   {driverSession ? (
                     <DriverApp />
                   ) : (
@@ -340,21 +340,21 @@ export default function App() {
               </div>
             </div>
             {/* Dynamic Island */}
-            <div className="absolute top-3.5 left-1/2 -translate-x-1/2 w-[120px] h-[34px] bg-black rounded-[20px] z-20 flex items-center justify-center gap-2">
+            <div className="absolute top-3.5 left-1/2 -translate-x-1/2 w-[120px] h-[34px] bg-black rounded-[20px] z-20 hidden sm:flex items-center justify-center gap-2">
               <div className="w-2 h-2 bg-slate-800 rounded-full border border-slate-700" />
               <div className="w-3 h-3 bg-slate-800 rounded-full border border-slate-700" />
             </div>
             {/* Side buttons */}
-            <div className="absolute right-[-3px] top-28 w-1 h-16 bg-slate-600 rounded-l-full" />
-            <div className="absolute left-[-3px] top-24 w-1 h-10 bg-slate-600 rounded-r-full" />
-            <div className="absolute left-[-3px] top-36 w-1 h-10 bg-slate-600 rounded-r-full" />
+            <div className="hidden sm:block absolute right-[-3px] top-28 w-1 h-16 bg-slate-600 rounded-l-full" />
+            <div className="hidden sm:block absolute left-[-3px] top-24 w-1 h-10 bg-slate-600 rounded-r-full" />
+            <div className="hidden sm:block absolute left-[-3px] top-36 w-1 h-10 bg-slate-600 rounded-r-full" />
           </div>
           {/* Back button */}
           <button onClick={() => setPortal('selector')}
-            className="absolute top-5 left-5 flex items-center gap-2 text-sm text-white/80 bg-white/8 backdrop-blur border border-white/12 px-3 py-2 rounded-xl hover:bg-white/14 transition-colors">
+            className="absolute top-5 left-5 hidden sm:flex items-center gap-2 text-sm text-white/80 bg-white/8 backdrop-blur border border-white/12 px-3 py-2 rounded-xl hover:bg-white/14 transition-colors">
             <ArrowRight size={14} className="rotate-180" /> Порталы
           </button>
-          <div className="absolute bottom-5 left-0 right-0 text-center text-xs text-white/25 inter tracking-wider">
+          <div className="absolute bottom-5 left-0 right-0 text-center text-xs text-white/25 inter tracking-wider hidden sm:block">
             ONE CHARGE · Driver App · iOS / Android
           </div>
         </div>

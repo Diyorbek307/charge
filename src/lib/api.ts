@@ -16,6 +16,25 @@ export interface Account {
   avatar: string;
   lastLogin: string | null;
   twoFactorEnabled?: boolean;
+  /** A driver's own car, when they have told us. */
+  car?: Car | null;
+}
+
+export interface Car {
+  brand: string;
+  model: string;
+  year: number;
+  battery: number;
+  port: string;
+  maxKw: number;
+}
+
+export interface SignedInDevice {
+  id: string;
+  device: string;
+  issued: string;
+  lastSeen: string;
+  current: boolean;
 }
 
 export interface Connector {
@@ -66,6 +85,11 @@ export interface Session {
   price?: number;
   status: 'active' | 'completed' | 'failed';
   corporate: boolean;
+  /** Tariff band at start: 0.7 at night, 0.9 by day, 1.25 at the evening peak. */
+  multiplier?: number;
+  basePrice?: number;
+  /** The driver's 1–5 rating, once given. */
+  rating?: number;
 }
 
 export interface Transaction {
@@ -463,11 +487,18 @@ export const apiClient = {
     post<{ token: string; user: Account }>('/auth/otp/verify', { phone, code }),
 
   me: (portal: Portal) => request<{ user: Account }>('/auth/me', { portal }),
+  devices: (portal: Portal) => request<SignedInDevice[]>('/auth/sessions', { portal }),
+  signOutOthers: (portal: Portal) => post<{ revoked: number }>('/auth/sessions/revoke-others', undefined, portal),
+  changePassword: (portal: Portal, current: string, next: string) => post<{ ok: boolean }>('/auth/password', { current, next }, portal),
+  notifications: (portal: Portal) => request<SyncEvent[]>('/notifications', { portal }),
+  saveCar: (portal: Portal, car: Car) => request<{ user: Account }>('/me/car', { method: 'PUT', body: JSON.stringify(car), portal }),
   logout: (portal: Portal) => post<{ ok: boolean }>('/auth/logout', undefined, portal),
 
   /** payer 'company' charges a fleet employee's session to their employer, within the monthly limit. */
   startSession: (portal: Portal, stationId: string, connectorId: string, payer: 'self' | 'company' = 'self') =>
     post<{ session: Session; stats: Stats }>('/sessions/start', { stationId, connectorId, payer }, portal),
+  rateSession: (portal: Portal, id: string, stars: number) =>
+    post<{ station: Station; session: Session }>(`/sessions/${id}/rating`, { stars }, portal),
   stopSession: (portal: Portal, id: string) =>
     post<{ session: Session; transaction: Transaction; stats: Stats }>(`/sessions/${id}/stop`, undefined, portal),
   tickSession: (portal: Portal, id: string) => post<{ session: Session }>(`/sessions/${id}/tick`, undefined, portal),

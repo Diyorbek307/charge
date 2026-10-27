@@ -7,18 +7,26 @@ import {
   Wifi, Coffee, ParkingCircle, Toilet, CalendarCheck, Minus,
   AlertTriangle, Send, ThumbsUp, Flag, Trash2, StarIcon, Download, Phone,
   Gift, Trophy, Share2, Copy, TrendingUp, Award, Sparkles, Wallet, ArrowDownCircle,
-  Smartphone, Monitor, Building2
+  Smartphone, Monitor, Building2, Moon
 } from 'lucide-react';
 import { Station } from '../data/mockData';
-import { useLiveStations, useLiveDriverSessions } from '../lib/live';
+import { useLiveStations } from '../lib/live';
+import { plural } from '../lib/analytics';
 import DriverMap from './DriverMap';
 import { useSync } from '../lib/sync';
 import EcoScreen, { GreenHourBanner } from './EcoScreen';
 import PushToggle from './PushToggle';
-import type { Booking } from '../lib/api';
+import { BRAND } from '../brand';
+import { ChargingActiveScreen, ChargingDoneScreen } from './driver/Charging';
+import HistoryScreen from './driver/History';
+import ChargingHubScreen from './driver/Hub';
+import TripPlannerScreen from './driver/Trip';
+import { ProfileScreen, SecurityScreen, NotificationsScreen } from './driver/Account';
+import { useFavorites } from './driver/favorites';
+import type { Booking, Session, PaymentOrder } from '../lib/api';
 import AuthFlow from './AuthFlow';
 
-type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'cards' | 'loyalty' | 'referral' | 'app-settings' | 'wallet' | 'security' | 'support' | 'eco';
+type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'wallet' | 'security' | 'support' | 'eco';
 type Tab = 'map' | 'trips' | 'charging' | 'history' | 'profile';
 
 const statusColor: Record<string, string> = {
@@ -38,6 +46,8 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
   const free = station.connectors.filter(c => c.status === 'available').length;
   const { state, actions, sessions: portalSessions, refresh } = useSync();
   const me = portalSessions.driver;
+  const favorites = useFavorites();
+  const favorite = favorites.has(station.id);
   const queue = (state?.queues ?? []).filter(q => q.stationId === station.id);
   const myIndex = queue.findIndex(q => q.userId === me?.id);
   const myTurn = myIndex >= 0 && queue[myIndex].notified;
@@ -104,7 +114,7 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
           </div>
           <div className="bg-slate-50 rounded-xl p-2 text-center">
             <p className="text-xs text-slate-400">Рейтинг</p>
-            <p className="text-sm font-bold text-slate-800">⭐ {station.rating}</p>
+            <p className="text-sm font-bold text-slate-800">⭐ {station.rating.toFixed(1)}</p>
           </div>
           <div className="bg-slate-50 rounded-xl p-2 text-center">
             <p className="text-xs text-slate-400">Часы</p>
@@ -172,8 +182,8 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
           <p role="alert" className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-2">{queueError}</p>
         )}
         <div className="grid grid-cols-3 gap-2">
-          <button className="bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl py-2 font-medium text-sm transition-colors flex items-center justify-center gap-1.5">
-            <Heart size={13} />Избранное
+          <button onClick={() => favorites.toggle(station.id)} aria-pressed={favorite} className={`rounded-xl py-2 font-medium text-sm transition-colors flex items-center justify-center gap-1.5 ${favorite ? 'bg-red-50 text-red-500' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
+            <Heart size={13} className={favorite ? 'fill-red-500' : ''} />{favorite ? 'В избранном' : 'Избранное'}
           </button>
           <button onClick={onReviews} className="bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl py-2 font-medium text-sm transition-colors flex items-center justify-center gap-1.5">
             <Star size={13} />Отзывы
@@ -369,758 +379,6 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
   );
 }
 
-function ChargingActiveScreen({ station, onStop }: { station: Station | null; onStop: () => void }) {
-  const [progress, setProgress] = useState(42);
-  const [energy, setEnergy] = useState(16.8);
-  const [cost, setCost] = useState(33600);
-  const [elapsed, setElapsed] = useState(14 * 60); // seconds
-  const [power, setPower] = useState(148.2);
-  const [notified80, setNotified80] = useState(false);
-  const [showBanner, setShowBanner] = useState(false);
-
-  const target = 80;
-  const pctRemain = Math.max(0, target - progress);
-  const kwhRemain = (pctRemain / 100) * 85;
-  const etaSecs = power > 0 ? Math.round((kwhRemain / power) * 3600) : 0;
-
-  const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setProgress(p => {
-        const next = Math.min(p + 0.15, target);
-        if (next >= target && !notified80) {
-          setNotified80(true);
-          setShowBanner(true);
-          setTimeout(() => setShowBanner(false), 4000);
-        }
-        return next;
-      });
-      setEnergy(e => parseFloat((e + 0.08).toFixed(2)));
-      setCost(c => c + 160);
-      setElapsed(s => s + 2);
-      setPower(p => parseFloat((148 + Math.random() * 6 - 3).toFixed(1)));
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [notified80]);
-
-  const R_OUTER = 88;
-  const R_MID = 74;
-  const R_PROG = 60;
-  const C_OUTER = 2 * Math.PI * R_OUTER;
-  const C_MID = 2 * Math.PI * R_MID;
-  const C_PROG = 2 * Math.PI * R_PROG;
-
-  return (
-    <div className="h-full flex flex-col relative overflow-hidden"
-      style={{ background: 'linear-gradient(170deg, #050d1e 0%, #071428 35%, #050e1c 70%, #030a14 100%)' }}>
-
-      {/* Deep space ambient */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-64 opacity-40" style={{ background: 'radial-gradient(ellipse at 50% -20%, rgba(52,211,153,0.18) 0%, transparent 60%)' }} />
-        <div className="absolute bottom-0 left-0 right-0 h-48 opacity-30" style={{ background: 'radial-gradient(ellipse at 50% 110%, rgba(10, 175, 151,0.15) 0%, transparent 60%)' }} />
-        {/* Star particles */}
-        {[...Array(16)].map((_, i) => (
-          <div key={i} className="absolute rounded-full bg-white"
-            style={{
-              width: (i % 3) + 1, height: (i % 3) + 1,
-              left: `${(i * 41 + 7) % 90}%`,
-              top: `${(i * 31 + 5) % 80}%`,
-              opacity: 0.15 + (i % 5) * 0.07,
-              animation: `pulse ${2 + (i % 4)}s ease-in-out ${(i * 0.3) % 2}s infinite`,
-            }} />
-        ))}
-      </div>
-
-      {/* 80% notification banner */}
-      {showBanner && (
-        <div className="absolute top-14 left-3 right-3 z-30 rounded-2xl px-4 py-3 flex items-center gap-3 shadow-2xl"
-          style={{ background: 'linear-gradient(135deg, #059669, #10B981)', border: '1px solid rgba(52,211,153,0.4)', boxShadow: '0 8px 32px rgba(16,185,129,0.4)' }}>
-          <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center text-lg">🎉</div>
-          <div>
-            <p className="text-sm font-bold text-white">Цель достигнута!</p>
-            <p className="text-xs text-emerald-100">Батарея заряжена до {target}%</p>
-          </div>
-        </div>
-      )}
-
-      {/* Status bar */}
-      <div className="relative px-4 pt-4 pb-1 text-white/60 text-xs flex items-center justify-between shrink-0 z-10">
-        <span className="font-bold text-white/90 tracking-wider text-[11px]">ONE CHARGE</span>
-        <div className="flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-500/25 px-2.5 py-1 rounded-full">
-          <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" style={{ animationDuration: '1.2s' }} />
-          <span className="text-emerald-300 font-semibold text-[10px] tracking-wider">ЗАРЯДКА АКТИВНА</span>
-        </div>
-      </div>
-
-      {/* Station info */}
-      <div className="relative px-4 pb-1 text-center shrink-0 z-10">
-        <p className="text-white/75 text-sm font-semibold">{station?.name}</p>
-        <p className="text-white/35 text-[11px]">{station?.operator} · CCS2 · EVSE-1</p>
-      </div>
-
-      {/* ─── Charging ring visualization ─── */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 relative z-10">
-        <div className="relative mb-3" style={{ width: 220, height: 220 }}>
-
-          {/* Pulsing halos */}
-          <div className="absolute inset-0 rounded-full opacity-20"
-            style={{ background: 'radial-gradient(circle, rgba(52,211,153,0.6) 0%, transparent 60%)', animation: 'charge-glow 2.4s ease-in-out infinite' }} />
-          <div className="absolute rounded-full border border-emerald-400/20"
-            style={{ inset: -10, animation: 'pulse-halo 2.8s ease-out 0s infinite' }} />
-          <div className="absolute rounded-full border border-emerald-400/12"
-            style={{ inset: -10, animation: 'pulse-halo 2.8s ease-out 0.9s infinite' }} />
-          <div className="absolute rounded-full border border-sky-400/10"
-            style={{ inset: -10, animation: 'pulse-halo 2.8s ease-out 1.8s infinite' }} />
-
-          {/* SVG rings */}
-          <svg viewBox="0 0 200 200" className="w-full h-full absolute inset-0" style={{ overflow: 'visible' }}>
-            {/* Outer spinning dashed ring */}
-            <g style={{ transformOrigin: '100px 100px', animation: 'spin-cw 12s linear infinite' }}>
-              <circle cx="100" cy="100" r={R_OUTER} fill="none"
-                stroke="rgba(52,211,153,0.15)" strokeWidth="1.5"
-                strokeDasharray="6 8" />
-            </g>
-
-            {/* Mid counter-spinning ring */}
-            <g style={{ transformOrigin: '100px 100px', animation: 'spin-ccw 8s linear infinite' }}>
-              <circle cx="100" cy="100" r={R_MID} fill="none"
-                stroke="rgba(32, 212, 182,0.12)" strokeWidth="1"
-                strokeDasharray="3 14" />
-            </g>
-
-            {/* Outer ring track */}
-            <circle cx="100" cy="100" r={R_PROG} fill="none"
-              stroke="rgba(255,255,255,0.06)" strokeWidth="9"
-              style={{ transform: 'rotate(-90deg)', transformOrigin: '100px 100px' }} />
-
-            {/* Target arc ghost */}
-            <circle cx="100" cy="100" r={R_PROG} fill="none"
-              stroke="rgba(52,211,153,0.1)" strokeWidth="9"
-              strokeDasharray={`${C_PROG * target / 100} ${C_PROG}`}
-              style={{ transform: 'rotate(-90deg)', transformOrigin: '100px 100px' }} />
-
-            {/* Progress arc — main */}
-            <circle cx="100" cy="100" r={R_PROG} fill="none"
-              stroke="url(#chargeGrad)" strokeWidth="9" strokeLinecap="round"
-              strokeDasharray={C_PROG}
-              strokeDashoffset={C_PROG * (1 - progress / 100)}
-              style={{ transform: 'rotate(-90deg)', transformOrigin: '100px 100px', transition: 'stroke-dashoffset 1.8s cubic-bezier(0.34,1,0.64,1)' }} />
-
-            {/* Progress arc glow copy */}
-            <circle cx="100" cy="100" r={R_PROG} fill="none"
-              stroke="rgba(52,211,153,0.3)" strokeWidth="16" strokeLinecap="round"
-              strokeDasharray={C_PROG}
-              strokeDashoffset={C_PROG * (1 - progress / 100)}
-              style={{ transform: 'rotate(-90deg)', transformOrigin: '100px 100px', transition: 'stroke-dashoffset 1.8s cubic-bezier(0.34,1,0.64,1)', filter: 'blur(4px)' }} />
-
-            <defs>
-              <linearGradient id="chargeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#34D399" />
-                <stop offset="50%" stopColor="#10B981" />
-                <stop offset="100%" stopColor="#20D4B6" />
-              </linearGradient>
-            </defs>
-          </svg>
-
-          {/* Center content */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div style={{ animation: 'energy-bolt 1.8s ease-in-out infinite' }}>
-              <BatteryCharging size={20} className="text-emerald-300 mb-1" />
-            </div>
-            <span className="text-[52px] font-bold text-white mono leading-none tracking-tight"
-              style={{ textShadow: '0 0 30px rgba(52,211,153,0.5)' }}>
-              {Math.round(progress)}
-            </span>
-            <span className="text-emerald-400/70 text-sm font-bold">%</span>
-          </div>
-        </div>
-
-        {/* ETA pill */}
-        <div className="mb-4">
-          {progress < target ? (
-            <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full">
-              <Clock size={11} className="text-sky-400" />
-              <p className="text-white/60 text-xs">до {target}% · ~{Math.ceil(etaSecs / 60)} мин</p>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-400/25 px-3 py-1.5 rounded-full">
-              <span className="text-emerald-400 text-xs font-bold">✓ Цель достигнута</span>
-            </div>
-          )}
-        </div>
-
-        {/* Live stats */}
-        <div className="grid grid-cols-3 gap-2 w-full">
-          {[
-            { label: 'кВт·ч', value: energy.toFixed(2), sub: 'получено', color: '#34D399' },
-            { label: 'кВт', value: power.toFixed(1), sub: 'мощность', color: '#20D4B6' },
-            { label: '', value: fmt(elapsed), sub: 'прошло', color: '#8DA2FF' },
-          ].map(stat => (
-            <div key={stat.sub}
-              className="rounded-2xl p-3 text-center border"
-              style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(8px)' }}>
-              <p className="text-white/40 text-[10px] mb-0.5 tracking-wide">{stat.sub}</p>
-              <p className="font-bold text-[15px] mono" style={{ color: stat.color, textShadow: `0 0 12px ${stat.color}60` }}>{stat.value}</p>
-              <p className="text-white/25 text-[10px]">{stat.label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Cost + remaining */}
-        <div className="mt-2 grid grid-cols-2 gap-2 w-full">
-          <div className="rounded-2xl p-3 border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.07)' }}>
-            <p className="text-white/35 text-[10px] mb-0.5">стоимость</p>
-            <p className="text-white font-bold mono text-sm">{cost.toLocaleString()} сум</p>
-          </div>
-          <div className="rounded-2xl p-3 border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.07)' }}>
-            <p className="text-white/35 text-[10px] mb-0.5">осталось</p>
-            <p className="text-white font-bold mono text-sm">{progress < target ? `~${Math.ceil(etaSecs / 60)} мин` : '— готово'}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Stop button */}
-      <div className="relative px-4 pb-6 pt-2 z-10">
-        <button onClick={onStop}
-          className="w-full text-white rounded-2xl py-4 font-bold text-[15px] transition-all active:scale-95"
-          style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', backdropFilter: 'blur(8px)' }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}>
-          Остановить зарядку
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ChargingDoneScreen({ station, onClose, summary }: { station: Station | null; onClose: () => void; summary?: { energy: number; cost: number; minutes: number } | null }) {
-  const [rated, setRated] = useState(0);
-  const [ratingDone, setRatingDone] = useState(false);
-  const [confetti] = useState(() => Array.from({length: 24}, (_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    color: ['#20D4B6','#34D399','#F59E0B','#F472B6','#8DA2FF','#FB923C'][i % 6],
-    size: 6 + (i % 5) * 2,
-    delay: (i * 0.08).toFixed(2),
-    dur: (1.8 + (i % 4) * 0.3).toFixed(1),
-  })));
-  // Real numbers from the session that just ended; demo values only as a fallback.
-  const kwh = summary?.energy ?? 38.4;
-  const minutes = summary?.minutes ?? 43;
-  const co2Saved = (kwh * 0.023).toFixed(2);
-  const kmAdded = Math.round(kwh / 0.18);
-  const cost = 76800;
-  const serviceFee = 5000;
-
-  return (
-    <div className="h-full flex flex-col bg-white relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-10">
-        {confetti.map(c => (
-          <div key={c.id} style={{
-            position: 'absolute',
-            left: `${c.x}%`,
-            top: '-20px',
-            width: c.size,
-            height: c.size,
-            background: c.color,
-            borderRadius: c.id % 3 === 0 ? '50%' : '2px',
-            animation: `confetti-fall ${c.dur}s ${c.delay}s ease-in both`,
-          }} />
-        ))}
-      </div>
-      {/* Hero */}
-      <div className="bg-gradient-to-b from-green-500 to-green-600 px-4 pt-6 pb-8 text-white text-center relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="absolute rounded-full bg-white/10 animate-ping"
-              style={{ width: `${20 + i * 10}px`, height: `${20 + i * 10}px`, top: '50%', left: '50%', transform: 'translate(-50%,-50%)', animationDelay: `${i * 0.15}s`, animationDuration: '2s' }} />
-          ))}
-        </div>
-        <div className="relative">
-          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
-            <CheckCircle size={34} className="text-white" />
-          </div>
-          <h2 className="text-2xl font-bold">Зарядка завершена!</h2>
-          <p className="text-green-100 text-sm mt-0.5">{station?.name}</p>
-          <div className="grid grid-cols-3 gap-3 mt-5">
-            {[
-              { value: String(kwh), unit: 'кВт·ч', label: 'заряжено' },
-              { value: summary ? `${(summary.cost / 1000).toFixed(1)}k` : '80%', unit: summary ? 'сум' : '', label: summary ? 'списано' : 'заряд батареи' },
-              { value: String(minutes), unit: 'мин', label: 'время' },
-            ].map(s => (
-              <div key={s.label} className="bg-white/15 rounded-2xl py-2">
-                <p className="text-xl font-bold mono">{s.value}<span className="text-sm font-normal">{s.unit}</span></p>
-                <p className="text-green-100 text-xs">{s.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {/* Hero */}
-        <div className="animate-scale-in bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-5 text-white text-center relative overflow-hidden">
-          <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full" />
-          <div className="absolute -left-2 -bottom-3 w-14 h-14 bg-white/10 rounded-full" />
-          <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
-            <CheckCircle size={28} className="text-white" />
-          </div>
-          <h2 className="text-xl font-bold mb-0.5">Отлично!</h2>
-          <p className="text-green-100 text-sm">Батарея заряжена с 24% до 80%</p>
-          <div className="grid grid-cols-3 gap-3 mt-4">
-            {[
-              { label: 'кВт·ч', value: `${kwh}` },
-              { label: 'мин', value: '43' },
-              { label: 'км добавлено', value: `+${kmAdded}` },
-            ].map(s => (
-              <div key={s.label} className="bg-white/15 rounded-xl py-2">
-                <p className="text-xl font-bold mono">{s.value}</p>
-                <p className="text-xs text-green-100">{s.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Eco badge */}
-        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-xl">🌿</div>
-          <div>
-            <p className="text-sm font-semibold text-emerald-800">Вы сэкономили {co2Saved} кг CO₂</p>
-            <p className="text-xs text-emerald-600">по сравнению с бензиновым авто на этот пробег</p>
-          </div>
-        </div>
-
-        {/* Receipt */}
-        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-          <div className="px-4 py-3 bg-slate-50 border-b border-slate-50 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-slate-500">ЭЛЕКТРОННЫЙ ЧЕК</p>
-              <p className="text-xs text-slate-400 mono">#CDR-S-1043 · 4 сен 2026</p>
-            </div>
-            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Оплачено</span>
-          </div>
-          <div className="p-4 space-y-2">
-            {[
-              { label: 'Станция', value: station?.name || 'Toshkent Siti Hub' },
-              { label: 'Оператор', value: station?.operator || 'GreenCharge UZ' },
-              { label: 'Разъём', value: 'CCS2 · макс 150 кВт' },
-              { label: 'Начало', value: '15:22:04' },
-              { label: 'Конец', value: '16:05:37' },
-              { label: 'Длительность', value: '43 мин 33 сек' },
-            ].map(row => (
-              <div key={row.label} className="flex justify-between items-center">
-                <span className="text-xs text-slate-400">{row.label}</span>
-                <span className="text-xs font-medium text-slate-700">{row.value}</span>
-              </div>
-            ))}
-            <div className="border-t border-dashed border-slate-200 pt-2 mt-1 space-y-1.5">
-              {[
-                { label: `${kwh} кВт·ч × 2 000 сум`, value: `${(kwh * 2000).toLocaleString()} сум` },
-                { label: 'Сервисный сбор', value: `${serviceFee.toLocaleString()} сум` },
-              ].map(row => (
-                <div key={row.label} className="flex justify-between text-xs">
-                  <span className="text-slate-400">{row.label}</span>
-                  <span className="text-slate-700 mono">{row.value}</span>
-                </div>
-              ))}
-              <div className="flex justify-between items-center border-t border-slate-100 pt-2 mt-1">
-                <span className="text-sm font-bold text-slate-900">Итого</span>
-                <span className="text-base font-bold text-sky-600 mono">{cost.toLocaleString()} сум</span>
-              </div>
-            </div>
-            <div className="bg-slate-50 rounded-xl p-2.5 flex items-center justify-between text-xs">
-              <span className="text-slate-500">Метод оплаты</span>
-              <div className="flex items-center gap-1.5">
-                <div className="w-5 h-3 bg-gradient-to-r from-orange-400 to-orange-600 rounded flex items-center justify-center">
-                  <span className="text-white text-xs font-bold" style={{ fontSize: '6px' }}>H</span>
-                </div>
-                <span className="font-medium text-slate-700">Humo •••• 4521</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick rating */}
-        {!ratingDone ? (
-          <div className="bg-white rounded-2xl border border-slate-100 p-4">
-            <p className="text-sm font-semibold text-slate-700 mb-3 text-center">Оцените эту зарядку</p>
-            <div className="flex justify-center gap-2 mb-3">
-              {[1,2,3,4,5].map(s => (
-                <button key={s} onClick={() => setRated(s)}
-                  className={`text-2xl transition-transform active:scale-90 ${s <= rated ? 'text-amber-400' : 'text-slate-200'}`}>★</button>
-              ))}
-            </div>
-            {rated > 0 && (
-              <button onClick={() => setRatingDone(true)}
-                className="w-full py-2 bg-sky-500 text-white rounded-xl text-sm font-medium hover:bg-sky-600">
-                Отправить оценку
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="bg-sky-50 border border-sky-100 rounded-2xl p-4 text-center">
-            <p className="text-sm font-semibold text-sky-700">Спасибо за оценку! ⭐ {rated}/5</p>
-          </div>
-        )}
-      </div>
-
-      <div className="px-4 pb-6 pt-2 grid grid-cols-2 gap-2">
-        <button className="border border-slate-200 text-slate-700 rounded-2xl py-3 font-medium text-sm flex items-center justify-center gap-1.5">
-          <Download size={14} />Чек PDF
-        </button>
-        <button onClick={onClose} className="bg-sky-500 text-white rounded-2xl py-3 font-semibold text-sm">
-          Готово
-        </button>
-        <button className="w-full border border-slate-200 text-slate-500 rounded-2xl py-2.5 text-sm">
-          Поделиться маршрутом
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ChargingHubScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
-  const stations = useLiveStations();
-  const nearbyStations = stations.slice(0, 3);
-  const [activeCard, setActiveCard] = useState<'promo' | 'subscription' | null>(null);
-
-  const subscriptionPlans = [
-    { name: 'Базовый', price: '49 000', kwh: 50, badge: '', color: 'from-slate-500 to-slate-600' },
-    { name: 'Стандарт', price: '89 000', kwh: 100, badge: 'Популярный', color: 'from-sky-500 to-sky-600' },
-    { name: 'Премиум', price: '159 000', kwh: 200, badge: '25% выгода', color: 'from-violet-500 to-violet-600' },
-  ];
-
-  return (
-    <div className="h-full flex flex-col bg-slate-50">
-      <div className="bg-white px-4 pt-4 pb-4 border-b border-slate-100">
-        <h1 className="text-lg font-bold text-slate-900">Зарядка</h1>
-        <p className="text-xs text-slate-500 mt-0.5">BYD Han EV · 34% заряда · ~142 км</p>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        {/* Current battery card */}
-        <div className="bg-gradient-to-br from-sky-500 to-sky-700 rounded-2xl p-5 text-white relative overflow-hidden">
-          <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full" />
-          <div className="absolute -right-2 -bottom-4 w-16 h-16 bg-white/10 rounded-full" />
-          <p className="text-xs text-sky-200 mb-2 font-medium">МОЙ АВТОМОБИЛЬ</p>
-          <div className="flex items-end justify-between mb-3">
-            <div>
-              <p className="text-4xl font-bold mono">34%</p>
-              <p className="text-sky-200 text-sm">~142 км запаса</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sky-200 text-xs">до полного</p>
-              <p className="text-xl font-bold mono">~55 мин</p>
-              <p className="text-sky-200 text-xs">при 150 кВт</p>
-            </div>
-          </div>
-          {/* Battery bar */}
-          <div className="h-3 bg-white/20 rounded-full overflow-hidden">
-            <div className="h-full bg-white rounded-full relative" style={{ width: '34%' }}>
-              <div className="absolute right-0 top-0 h-full w-1 bg-sky-300 animate-pulse" />
-            </div>
-          </div>
-          <div className="flex justify-between text-xs text-sky-200 mt-1">
-            <span>0%</span><span>Цель: 80%</span><span>100%</span>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button onClick={() => onNavigate('map')}
-              className="bg-white text-sky-600 rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2">
-              <MapPin size={15} />На карте
-            </button>
-            <button onClick={() => onNavigate('qr-scan')}
-              className="bg-white/20 text-white rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2 border border-white/30 active:scale-95 transition-all">
-              <Scan size={15} />QR-сканер
-            </button>
-          </div>
-        </div>
-
-        {/* Quick charge targets */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-4">
-          <p className="text-xs font-semibold text-slate-500 mb-3">ЗАРЯДИТЬ ДО</p>
-          <div className="flex gap-2">
-            {[60, 80, 100].map(pct => (
-              <button key={pct}
-                className={`flex-1 py-3 rounded-xl text-sm font-semibold border transition-all ${pct === 80 ? 'bg-sky-500 text-white border-sky-500' : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-sky-300'}`}>
-                {pct}%
-                <p className="text-xs font-normal mt-0.5 opacity-70">
-                  {pct === 60 ? '~245 км' : pct === 80 ? '~326 км' : '~407 км'}
-                </p>
-              </button>
-            ))}
-          </div>
-          <div className="mt-3 p-3 bg-sky-50 rounded-xl flex justify-between items-center text-sm">
-            <span className="text-slate-600">Стоимость до 80%</span>
-            <span className="font-bold text-sky-700 mono">~92 000 сум</span>
-          </div>
-        </div>
-
-        {/* Nearby stations */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-semibold text-slate-700">Ближайшие станции</p>
-            <button onClick={() => onNavigate('map')} className="text-xs text-sky-500 font-medium">Все на карте →</button>
-          </div>
-          <div className="space-y-2">
-            {nearbyStations.map((s, i) => {
-              const free = s.connectors.filter(c => c.status === 'available').length;
-              const dist = [0.8, 1.4, 2.1][i];
-              return (
-                <div key={s.id} className="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
-                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${free > 0 ? 'bg-green-500' : 'bg-red-400'}`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 truncate">{s.name}</p>
-                    <p className="text-xs text-slate-400">{s.city} · {dist} км · {free}/{s.connectors.length} свободно</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold mono text-slate-800">{s.connectors[0].price.toLocaleString()}</p>
-                    <p className="text-xs text-slate-400">сум/кВт·ч</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Subscription */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-semibold text-slate-700">Подписка ONE CHARGE+</p>
-            <span className="text-xs text-sky-500 bg-sky-50 px-2 py-0.5 rounded-full">Активна</span>
-          </div>
-          <div className="bg-white rounded-2xl border border-slate-100 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="text-sm font-semibold text-slate-800">Стандарт · Август 2026</p>
-                <p className="text-xs text-slate-400">68 / 100 кВт·ч использовано</p>
-              </div>
-              <span className="text-2xl font-bold mono text-sky-600">68%</span>
-            </div>
-            <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-2">
-              <div className="h-full bg-sky-400 rounded-full" style={{ width: '68%' }} />
-            </div>
-            <p className="text-xs text-slate-400">Осталось 32 кВт·ч · сбрасывается 1 сентября</p>
-          </div>
-        </div>
-
-        {/* Subscription plans */}
-        <div>
-          <p className="text-sm font-semibold text-slate-700 mb-2">Тарифы подписки</p>
-          <div className="grid grid-cols-3 gap-2">
-            {subscriptionPlans.map(plan => (
-              <div key={plan.name} className={`rounded-2xl p-3 bg-gradient-to-br ${plan.color} text-white relative`}>
-                {plan.badge && (
-                  <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-xs bg-amber-400 text-amber-900 px-2 py-0.5 rounded-full font-semibold whitespace-nowrap">
-                    {plan.badge}
-                  </span>
-                )}
-                <p className="text-xs font-semibold opacity-80 mt-2">{plan.name}</p>
-                <p className="text-base font-bold mono mt-0.5">{plan.price}</p>
-                <p className="text-xs opacity-70">сум/мес</p>
-                <p className="text-xs font-semibold mt-1">{plan.kwh} кВт·ч</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PowerMiniChart({ energy, maxPower }: { energy: number; maxPower: number }) {
-  const pts = Array.from({ length: 12 }, (_, i) => {
-    const progress = i / 11;
-    const base = progress < 0.15 ? progress / 0.15 : progress < 0.75 ? 1 : 1 - (progress - 0.75) / 0.25;
-    return Math.max(5, Math.round(base * maxPower + (Math.random() - 0.5) * 8));
-  });
-  const max = Math.max(...pts);
-  const w = 180, h = 44;
-  const coords = pts.map((v, i) => `${Math.round((i / 11) * w)},${Math.round(h - (v / max) * (h - 4) - 2)}`).join(' ');
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="w-full">
-      <defs>
-        <linearGradient id={`pg${energy}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#20D4B6" stopOpacity="0.3" />
-          <stop offset="100%" stopColor="#20D4B6" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polygon points={`0,${h} ${coords} ${w},${h}`} fill={`url(#pg${energy})`} />
-      <polyline points={coords} fill="none" stroke="#20D4B6" strokeWidth="1.5" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function HistoryScreen() {
-  const sessions = useLiveDriverSessions();
-  const [period, setPeriod] = useState<'week' | 'month' | 'all'>('month');
-  const [expanded, setExpanded] = useState<string | null>(null);
-
-  const stats = { sessions: 5, energy: 192.4, cost: 378020, co2: (192.4 * 0.023).toFixed(1), bonus: 192 };
-
-  const monthBars = [
-    { m: 'Июн', kwh: 52, cost: 102400 },
-    { m: 'Июл', kwh: 78, cost: 153600 },
-    { m: 'Авг', kwh: 62, cost: 122020 },
-  ];
-  const maxKwh = Math.max(...monthBars.map(b => b.kwh));
-
-  const sessionDetails: Record<string, { socStart: number; socEnd: number; maxPower: number; tariff: number; card: string; station: string }> = {};
-  sessions.forEach(s => {
-    sessionDetails[s.id] = {
-      socStart: Math.max(10, Math.round(Math.random() * 30 + 10)),
-      socEnd: Math.min(95, Math.round(Math.random() * 20 + 65)),
-      maxPower: s.connector === 'CCS2' ? 150 : s.connector === 'CHAdeMO' ? 100 : 22,
-      tariff: Math.round(s.cost / s.energy),
-      card: Math.random() > 0.5 ? 'Humo •••• 4521' : 'Uzcard •••• 8832',
-      station: s.stationName,
-    };
-  });
-
-  return (
-    <div className="h-full flex flex-col bg-slate-50">
-      <div className="bg-white px-4 pt-4 pb-3 border-b border-slate-100">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold text-slate-900">История зарядок</h1>
-            <p className="text-xs text-slate-500 mt-0.5">{stats.sessions} сессий · {stats.energy} кВт·ч · {stats.cost.toLocaleString()} сум</p>
-          </div>
-          <button className="p-2 bg-slate-100 rounded-xl"><Download size={15} className="text-slate-600" /></button>
-        </div>
-        <div className="flex gap-1 mt-3">
-          {(['week', 'month', 'all'] as const).map(p => (
-            <button key={p} onClick={() => setPeriod(p)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${period === p ? 'bg-sky-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
-              {p === 'week' ? 'Неделя' : p === 'month' ? 'Месяц' : 'Всё время'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {/* Stats */}
-        <div className="grid grid-cols-4 gap-2">
-          {[
-            { label: 'кВт·ч', value: String(stats.energy), color: 'text-sky-600' },
-            { label: 'потрачено', value: `${(stats.cost/1000).toFixed(0)}k`, color: 'text-slate-900' },
-            { label: 'кг CO₂ saved', value: String(stats.co2), color: 'text-green-600' },
-            { label: 'бонусов', value: `+${stats.bonus}`, color: 'text-amber-500' },
-          ].map(s => (
-            <div key={s.label} className="bg-white rounded-2xl border border-slate-100 p-3 text-center">
-              <p className={`text-lg font-bold mono ${s.color}`}>{s.value}</p>
-              <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">{s.label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Bar chart */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-4">
-          <p className="text-xs font-semibold text-slate-500 mb-3">кВт·ч по месяцам</p>
-          <div className="flex items-end gap-3 h-16">
-            {monthBars.map(b => (
-              <div key={b.m} className="flex-1 flex flex-col items-center gap-1">
-                <span className="text-xs text-slate-500 mono">{b.kwh}</span>
-                <div className="w-full bg-sky-500 rounded-t-md" style={{ height: `${(b.kwh / maxKwh) * 52}px` }} />
-                <span className="text-xs text-slate-400">{b.m}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Sessions */}
-        {sessions.map(s => {
-          const det = sessionDetails[s.id] || { socStart: 20, socEnd: 80, maxPower: 150, tariff: 2000, card: 'Humo •••• 4521', station: s.stationName };
-          const isOpen = expanded === s.id;
-          return (
-            <div key={s.id} className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-              <button onClick={() => setExpanded(isOpen ? null : s.id)} className="w-full p-4 text-left">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">{s.stationName}</p>
-                    <p className="text-xs text-slate-400">{s.operator} · {s.date}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-slate-900 mono">{s.cost.toLocaleString()} сум</p>
-                    <p className="text-xs text-amber-500">+{Math.round(s.energy / 10)} бонусов</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 text-xs text-slate-500">
-                  <span className="flex items-center gap-1"><Clock size={11} />{s.duration}</span>
-                  <span className="flex items-center gap-1"><Zap size={11} />{s.energy} кВт·ч</span>
-                  <span className="text-xs px-1.5 py-0.5 bg-sky-50 text-sky-600 rounded-md">{s.connector}</span>
-                  <ChevronDown size={13} className={`ml-auto text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                </div>
-              </button>
-
-              {isOpen && (
-                <div className="border-t border-slate-100 px-4 pb-4 pt-3 space-y-4">
-                  {/* SOC progress */}
-                  <div>
-                    <div className="flex justify-between text-xs text-slate-500 mb-1.5">
-                      <span className="flex items-center gap-1"><Battery size={11} />Батарея</span>
-                      <span className="font-semibold text-slate-700">{det.socStart}% → {det.socEnd}%</span>
-                    </div>
-                    <div className="relative h-4 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="absolute left-0 top-0 h-full bg-slate-200 rounded-full" style={{ width: `${det.socStart}%` }} />
-                      <div className="absolute left-0 top-0 h-full bg-gradient-to-r from-sky-400 to-green-400 rounded-full transition-all" style={{ width: `${det.socEnd}%` }} />
-                      <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">
-                        +{det.socEnd - det.socStart}%
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Power chart */}
-                  <div>
-                    <p className="text-xs font-semibold text-slate-500 mb-1.5">Мощность зарядки (кВт)</p>
-                    <div className="bg-slate-950 rounded-xl p-2 pb-1">
-                      <PowerMiniChart energy={s.energy} maxPower={det.maxPower} />
-                      <div className="flex justify-between text-[10px] text-slate-600 px-1 mt-0.5">
-                        <span>Старт</span>
-                        <span className="text-sky-400">макс {det.maxPower} кВт</span>
-                        <span>Конец</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Receipt */}
-                  <div className="bg-slate-50 rounded-xl p-3 space-y-2">
-                    <p className="text-[11px] font-bold text-slate-400 tracking-wider">ЧЕК</p>
-                    {[
-                      { label: 'Энергия', value: `${s.energy} кВт·ч` },
-                      { label: 'Тариф', value: `${det.tariff.toLocaleString()} сум/кВт·ч` },
-                      { label: 'Сервисный сбор', value: '5 000 сум' },
-                      { label: 'Итого', value: `${s.cost.toLocaleString()} сум`, bold: true },
-                      { label: 'Оплата', value: det.card },
-                      { label: 'CDR ID', value: s.id, mono: true },
-                    ].map(row => (
-                      <div key={row.label} className={`flex justify-between text-xs ${row.bold ? 'border-t border-slate-200 pt-2 mt-1' : ''}`}>
-                        <span className="text-slate-500">{row.label}</span>
-                        <span className={`${row.bold ? 'font-bold text-slate-900' : 'text-slate-700 font-medium'} ${row.mono ? 'font-mono text-[10px]' : ''}`}>{row.value}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button className="flex-1 text-xs py-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 font-medium transition-colors">
-                      Повторить маршрут
-                    </button>
-                    <button className="flex-1 text-xs py-2.5 bg-sky-50 text-sky-600 rounded-xl hover:bg-sky-100 font-medium transition-colors">
-                      Скачать чек
-                    </button>
-                    <button className="text-xs py-2.5 px-3 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 font-medium transition-colors">
-                      Оценить
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 function AppSettingsScreen({ onBack }: { onBack: () => void }) {
   const [language, setLanguage] = useState<'ru' | 'uz' | 'en'>('ru');
   const [theme, setTheme] = useState<'light' | 'dark' | 'auto'>(
@@ -1257,7 +515,7 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
   const { actions, refresh, state, sessions: portalSessions } = useSync();
   const driverId = portalSessions.driver?.id;
   // Balance is owned by the server so a top-up shows up in every portal.
-  const balance = (driverId && state?.wallets?.[driverId]?.balance) ?? 47500;
+  const balance = (driverId && state?.wallets?.[driverId]?.balance) ?? 0;
   const [showTopUp, setShowTopUp] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState('');
@@ -1265,7 +523,7 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const [topUpSuccess, setTopUpSuccess] = useState(false);
-  const [autoRecharge, setAutoRecharge] = useState(true);
+  const [orders, setOrders] = useState<PaymentOrder[]>([]);
 
   const quickAmounts = [10000, 20000, 50000, 100000];
   const providers = [
@@ -1273,15 +531,24 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
     { id: 'click' as const, name: 'Click', letter: 'C', color: '#0073FF' },
   ];
 
+  // Money in: paid top-ups. Money out: charges paid from the wallet, refunds back in.
+  useEffect(() => {
+    actions.listPayments('driver').then(setOrders).catch(() => setOrders([]));
+  }, [actions, balance]);
+  const fmt = (iso: string) => new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tashkent' });
   const transactions = [
-    { id: 'W-1042', type: 'topup', amount: 50000, label: 'Пополнение — Humo 4521', date: '07 сент, 14:20' },
-    { id: 'W-1041', type: 'charge', amount: -76800, label: 'Зарядка — GreenCharge Toshkent', date: '07 сент, 11:05' },
-    { id: 'W-1040', type: 'topup', amount: 100000, label: 'Пополнение — Uzcard 8832', date: '05 сент, 09:30' },
-    { id: 'W-1039', type: 'charge', amount: -78280, label: 'Зарядка — EV Hub Samarkand', date: '04 сент, 17:45' },
-    { id: 'W-1038', type: 'charge', amount: -97680, label: 'Зарядка — AutoCharge Fergana', date: '03 сент, 12:20' },
-    { id: 'W-1037', type: 'topup', amount: 200000, label: 'Пополнение — Humo 4521', date: '01 сент, 08:00' },
-    { id: 'W-1036', type: 'charge', amount: -75820, label: 'Зарядка — SolarStation Bukhara', date: '31 авг, 16:10' },
-  ];
+    ...orders.filter(o => o.status === 'paid').map(o => ({ id: o.id, type: 'topup', amount: o.amount, label: `Пополнение — ${o.provider === 'payme' ? 'Payme' : 'Click'}`, at: o.paidAt ?? o.created })),
+    ...(state?.transactions ?? [])
+      .filter(t => t.userId === driverId && t.method === 'Кошелёк')
+      .map(t => {
+        const ses = state?.sessions.find(x => x.id === t.sessionId);
+        const refunded = t.status === 'refunded';
+        return { id: t.id, type: refunded ? 'topup' : 'charge', amount: refunded ? t.amount : -t.amount, label: `${refunded ? 'Возврат' : 'Зарядка'} — ${ses?.stationName ?? t.sessionId}`, at: t.time };
+      }),
+  ]
+    .sort((a, b) => b.at.localeCompare(a.at))
+    .slice(0, 30)
+    .map(x => ({ ...x, date: fmt(x.at) }));
 
   /**
    * The wallet is credited only once the provider confirms the payment. With
@@ -1330,48 +597,14 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
         <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-5 text-white shadow-xl">
           <p className="text-xs font-semibold tracking-widest text-slate-400 uppercase mb-1">БАЛАНС ONE CHARGE</p>
           <p className="text-3xl font-bold tracking-tight mb-3">{balance.toLocaleString()} сум</p>
-          <div className="flex items-center gap-2 mb-4">
-            {autoRecharge && (
-              <span className="flex items-center gap-1 text-xs bg-green-500/20 text-green-400 px-2.5 py-1 rounded-full font-medium border border-green-500/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-                Автопополнение включено
-              </span>
-            )}
-          </div>
+          <p className="text-xs text-slate-400 mb-4">Пополнение через Payme или Click · списывается за каждую зарядку по счётчику</p>
           <div className="flex gap-2">
             <button onClick={() => setShowTopUp(true)}
               className="flex-1 py-2.5 bg-sky-500 hover:bg-sky-400 rounded-2xl text-sm font-semibold transition-colors active:scale-95">
               Пополнить
             </button>
-            <button className="flex-1 py-2.5 bg-slate-700 rounded-2xl text-sm font-semibold text-slate-400 cursor-not-allowed">
-              Снять
-            </button>
-          </div>
-        </div>
 
-        {/* Auto-recharge toggle */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
-          <div className="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center shrink-0">
-            <Zap size={17} className="text-green-500" />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-slate-800">Автопополнение</p>
-            <p className="text-xs text-slate-400 mt-0.5">Пополнять на 50 000 сум при балансе &lt; 10 000 сум</p>
-          </div>
-          <button
-            onClick={() => setAutoRecharge(v => !v)}
-            className="relative shrink-0"
-            style={{ width: 44, height: 24 }}
-          >
-            <div
-              className="absolute inset-0 rounded-full transition-colors duration-200"
-              style={{ background: autoRecharge ? '#22c55e' : '#cbd5e1' }}
-            />
-            <div
-              className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200"
-              style={{ left: autoRecharge ? 20 : 2 }}
-            />
-          </button>
         </div>
 
         {/* Transaction history */}
@@ -1380,6 +613,7 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
             <p className="text-xs font-semibold text-slate-500">ИСТОРИЯ ОПЕРАЦИЙ</p>
           </div>
           <div className="divide-y divide-slate-50">
+            {transactions.length === 0 && <p className="px-4 py-6 text-center text-sm text-slate-400">Операций пока нет</p>}
             {transactions.map(tx => (
               <div key={tx.id} className="px-4 py-3 flex items-center gap-3">
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${tx.type === 'topup' ? 'bg-green-50' : 'bg-sky-50'}`}>
@@ -1472,502 +706,51 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
   );
 }
 
-function SecurityScreen({ onBack }: { onBack: () => void }) {
-  const [pinEnabled, setPinEnabled] = useState(true);
-  const [bioEnabled, setBioEnabled] = useState(true);
-  const [twoFA, setTwoFA] = useState(false);
-  const [pinPhase, setPinPhase] = useState<'idle' | 'enter' | 'confirm' | 'done'>('idle');
-  const [pin, setPin] = useState('');
-  const [confirmPin, setConfirmPin] = useState('');
-  const [pinError, setPinError] = useState('');
-  const [analytics, setAnalytics] = useState(true);
-  const [personalization, setPersonalization] = useState(true);
-  const [crashReports, setCrashReports] = useState(true);
-
-  const Toggle = ({ value, onChange }: { value: boolean; onChange: () => void }) => (
-    <button
-      onClick={onChange}
-      className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${value ? 'bg-sky-500' : 'bg-slate-200'}`}
-    >
-      <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-6' : 'translate-x-1'}`} />
-    </button>
-  );
-
-  const handlePinKey = (k: string) => {
-    if (pinPhase === 'idle' || pinPhase === 'done') return;
-    if (k === '⌫') {
-      if (pinPhase === 'enter') setPin(p => p.slice(0, -1));
-      else setConfirmPin(p => p.slice(0, -1));
-      setPinError('');
-      return;
-    }
-    if (pinPhase === 'enter') {
-      const next = pin + k;
-      setPin(next);
-      if (next.length === 4) {
-        setTimeout(() => { setPinPhase('confirm'); setPin(next); setConfirmPin(''); }, 150);
-      }
-    } else {
-      const next = confirmPin + k;
-      setConfirmPin(next);
-      if (next.length === 4) {
-        if (next === pin) {
-          setPinPhase('done');
-          setPinError('');
-        } else {
-          setPinError('PIN-коды не совпадают. Попробуйте снова.');
-          setPin('');
-          setConfirmPin('');
-          setPinPhase('enter');
-        }
-      }
-    }
-  };
-
-  const currentPin = pinPhase === 'enter' ? pin : confirmPin;
-
-  const sessions = [
-    { device: 'iPhone 15 Pro', os: 'iOS 17.4', location: 'Ташкент, UZ', time: 'Сейчас (текущее)', current: true },
-    { device: 'Chrome / MacBook', os: 'macOS Sonoma', location: 'Ташкент, UZ', time: '3 часа назад', current: false },
-    { device: 'Samsung Galaxy S24', os: 'Android 14', location: 'Самарканд, UZ', time: '2 дня назад', current: false },
-  ];
-
-  return (
-    <div className="h-full flex flex-col bg-slate-50">
-      <div className="bg-white px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100 shrink-0">
-        <button onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
-        <h1 className="text-base font-bold text-slate-900">Безопасность</h1>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        {/* Section 1 — Login */}
-        <div>
-          <p className="text-xs font-semibold text-slate-400 tracking-widest mb-2 px-1">ВХОД В ПРИЛОЖЕНИЕ</p>
-          <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-            <div className="px-4 py-3.5 flex items-center justify-between border-b border-slate-50">
-              <div>
-                <p className="text-sm font-medium text-slate-800">PIN-код</p>
-                <p className="text-xs text-slate-400">4-значный код при запуске</p>
-              </div>
-              <Toggle value={pinEnabled} onChange={() => setPinEnabled(v => !v)} />
-            </div>
-            <div className="px-4 py-3.5 flex items-center justify-between border-b border-slate-50">
-              <div>
-                <p className="text-sm font-medium text-slate-800">Face ID / Touch ID</p>
-                <p className="text-xs text-slate-400">Биометрический вход</p>
-              </div>
-              <Toggle value={bioEnabled} onChange={() => setBioEnabled(v => !v)} />
-            </div>
-            {pinPhase === 'idle' && (
-              <div className="px-4 py-3">
-                <button onClick={() => { setPinPhase('enter'); setPin(''); setConfirmPin(''); setPinError(''); }}
-                  className="text-sky-500 text-sm font-medium">
-                  Изменить PIN-код
-                </button>
-              </div>
-            )}
-          </div>
-
-          {pinPhase !== 'idle' && (
-            <div className="mt-3 bg-slate-900 rounded-2xl p-6">
-              {pinPhase === 'done' ? (
-                <div className="text-center py-2">
-                  <div className="text-3xl mb-2">✅</div>
-                  <p className="text-green-400 font-semibold">PIN изменён</p>
-                  <button onClick={() => setPinPhase('idle')} className="mt-3 text-slate-400 text-sm">Закрыть</button>
-                </div>
-              ) : (
-                <>
-                  <p className="text-white font-semibold text-center mb-4">
-                    {pinPhase === 'enter' ? 'Введите новый PIN' : 'Подтвердите PIN'}
-                  </p>
-                  <div className="flex justify-center gap-3 mb-5">
-                    {Array.from({ length: 4 }).map((_, i) => (
-                      <div key={i} className={`w-4 h-4 rounded-full ${i < currentPin.length ? 'bg-sky-400' : 'border-2 border-slate-600'}`} />
-                    ))}
-                  </div>
-                  {pinError && <p className="text-red-400 text-xs text-center mb-3">{pinError}</p>}
-                  <div className="grid grid-cols-3 gap-2">
-                    {['1','2','3','4','5','6','7','8','9','*','0','⌫'].map(k => (
-                      <button key={k} onClick={() => handlePinKey(k)}
-                        className="bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-white rounded-xl py-3.5 text-lg font-semibold transition-colors">
-                        {k}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Section 2 — 2FA */}
-        <div>
-          <p className="text-xs font-semibold text-slate-400 tracking-widest mb-2 px-1">ДВУХФАКТОРНАЯ АУТЕНТИФИКАЦИЯ</p>
-          <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-            <div className="px-4 py-3.5 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-800">SMS при входе с нового устройства</p>
-              </div>
-              <Toggle value={twoFA} onChange={() => setTwoFA(v => !v)} />
-            </div>
-            {twoFA && (
-              <div className="px-4 pb-3.5">
-                <div className="bg-sky-50 rounded-xl px-3 py-2">
-                  <p className="text-xs text-sky-700">Код будет отправлен на +998 90 *** 45 67</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Section 3 — Active Sessions */}
-        <div>
-          <p className="text-xs font-semibold text-slate-400 tracking-widest mb-2 px-1">АКТИВНЫЕ СЕССИИ</p>
-          <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden divide-y divide-slate-50">
-            {sessions.map((s, i) => (
-              <div key={i} className="px-4 py-3.5 flex items-center gap-3">
-                <div className="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center shrink-0">
-                  {s.current || s.device.includes('iPhone') || s.device.includes('Samsung')
-                    ? <Smartphone size={15} className="text-slate-500" />
-                    : <Monitor size={15} className="text-slate-500" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800">{s.device}</p>
-                  <p className="text-xs text-slate-400">{s.os}</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-xs text-slate-500">{s.location}</p>
-                  <p className="text-xs text-slate-400">{s.time}</p>
-                  {s.current
-                    ? <span className="text-xs text-green-600 font-medium">Активна</span>
-                    : <button className="text-xs text-red-500 font-medium">Завершить</button>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Section 4 — Privacy */}
-        <div>
-          <p className="text-xs font-semibold text-slate-400 tracking-widest mb-2 px-1">КОНФИДЕНЦИАЛЬНОСТЬ</p>
-          <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-            <div className="px-4 py-3.5 flex items-center justify-between border-b border-slate-50">
-              <div>
-                <p className="text-sm font-medium text-slate-800">Аналитика использования</p>
-                <p className="text-xs text-slate-400">Помогает улучшать приложение</p>
-              </div>
-              <Toggle value={analytics} onChange={() => setAnalytics(v => !v)} />
-            </div>
-            <div className="px-4 py-3.5 flex items-center justify-between border-b border-slate-50">
-              <div>
-                <p className="text-sm font-medium text-slate-800">Персонализация тарифов</p>
-                <p className="text-xs text-slate-400">Индивидуальные предложения</p>
-              </div>
-              <Toggle value={personalization} onChange={() => setPersonalization(v => !v)} />
-            </div>
-            <div className="px-4 py-3.5 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-800">Отчёты о сбоях</p>
-                <p className="text-xs text-slate-400">Автоматически отправлять отчёты</p>
-              </div>
-              <Toggle value={crashReports} onChange={() => setCrashReports(v => !v)} />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SupportScreen({ onBack }: { onBack: () => void }) {
-  const [tab, setTab] = useState<'faq' | 'chat' | 'tickets' | 'contact'>('faq');
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [chatMsg, setChatMsg] = useState('');
-  const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'ai'; text: string }[]>([
-    { role: 'ai', text: 'Привет! Я ИИ-ассистент ONE CHARGE 🔋 Как могу помочь?' }
-  ]);
-
+function SupportScreen({ onBack, onReport }: { onBack: () => void; onReport: () => void }) {
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
   const faqs = [
-    { q: 'Как начать зарядку?', a: 'Найдите станцию на карте → нажмите "Начать зарядку" → выберите коннектор → подтвердите. Либо отсканируйте QR-код на станции.' },
-    { q: 'Почему зарядка не началась?', a: 'Проверьте: 1) Коннектор вставлен и зафиксирован, 2) Баланс кошелька достаточен, 3) Автомобиль в режиме зарядки. Если ошибка сохраняется — нажмите "Сообщить о проблеме".' },
-    { q: 'Как пополнить кошелёк?', a: 'Профиль → Кошелёк → Пополнить. Доступны Humo, Uzcard, Visa, Mastercard. Минимальная сумма 5 000 сум. Зачисление мгновенное.' },
-    { q: 'Как получить бонусы?', a: '1 балл за каждые 10 кВт·ч. Дополнительно: реферал +500 баллов, отзыв +200, день рождения +1000. Тратьте баллы на скидки в разделе Бонусы.' },
-    { q: 'Как отменить бронирование?', a: 'История → нужная сессия → Отменить. Бесплатно до 30 минут до начала. После — штраф 3 000 сум.' },
-  ];
-
-  const tickets = [
-    { id: 'RPT-8821', title: 'Не запустилась зарядка', station: 'GreenCharge Toshkent-1', date: '05 сент', status: 'resolved' },
-    { id: 'RPT-7654', title: 'Неверное списание', station: 'EV Hub Samarkand', date: '28 авг', status: 'in_progress' },
-    { id: 'RPT-6201', title: 'Сломан коннектор CCS2', station: 'AutoCharge Fergana', date: '15 авг', status: 'resolved' },
-  ];
-
-  const aiReply = (msg: string) => {
-    if (msg.includes('зарядк') || msg.includes('старт')) return 'Для начала зарядки найдите станцию на карте и нажмите кнопку "Начать зарядку". Нужна помощь с конкретной станцией?';
-    if (msg.includes('бонус') || msg.includes('балл')) return 'Ваш текущий баланс — 2 450 бонусных баллов. Уровень: Silver. До Gold осталось 1 550 баллов!';
-    if (msg.includes('оплат') || msg.includes('кошел')) return 'Кошелёк ONE CHARGE поддерживает Humo, Uzcard, Visa и Mastercard. Пополнение мгновенное!';
-    if (msg.includes('станц') || msg.includes('карт')) return 'В сети ONE CHARGE 108 станций по всему Узбекистану. Найдите ближайшую на главной карте или в разделе Избранные.';
-    return 'Понял вас! Соединяю с оператором... Обычно отвечаем в течение 5 минут в рабочее время (9:00–21:00).';
-  };
-
-  const sendMsg = () => {
-    const text = chatMsg.trim();
-    if (!text) return;
-    setChatHistory(h => [...h, { role: 'user', text }]);
-    setChatMsg('');
-    setTimeout(() => {
-      setChatHistory(h => [...h, { role: 'ai', text: aiReply(text) }]);
-    }, 1200);
-  };
-
-  const tabs: { id: 'faq' | 'chat' | 'tickets' | 'contact'; label: string }[] = [
-    { id: 'faq', label: 'FAQ' },
-    { id: 'chat', label: 'Чат' },
-    { id: 'tickets', label: 'Заявки' },
-    { id: 'contact', label: 'Контакты' },
+    { q: 'Как начать зарядку?', a: 'Найдите станцию на карте или отсканируйте QR-код на ней → «Начать зарядку» → выберите разъём и способ оплаты → подтвердите. Подключите кабель к машине — зарядка начнётся, когда станция её подтвердит.' },
+    { q: 'Почему зарядка не началась?', a: 'Частые причины: разъём занят или забронирован, на кошельке меньше чем на 5 кВт·ч, исчерпан лимит компании. Текст ошибки на экране подскажет, что именно. Если станция неисправна — сообщите о проблеме, оператор получит оповещение сразу.' },
+    { q: 'Как пополнить кошелёк?', a: 'Профиль → Кошелёк → Пополнить через Payme или Click. Деньги зачисляются, когда платёжная система подтвердит оплату. Данные карт мы не храним — их обрабатывают Payme и Click.' },
+    { q: 'Сколько стоит зарядка?', a: 'Цену за кВт·ч задаёт оператор станции, она видна на карточке разъёма. Ночью (23:00–07:00) — ×0.7, днём (10:00–17:00) — ×0.9, вечером в пик (17:00–22:00) — ×1.25. Тариф фиксируется в момент старта, оплата — по фактической энергии.' },
+    { q: 'Как работает бронь?', a: `Бронь держит разъём за вами 15 минут после назначенного времени и стоит ${(2000).toLocaleString('ru-RU')} сум. Если отменить до начала окна — плата возвращается на кошелёк.` },
+    { q: 'Я сотрудник компании-клиента. Как заряжаться за счёт компании?', a: 'Если ваш номер привязан к автопарку компании, при старте зарядки появится вариант «За счёт компании» и остаток вашего месячного лимита. Лимит меняет менеджер автопарка.' },
   ];
 
   return (
     <div className="h-full flex flex-col bg-slate-50">
       <div className="bg-white px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100 shrink-0">
-        <button onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
+        <button onClick={onBack} aria-label="Назад" className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
         <h1 className="text-base font-bold text-slate-900">Поддержка</h1>
       </div>
-
-      {/* Tabs */}
-      <div className="bg-white px-4 pb-3 shrink-0">
-        <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl">
-          {tabs.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-colors ${tab === t.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-hidden flex flex-col">
-        {tab === 'faq' && (
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-            {faqs.map((faq, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-                <button onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full px-4 py-3.5 flex items-center justify-between text-left">
-                  <span className="text-sm font-medium text-slate-800 flex-1 pr-2">{faq.q}</span>
-                  <ChevronDown size={16} className={`text-slate-400 shrink-0 transition-transform ${openFaq === i ? 'rotate-180' : ''}`} />
-                </button>
-                <div className={`overflow-hidden transition-all ${openFaq === i ? 'max-h-48' : 'max-h-0'}`}>
-                  <p className="px-4 pb-4 text-sm text-slate-500 leading-relaxed">{faq.a}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {tab === 'chat' && (
-          <div className="flex-1 flex flex-col min-h-0">
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-              {chatHistory.map((m, i) => (
-                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm ${m.role === 'user' ? 'bg-sky-500 text-white' : 'bg-slate-100 text-slate-800'}`}>
-                    {m.text}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="px-4 pb-4 pt-2 flex gap-2 bg-white border-t border-slate-100 shrink-0">
-              <input
-                value={chatMsg}
-                onChange={e => setChatMsg(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && sendMsg()}
-                placeholder="Написать сообщение..."
-                className="flex-1 bg-slate-100 rounded-2xl px-4 py-2.5 text-sm outline-none text-slate-800 placeholder:text-slate-400"
-              />
-              <button onClick={sendMsg}
-                className="w-10 h-10 bg-sky-500 rounded-2xl flex items-center justify-center shrink-0">
-                <Send size={16} className="text-white" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {tab === 'tickets' && (
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-            {tickets.map((t, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-slate-100 p-4">
-                <div className="flex items-start justify-between mb-1">
-                  <p className="text-sm font-semibold text-slate-800">{t.title}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ml-2 ${t.status === 'resolved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                    {t.status === 'resolved' ? 'Решено' : 'В работе'}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400">{t.station}</p>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs font-mono text-slate-500">{t.id}</span>
-                  <span className="text-xs text-slate-400">{t.date}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {tab === 'contact' && (
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-            <button className="w-full bg-sky-500 text-white rounded-2xl p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
-                <Phone size={20} className="text-white" />
-              </div>
-              <div className="text-left">
-                <p className="font-bold text-base">+998 71 200-10-01</p>
-                <p className="text-sky-100 text-xs">Поддержка 24/7</p>
-              </div>
-            </button>
-
-            <button className="w-full bg-violet-600 text-white rounded-2xl p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
-                <Send size={18} className="text-white" />
-              </div>
-              <div className="text-left">
-                <p className="font-bold">@onecharge_support</p>
-                <p className="text-violet-200 text-xs">Telegram</p>
-              </div>
-            </button>
-
-            <div className="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center shrink-0">
-                <span className="text-slate-600 text-lg">✉</span>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-800">support@onecharge.uz</p>
-                <p className="text-xs text-slate-400">Email</p>
-              </div>
-            </div>
-
-            <div className="bg-slate-100 rounded-2xl p-4">
-              <p className="text-xs font-semibold text-slate-500 mb-1">РЕЖИМ РАБОТЫ</p>
-              <p className="text-sm text-slate-700">Пн–Пт 9:00–21:00, Сб–Вс 10:00–18:00</p>
-              <p className="text-xs text-slate-500 mt-0.5">Экстренно: 24/7</p>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
-  return (
-    <div className="h-full flex flex-col bg-slate-50">
-      <div className="bg-white px-4 pt-4 pb-4 border-b border-slate-100">
-        <div className="flex items-center gap-3">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-400 to-sky-600 flex items-center justify-center text-white text-xl font-bold shadow">
-            AT
-          </div>
-          <div>
-            <h1 className="text-base font-bold text-slate-900">Alisher Toshmatov</h1>
-            <p className="text-sm text-slate-500">+998 90 123 45 67</p>
-            <div className="flex items-center gap-1 mt-0.5">
-              <Star size={11} className="text-amber-400 fill-amber-400" />
-              <span className="text-xs text-slate-500">4.9 · 47 зарядок</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
-        {/* Car */}
-        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-          <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
-            <p className="text-xs font-semibold text-slate-500">МОЙ АВТОМОБИЛЬ</p>
-          </div>
-          <div className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-sky-100 rounded-xl flex items-center justify-center">
-              <Car size={20} className="text-sky-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-slate-800">BYD Han EV</p>
-              <p className="text-xs text-slate-400">2024 · 85 кВт·ч · CCS2 · макс 150 кВт</p>
-            </div>
-            <ChevronRight size={16} className="text-slate-400" />
-          </div>
-          <button onClick={() => onNavigate('add-car')} className="p-4 flex items-center gap-3 w-full border-t border-slate-50 hover:bg-slate-50 transition-colors">
-            <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center">
-              <Plus size={16} className="text-slate-400" />
-            </div>
-            <span className="text-sm text-slate-500">Добавить автомобиль</span>
-          </button>
-        </div>
-
-        {/* Eco profile */}
-        <button onClick={() => onNavigate('eco')}
-          className="w-full rounded-2xl p-4 flex items-center gap-3 text-left text-white"
-          style={{ background: 'linear-gradient(135deg,#16A34A,#0D9488)' }}>
-          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">🌱</div>
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        <button onClick={onReport} className="w-full bg-amber-50 border border-amber-100 rounded-2xl p-4 flex items-center gap-3 text-left">
+          <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center shrink-0"><AlertTriangle size={18} className="text-amber-600" /></div>
           <div className="flex-1">
-            <p className="text-sm font-bold">Эко-профиль</p>
-            <p className="text-xs text-green-100">CO₂, достижения, зелёные часы и лидеры</p>
+            <p className="text-sm font-semibold text-slate-800">Проблема на станции</p>
+            <p className="text-xs text-slate-500">Сообщение сразу уходит оператору станции</p>
           </div>
-          <ChevronRight size={16} className="text-green-100" />
+          <ChevronRight size={16} className="text-slate-400" />
         </button>
 
-        <PushToggle portal="driver" />
-
-        {/* Payments */}
-        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-          <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
-            <p className="text-xs font-semibold text-slate-500">ПЛАТЁЖНЫЕ МЕТОДЫ</p>
-          </div>
-          <button onClick={() => onNavigate('cards')} className="w-full divide-y divide-slate-50 text-left">
-            {[
-              { label: 'Humo •••• 4521', sub: 'Основная', color: 'from-orange-400 to-orange-600', letter: 'H' },
-              { label: 'Uzcard •••• 8832', sub: '', color: 'from-blue-400 to-blue-600', letter: 'U' },
-            ].map(card => (
-              <div key={card.label} className="p-4 flex items-center gap-3">
-                <div className={`w-8 h-5 bg-gradient-to-r ${card.color} rounded flex items-center justify-center`}>
-                  <span className="text-white text-xs font-bold">{card.letter}</span>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-800">{card.label}</p>
-                  {card.sub && <p className="text-xs text-sky-500">{card.sub}</p>}
-                </div>
-                <ChevronRight size={16} className="text-slate-400" />
-              </div>
-            ))}
-            <div className="p-4 flex items-center gap-3">
-              <div className="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center">
-                <Plus size={14} className="text-slate-500" />
-              </div>
-              <span className="text-sm text-slate-500">Управление картами</span>
-            </div>
-          </button>
-        </div>
-
-        {/* Settings */}
-        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-          {[
-            { icon: <Wallet size={16} className="text-green-500" />, label: 'Кошелёк', count: '47 500 сум', screen: 'wallet' },
-            { icon: <Star size={16} className="text-amber-400" />, label: 'Бонусы и уровни', count: '2 450 бонусов', screen: 'loyalty' },
-            { icon: <Gift size={16} className="text-violet-400" />, label: 'Реферальная программа', count: '+5 000 сум', screen: 'referral' },
-            { icon: <Heart size={16} className="text-red-400" />, label: 'Избранные станции', count: '8', screen: 'favorites' },
-            { icon: <Bell size={16} className="text-amber-400" />, label: 'Уведомления', count: '2', screen: 'notifications' },
-            { icon: <Lock size={16} className="text-slate-400" />, label: 'Безопасность', count: '', screen: 'security' },
-            { icon: <Settings size={16} className="text-slate-400" />, label: 'Настройки', count: '', screen: 'app-settings' },
-            { icon: <Phone size={16} className="text-sky-400" />, label: 'Поддержка', count: '', screen: 'support' },
-          ].map(item => (
-            <button key={item.label} onClick={item.screen ? () => onNavigate(item.screen as Screen) : undefined}
-              className="p-4 flex items-center gap-3 w-full border-b border-slate-50 last:border-none hover:bg-slate-50 transition-colors">
-              <div className="w-8 h-8 bg-slate-50 rounded-xl flex items-center justify-center">
-                {item.icon}
-              </div>
-              <span className="flex-1 text-sm font-medium text-slate-700 text-left">{item.label}</span>
-              {item.count && <span className="text-xs bg-sky-100 text-sky-600 px-2 py-0.5 rounded-full">{item.count}</span>}
-              <ChevronRight size={16} className="text-slate-400" />
+        <p className="text-xs font-semibold text-slate-400 tracking-widest px-1 pt-1">ЧАСТЫЕ ВОПРОСЫ</p>
+        {faqs.map((faq, i) => (
+          <div key={faq.q} className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+            <button onClick={() => setOpenFaq(openFaq === i ? null : i)} aria-expanded={openFaq === i} className="w-full px-4 py-3.5 flex items-center justify-between text-left">
+              <span className="text-sm font-medium text-slate-800 flex-1 pr-2">{faq.q}</span>
+              <ChevronDown size={16} className={`text-slate-400 shrink-0 transition-transform ${openFaq === i ? 'rotate-180' : ''}`} />
             </button>
-          ))}
-        </div>
+            {openFaq === i && <p className="px-4 pb-4 text-sm text-slate-500 leading-relaxed">{faq.a}</p>}
+          </div>
+        ))}
 
-        <button className="w-full py-3 flex items-center justify-center gap-2 text-red-500 text-sm font-medium">
-          <LogOut size={16} />Выйти из аккаунта
-        </button>
+        <a href={`mailto:${BRAND.email}`} className="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+          <div className="w-10 h-10 bg-sky-50 rounded-xl flex items-center justify-center shrink-0"><Send size={17} className="text-sky-600" /></div>
+          <div>
+            <p className="text-sm font-semibold text-slate-800">{BRAND.email}</p>
+            <p className="text-xs text-slate-400">Напишите нам — укажите номер телефона и, если есть, номер зарядки из чека</p>
+          </div>
+        </a>
       </div>
     </div>
   );
@@ -2161,292 +944,33 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
   );
 }
 
-function NotificationsScreen({ onBack }: { onBack: () => void }) {
-  type NotifType = 'charge' | 'payment' | 'booking' | 'promo' | 'alert' | 'system';
-  type Notif = { id: number; type: NotifType; icon: string; title: string; body: string; time: string; date: string; read: boolean; action?: string };
-
-  const initial: Notif[] = [
-    { id: 1, type: 'charge', icon: '⚡', title: 'Зарядка завершена', body: 'Toshkent Siti Hub · CCS2 · 38.4 кВт·ч · 76 800 сум · 42 мин', time: '15:05', date: 'Сегодня', read: false, action: 'Посмотреть квитанцию' },
-    { id: 2, type: 'payment', icon: '💳', title: 'Оплата прошла успешно', body: 'Humo •••• 4521 · 76 800 сум · TXN-28491', time: '15:05', date: 'Сегодня', read: false, action: 'Детали платежа' },
-    { id: 3, type: 'booking', icon: '📅', title: 'Бронь через 30 минут', body: 'Yunusobod Mall · EVSE-002 · CCS2 150 кВт · подъезжайте заранее', time: '09:30', date: 'Сегодня', read: false, action: 'Открыть бронь' },
-    { id: 4, type: 'charge', icon: '🎯', title: 'Достигнуто 80% заряда', body: 'Samarqand Gateway · BYD Han EV · цель достигнута, продолжаем до 100%', time: '28 авг, 14:20', date: '28 авг', read: true },
-    { id: 5, type: 'promo', icon: '🎁', title: 'Ночной тариф −30%', body: 'GreenCharge UZ · 23:00–06:00 каждую ночь · до 15 сент 2026', time: '27 авг', date: '27 авг', read: true, action: 'Активировать' },
-    { id: 6, type: 'alert', icon: '⚠️', title: 'Станция временно недоступна', body: 'Namangan Industrial · CCS2 EVSE-001 · техническое обслуживание · EVSE-002 работает', time: '26 авг', date: '26 авг', read: true },
-    { id: 7, type: 'system', icon: '🔒', title: 'Новый вход в аккаунт', body: 'iPhone 15 Pro · Ташкент, UZ · если это не вы — смените PIN', time: '25 авг', date: '25 авг', read: true, action: 'Проверить устройства' },
-    { id: 8, type: 'payment', icon: '↩️', title: 'Возврат средств', body: 'Yunusobod Mall · 12 400 сум возвращено на карту Humo •••• 4521', time: '22 авг', date: '22 авг', read: true, action: 'Детали' },
-    { id: 9, type: 'system', icon: '⭐', title: 'Оцените зарядку', body: 'Toshkent Siti Hub · 21 авг · ваш отзыв поможет другим водителям', time: '21 авг', date: '21 авг', read: true, action: 'Оставить отзыв' },
-    { id: 10, type: 'promo', icon: '🚀', title: 'Реферальный бонус зачислен', body: '+5 000 сум на баланс ONE CHARGE · вы пригласили Bobur M.', time: '20 авг', date: '20 авг', read: true },
-  ];
-
-  const [notifs, setNotifs] = useState<Notif[]>(initial);
-  const [filter, setFilter] = useState<'all' | NotifType>('all');
-
-  const typeLabel: Record<string, string> = { charge: 'Зарядки', payment: 'Платежи', booking: 'Брони', promo: 'Акции', alert: 'Предупреждения', system: 'Система' };
-  const typeDot: Record<string, string> = { charge: 'bg-sky-500', payment: 'bg-green-500', booking: 'bg-violet-500', promo: 'bg-amber-500', alert: 'bg-red-500', system: 'bg-slate-400' };
-
-  const unreadCount = notifs.filter(n => !n.read).length;
-
-  const filtered = filter === 'all' ? notifs : notifs.filter(n => n.type === filter);
-
-  const markAll = () => setNotifs(ns => ns.map(n => ({ ...n, read: true })));
-  const markRead = (id: number) => setNotifs(ns => ns.map(n => n.id === id ? { ...n, read: true } : n));
-  const dismiss = (id: number) => setNotifs(ns => ns.filter(n => n.id !== id));
-
-  // Group by date
-  const grouped = filtered.reduce<Record<string, Notif[]>>((acc, n) => {
-    if (!acc[n.date]) acc[n.date] = [];
-    acc[n.date].push(n);
-    return acc;
-  }, {});
-
-  return (
-    <div className="h-full flex flex-col bg-slate-50">
-      {/* Header */}
-      <div className="bg-white px-4 pt-4 pb-0 border-b border-slate-100">
-        <div className="flex items-center gap-3 mb-3">
-          <button onClick={onBack} className="p-2 rounded-xl bg-slate-100 active:scale-95 transition-transform">
-            <ArrowLeft size={18} className="text-slate-600" />
-          </button>
-          <div className="flex-1">
-            <h1 className="text-base font-bold text-slate-900 leading-tight">Уведомления</h1>
-            {unreadCount > 0 && (
-              <p className="text-xs text-slate-400">{unreadCount} непрочитанных</p>
-            )}
-          </div>
-          {unreadCount > 0 && (
-            <button onClick={markAll} className="text-xs text-sky-500 font-semibold px-3 py-1.5 rounded-xl hover:bg-sky-50 active:scale-95 transition-all">
-              Прочитать все
-            </button>
-          )}
-        </div>
-
-        {/* Filter tabs */}
-        <div className="flex gap-1 overflow-x-auto pb-3" style={{ scrollbarWidth: 'none' }}>
-          {(['all', 'charge', 'payment', 'booking', 'promo', 'alert', 'system'] as const).map(f => {
-            const active = filter === f;
-            const count = f === 'all' ? unreadCount : notifs.filter(n => n.type === f && !n.read).length;
-            return (
-              <button key={f} onClick={() => setFilter(f)}
-                className={`shrink-0 text-xs px-3 py-1.5 rounded-xl font-medium transition-all ${active ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-                {f === 'all' ? 'Все' : typeLabel[f]}
-                {count > 0 && (
-                  <span className={`ml-1.5 px-1 py-0.5 rounded-full text-[10px] font-bold ${active ? 'bg-white text-slate-900' : 'bg-sky-500 text-white'}`}>{count}</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* List */}
-      <div className="flex-1 overflow-y-auto">
-        {Object.keys(grouped).length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-6">
-            <span className="text-4xl">🔔</span>
-            <p className="text-sm font-semibold text-slate-700">Нет уведомлений</p>
-            <p className="text-xs text-slate-400">В этом разделе пока пусто</p>
-          </div>
-        ) : (
-          Object.entries(grouped).map(([date, items]) => (
-            <div key={date}>
-              <p className="px-4 pt-4 pb-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{date}</p>
-              <div className="px-3 space-y-1.5 pb-2">
-                {items.map(n => (
-                  <div key={n.id}
-                    onClick={() => markRead(n.id)}
-                    className={`relative flex items-start gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer active:scale-[0.99] ${
-                      !n.read
-                        ? 'bg-sky-50 border-sky-100 shadow-sm'
-                        : 'bg-white border-slate-100 hover:border-slate-200'
-                    }`}
-                  >
-                    {/* Unread dot */}
-                    {!n.read && (
-                      <span className="absolute top-3.5 right-3 w-2 h-2 bg-sky-500 rounded-full" />
-                    )}
-
-                    {/* Icon */}
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-base ${!n.read ? 'bg-sky-100' : 'bg-slate-100'}`}>
-                      {n.icon}
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0 pr-4">
-                      <div className="flex items-start justify-between gap-1 mb-0.5">
-                        <p className={`text-sm leading-tight ${!n.read ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'}`}>{n.title}</p>
-                        <span className="text-[10px] text-slate-400 shrink-0 mt-0.5">{n.time}</span>
-                      </div>
-                      <p className="text-xs text-slate-500 leading-relaxed">{n.body}</p>
-
-                      {n.action && (
-                        <div className="flex items-center justify-between mt-2">
-                          <button className="text-xs text-sky-600 font-semibold hover:underline">{n.action} →</button>
-                          <button
-                            onClick={e => { e.stopPropagation(); dismiss(n.id); }}
-                            className="text-[10px] text-slate-400 hover:text-slate-600 transition-colors"
-                          >
-                            Скрыть
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Type pill */}
-                      <div className="flex items-center gap-1.5 mt-1.5">
-                        <div className={`w-1 h-1 rounded-full ${typeDot[n.type]}`} />
-                        <span className="text-[10px] text-slate-400">{typeLabel[n.type]}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))
-        )}
-        <div className="h-6" />
-      </div>
-    </div>
-  );
-}
-
-const mockReviews = [
-  { id: 1, author: 'Alisher T.', avatar: 'AT', date: '2 сент 2026', rating: 5, text: 'Отличная станция! Зарядился за 40 минут до 80%. CCS2 работает стабильно, персонал вежливый. Рекомендую.', likes: 12, connector: 'CCS2' },
-  { id: 2, author: 'Nilufar K.', avatar: 'NK', date: '1 сент 2026', rating: 4, text: 'Хорошее место, но иногда очереди в час-пик. Лучше приезжать утром. Есть кафе рядом — удобно ждать.', likes: 8, connector: 'Type 2' },
-  { id: 3, author: 'Bobur M.', avatar: 'BM', date: '29 авг 2026', rating: 5, text: 'Уже третий раз здесь. Цена адекватная, скорость 148 кВт стабильно. Приложение работает без сбоев.', likes: 15, connector: 'CCS2' },
-  { id: 4, author: 'Dilshod R.', avatar: 'DR', date: '25 авг 2026', rating: 3, text: 'Один из четырёх разъёмов не работал. Поддержка ответила быстро, но сам факт неприятен. Надеюсь починят.', likes: 4, connector: 'CCS2' },
-];
-
 function ReviewsScreen({ station, onBack }: { station: Station | null; onBack: () => void }) {
-  const [reviews, setReviews] = useState(mockReviews);
-  const [myRating, setMyRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
-  const [text, setText] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const textRef = useRef<HTMLTextAreaElement>(null);
-
-  const avgRating = (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1);
-
-  const submit = () => {
-    if (!myRating || !text.trim()) return;
-    setReviews(prev => [{
-      id: Date.now(), author: 'Alisher T.', avatar: 'AT',
-      date: 'Сейчас', rating: myRating, text: text.trim(), likes: 0, connector: 'CCS2',
-    }, ...prev]);
-    setSubmitted(true);
-    setText('');
-    setMyRating(0);
-  };
-
+  const { state, sessions: portalSessions } = useSync();
+  const me = portalSessions.driver;
+  const mine = (state?.sessions ?? []).filter(x => x.userId === me?.id && x.stationId === station?.id && x.status === 'completed');
+  const rated = mine.filter(x => x.rating);
   return (
     <div className="h-full flex flex-col bg-slate-50">
       <div className="bg-white px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100">
-        <button onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
+        <button onClick={onBack} aria-label="Назад" className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
         <div>
-          <h1 className="text-base font-bold text-slate-900">Отзывы и рейтинг</h1>
+          <h1 className="text-base font-bold text-slate-900">Оценки станции</h1>
           <p className="text-xs text-slate-500">{station?.name}</p>
         </div>
       </div>
-
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        {/* Rating summary */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-6">
-          <div className="text-center">
-            <p className="text-4xl font-bold text-slate-900 mono">{avgRating}</p>
-            <div className="flex gap-0.5 justify-center mt-1">
-              {[1,2,3,4,5].map(i => (
-                <Star key={i} size={12} className={i <= Math.round(Number(avgRating)) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'} />
-              ))}
-            </div>
-            <p className="text-xs text-slate-400 mt-1">{reviews.length} отзывов</p>
-          </div>
-          <div className="flex-1 space-y-1.5">
-            {[5,4,3,2,1].map(star => {
-              const count = reviews.filter(r => r.rating === star).length;
-              return (
-                <div key={star} className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500 w-3">{star}</span>
-                  <Star size={10} className="text-amber-400 fill-amber-400 shrink-0" />
-                  <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-amber-400 rounded-full" style={{ width: `${(count / reviews.length) * 100}%` }} />
-                  </div>
-                  <span className="text-xs text-slate-400 w-3">{count}</span>
-                </div>
-              );
-            })}
-          </div>
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        <div className="bg-white rounded-2xl border border-slate-100 p-5 text-center">
+          <p className="text-4xl font-bold text-slate-900 tabular-nums">{station ? station.rating.toFixed(1) : '—'}</p>
+          <p className="text-amber-400 text-lg">{'★★★★★'.slice(0, Math.round(station?.rating ?? 0))}<span className="text-slate-200">{'★★★★★'.slice(Math.round(station?.rating ?? 0))}</span></p>
+          <p className="text-xs text-slate-400 mt-1">{`${station?.reviews ?? 0} оценок водителей после зарядки`}</p>
         </div>
-
-        {/* Write review */}
-        {!submitted ? (
-          <div className="bg-white rounded-2xl border border-slate-100 p-4">
-            <p className="text-sm font-semibold text-slate-700 mb-3">Оставить отзыв</p>
-            <div className="flex gap-1 mb-3">
-              {[1,2,3,4,5].map(i => (
-                <button key={i}
-                  onMouseEnter={() => setHoverRating(i)}
-                  onMouseLeave={() => setHoverRating(0)}
-                  onClick={() => setMyRating(i)}
-                  className="p-1">
-                  <Star size={24} className={i <= (hoverRating || myRating) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'} />
-                </button>
-              ))}
-            </div>
-            <textarea
-              ref={textRef}
-              value={text}
-              onChange={e => setText(e.target.value)}
-              placeholder="Расскажите о своём опыте зарядки..."
-              className="w-full text-sm border border-slate-200 rounded-xl p-3 outline-none resize-none focus:border-sky-400 text-slate-700 placeholder:text-slate-300"
-              rows={3}
-            />
-            <button
-              onClick={submit}
-              disabled={!myRating || !text.trim()}
-              className={`mt-2 flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${myRating && text.trim() ? 'bg-sky-500 text-white hover:bg-sky-600' : 'bg-slate-100 text-slate-400'}`}>
-              <Send size={14} />Отправить отзыв
-            </button>
-          </div>
-        ) : (
-          <div className="bg-green-50 border border-green-100 rounded-2xl p-4 flex items-center gap-3">
-            <CheckCircle size={20} className="text-green-500 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-green-800">Отзыв опубликован!</p>
-              <p className="text-xs text-green-600">Спасибо за обратную связь.</p>
-            </div>
-          </div>
-        )}
-
-        {/* Reviews list */}
-        <div className="space-y-3">
-          {reviews.map(r => (
-            <div key={r.id} className="bg-white rounded-2xl border border-slate-100 p-4">
-              <div className="flex items-start gap-3 mb-2">
-                <div className="w-9 h-9 bg-sky-100 rounded-xl flex items-center justify-center text-xs font-bold text-sky-600 shrink-0">
-                  {r.avatar}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-slate-800">{r.author}</p>
-                    <span className="text-xs text-slate-400">{r.date}</span>
-                  </div>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    {[1,2,3,4,5].map(i => (
-                      <Star key={i} size={11} className={i <= r.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'} />
-                    ))}
-                    <span className="text-xs text-slate-400 ml-1">{r.connector}</span>
-                  </div>
-                </div>
-              </div>
-              <p className="text-sm text-slate-600 leading-relaxed">{r.text}</p>
-              <div className="flex items-center gap-3 mt-3 pt-2.5 border-t border-slate-50">
-                <button className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-sky-500 transition-colors">
-                  <ThumbsUp size={12} />Полезно ({r.likes})
-                </button>
-                <button className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-red-400 transition-colors ml-auto">
-                  <Flag size={12} />Жалоба
-                </button>
-              </div>
-            </div>
-          ))}
+        <div className="bg-white rounded-2xl border border-slate-100 p-4">
+          <p className="text-sm font-semibold text-slate-800 mb-1">Ваши оценки</p>
+          {mine.length === 0 ? (
+            <p className="text-sm text-slate-500">Оценить станцию можно после зарядки на ней — на экране чека или в истории.</p>
+          ) : (
+            <p className="text-sm text-slate-500">{`Зарядок здесь: ${mine.length}, оценено: ${rated.length}. Неоценённые зарядки — в истории.`}</p>
+          )}
         </div>
       </div>
     </div>
@@ -2565,7 +1089,8 @@ function ReportScreen({ station, onBack }: { station: Station | null; onBack: ()
 
 function FavoritesScreen({ onBack, onSelectStation }: { onBack: () => void; onSelectStation: (s: Station) => void }) {
   const stations = useLiveStations();
-  const [favs, setFavs] = useState(stations.slice(0, 4));
+  const favorites = useFavorites();
+  const favs = stations.filter(s => favorites.has(s.id));
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<'name' | 'rating' | 'distance'>('rating');
 
@@ -2640,7 +1165,7 @@ function FavoritesScreen({ onBack, onSelectStation }: { onBack: () => void; onSe
                         <p className="text-sm font-bold text-slate-900">{s.name}</p>
                         <p className="text-xs text-slate-400">{s.operator}</p>
                       </div>
-                      <button onClick={e => { e.stopPropagation(); setFavs(prev => prev.filter(f => f.id !== s.id)); }}
+                      <button onClick={e => { e.stopPropagation(); favorites.toggle(s.id); }}
                         className="p-1.5 rounded-xl bg-slate-50 hover:bg-red-50 transition-colors">
                         <Trash2 size={13} className="text-slate-400 hover:text-red-400" />
                       </button>
@@ -2654,7 +1179,7 @@ function FavoritesScreen({ onBack, onSelectStation }: { onBack: () => void; onSe
                     </div>
                     <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
                       <span className="flex items-center gap-0.5">
-                        <Star size={10} className="text-amber-400 fill-amber-400" />{s.rating}
+                        <Star size={10} className="text-amber-400 fill-amber-400" />{s.rating.toFixed(1)}
                       </span>
                       <span>{s.connectors[0].price.toLocaleString()} сум/кВт·ч</span>
                       <span>{s.city}</span>
@@ -2875,352 +1400,7 @@ const NEAREST_STATIONS = [
   { name: 'Chilanzar AC Point', dist: '5.1 км', time: '16 мин', free: 2, total: 2, power: '22 кВт', type: 'Type 2', color: '#22C55E' },
 ];
 
-const ROUTE_DATA: Record<string, { km: number; time: string; stops: { name: string; dist: number; kwh: number; cost: number; time: string; power: string }[]; voiceRu: string }> = {
-  'Samarqand': {
-    km: 348, time: '4ч 20м',
-    stops: [
-      { name: 'GreenCharge Navoi', dist: 220, kwh: 35, cost: 70000, time: '40 мин', power: 'CCS2 150кВт' },
-    ],
-    voiceRu: 'Маршрут до Самарканда рассчитан. Расстояние триста сорок восемь километров. По дороге вы встретите одну зарядную станцию. Рекомендуемая остановка: GreenCharge Навои, на расстоянии двести двадцать километров. Время зарядки сорок минут. Прибытие с зарядом двадцать пять процентов.',
-  },
-  'Buxoro': {
-    km: 596, time: '7ч 40м',
-    stops: [
-      { name: 'EcoVolt Jizzax', dist: 190, kwh: 30, cost: 60000, time: '35 мин', power: 'CCS2 100кВт' },
-      { name: 'GreenCharge Navoi', dist: 370, kwh: 38, cost: 76000, time: '45 мин', power: 'CCS2 150кВт' },
-    ],
-    voiceRu: 'Маршрут до Бухары рассчитан. Расстояние пятьсот девяносто шесть километров. По дороге вы встретите две зарядные станции. Первая остановка: ЭкоВольт Джизак, сто девяносто километров. Вторая остановка: GreenCharge Навои, триста семьдесят километров. Прибытие с зарядом восемнадцать процентов.',
-  },
-  'Namangan': {
-    km: 328, time: '4ч 05м',
-    stops: [
-      { name: 'SilkRoad Angren', dist: 120, kwh: 25, cost: 50000, time: '30 мин', power: 'CCS2 100кВт' },
-    ],
-    voiceRu: 'Маршрут до Намангана рассчитан. Расстояние триста двадцать восемь километров. По дороге вы встретите одну зарядную станцию. Рекомендуемая остановка: СилкРоад Ангрен, сто двадцать километров. Время зарядки тридцать минут. Прибытие с зарядом двадцать два процента.',
-  },
-  'Farg\'ona': {
-    km: 338, time: '4ч 15м',
-    stops: [
-      { name: 'EcoVolt Kokand', dist: 240, kwh: 32, cost: 64000, time: '38 мин', power: 'CCS2 150кВт' },
-    ],
-    voiceRu: 'Маршрут до Ферганы рассчитан. Расстояние триста тридцать восемь километров. По дороге вы встретите одну зарядную станцию. Рекомендуемая остановка: ЭкоВольт Коканд, двести сорок километров. Время зарядки тридцать восемь минут.',
-  },
-};
-
-function TripPlannerScreen({ onBack }: { onBack: () => void }) {
-  const [from, setFrom] = useState('Toshkent, Amir Temur sq.');
-  const [to, setTo] = useState('Samarqand, Registon');
-  const [battery, setBattery] = useState(65);
-  const [phase, setPhase] = useState<'idle' | 'loading' | 'done'>('idle');
-  const [selected, setSelected] = useState(0);
-  const [progress, setProgress] = useState(0);
-  const [showNearest, setShowNearest] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
-  const [nearestLoading, setNearestLoading] = useState(false);
-
-  const destKey = Object.keys(ROUTE_DATA).find(k => to.toLowerCase().includes(k.toLowerCase())) ?? 'Samarqand';
-  const routeData = ROUTE_DATA[destKey];
-
-  const speak = (text: string) => {
-    if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ru-RU';
-    u.rate = 0.88;
-    u.pitch = 1.05;
-    u.volume = 1;
-    u.onstart = () => setSpeaking(true);
-    u.onend = () => setSpeaking(false);
-    u.onerror = () => setSpeaking(false);
-    window.speechSynthesis.speak(u);
-  };
-
-  const stopSpeaking = () => {
-    window.speechSynthesis?.cancel();
-    setSpeaking(false);
-  };
-
-  const findNearest = () => {
-    setNearestLoading(true);
-    setTimeout(() => { setNearestLoading(false); setShowNearest(true); }, 1200);
-    speak('Ищу ближайшие зарядные станции. Найдено четыре станции в радиусе пяти километров.');
-  };
-
-  const startPlanning = () => {
-    setPhase('loading');
-    setProgress(0);
-    setShowNearest(false);
-    const steps = [10, 30, 55, 75, 90, 100];
-    steps.forEach((p, i) => setTimeout(() => {
-      setProgress(p);
-      if (p === 100) {
-        setTimeout(() => {
-          setPhase('done');
-          setTimeout(() => speak(routeData.voiceRu), 600);
-        }, 300);
-      }
-    }, i * 320));
-  };
-
-  const routes = [
-    {
-      label: 'Быстрый', badge: 'AI выбор', color: 'border-sky-400 bg-sky-50',
-      km: 348, time: '4ч 20м', cost: 89000, stops: 1, arrivalPct: 25,
-      stops_list: [
-        { icon: '🟢', label: from, sub: `Старт · заряд ${battery}%` },
-        { icon: '⚡', label: 'Navoi, GreenCharge DC', sub: '40 мин · CCS2 150кВт · 35кВт·ч · 70 000 сум' },
-        { icon: '📍', label: to, sub: 'Прибытие с ~25% заряда' },
-      ],
-    },
-    {
-      label: 'Эконом', badge: 'Дешевле', color: 'border-green-400 bg-green-50',
-      km: 362, time: '5ч 05м', cost: 62000, stops: 2, arrivalPct: 31,
-      stops_list: [
-        { icon: '🟢', label: from, sub: `Старт · заряд ${battery}%` },
-        { icon: '⚡', label: 'Jizzax, EcoVolt AC', sub: '65 мин · Type2 22кВт · 28кВт·ч · 33 600 сум' },
-        { icon: '⚡', label: 'Samarqand Gateway', sub: '25 мин · CCS2 · 12кВт·ч · 28 400 сум' },
-        { icon: '📍', label: to, sub: 'Прибытие с ~31% заряда' },
-      ],
-    },
-    {
-      label: 'Без остановок', badge: battery >= 65 ? '✓ Возможно' : '⚠ Риск', color: battery >= 65 ? 'border-amber-400 bg-amber-50' : 'border-red-300 bg-red-50',
-      km: 340, time: '3ч 55м', cost: 0, stops: 0, arrivalPct: battery >= 65 ? 12 : 3,
-      stops_list: [
-        { icon: '🟢', label: from, sub: `Старт · заряд ${battery}%` },
-        { icon: '📍', label: to, sub: `Прибытие с ~${battery >= 65 ? 12 : 3}% заряда ${battery < 65 ? '⚠ Риск разряда' : ''}` },
-      ],
-    },
-  ];
-
-  const r = routes[selected];
-
-  return (
-    <div className="h-full flex flex-col" style={{ background: '#F0F4FA' }}>
-      {/* Header */}
-      <div className="px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100/80"
-        style={{ background: 'linear-gradient(135deg, #0AAF97 0%, #078C7C 100%)' }}>
-        <button onClick={onBack} className="p-2 rounded-xl bg-white/20 backdrop-blur"><ArrowLeft size={18} className="text-white" /></button>
-        <div className="flex-1">
-          <h1 className="text-base font-bold text-white">AI Маршрут & Станции</h1>
-          <p className="text-xs text-sky-100/80">Голосовой помощник · поиск по маршруту</p>
-        </div>
-        {speaking && (
-          <button onClick={stopSpeaking} className="flex items-center gap-1.5 bg-white/20 border border-white/30 px-2.5 py-1.5 rounded-xl">
-            {/* Animated waveform */}
-            <span className="flex items-end gap-0.5 h-4">
-              {[1,2,3,4,3,2,1].map((h, i) => (
-                <span key={i} className="w-0.5 bg-white rounded-full"
-                  style={{ height: `${h * 3 + 2}px`, animation: `bounce 0.6s ease-in-out ${i * 80}ms infinite` }} />
-              ))}
-            </span>
-            <span className="text-[10px] text-white font-medium">Стоп</span>
-          </button>
-        )}
-        {phase === 'done' && !speaking && (
-          <button onClick={() => speak(routeData.voiceRu)}
-            className="flex items-center gap-1 bg-white/20 border border-white/30 px-2.5 py-1.5 rounded-xl text-[11px] text-white font-medium">
-            🔊 Слушать
-          </button>
-        )}
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-
-        {/* ── Nearest stations button ── */}
-        <button onClick={findNearest} disabled={nearestLoading}
-          className="w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-dashed text-left transition-all active:scale-95"
-          style={{ borderColor: '#0AAF97', background: 'rgba(10, 175, 151,0.06)' }}>
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: 'linear-gradient(135deg, #0AAF97, #20D4B6)', boxShadow: '0 4px 12px rgba(10, 175, 151,0.3)' }}>
-            {nearestLoading
-              ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" style={{ animation: 'spin-cw 0.8s linear infinite' }} />
-              : <MapPin size={18} className="text-white" />}
-          </div>
-          <div>
-            <p className="text-sm font-bold text-slate-800">Найти ближайшие станции</p>
-            <p className="text-xs text-slate-400">{nearestLoading ? 'Определяю местоположение...' : 'GPS · в радиусе 5 км · голосовой отчёт'}</p>
-          </div>
-          <div className="ml-auto text-sky-400">›</div>
-        </button>
-
-        {/* Nearest stations list */}
-        {showNearest && (
-          <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden" style={{ animation: 'enter-up 0.3s ease both' }}>
-            <div className="px-4 py-2.5 border-b border-slate-50 flex items-center justify-between">
-              <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">Ближайшие станции</p>
-              <button onClick={() => setShowNearest(false)} className="text-slate-400 text-base leading-none">×</button>
-            </div>
-            {NEAREST_STATIONS.map((s, i) => (
-              <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-slate-50 last:border-0">
-                <div className="w-8 h-8 rounded-xl bg-sky-50 flex items-center justify-center shrink-0">
-                  <Zap size={14} className="text-sky-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 truncate">{s.name}</p>
-                  <p className="text-[10px] text-slate-400">{s.dist} · {s.time} · {s.power} · {s.type}</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: s.color }} />
-                    <span className="text-xs font-semibold text-slate-700">{s.free}/{s.total}</span>
-                  </div>
-                  <p className="text-[9px] text-slate-400">свободно</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ── Route inputs ── */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-4">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-3">Маршрут</p>
-          <div className="flex items-center gap-3 pb-3 border-b border-slate-50">
-            <div className="w-2.5 h-2.5 rounded-full bg-sky-500 shrink-0" />
-            <input value={from} onChange={e => setFrom(e.target.value)} placeholder="Откуда"
-              className="flex-1 text-sm text-slate-800 outline-none placeholder:text-slate-400" />
-          </div>
-          <div className="flex items-center gap-3 pt-3">
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-            <input value={to} onChange={e => { setTo(e.target.value); setPhase('idle'); }} placeholder="Куда (напр. Samarqand, Buxoro...)"
-              className="flex-1 text-sm text-slate-800 outline-none placeholder:text-slate-400" />
-          </div>
-        </div>
-
-        {/* Battery */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-4">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-slate-600 flex items-center gap-1.5"><Battery size={14} />Текущий заряд</span>
-            <span className={`text-sm font-bold mono ${battery < 30 ? 'text-red-500' : battery < 50 ? 'text-amber-500' : 'text-emerald-600'}`}>{battery}%</span>
-          </div>
-          <input type="range" min="10" max="100" value={battery} onChange={e => { setBattery(Number(e.target.value)); setPhase('idle'); }}
-            className="w-full accent-sky-500" />
-        </div>
-
-        {phase === 'idle' && (
-          <button onClick={startPlanning}
-            className="w-full text-white rounded-2xl py-4 font-bold flex items-center justify-center gap-2 active:scale-95 transition-all"
-            style={{ background: 'linear-gradient(135deg, #0AAF97, #078C7C)', boxShadow: '0 4px 16px rgba(10, 175, 151,0.4)' }}>
-            <Route size={16} />Построить маршрут + голос
-          </button>
-        )}
-
-        {phase === 'loading' && (
-          <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-700">AI анализирует маршрут...</p>
-              <span className="text-xs text-sky-600 mono font-bold">{progress}%</span>
-            </div>
-            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-              <div className="h-full rounded-full transition-all duration-300"
-                style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #20D4B6, #0AAF97, #078C7C)' }} />
-            </div>
-            {[
-              { label: 'Расчёт расхода по маршруту', done: progress >= 30 },
-              { label: 'Поиск станций по трассе', done: progress >= 55 },
-              { label: 'Оптимизация остановок', done: progress >= 75 },
-              { label: 'Подготовка голосового отчёта', done: progress >= 100 },
-            ].map(step => (
-              <div key={step.label} className={`flex items-center gap-2 text-xs transition-all ${step.done ? 'text-emerald-600' : 'text-slate-400'}`}>
-                {step.done ? <CheckCircle size={12} /> : <div className="w-3 h-3 rounded-full border border-slate-200" />}
-                {step.label}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {phase === 'done' && (
-          <div className="space-y-3" style={{ animation: 'enter-up 0.4s ease both' }}>
-            {/* AI voice banner */}
-            <div className="rounded-2xl p-4 flex items-center gap-3"
-              style={{ background: 'linear-gradient(135deg, #050A14, #0d1628)', border: '1px solid rgba(32, 212, 182,0.2)' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: 'linear-gradient(135deg, #0AAF97, #3B4FE0)' }}>
-                🎙️
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-bold text-white">Голосовой AI готов</p>
-                <p className="text-xs text-slate-400">По маршруту {from.split(',')[0]} → {to.split(',')[0]} — {routeData.stops.length} зарядная станция</p>
-              </div>
-              <button onClick={() => speak(routeData.voiceRu)}
-                className="px-3 py-2 rounded-xl text-xs font-bold text-white transition-all active:scale-95"
-                style={{ background: 'linear-gradient(135deg, #0AAF97, #3B4FE0)' }}>
-                🔊 Слушать
-              </button>
-            </div>
-
-            {/* Route summary */}
-            <div className="bg-white rounded-2xl border border-slate-100 p-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-bold text-slate-800">{from.split(',')[0]} → {to.split(',')[0]}</p>
-                <span className="text-xs bg-sky-50 text-sky-600 px-2 py-1 rounded-lg font-medium">AI выбор</span>
-              </div>
-              <div className="flex gap-4 text-xs text-slate-500 mb-4">
-                <span className="font-bold text-slate-800 mono">{routeData.km} км</span>
-                <span>{routeData.time}</span>
-                <span>{routeData.stops.length} {routeData.stops.length === 1 ? 'остановка' : 'остановки'}</span>
-              </div>
-
-              {/* Route timeline */}
-              <div className="space-y-0">
-                {/* Start */}
-                <div className="flex items-start gap-3 pb-3">
-                  <div className="flex flex-col items-center shrink-0">
-                    <div className="w-3 h-3 rounded-full bg-sky-500 mt-0.5" />
-                    <div className="w-0.5 flex-1 bg-slate-200 mt-1" style={{ minHeight: 24 }} />
-                  </div>
-                  <div className="pb-1">
-                    <p className="text-sm font-semibold text-slate-800">{from}</p>
-                    <p className="text-xs text-slate-400">Старт · заряд {battery}%</p>
-                  </div>
-                </div>
-
-                {/* Stops */}
-                {routeData.stops.map((stop, i) => (
-                  <div key={i} className="flex items-start gap-3 pb-3">
-                    <div className="flex flex-col items-center shrink-0">
-                      <div className="w-4 h-4 rounded-full flex items-center justify-center mt-0"
-                        style={{ background: 'linear-gradient(135deg, #F59E0B, #EF4444)' }}>
-                        <Zap size={8} className="text-white" />
-                      </div>
-                      <div className="w-0.5 flex-1 bg-slate-200 mt-1" style={{ minHeight: 24 }} />
-                    </div>
-                    <div className="pb-1 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 flex-1">
-                      <p className="text-xs font-bold text-amber-800">⚡ {stop.name}</p>
-                      <p className="text-[10px] text-amber-600">{stop.power} · {stop.kwh} кВт·ч · {stop.time} · {stop.cost.toLocaleString()} сум</p>
-                      <p className="text-[10px] text-amber-500">{stop.dist} км от старта</p>
-                    </div>
-                  </div>
-                ))}
-
-                {/* End */}
-                <div className="flex items-start gap-3">
-                  <div className="w-3 h-3 rounded-full bg-emerald-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">{to}</p>
-                    <p className="text-xs text-slate-400">Прибытие · заряд ~{battery >= 65 ? 25 : 15}%</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <button className="w-full text-white rounded-2xl py-4 font-bold flex items-center justify-center gap-2 active:scale-95 transition-all"
-              style={{ background: 'linear-gradient(135deg, #22C55E, #16A34A)', boxShadow: '0 4px 16px rgba(34,197,94,0.3)' }}>
-              <Navigation size={16} />Начать навигацию
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── QR SCAN SCREEN ──────────────────────────────────────────────────────────
 type QRPhase = 'idle' | 'permission' | 'scanning' | 'processing' | 'success' | 'error' | 'manual';
-
-const QR_VALID_CODES: Record<string, string> = {
-  'GCU-TH-01': '0', 'GCU-TH-02': '1', 'ECO-YM-03': '2', 'ECO-YM-04': '3',
-  'SRB-BX-01': '4', 'SRB-BX-02': '5', 'ONE-TH-05': '0', 'ONE-SM-02': '1',
-};
 
 function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStartCharging: (s: Station) => void }) {
   const stations = useLiveStations();
@@ -3276,9 +1456,9 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
   const submitManual = () => {
     const code = manualCode.trim().toUpperCase();
     if (!code) return;
-    const idx = QR_VALID_CODES[code];
-    if (idx !== undefined) {
-      const s = stations[Number(idx)];
+    // The sticker on a charger carries its station ID, e.g. ST-001.
+    const s = stations.find(x => x.id.toUpperCase() === code || x.id.toUpperCase() === code.replace(/^ST(\d)/, 'ST-$1'));
+    if (s) {
       setScannedStation(s);
       setPhase('success');
     } else {
@@ -3610,7 +1790,7 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
                   </span>
                   <div className="flex items-center gap-1">
                     <Star size={11} className="text-amber-400 fill-amber-400" />
-                    <span className="text-[11px] font-semibold text-slate-600">{scannedStation.rating}</span>
+                    <span className="text-[11px] font-semibold text-slate-600">{scannedStation.rating.toFixed(1)}</span>
                   </div>
                   <span className="text-[11px] text-slate-400">· {scannedStation.distance} км</span>
                 </div>
@@ -3792,7 +1972,7 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
         <div className="bg-slate-50 rounded-2xl p-4">
           <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">Тестовые коды (демо)</p>
           <div className="flex flex-wrap gap-2">
-            {Object.keys(QR_VALID_CODES).slice(0, 5).map(c => (
+            {stations.slice(0, 5).map(st => st.id.toUpperCase()).map(c => (
               <button key={c} onClick={() => setManualCode(c)}
                 className="px-3 py-1.5 bg-white rounded-xl border border-slate-200 text-xs font-bold mono text-sky-600 hover:border-sky-300 active:scale-95 transition-all">
                 {c}
@@ -3837,328 +2017,50 @@ const levels = [
   { name: 'Platinum', minPts: 15000, maxPts: Infinity, color: '#4F6BFF', icon: '💎', perks: ['3× бонусы', 'VIP-поддержка 24/7', 'Эксклюзивные тарифы', 'Личный менеджер'] },
 ];
 
-function LoyaltyScreen({ onBack }: { onBack: () => void }) {
-  const points = 2450;
-  const currentLevel = levels.find(l => points >= l.minPts && points <= l.maxPts) || levels[0];
-  const nextLevel = levels[levels.indexOf(currentLevel) + 1];
-  const progress = nextLevel ? Math.round(((points - currentLevel.minPts) / (nextLevel.minPts - currentLevel.minPts)) * 100) : 100;
-  const [tab, setTab] = useState<'overview' | 'history' | 'redeem'>('overview');
-
-  return (
-    <div className="h-full flex flex-col bg-slate-50">
-      {/* Header */}
-      <div className="relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 50%, #B45309 100%)' }}>
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
-        <div className="relative px-4 pt-4 pb-6">
-          <button onClick={onBack} className="flex items-center gap-1 text-white/80 text-sm mb-4">
-            <ArrowLeft size={16} />Назад
-          </button>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-white/70 text-xs font-medium mb-0.5">МОЙ УРОВЕНЬ</p>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">{currentLevel.icon}</span>
-                <span className="text-white text-2xl font-bold">{currentLevel.name}</span>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-white/70 text-xs font-medium mb-0.5">БОНУСЫ</p>
-              <p className="text-white text-3xl font-bold">{points.toLocaleString()}</p>
-            </div>
-          </div>
-          {nextLevel && (
-            <div>
-              <div className="flex items-center justify-between text-xs text-white/70 mb-1.5">
-                <span>{points.toLocaleString()} из {nextLevel.minPts.toLocaleString()} до {nextLevel.name}</span>
-                <span>{progress}%</span>
-              </div>
-              <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                <div className="h-full bg-white rounded-full transition-all" style={{ width: `${progress}%` }} />
-              </div>
-              <p className="text-white/60 text-xs mt-1">{(nextLevel.minPts - points).toLocaleString()} баллов до следующего уровня</p>
-            </div>
-          )}
-        </div>
-        {/* Tabs */}
-        <div className="flex bg-black/10 mx-4 mb-0 rounded-xl p-1">
-          {(['overview', 'history', 'redeem'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-colors ${tab === t ? 'bg-white text-amber-700' : 'text-white/70'}`}>
-              {t === 'overview' ? 'Обзор' : t === 'history' ? 'История' : 'Потратить'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto">
-        {tab === 'overview' && (
-          <div className="p-4 space-y-4">
-            {/* Earn rate */}
-            <div className="bg-white rounded-2xl border border-slate-100 p-4">
-              <p className="text-xs font-semibold text-slate-500 mb-3">КАК ЗАРАБАТЫВАТЬ БАЛЛЫ</p>
-              <div className="space-y-2.5">
-                {[
-                  { icon: '⚡', label: `${currentLevel.name === 'Gold' || currentLevel.name === 'Platinum' ? '2' : '1'} балл за 10 кВт·ч зарядки`, sub: `Уровень ${currentLevel.name}` },
-                  { icon: '👥', label: '500 баллов за реферала', sub: 'Пригласите друга' },
-                  { icon: '⭐', label: '200 баллов за отзыв', sub: 'После каждой зарядки' },
-                  { icon: '🎂', label: '1 000 баллов в день рождения', sub: 'Единоразово' },
-                ].map(e => (
-                  <div key={e.label} className="flex items-center gap-3">
-                    <span className="text-xl w-8 shrink-0 text-center">{e.icon}</span>
-                    <div>
-                      <p className="text-sm font-medium text-slate-800">{e.label}</p>
-                      <p className="text-xs text-slate-400">{e.sub}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Levels */}
-            <div className="bg-white rounded-2xl border border-slate-100 p-4">
-              <p className="text-xs font-semibold text-slate-500 mb-3">УРОВНИ ПРОГРАММЫ</p>
-              <div className="space-y-3">
-                {levels.map((lvl, i) => {
-                  const isActive = lvl.name === currentLevel.name;
-                  return (
-                    <div key={lvl.name} className={`rounded-xl p-3 border transition-all ${isActive ? 'border-amber-300 bg-amber-50' : 'border-slate-100'}`}>
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="text-lg">{lvl.icon}</span>
-                        <span className="text-sm font-bold text-slate-800">{lvl.name}</span>
-                        <span className="text-xs text-slate-400 ml-auto">
-                          {lvl.maxPts === Infinity ? `${lvl.minPts.toLocaleString()}+ баллов` : `${lvl.minPts.toLocaleString()}–${lvl.maxPts.toLocaleString()}`}
-                        </span>
-                        {isActive && <span className="text-[10px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold">ТЕКУЩИЙ</span>}
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {lvl.perks.map(p => (
-                          <span key={p} className="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{p}</span>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {tab === 'history' && (
-          <div className="p-4 space-y-2">
-            <div className="grid grid-cols-2 gap-3 mb-2">
-              <div className="bg-green-50 border border-green-100 rounded-xl p-3 text-center">
-                <p className="text-xl font-bold text-green-600">+{loyaltyHistory.filter(h => h.amount > 0).reduce((s, h) => s + h.amount, 0).toLocaleString()}</p>
-                <p className="text-xs text-green-500">Начислено</p>
-              </div>
-              <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-center">
-                <p className="text-xl font-bold text-red-500">{loyaltyHistory.filter(h => h.amount < 0).reduce((s, h) => s + h.amount, 0).toLocaleString()}</p>
-                <p className="text-xs text-red-400">Потрачено</p>
-              </div>
-            </div>
-            {loyaltyHistory.map(h => (
-              <div key={h.id} className="bg-white rounded-xl border border-slate-100 px-4 py-3 flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${h.type === 'earned' ? 'bg-green-100' : 'bg-red-100'}`}>
-                  {h.type === 'earned' ? <TrendingUp size={16} className="text-green-600" /> : <Zap size={16} className="text-red-500" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-800 truncate">{h.desc}</p>
-                  <p className="text-xs text-slate-400">{h.date}{h.kwh ? ` · ${h.kwh} кВт·ч` : ''}</p>
-                </div>
-                <span className={`text-sm font-bold shrink-0 ${h.amount > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                  {h.amount > 0 ? '+' : ''}{h.amount.toLocaleString()}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {tab === 'redeem' && (
-          <div className="p-4 space-y-3">
-            <p className="text-xs font-semibold text-slate-500 px-1">НА ЧТО ПОТРАТИТЬ {points.toLocaleString()} БАЛЛОВ</p>
-            {[
-              { icon: '⚡', title: 'Скидка на зарядку', desc: '200 баллов = 200 сум скидки', cost: 200, color: 'bg-sky-50 border-sky-100' },
-              { icon: '📅', title: 'Бесплатное бронирование', desc: '150 баллов = 1 бронирование', cost: 150, color: 'bg-violet-50 border-violet-100' },
-              { icon: '🚗', title: 'Приоритетная очередь', desc: '500 баллов = приоритет на 1 день', cost: 500, color: 'bg-amber-50 border-amber-100' },
-              { icon: '🎁', title: 'Подарочный сертификат', desc: '2 000 баллов = 10 000 сум', cost: 2000, color: 'bg-green-50 border-green-100' },
-              { icon: '💎', title: 'Upgrade до Gold', desc: '3 000 баллов = +1 уровень (разово)', cost: 3000, color: 'bg-pink-50 border-pink-100' },
-            ].map(r => (
-              <div key={r.title} className={`${r.color} border rounded-2xl p-4 flex items-center gap-3`}>
-                <span className="text-2xl shrink-0">{r.icon}</span>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-slate-800">{r.title}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{r.desc}</p>
-                </div>
-                <button disabled={points < r.cost}
-                  className={`text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 transition-colors ${points >= r.cost ? 'bg-amber-500 text-white hover:bg-amber-400' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
-                  {r.cost.toLocaleString()} б
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── REFERRAL SCREEN ─────────────────────────────────────────────────────────
-
-function ReferralScreen({ onBack }: { onBack: () => void }) {
-  const [copied, setCopied] = useState(false);
-  const code = 'ALISHER-7821';
-  const invites = [
-    { name: 'Bobur M.', status: 'active', reward: 5000, date: '20 авг' },
-    { name: 'Nilufar K.', status: 'pending', reward: 0, date: '3 сент' },
-    { name: 'Sardor T.', status: 'active', reward: 5000, date: '28 авг' },
-  ];
-  const totalEarned = invites.filter(i => i.status === 'active').reduce((s, i) => s + i.reward, 0);
-
-  const copyCode = () => {
-    navigator.clipboard?.writeText(code).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className="h-full flex flex-col bg-slate-50">
-      {/* Header */}
-      <div className="relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #4F6BFF 0%, #3B4FE0 100%)' }}>
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
-        <div className="relative px-4 pt-4 pb-8">
-          <button onClick={onBack} className="flex items-center gap-1 text-white/80 text-sm mb-4">
-            <ArrowLeft size={16} />Назад
-          </button>
-          <div className="text-center">
-            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
-              <Gift size={32} className="text-white" />
-            </div>
-            <h1 className="text-white text-xl font-bold mb-1">Пригласите друга</h1>
-            <p className="text-white/70 text-sm">Вы и ваш друг получите по 5 000 сум на баланс</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: 'Приглашено', value: invites.length.toString() },
-            { label: 'Активных', value: invites.filter(i => i.status === 'active').length.toString() },
-            { label: 'Заработано', value: `${totalEarned.toLocaleString()} сум` },
-          ].map(s => (
-            <div key={s.label} className="bg-white rounded-xl border border-slate-100 p-3 text-center">
-              <p className="text-lg font-bold text-slate-900">{s.value}</p>
-              <p className="text-xs text-slate-400">{s.label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Referral code */}
-        <div className="bg-white rounded-2xl border border-violet-100 p-4">
-          <p className="text-xs font-semibold text-slate-500 mb-3">ВАШ РЕФЕРАЛЬНЫЙ КОД</p>
-          <div className="flex items-center gap-2 bg-violet-50 border border-violet-200 rounded-xl px-4 py-3 mb-3">
-            <span className="flex-1 text-lg font-bold text-violet-700 font-mono tracking-widest">{code}</span>
-            <button onClick={copyCode}
-              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${copied ? 'bg-green-500 text-white' : 'bg-violet-500 text-white hover:bg-violet-400'}`}>
-              {copied ? <CheckCircle size={12} /> : <Copy size={12} />}
-              {copied ? 'Скопировано!' : 'Копировать'}
-            </button>
-          </div>
-          <button className="w-full flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 text-white font-semibold py-3 rounded-xl transition-colors">
-            <Share2 size={16} />Поделиться ссылкой
-          </button>
-        </div>
-
-        {/* How it works */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-4">
-          <p className="text-xs font-semibold text-slate-500 mb-3">КАК ЭТО РАБОТАЕТ</p>
-          <div className="space-y-3">
-            {[
-              { step: '1', text: 'Поделитесь своим кодом с другом' },
-              { step: '2', text: 'Друг регистрируется и вводит ваш код' },
-              { step: '3', text: 'Друг совершает первую зарядку на сумму от 10 000 сум' },
-              { step: '4', text: 'Вы и друг получаете по 5 000 сум на баланс ONE CHARGE' },
-            ].map(s => (
-              <div key={s.step} className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-violet-100 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-violet-600">{s.step}</div>
-                <p className="text-sm text-slate-700">{s.text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Invite list */}
-        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-100">
-            <p className="text-xs font-semibold text-slate-500">ПРИГЛАШЁННЫЕ</p>
-          </div>
-          {invites.map(inv => (
-            <div key={inv.name} className="px-4 py-3 flex items-center gap-3 border-b border-slate-50 last:border-none">
-              <div className="w-9 h-9 bg-violet-100 rounded-xl flex items-center justify-center text-sm font-bold text-violet-600">
-                {inv.name[0]}
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-slate-800">{inv.name}</p>
-                <p className="text-xs text-slate-400">{inv.date}</p>
-              </div>
-              {inv.status === 'active' ? (
-                <div className="text-right">
-                  <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-medium">Активен</span>
-                  <p className="text-xs text-green-600 font-semibold mt-0.5">+{inv.reward.toLocaleString()} сум</p>
-                </div>
-              ) : (
-                <span className="text-xs bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">Ожидает зарядки</span>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── ONBOARDING SCREEN ───────────────────────────────────────────────────────
-
 function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
+  const { actions, updateAccount } = useSync();
+  const stations = useLiveStations();
   const [step, setStep] = useState(0);
-  // Step 2 - car
   const [carBrand, setCarBrand] = useState('BYD');
   const [carModel, setCarModel] = useState('');
-  const [battery, setBattery] = useState(77);
+  const [battery, setBattery] = useState(60);
   const [connector, setConnector] = useState('CCS2');
-  // Step 3 - payment
-  const [paymentType, setPaymentType] = useState<'humo' | 'uzcard' | null>(null);
-  const [cardNum, setCardNum] = useState('');
-  const [expiry, setExpiry] = useState('');
-  const [cardHolder, setCardHolder] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [carError, setCarError] = useState('');
 
-  const onboardBrands = ['BYD', 'Hyundai', 'Kia', 'Tesla', 'Chevrolet', 'Geely', 'Other'];
+  const onboardBrands = ['BYD', 'Hyundai', 'Kia', 'Tesla', 'Chevrolet', 'Geely', 'Zeekr', 'Другая'];
   const batteryOptions = [40, 60, 77, 82, 100];
-  const connectorOptions = ['CCS2', 'Type 2', 'CHAdeMO'];
+  const connectorOptions = ['CCS2', 'GB/T DC', 'Type 2', 'CHAdeMO'];
+  const cities = new Set(stations.map(s => s.city)).size;
 
-  const formatCardNum = (val: string) => {
-    const digits = val.replace(/\D/g, '').slice(0, 16);
-    return digits.replace(/(\d{4})(?=\d)/g, '$1 ');
-  };
-  const formatExpiry = (val: string) => {
-    const digits = val.replace(/\D/g, '').slice(0, 4);
-    if (digits.length >= 3) return digits.slice(0, 2) + '/' + digits.slice(2);
-    return digits;
+  const saveCar = async () => {
+    if (!carModel.trim()) return setStep(2);
+    setSaving(true);
+    setCarError('');
+    try {
+      const maxKw = connector === 'Type 2' ? 11 : connector === 'CHAdeMO' ? 50 : 150;
+      const { user } = await actions.saveCar('driver', { brand: carBrand === 'Другая' ? 'Другая марка' : carBrand, model: carModel.trim(), year: new Date().getFullYear(), battery, port: connector, maxKw });
+      updateAccount('driver', user);
+      setStep(2);
+    } catch (e) {
+      setCarError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const steps = [
-    // Step 1: Welcome
     <div key="welcome" className="flex-1 flex flex-col items-center justify-center px-6 text-center" style={{ animation: 'enter-up 0.4s ease both' }}>
       <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-sky-500 to-sky-700 flex items-center justify-center mb-6 shadow-xl shadow-sky-200">
         <Zap size={44} className="text-white" />
       </div>
-      <h1 className="text-2xl font-bold text-slate-900 mb-2 leading-tight">Добро пожаловать в ONE CHARGE!</h1>
-      <p className="text-slate-500 text-sm mb-8 leading-relaxed">Национальная сеть зарядки для электромобилей</p>
+      <h1 className="text-2xl font-bold text-slate-900 mb-2 leading-tight">{`Добро пожаловать в ${BRAND.name}`}</h1>
+      <p className="text-slate-500 text-sm mb-8 leading-relaxed">Все зарядные станции разных операторов — в одном приложении</p>
       <div className="w-full space-y-3 text-left">
         {[
-          { icon: <MapPin size={18} className="text-sky-500" />, text: '108 станций по всему Узбекистану' },
-          { icon: <Star size={18} className="text-amber-500" />, text: 'Быстрая оплата через Humo / Uzcard' },
-          { icon: <Route size={18} className="text-emerald-500" />, text: 'AI-планировщик маршрутов' },
+          { icon: <MapPin size={18} className="text-sky-500" />, text: `${stations.length} ${plural(stations.length, ['станция', 'станции', 'станций'])} в ${cities} ${plural(cities, ['городе', 'городах', 'городах'])} — свободные разъёмы в реальном времени` },
+          { icon: <Wallet size={18} className="text-emerald-500" />, text: 'Один кошелёк для всех сетей, пополнение через Payme и Click' },
+          { icon: <Route size={18} className="text-violet-500" />, text: 'Планировщик поездок между городами по станциям сети' },
         ].map((item, i) => (
           <div key={i} className="flex items-center gap-3 bg-slate-50 rounded-2xl px-4 py-3">
             <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">{item.icon}</div>
@@ -4168,365 +2070,87 @@ function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
       </div>
     </div>,
 
-    // Step 2: Add car
     <div key="car" className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ animation: 'enter-up 0.35s ease both' }}>
       <div className="text-center pb-2">
         <h2 className="text-lg font-bold text-slate-900">Ваш автомобиль</h2>
-        <p className="text-sm text-slate-400">Мы подберём подходящие станции и разъёмы</p>
+        <p className="text-sm text-slate-400">Чтобы показывать подходящие разъёмы, время и стоимость зарядки</p>
       </div>
-      {/* Brand grid */}
       <div className="bg-white rounded-2xl border border-slate-100 p-4">
         <p className="text-xs font-semibold text-slate-500 mb-3">МАРКА</p>
         <div className="grid grid-cols-4 gap-2">
           {onboardBrands.map(b => (
-            <button key={b} onClick={() => setCarBrand(b)}
-              className={`py-2.5 rounded-xl text-xs font-semibold transition-all ${carBrand === b ? 'bg-sky-500 text-white shadow-sm' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
-              {b}
-            </button>
+            <button key={b} onClick={() => setCarBrand(b)} aria-pressed={carBrand === b} className={`py-2.5 rounded-xl text-xs font-semibold transition-all ${carBrand === b ? 'bg-sky-500 text-white shadow-sm' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>{b}</button>
           ))}
         </div>
       </div>
-      {/* Model */}
       <div className="bg-white rounded-2xl border border-slate-100 p-4">
         <p className="text-xs font-semibold text-slate-500 mb-2">МОДЕЛЬ</p>
-        <input value={carModel} onChange={e => setCarModel(e.target.value)}
-          placeholder={`Например: ${carBrand === 'BYD' ? 'Han EV' : carBrand === 'Hyundai' ? 'Ioniq 5' : 'Введите модель'}`}
-          className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-sky-400 text-slate-800 placeholder:text-slate-300" />
+        <input value={carModel} onChange={e => setCarModel(e.target.value)} aria-label="Модель" placeholder={carBrand === 'BYD' ? 'Например: Song Plus' : carBrand === 'Hyundai' ? 'Например: Ioniq 5' : 'Модель'} className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-sky-400 text-slate-800 placeholder:text-slate-300" />
       </div>
-      {/* Battery */}
       <div className="bg-white rounded-2xl border border-slate-100 p-4">
         <p className="text-xs font-semibold text-slate-500 mb-3">ЁМКОСТЬ БАТАРЕИ</p>
         <div className="flex gap-2">
           {batteryOptions.map(b => (
-            <button key={b} onClick={() => setBattery(b)}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${battery === b ? 'bg-sky-500 text-white' : 'bg-slate-50 text-slate-600'}`}>
+            <button key={b} onClick={() => setBattery(b)} aria-pressed={battery === b} className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${battery === b ? 'bg-sky-500 text-white' : 'bg-slate-50 text-slate-600'}`}>
               {b}<span className="block text-[10px] font-normal opacity-70">кВт·ч</span>
             </button>
           ))}
         </div>
       </div>
-      {/* Connector */}
       <div className="bg-white rounded-2xl border border-slate-100 p-4">
-        <p className="text-xs font-semibold text-slate-500 mb-3">ТИП РАЗЪЁМА</p>
-        <div className="flex gap-2">
+        <p className="text-xs font-semibold text-slate-500 mb-3">БЫСТРАЯ ЗАРЯДКА</p>
+        <div className="grid grid-cols-2 gap-2">
           {connectorOptions.map(c => (
-            <button key={c} onClick={() => setConnector(c)}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${connector === c ? 'bg-sky-500 text-white' : 'bg-slate-50 text-slate-600'}`}>
-              {c}
-            </button>
+            <button key={c} onClick={() => setConnector(c)} aria-pressed={connector === c} className={`py-2.5 rounded-xl text-xs font-semibold transition-all ${connector === c ? 'bg-sky-500 text-white' : 'bg-slate-50 text-slate-600'}`}>{c}</button>
           ))}
         </div>
       </div>
+      {carError && <p className="text-xs text-red-500 px-1">{carError}</p>}
     </div>,
 
-    // Step 3: Payment
-    <div key="payment" className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ animation: 'enter-up 0.35s ease both' }}>
+    <div key="pay" className="flex-1 overflow-y-auto px-4 py-4 space-y-3" style={{ animation: 'enter-up 0.35s ease both' }}>
       <div className="text-center pb-2">
-        <h2 className="text-lg font-bold text-slate-900">Способ оплаты</h2>
-        <p className="text-sm text-slate-400">Выберите платёжную систему</p>
+        <h2 className="text-lg font-bold text-slate-900">Как платить</h2>
+        <p className="text-sm text-slate-400">Без привязки карты в приложении</p>
       </div>
-      {/* Card type selection */}
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { type: 'humo' as const, label: 'Humo', gradient: 'from-orange-400 to-red-500', letter: 'H' },
-          { type: 'uzcard' as const, label: 'Uzcard', gradient: 'from-blue-400 to-blue-700', letter: 'U' },
-        ].map(card => (
-          <button key={card.type} onClick={() => setPaymentType(card.type)}
-            className={`relative rounded-2xl p-5 text-white text-left transition-all ${paymentType === card.type ? 'ring-2 ring-sky-500 ring-offset-2' : ''} bg-gradient-to-br ${card.gradient}`}>
-            {paymentType === card.type && (
-              <div className="absolute top-2 right-2 w-5 h-5 bg-white rounded-full flex items-center justify-center">
-                <CheckCircle size={14} className="text-sky-500" />
-              </div>
-            )}
-            <div className="w-10 h-7 bg-white/25 rounded-lg flex items-center justify-center mb-3">
-              <span className="font-bold text-base">{card.letter}</span>
-            </div>
-            <p className="font-bold text-base">{card.label}</p>
-          </button>
-        ))}
-      </div>
-      {/* Card fields */}
-      {paymentType && (
-        <div className="bg-white rounded-2xl border border-slate-100 p-4 space-y-3" style={{ animation: 'enter-up 0.3s ease both' }}>
-          <div>
-            <label className="text-xs font-semibold text-slate-500 block mb-1">НОМЕР КАРТЫ</label>
-            <input value={cardNum} onChange={e => setCardNum(formatCardNum(e.target.value))}
-              placeholder="0000 0000 0000 0000"
-              className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-sky-400 font-mono tracking-wider text-slate-800 placeholder:text-slate-300" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-slate-500 block mb-1">СРОК</label>
-              <input value={expiry} onChange={e => setExpiry(formatExpiry(e.target.value))}
-                placeholder="MM/YY"
-                className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-sky-400 font-mono text-slate-800 placeholder:text-slate-300" />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500 block mb-1">ВЛАДЕЛЕЦ</label>
-              <input value={cardHolder} onChange={e => setCardHolder(e.target.value.toUpperCase())}
-                placeholder="ИМЯ ФАМИЛИЯ"
-                className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-sky-400 text-slate-800 placeholder:text-slate-300 uppercase" />
-            </div>
-          </div>
+      {[
+        { icon: <Wallet size={18} className="text-emerald-500" />, title: 'Кошелёк', text: 'Пополняете через Payme или Click — данные карты остаются у платёжной системы.' },
+        { icon: <Zap size={18} className="text-sky-500" />, title: 'Оплата по факту', text: 'За зарядку списывается только полученная энергия по цене станции.' },
+        { icon: <Moon size={18} className="text-violet-500" />, title: 'Ночью дешевле', text: 'С 23:00 до 07:00 цена ×0.7 на всех станциях сети.' },
+      ].map(x => (
+        <div key={x.title} className="flex items-start gap-3 bg-slate-50 rounded-2xl px-4 py-3">
+          <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">{x.icon}</div>
+          <div><p className="text-sm font-semibold text-slate-800">{x.title}</p><p className="text-xs text-slate-500 mt-0.5">{x.text}</p></div>
         </div>
-      )}
+      ))}
     </div>,
   ];
 
   return (
     <div className="absolute inset-0 bg-white flex flex-col" style={{ zIndex: 9999, fontFamily: 'Manrope, sans-serif' }}>
-      {/* Header */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between shrink-0">
-        <span className="text-sm font-bold text-sky-500">ONE CHARGE</span>
-        {step > 0 && (
-          <button onClick={() => onComplete()} className="text-xs text-slate-400 font-medium px-3 py-1.5 rounded-xl hover:bg-slate-100">
-            Пропустить
-          </button>
-        )}
+        <span className="text-sm font-bold text-sky-500">{BRAND.name}</span>
+        <button onClick={() => onComplete()} className="text-xs text-slate-400 font-medium px-3 py-1.5 rounded-xl hover:bg-slate-100">Пропустить</button>
       </div>
-
-      {/* Step indicators */}
       <div className="flex items-center justify-center gap-2 py-3 shrink-0">
         {[0, 1, 2].map(i => (
           <div key={i} className={`rounded-full transition-all ${i === step ? 'w-5 h-2.5 bg-sky-500' : i < step ? 'w-2.5 h-2.5 bg-sky-300' : 'w-2.5 h-2.5 bg-slate-200'}`} />
         ))}
       </div>
-
-      {/* Step content */}
       {steps[step]}
-
-      {/* Bottom button */}
       <div className="px-4 pb-8 pt-3 shrink-0 space-y-2">
         <button
-          onClick={() => { if (step < 2) setStep(s => s + 1); else onComplete(); }}
-          className="w-full bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-2xl py-4 font-bold text-base shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2">
-          {step === 2 ? <><CheckCircle size={18} />Готово — начать</> : 'Далее →'}
+          onClick={() => { if (step === 0) setStep(1); else if (step === 1) void saveCar(); else onComplete(); }}
+          disabled={saving}
+          className="w-full bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-2xl py-4 font-bold text-base shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+        >
+          {step === 2 ? <><CheckCircle size={18} />Готово — к карте</> : step === 1 && carModel.trim() ? 'Сохранить и далее →' : 'Далее →'}
         </button>
-        {step === 1 && (
-          <button onClick={() => setStep(2)} className="w-full text-slate-400 text-sm font-medium py-2">
-            Добавить позже
-          </button>
-        )}
+        {step === 1 && <button onClick={() => setStep(2)} className="w-full text-slate-400 text-sm font-medium py-2">Добавить позже</button>}
       </div>
     </div>
   );
 }
-
-// ─── CARDS SCREEN ────────────────────────────────────────────────────────────
-
-type SavedCard = {
-  id: string;
-  type: 'humo' | 'uzcard' | 'visa' | 'mastercard';
-  last4: string;
-  holder: string;
-  expiry: string;
-  isPrimary: boolean;
-};
-
-function detectCardType(num: string): 'humo' | 'uzcard' | 'visa' | 'mastercard' | null {
-  const raw = num.replace(/\s/g, '');
-  if (raw.startsWith('9860')) return 'humo';
-  if (raw.startsWith('8600')) return 'uzcard';
-  if (raw.startsWith('4')) return 'visa';
-  if (raw.startsWith('5')) return 'mastercard';
-  return null;
-}
-
-function CardsScreen({ onBack }: { onBack: () => void }) {
-  const [cards, setCards] = useState<SavedCard[]>([
-    { id: 'c1', type: 'humo', last4: '4521', holder: 'Alisher Toshmatov', expiry: '12/27', isPrimary: true },
-    { id: 'c2', type: 'uzcard', last4: '8834', holder: 'Alisher Toshmatov', expiry: '08/26', isPrimary: false },
-  ]);
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newNum, setNewNum] = useState('');
-  const [newExpiry, setNewExpiry] = useState('');
-  const [newCvc, setNewCvc] = useState('');
-  const [newHolder, setNewHolder] = useState('');
-  const [showCvc, setShowCvc] = useState(false);
-
-  const formatCardNum = (val: string) => {
-    const d = val.replace(/\D/g, '').slice(0, 16);
-    return d.replace(/(\d{4})(?=\d)/g, '$1 ');
-  };
-  const formatExpiry = (val: string) => {
-    const d = val.replace(/\D/g, '').slice(0, 4);
-    if (d.length >= 3) return d.slice(0, 2) + '/' + d.slice(2);
-    return d;
-  };
-
-  const cardGradient: Record<string, string> = {
-    humo: 'from-orange-400 to-orange-600',
-    uzcard: 'from-blue-500 to-blue-700',
-    visa: 'from-slate-700 to-slate-900',
-    mastercard: 'from-red-500 to-orange-600',
-  };
-  const cardLetterBg: Record<string, string> = { humo: 'H', uzcard: 'U', visa: 'V', mastercard: 'M' };
-
-  const makePrimary = (id: string) => {
-    setCards(cs => cs.map(c => ({ ...c, isPrimary: c.id === id })));
-    setExpanded(null);
-  };
-  const deleteCard = (id: string) => {
-    setCards(cs => cs.filter(c => c.id !== id));
-    setDeleteTarget(null);
-    setExpanded(null);
-  };
-  const addCard = () => {
-    const raw = newNum.replace(/\s/g, '');
-    if (raw.length < 16 || !newExpiry || !newHolder) return;
-    const type = detectCardType(raw) || 'visa';
-    const newCard: SavedCard = {
-      id: 'c' + Date.now(),
-      type, last4: raw.slice(-4), holder: newHolder, expiry: newExpiry, isPrimary: cards.length === 0,
-    };
-    setCards(cs => [...cs, newCard]);
-    setNewNum(''); setNewExpiry(''); setNewCvc(''); setNewHolder('');
-    setShowAddForm(false);
-  };
-
-  return (
-    <div className="h-full flex flex-col bg-slate-50">
-      {/* Header */}
-      <div className="bg-white px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100">
-        <button onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
-        <h1 className="flex-1 text-base font-bold text-slate-900">Мои карты</h1>
-        <button onClick={() => setShowAddForm(v => !v)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-500 text-white rounded-xl text-xs font-semibold active:scale-95 transition-all">
-          <Plus size={13} />Добавить
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {/* Saved cards */}
-        {cards.map(card => (
-          <div key={card.id} className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-            <button onClick={() => setExpanded(expanded === card.id ? null : card.id)}
-              className="w-full p-4 flex items-center gap-3">
-              {/* Mini card visual */}
-              <div className={`w-12 h-8 rounded-xl bg-gradient-to-r ${cardGradient[card.type]} flex items-center justify-center shrink-0 shadow-sm`}>
-                <span className="text-white text-sm font-bold">{cardLetterBg[card.type]}</span>
-              </div>
-              <div className="flex-1 text-left">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-slate-800 capitalize">{card.type} •••• {card.last4}</p>
-                  {card.isPrimary && (
-                    <span className="text-[10px] bg-sky-100 text-sky-600 px-1.5 py-0.5 rounded-full font-semibold">Основная</span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-400">{card.holder} · {card.expiry}</p>
-              </div>
-              <ChevronRight size={16} className={`text-slate-400 transition-transform ${expanded === card.id ? 'rotate-90' : ''}`} />
-            </button>
-
-            {expanded === card.id && (
-              <div className="border-t border-slate-50 px-4 pb-4 pt-3 space-y-2" style={{ animation: 'enter-up 0.2s ease both' }}>
-                {!card.isPrimary && (
-                  <button onClick={() => makePrimary(card.id)}
-                    className="w-full py-2.5 bg-sky-50 text-sky-600 rounded-xl text-sm font-semibold border border-sky-100 hover:bg-sky-100 active:scale-95 transition-all">
-                    Сделать основной
-                  </button>
-                )}
-                <button onClick={() => setDeleteTarget(card.id)}
-                  className="w-full py-2.5 bg-red-50 text-red-500 rounded-xl text-sm font-semibold border border-red-100 hover:bg-red-100 active:scale-95 transition-all flex items-center justify-center gap-2">
-                  <Trash2 size={14} />Удалить карту
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
-
-        {cards.length === 0 && (
-          <div className="text-center py-10 text-slate-400">
-            <div className="text-4xl mb-3">💳</div>
-            <p className="text-sm font-medium">Нет сохранённых карт</p>
-          </div>
-        )}
-
-        {/* Add card form */}
-        {showAddForm && (
-          <div className="bg-white rounded-2xl border border-slate-100 p-4 space-y-3" style={{ animation: 'enter-up 0.3s ease both', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-            <p className="text-sm font-semibold text-slate-700">Добавить карту</p>
-            {/* Card number with type detection */}
-            <div>
-              <label className="text-xs text-slate-400 block mb-1">Номер карты</label>
-              <div className="relative">
-                <input value={newNum} onChange={e => setNewNum(formatCardNum(e.target.value))}
-                  placeholder="0000 0000 0000 0000"
-                  className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-sky-400 font-mono tracking-wider pr-16 text-slate-800 placeholder:text-slate-300" />
-                {detectCardType(newNum) && (
-                  <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold px-1.5 py-0.5 rounded text-white bg-gradient-to-r ${cardGradient[detectCardType(newNum)!]}`}>
-                    {cardLetterBg[detectCardType(newNum)!]}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-slate-400 block mb-1">Срок действия</label>
-                <input value={newExpiry} onChange={e => setNewExpiry(formatExpiry(e.target.value))}
-                  placeholder="MM/YY"
-                  className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-sky-400 font-mono text-slate-800 placeholder:text-slate-300" />
-              </div>
-              <div>
-                <label className="text-xs text-slate-400 block mb-1">CVC</label>
-                <div className="relative">
-                  <input value={newCvc} onChange={e => setNewCvc(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                    type={showCvc ? 'text' : 'password'}
-                    placeholder="•••"
-                    className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 pr-9 outline-none focus:border-sky-400 font-mono text-slate-800 placeholder:text-slate-300" />
-                  <button onClick={() => setShowCvc(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 p-0.5">
-                    <Lock size={13} />
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div>
-              <label className="text-xs text-slate-400 block mb-1">Имя владельца</label>
-              <input value={newHolder} onChange={e => setNewHolder(e.target.value.toUpperCase())}
-                placeholder="ИМЯ ФАМИЛИЯ"
-                className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-sky-400 uppercase text-slate-800 placeholder:text-slate-300" />
-            </div>
-            <button onClick={addCard}
-              disabled={newNum.replace(/\s/g, '').length < 16 || !newExpiry || !newHolder}
-              className="w-full bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-2xl py-3.5 font-bold text-sm disabled:opacity-40 active:scale-95 transition-all">
-              Добавить карту
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Delete confirmation modal */}
-      {deleteTarget && (
-        <div className="absolute inset-0 z-50 bg-black/40 flex items-end" style={{ fontFamily: 'Manrope, sans-serif' }}>
-          <div className="w-full bg-white rounded-t-3xl px-4 pt-5 pb-8 space-y-3" style={{ animation: 'enter-up 0.25s ease both' }}>
-            <div className="flex justify-center mb-2">
-              <div className="w-10 h-1 bg-slate-200 rounded-full" />
-            </div>
-            <div className="flex flex-col items-center text-center pb-2">
-              <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mb-3">
-                <Trash2 size={24} className="text-red-500" />
-              </div>
-              <p className="text-base font-bold text-slate-900 mb-1">Удалить карту?</p>
-              <p className="text-sm text-slate-500">Это действие нельзя отменить. Карта будет удалена из вашего профиля.</p>
-            </div>
-            <button onClick={() => deleteCard(deleteTarget)}
-              className="w-full py-3.5 bg-red-500 text-white rounded-2xl font-bold text-sm hover:bg-red-600 active:scale-95 transition-all">
-              Удалить
-            </button>
-            <button onClick={() => setDeleteTarget(null)}
-              className="w-full py-3.5 bg-slate-100 text-slate-700 rounded-2xl font-semibold text-sm active:scale-95 transition-all">
-              Отмена
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 const tabs: { id: Tab; label: string; icon: ReactNode }[] = [
   { id: 'map', label: 'Карта', icon: <MapPin size={20} /> },
@@ -4558,16 +2182,33 @@ function PushToast({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
 }
 
 export default function DriverApp() {
-  const { actions, sessions: portalSessions, state, refresh, events } = useSync();
+  const { actions, sessions: portalSessions, state, refresh, events, updateAccount } = useSync();
   const driverAccount = portalSessions.driver;
   // The session this driver currently has running, as the server sees it.
   const liveSession = state?.sessions.find(
     s => s.status === 'active' && s.userId === driverAccount?.id,
   ) ?? null;
 
-  const [lastSummary, setLastSummary] = useState<{ energy: number; cost: number; minutes: number } | null>(null);
+  const [lastSession, setLastSession] = useState<Session | null>(null);
+  const watched = useRef<string | null>(null);
   const [lastBooking, setLastBooking] = useState<Booking | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(true);
+  // Shown once per account on this device.
+  const onboardKey = `oc-onboarded-${driverAccount?.id ?? 'guest'}`;
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try {
+      return !localStorage.getItem(onboardKey);
+    } catch {
+      return true;
+    }
+  });
+  const finishOnboarding = () => {
+    try {
+      localStorage.setItem(onboardKey, '1');
+    } catch {
+      /* private mode */
+    }
+    setShowOnboarding(false);
+  };
   const [activeTab, setActiveTab] = useState<Tab>('map');
   const [screen, setScreen] = useState<Screen>('map');
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
@@ -4619,20 +2260,36 @@ export default function DriverApp() {
     setScreen('charging-active');
   };
 
+  useEffect(() => {
+    if (liveSession) {
+      watched.current = liveSession.id;
+      return;
+    }
+    if (screen !== 'charging-active' || !watched.current) return;
+    const ended = state?.sessions.find(x => x.id === watched.current);
+    if (ended && ended.status !== 'active') {
+      watched.current = null;
+      setLastSession(ended);
+      setScreen('charging-done');
+    }
+  }, [liveSession, screen, state]);
+
+  const saveCar = async (car: { brand: string; model: string; year: number; battery: number; port: string; maxKw: number }) => {
+    try {
+      const { user } = await actions.saveCar('driver', { ...car, port: car.port.replace(/^Type(\d)$/, 'Type $1') });
+      updateAccount('driver', user);
+      setScreen('profile');
+    } catch (err) {
+      pushToast({ icon: '⚠️', title: 'Не удалось сохранить автомобиль', body: err instanceof Error ? err.message : 'Попробуйте ещё раз', color: '#F59E0B' });
+    }
+  };
+
   const stopCharging = async () => {
     if (liveSession) {
       try {
         const { session } = await actions.stopSession('driver', liveSession.id);
-        setLastSummary({
-          energy: session.energy,
-          cost: session.cost,
-          minutes: Math.max(
-            1,
-            Math.round(
-              (new Date(session.end ?? Date.now()).getTime() - new Date(session.start).getTime()) / 60000,
-            ),
-          ),
-        });
+        watched.current = null;
+        setLastSession(session);
         await refresh();
       } catch {
         /* already stopped elsewhere — the done screen is still correct */
@@ -4655,31 +2312,28 @@ export default function DriverApp() {
   };
 
   const renderContent = () => {
-    if (screen === 'cards') return <CardsScreen onBack={() => setScreen('profile')} />;
     if (screen === 'charging-start') return <ChargingStartScreen station={selectedStation} onBack={() => setScreen('station')} onConfirm={startCharging} onOpenQR={() => setScreen('qr-scan')} />;
-    if (screen === 'charging-active') return <ChargingActiveScreen station={selectedStation} onStop={stopCharging} />;
-    if (screen === 'charging-done') return <ChargingDoneScreen station={selectedStation} onClose={handleBack} summary={lastSummary} />;
-    if (screen === 'trip') return <TripPlannerScreen onBack={() => setScreen('map')} />;
+    if (screen === 'charging-active') return <ChargingActiveScreen session={liveSession} startBattery={state?.vehicles.find(v => v.driverId === driverAccount?.id)?.battery ?? null} packKwh={driverAccount?.car?.battery} onStop={stopCharging} />;
+    if (screen === 'charging-done') return <ChargingDoneScreen session={lastSession} onClose={handleBack} />;
+    if (screen === 'trip') return <TripPlannerScreen onBack={() => setScreen('map')} onSelectStation={handleSelectStation} />;
     if (screen === 'booking') return <BookingScreen station={selectedStation} onBack={() => setScreen('station')} onConfirm={b => { setLastBooking(b); setScreen('booking-done'); }} />;
     if (screen === 'booking-done') return <BookingDoneScreen station={selectedStation} booking={lastBooking} onClose={handleBack} />;
-    if (screen === 'add-car') return <AddCarScreen onBack={() => setScreen('map')} onSave={() => setScreen('map')} />;
-    if (screen === 'notifications') return <NotificationsScreen onBack={() => setScreen('map')} />;
+    if (screen === 'add-car') return <AddCarScreen onBack={() => setScreen('profile')} onSave={saveCar} />;
+    if (screen === 'notifications') return <NotificationsScreen onBack={() => setScreen('profile')} />;
     if (screen === 'reviews') return <ReviewsScreen station={selectedStation} onBack={() => setScreen('station')} />;
     if (screen === 'report') return <ReportScreen station={selectedStation} onBack={() => setScreen('station')} />;
     if (screen === 'favorites') return <FavoritesScreen onBack={() => setScreen('map')} onSelectStation={s => { setSelectedStation(s); setScreen('station'); }} />;
     if (screen === 'qr-scan') return <QRScanScreen onBack={() => setScreen(selectedStation ? 'station' : 'map')} onStartCharging={s => { setSelectedStation(s); setScreen('charging-start'); }} />;
-    if (screen === 'loyalty') return <LoyaltyScreen onBack={() => setScreen('profile')} />;
-    if (screen === 'referral') return <ReferralScreen onBack={() => setScreen('profile')} />;
     if (screen === 'app-settings') return <AppSettingsScreen onBack={() => setScreen('profile')} />;
     if (screen === 'wallet') return <WalletScreen onBack={() => setScreen('profile')} />;
     if (screen === 'eco') return <EcoScreen onBack={() => setScreen('profile')} />;
     if (screen === 'security') return <SecurityScreen onBack={() => setScreen('profile')} />;
-    if (screen === 'support') return <SupportScreen onBack={() => setScreen('profile')} />;
+    if (screen === 'support') return <SupportScreen onBack={() => setScreen('profile')} onReport={() => setScreen(selectedStation ? 'report' : 'map')} />;
 
     if (activeTab === 'history') return <HistoryScreen />;
-    if (activeTab === 'profile') return <ProfileScreen onNavigate={setScreen} />;
-    if (activeTab === 'trips') return <TripPlannerScreen onBack={() => setActiveTab('map')} />;
-    if (activeTab === 'charging') return <ChargingHubScreen onNavigate={(s) => { setScreen(s as Screen); setActiveTab('map'); }} />;
+    if (activeTab === 'profile') return <ProfileScreen onNavigate={s => setScreen(s as Screen)} />;
+    if (activeTab === 'trips') return <TripPlannerScreen onBack={() => setActiveTab('map')} onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} />;
+    if (activeTab === 'charging') return <ChargingHubScreen onNavigate={(s) => { setScreen(s as Screen); setActiveTab('map'); }} onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} onOpenCharge={() => { setActiveTab('map'); setScreen('charging-active'); }} />;
 
     return (
       <div className="relative w-full h-full">
@@ -4700,13 +2354,13 @@ export default function DriverApp() {
     );
   };
 
-  const showTabs = !['charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'cards', 'app-settings', 'wallet', 'security', 'support'].includes(screen);
+  const showTabs = !['charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support'].includes(screen);
 
   return (
     <div className="h-full flex flex-col bg-white overflow-hidden relative" style={{ fontFamily: 'Manrope, sans-serif' }}>
-      {showOnboarding && <OnboardingScreen onComplete={() => setShowOnboarding(false)} />}
-      {/* Status bar */}
-      <div className="bg-white px-4 pt-2 pb-1 flex items-center justify-between shrink-0 border-b border-slate-100">
+      {showOnboarding && <OnboardingScreen onComplete={finishOnboarding} />}
+      {/* Status bar of the device mock — a real phone draws its own */}
+      <div className="bg-white px-4 pt-2 pb-1 hidden sm:flex items-center justify-between shrink-0 border-b border-slate-100">
         <span className="text-xs font-semibold text-slate-800 mono">09:41</span>
         <div className="flex items-center gap-1">
           <div className="flex gap-0.5 items-end">
@@ -4737,9 +2391,10 @@ export default function DriverApp() {
         <div className="bg-white border-t border-slate-100 px-2 py-2 flex items-center justify-around shrink-0">
           {tabs.map(tab => {
             const isActive = activeTab === tab.id && !['station'].includes(screen);
-            const isCharging = tab.id === 'charging';
+            // The badge means a charge is running right now, nothing else.
+            const isCharging = tab.id === 'charging' && !!liveSession;
             return (
-              <button key={tab.id} onClick={() => { setActiveTab(tab.id); setScreen('map'); setSelectedStation(null); }}
+              <button key={tab.id} aria-current={isActive ? 'page' : undefined} onClick={() => { setActiveTab(tab.id); setScreen('map'); setSelectedStation(null); }}
                 className={`relative flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors ${isActive ? 'text-sky-500' : 'text-slate-400'}`}>
                 {isCharging && (
                   <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5">

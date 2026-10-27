@@ -225,7 +225,7 @@ function StationDetailPage({ stationId, onBack }: { stationId: string; onBack: (
           {[
             { label: t('lbl2.openingHours'), value: s.hours },
             { label: t('lbl2.maxPower'), value: `${s.totalPower} кВт` },
-            { label: t('lbl2.rating'), value: `⭐ ${s.rating} (${s.reviews})` },
+            { label: t('lbl2.rating'), value: `⭐ ${s.rating.toFixed(1)} (${s.reviews})` },
             { label: t('lbl2.connectorType'), value: [...new Set(s.connectors.map(c => c.type))].join(', ') },
             { label: t('lbl2.available'), value: `${s.connectors.filter(c => c.status === 'available').length}/${s.connectors.length} EVSE` },
             { label: t('lbl2.services'), value: s.amenities.join(', ') || '—' },

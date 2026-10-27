@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { resetDemo, signIn } from './helpers.mjs';
+import { resetDemo, signIn, skipOnboarding } from './helpers.mjs';
 
 test.beforeEach(async ({ request }) => {
   await resetDemo(request);
@@ -25,5 +25,17 @@ test('the fleet portal fits a phone on every page', async ({ page }) => {
     await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow, `${section} overflows by ${overflow}px`).toBeLessThanOrEqual(1);
+  }
+});
+
+test('the driver app fills a phone screen and every tab stays in view', async ({ page }) => {
+  await signIn(page, 'driver');
+  await skipOnboarding(page);
+  for (const tab of ['Поездки', 'Зарядка', 'История', 'Профиль', 'Карта']) {
+    await page.getByRole('button', { name: new RegExp(`^${tab}$`) }).click();
+    const box = await page.getByRole('button', { name: new RegExp(`^${tab}$`) }).boundingBox();
+    const width = page.viewportSize().width;
+    expect(box.x, `${tab} tab is off screen`).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width, `${tab} tab is off screen`).toBeLessThanOrEqual(width + 1);
   }
 });

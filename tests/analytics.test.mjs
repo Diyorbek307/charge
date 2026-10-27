@@ -178,6 +178,67 @@ describe('company-paid charging', () => {
   });
 });
 
+describe('station ratings', () => {
+  test('a driver rates a finished charge once, and the station average moves', async () => {
+    const driver = await login('driver');
+    const state = (await call('/state', { token: driver })).data;
+    const running = state.sessions.find(s => s.status === 'active' && s.userId === 'acc-driver');
+    if (running) await call(`/sessions/${running.id}/stop`, { method: 'POST', token: driver });
+    const st = state.stations.find(s => s.connectors.some(c => c.status === 'available'));
+    const c = st.connectors.find(x => x.status === 'available');
+    const started = (await call('/sessions/start', { method: 'POST', token: driver, body: { stationId: st.id, connectorId: c.id } })).data.session;
+    assert.equal((await call(`/sessions/${started.id}/rating`, { method: 'POST', token: driver, body: { stars: 5 } })).status, 409, 'a running charge was rated');
+    await call(`/sessions/${started.id}/stop`, { method: 'POST', token: driver });
+
+    assert.equal((await call(`/sessions/${started.id}/rating`, { method: 'POST', token: driver, body: { stars: 9 } })).status, 400);
+    assert.equal((await call(`/sessions/${started.id}/rating`, { method: 'POST', token: await login('business'), body: { stars: 1 } })).status, 404, 'someone else rated the charge');
+    const rated = await call(`/sessions/${started.id}/rating`, { method: 'POST', token: driver, body: { stars: 1 } });
+    assert.equal(rated.status, 200);
+    assert.equal(rated.data.station.reviews, st.reviews + 1);
+    assert.ok(rated.data.station.rating < st.rating);
+    assert.equal((await call(`/sessions/${started.id}/rating`, { method: 'POST', token: driver, body: { stars: 5 } })).status, 409, 'rated twice');
+  });
+});
+
+describe('account self-service', () => {
+  test('devices are listed without their tokens, and the others can be signed out', async () => {
+    const a = await login('operator');
+    const b = await login('operator');
+    const list = (await call('/auth/sessions', { token: a })).data;
+    assert.ok(list.length >= 2);
+    assert.equal(list.filter(d => d.current).length, 1);
+    assert.ok(list.every(d => d.id.length === 12 && !JSON.stringify(d).includes(a)));
+    assert.equal((await call('/auth/sessions/revoke-others', { method: 'POST', token: a })).status, 200);
+    assert.equal((await call('/auth/me', { token: b })).status, 401, 'the other device is still signed in');
+    assert.equal((await call('/auth/me', { token: a })).status, 200);
+  });
+
+  test('a password change needs the current one and signs other devices out', async () => {
+    const a = await login('operator');
+    const b = await login('operator');
+    assert.equal((await call('/auth/password', { method: 'POST', token: a, body: { current: 'wrong', next: 'NewPass2026' } })).status, 401);
+    assert.equal((await call('/auth/password', { method: 'POST', token: a, body: { current: CREDS.operator[1], next: '123' } })).status, 400);
+    assert.equal((await call('/auth/password', { method: 'POST', token: a, body: { current: CREDS.operator[1], next: 'NewPass2026' } })).status, 200);
+    assert.equal((await call('/auth/me', { token: b })).status, 401);
+    const relogin = await call('/auth/login', { method: 'POST', body: { portal: 'operator', login: CREDS.operator[0], password: 'NewPass2026' } });
+    assert.equal(relogin.status, 200);
+    // Put it back for the other tests.
+    await call('/auth/password', { method: 'POST', token: relogin.data.token, body: { current: 'NewPass2026', next: CREDS.operator[1] } });
+  });
+
+  test('notifications are the events addressed to me, and a driver can save a car', async () => {
+    const driver = await login('driver');
+    const notes = (await call('/notifications', { token: driver })).data;
+    assert.ok(Array.isArray(notes));
+    assert.ok(notes.every(n => !('scope' in n)));
+    assert.equal((await call('/me/car', { method: 'PUT', token: driver, body: { brand: 'BYD', model: 'Seal', year: 2025, battery: 999, port: 'CCS2', maxKw: 150 } })).status, 400);
+    const saved = await call('/me/car', { method: 'PUT', token: driver, body: { brand: 'BYD', model: 'Seal', year: 2025, battery: 82, port: 'CCS2', maxKw: 150 } });
+    assert.equal(saved.status, 200);
+    assert.equal((await call('/auth/me', { token: driver })).data.user.car.model, 'Seal');
+    assert.equal((await call('/me/car', { method: 'PUT', token: await login('operator'), body: {} })).status, 403);
+  });
+});
+
 describe('admin users', () => {
   test('lists drivers with activity; only the admin may', async () => {
     const admin = await login('admin');

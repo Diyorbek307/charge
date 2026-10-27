@@ -31,6 +31,8 @@ interface SyncContextValue {
   logout: (portal: Portal) => Promise<void>;
   /** Signs a portal in with a token obtained outside login(), e.g. after sign-up. */
   adoptSession: (portal: Portal, token: string, user: Account) => void;
+  /** Replaces the signed-in account after the server changed it (a saved car, say). */
+  updateAccount: (portal: Portal, user: Account) => void;
   actions: typeof apiClient;
   lastError: string | null;
 }
@@ -274,9 +276,14 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     setSessions(s => ({ ...s, [portal]: user }));
   }, []);
 
+  const updateAccount = useCallback((portal: Portal, user: Account) => {
+    setSessions(s => ({ ...s, [portal]: user }));
+  }, []);
+
   const value = useMemo<SyncContextValue>(
     () => ({
       adoptSession,
+      updateAccount,
       state,
       connection,
       events,
@@ -292,7 +299,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       actions: apiClient,
       lastError,
     }),
-    [state, connection, events, eventCount, credentials, sessions, refresh, login, verify2fa, loginWithOtp, requestOtp, logout, adoptSession, lastError],
+    [state, connection, events, eventCount, credentials, sessions, refresh, login, verify2fa, loginWithOtp, requestOtp, logout, adoptSession, updateAccount, lastError],
   );
 
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;

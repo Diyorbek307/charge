@@ -106,6 +106,7 @@ function scopeOf({ type, entity, payload = {} }) {
     case 'ocpp.command':
     case 'tariff.update':
     case 'station.added':
+    case 'station.rated':
       return { operatorId: stationOperator(entity) };
     case 'ocpp.online':
     case 'ocpp.offline':
@@ -469,6 +470,7 @@ function requireAuth(...portals) {
       return res.status(403).json({ error: 'Нет доступа к этому порталу' });
     }
     req.account = resolved.account;
+    req.tokenEntry = resolved.entry;
     next();
   };
 }
@@ -516,7 +518,7 @@ api.post('/auth/login', (req, res) => {
     return res.json({ requires2fa: true, challenge });
   }
 
-  const token = db.issueToken(account);
+  const token = db.issueToken(account, req);
   db.update('accounts', account.id, { lastLogin: new Date().toISOString() });
   emit({
     type: 'auth.login',
@@ -552,7 +554,7 @@ api.post('/auth/2fa/verify', (req, res) => {
 
   // One challenge, one login.
   db.data.challenges.splice(idx, 1);
-  const token = db.issueToken(account);
+  const token = db.issueToken(account, req);
   db.update('accounts', account.id, { lastLogin: new Date().toISOString() });
   emit({
     type: 'auth.login',
@@ -690,7 +692,7 @@ api.post('/auth/register', (req, res) => {
   };
   db.data.accounts.push(account);
   db.data.wallets[account.id] = { balance: 0, currency: 'UZS', autoTopUp: false, threshold: 0, card: null };
-  const token = db.issueToken(account);
+  const token = db.issueToken(account, req);
   emit({
     type: 'auth.register',
     portal: 'driver',
@@ -727,7 +729,7 @@ api.post('/auth/password/reset', (req, res) => {
 
   // An SMS code proves the phone, not the authenticator: 2FA still applies.
   if (account.twoFactor?.enabled) return res.json({ reset: true, requires2fa: true });
-  const token = db.issueToken(account);
+  const token = db.issueToken(account, req);
   db.update('accounts', account.id, { lastLogin: new Date().toISOString() });
   res.json({ reset: true, token, user: publicAccount(account) });
 });
@@ -749,7 +751,7 @@ api.post('/auth/otp/verify', (req, res) => {
   if (!account || account.otp !== code) return res.status(401).json({ error: 'Неверный код' });
   if (isBlocked(account.id)) return res.status(403).json({ error: 'Аккаунт заблокирован — обратитесь в поддержку' });
 
-  const token = db.issueToken(account);
+  const token = db.issueToken(account, req);
   db.update('accounts', account.id, { lastLogin: new Date().toISOString() });
   emit({
     type: 'auth.login',
@@ -763,6 +765,86 @@ api.post('/auth/otp/verify', (req, res) => {
 
 api.get('/auth/me', requireAuth(), (req, res) => {
   res.json({ user: publicAccount(req.account) });
+});
+
+// ---------------------------------------------------------------------------
+// Account self-service: signed-in devices, password, notifications, car
+// ---------------------------------------------------------------------------
+
+/** "Chrome · Windows" from a user-agent string — enough to recognise a device. */
+function deviceName(agent = '') {
+  const browser = /Edg\//.test(agent) ? 'Edge' : /OPR\//.test(agent) ? 'Opera' : /Chrome\//.test(agent) ? 'Chrome' : /Firefox\//.test(agent) ? 'Firefox' : /Safari\//.test(agent) ? 'Safari' : 'Приложение';
+  const os = /iPhone|iPad/.test(agent) ? 'iOS' : /Android/.test(agent) ? 'Android' : /Windows/.test(agent) ? 'Windows' : /Mac OS X/.test(agent) ? 'macOS' : /Linux/.test(agent) ? 'Linux' : '';
+  return os ? `${browser} · ${os}` : browser;
+}
+
+api.get('/auth/sessions', requireAuth(), (req, res) => {
+  res.json(
+    db.data.tokens
+      .filter(t => t.accountId === req.account.id)
+      .map(t => ({
+        // A short fingerprint, never the token itself.
+        id: crypto.createHash('sha256').update(t.token).digest('hex').slice(0, 12),
+        device: deviceName(t.agent),
+        issued: t.issued,
+        lastSeen: t.lastSeen ?? t.issued,
+        current: t.token === req.tokenEntry.token,
+      })),
+  );
+});
+
+api.post('/auth/sessions/revoke-others', requireAuth(), (req, res) => {
+  const before = db.data.tokens.length;
+  db.data.tokens = db.data.tokens.filter(t => t.accountId !== req.account.id || t.token === req.tokenEntry.token);
+  db.save();
+  res.json({ revoked: before - db.data.tokens.length });
+});
+
+api.post('/auth/password', requireAuth(), (req, res) => {
+  const { current, next } = req.body ?? {};
+  if (!db.verifyPassword(req.account, String(current ?? ''))) return res.status(401).json({ error: 'Текущий пароль указан неверно' });
+  const weak = passwordProblem(next);
+  if (weak) return res.status(400).json({ error: weak });
+  if (String(next) === String(current)) return res.status(400).json({ error: 'Новый пароль совпадает с текущим' });
+  const { salt, hash } = hashPassword(String(next));
+  db.update('accounts', req.account.id, { salt, hash });
+  // Everyone else signed in as this account is signed out.
+  db.data.tokens = db.data.tokens.filter(t => t.accountId !== req.account.id || t.token === req.tokenEntry.token);
+  db.save();
+  emit({
+    type: 'auth.password',
+    portal: req.account.portal,
+    actor: req.account.name,
+    message: 'Пароль изменён',
+    entity: req.account.id,
+  });
+  res.json({ ok: true });
+});
+
+/** What happened to me: the events addressed to this account, without the network's public feed. */
+api.get('/notifications', requireAuth(), (req, res) => {
+  const limit = Math.min(Number(req.query.limit) || 50, 100);
+  res.json(db.data.events.filter(e => entitled(req.account, e) && e.scope?.userId === req.account.id).slice(0, limit).map(e => viewFor(req.account, e)));
+});
+
+const CAR_PORTS = ['CCS2', 'CCS1', 'CHAdeMO', 'Type 2', 'Type 1', 'GB/T DC', 'GB/T AC', 'NACS'];
+
+/** The driver's own car: used for charge estimates and connector filters. */
+api.put('/me/car', requireAuth('driver'), (req, res) => {
+  const b = req.body ?? {};
+  const brand = String(b.brand ?? '').trim().slice(0, 30);
+  const model = String(b.model ?? '').trim().slice(0, 40);
+  const year = Number(b.year);
+  const battery = Number(b.battery);
+  const maxKw = Number(b.maxKw);
+  if (!brand || !model) return res.status(400).json({ error: 'Укажите марку и модель' });
+  if (!Number.isInteger(year) || year < 2010 || year > new Date().getFullYear() + 1) return res.status(400).json({ error: 'Некорректный год выпуска' });
+  if (!Number.isFinite(battery) || battery < 10 || battery > 250) return res.status(400).json({ error: 'Ёмкость батареи — от 10 до 250 кВт·ч' });
+  if (!CAR_PORTS.includes(b.port)) return res.status(400).json({ error: 'Выберите разъём из списка' });
+  if (!Number.isFinite(maxKw) || maxKw < 3 || maxKw > 400) return res.status(400).json({ error: 'Мощность зарядки — от 3 до 400 кВт' });
+  const car = { brand, model, year, battery: Math.round(battery), port: b.port, maxKw: Math.round(maxKw) };
+  db.update('accounts', req.account.id, { car });
+  res.json({ user: publicAccount(db.byId('accounts', req.account.id)) });
 });
 
 api.post('/auth/logout', (req, res) => {
@@ -1124,6 +1206,36 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
   promoteQueue(session.stationId, session.connectorId);
   return { session, transaction };
 }
+
+/** One rating per completed charge, from the driver who charged; the station's average follows. */
+api.post('/sessions/:id/rating', requireAuth('driver', 'business'), (req, res) => {
+  const session = db.byId('sessions', req.params.id);
+  if (!session || session.userId !== req.account.id) return res.status(404).json({ error: 'Сессия не найдена' });
+  if (session.status !== 'completed') return res.status(409).json({ error: 'Оценить можно только завершённую зарядку' });
+  if (session.rating) return res.status(409).json({ error: 'Эта зарядка уже оценена' });
+  const stars = Number(req.body?.stars);
+  if (!Number.isInteger(stars) || stars < 1 || stars > 5) return res.status(400).json({ error: 'Оценка — от 1 до 5' });
+
+  const station = db.byId('stations', session.stationId);
+  session.rating = stars;
+  if (station) {
+    const n = station.reviews ?? 0;
+    // Two decimals, so a single vote still moves a well-reviewed station.
+    station.rating = Math.round((((station.rating ?? 0) * n + stars) / (n + 1)) * 100) / 100;
+    station.reviews = n + 1;
+  }
+  db.save();
+
+  emit({
+    type: 'station.rated',
+    portal: req.account.portal,
+    actor: req.account.name,
+    message: `Оценка ${stars}/5 · ${session.stationName}`,
+    entity: session.stationId,
+    payload: { stars, sessionId: session.id },
+  });
+  res.json({ station, session });
+});
 
 api.post('/sessions/:id/stop', requireAuth('driver', 'business', 'admin', 'operator'), async (req, res) => {
   const session = db.byId('sessions', req.params.id);
