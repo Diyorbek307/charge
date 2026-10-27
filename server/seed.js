@@ -3,7 +3,7 @@ import { OPERATORS, buildStations, buildCustomers, buildHistory, buildMonthly } 
 
 // Bump when the shape below changes so existing stores reseed instead of
 // silently serving a stale schema.
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 14;
 
 export function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   const hash = crypto.scryptSync(password, salt, 32).toString('hex');
@@ -221,15 +221,21 @@ export function seed(now = Date.now()) {
     v.cost = mine.reduce((n, x) => n + x.cost, 0);
   }
   const employees = [
-    { id: 'emp-01', name: 'Alisher Tursunov', driverId: 'acc-driver', dept: 'Продажи', limit: 1500000, vehicle: 'BYD Han EV' },
-    { id: 'emp-02', name: 'Nilufar Karimova', driverId: 'usr-nilufar', dept: 'Маркетинг', limit: 1200000, vehicle: 'Hyundai Ioniq 6' },
-    { id: 'emp-03', name: 'Bobur Mirzayev', driverId: 'usr-bobur', dept: 'IT', limit: 900000, vehicle: 'Tesla Model 3' },
-    { id: 'emp-04', name: 'Dilshod Raximov', driverId: 'usr-dilshod', dept: 'Логистика', limit: 2000000, vehicle: 'Kia EV6' },
-    { id: 'emp-05', name: 'Kamola Abdullayeva', driverId: 'usr-kamola', dept: 'HR', limit: 800000, vehicle: 'BYD Atto 3' },
-  ].map(e => {
+    { id: 'emp-01', name: 'Alisher Tursunov', driverId: 'acc-driver', dept: 'Продажи', headroom: 1.4, vehicle: 'BYD Han EV' },
+    { id: 'emp-02', name: 'Nilufar Karimova', driverId: 'usr-nilufar', dept: 'Маркетинг', headroom: 1.3, vehicle: 'Hyundai Ioniq 6' },
+    { id: 'emp-03', name: 'Bobur Mirzayev', driverId: 'usr-bobur', dept: 'IT', headroom: 1.25, vehicle: 'Tesla Model 3' },
+    { id: 'emp-04', name: 'Dilshod Raximov', driverId: 'usr-dilshod', dept: 'Логистика', headroom: 1.5, vehicle: 'Kia EV6' },
+    { id: 'emp-05', name: 'Kamola Abdullayeva', driverId: 'usr-kamola', dept: 'HR', headroom: 1.0, vehicle: 'BYD Atto 3' },
+  ].map(({ headroom, ...e }) => {
+    // Limits a fleet manager would set: the usual monthly spend plus headroom,
+    // rounded to 100k. One employee runs close to it, as someone always does.
+    const pace = sessions
+      .filter(x => x.userId === e.driverId && x.corporate && x.status === 'completed' && Date.parse(x.start) >= now - 30 * 86400_000)
+      .reduce((n, x) => n + x.cost, 0);
+    const limit = Math.max(300_000, Math.ceil((pace * headroom) / 100_000) * 100_000);
     const mine = monthOf(e.driverId);
     const spent = mine.reduce((n, x) => n + x.cost, 0);
-    return { ...e, spent, sessions: mine.length, status: spent > e.limit ? 'warning' : 'active' };
+    return { ...e, limit, spent, sessions: mine.length, status: spent > limit ? 'warning' : 'active' };
   });
 
   const wallets = {
@@ -271,6 +277,8 @@ export function seed(now = Date.now()) {
     bookings: [],
     payments: history.payments,
     // Generated history runs up to here; the demo simulation fills in after it.
+    // The generated history covers this window; months it only partly covers are not shown as real ones.
+    historyStart: new Date(now - 60 * 86400_000).toISOString(),
     historyUntil: new Date(now - 20 * 60_000).toISOString(),
     counters: { session: history.counters.session, txn: history.counters.txn, alert: 5, event: 1, webhook: 2, delivery: 1, report: 1, queue: 1, booking: 1 },
   };

@@ -64,6 +64,8 @@ const KINDS = {
   'alert.new': { title: 'Новое оповещение', url: '/?portal=operator' },
   // Only provider-confirmed top-ups, not the demo's direct button.
   'wallet.topup': { title: 'Кошелёк пополнен', url: '/?portal=driver', when: e => e.portal === 'system' },
+  'fleet.limit': { title: 'Лимит сотрудника', url: '/?portal=business' },
+  'fleet.balance': { title: 'Низкий баланс счёта', url: '/?portal=business' },
 };
 
 function recipients(event) {
@@ -73,7 +75,7 @@ function recipients(event) {
   if (event.type === 'alert.new' && scope.operatorId) {
     for (const a of db.data.accounts) if (a.portal === 'operator' && a.orgId === scope.operatorId) ids.add(a.id);
   }
-  if (event.type === 'wallet.topup' && scope.fleet) {
+  if ((event.type === 'wallet.topup' || event.type.startsWith('fleet.')) && scope.fleet) {
     for (const a of db.data.accounts) if (a.portal === 'business') ids.add(a.id);
   }
   return ids;

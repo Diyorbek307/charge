@@ -73,6 +73,8 @@ export interface Analytics {
   customers?: { id: string; name: string; phone: string; car: string; city: string; sessions: number; spent: number; energy: number; last: string; stations: number }[];
   employees?: { id: string; name: string; dept: string; vehicle: string; limit: number; spentMonth: number; sessions: number; energy: number; spent: number }[];
   departments?: { dept: string; spent: number; sessions: number }[];
+  trips?: Trip[];
+  account?: { balance: number; threshold: number; autoTopUp: boolean; budget: number; spentMonth: number; runwayDays: number | null };
   invoices?: Invoice[];
   payments?: {
     count: number;
@@ -83,6 +85,27 @@ export interface Analytics {
     pending: number;
     recent: { id: string; provider: string; userId: string; user: string; amount: number; status: string; created: string }[];
   };
+}
+
+/** A corporate charge, as the fleet portal lists it. */
+export interface Trip {
+  id: string;
+  start: string;
+  end: string;
+  status: string;
+  stationId: string;
+  station: string;
+  city: string;
+  connector: string;
+  energy: number;
+  cost: number;
+  price: number;
+  night: boolean;
+  employeeId: string | null;
+  employee: string;
+  dept: string;
+  vehicle: string;
+  plate: string;
 }
 
 export interface Invoice {

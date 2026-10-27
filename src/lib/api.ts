@@ -116,6 +116,15 @@ export interface Employee {
   status?: string;
 }
 
+export interface Employer {
+  org: string;
+  employeeId: string;
+  limit: number;
+  spent: number;
+  left: number;
+  vehicle: string;
+}
+
 export interface OperatorRecord {
   id: string;
   name: string;
@@ -173,6 +182,8 @@ export interface PlatformState {
   vehicles: Vehicle[];
   employees: Employee[];
   wallets: Record<string, Wallet>;
+  /** For a driver who works for a fleet client: the company account they may charge to. */
+  employer?: Employer | null;
   queues?: QueueEntry[];
   bookings?: Booking[];
   events: SyncEvent[];
@@ -454,8 +465,9 @@ export const apiClient = {
   me: (portal: Portal) => request<{ user: Account }>('/auth/me', { portal }),
   logout: (portal: Portal) => post<{ ok: boolean }>('/auth/logout', undefined, portal),
 
-  startSession: (portal: Portal, stationId: string, connectorId: string) =>
-    post<{ session: Session; stats: Stats }>('/sessions/start', { stationId, connectorId }, portal),
+  /** payer 'company' charges a fleet employee's session to their employer, within the monthly limit. */
+  startSession: (portal: Portal, stationId: string, connectorId: string, payer: 'self' | 'company' = 'self') =>
+    post<{ session: Session; stats: Stats }>('/sessions/start', { stationId, connectorId, payer }, portal),
   stopSession: (portal: Portal, id: string) =>
     post<{ session: Session; transaction: Transaction; stats: Stats }>(`/sessions/${id}/stop`, undefined, portal),
   tickSession: (portal: Portal, id: string) => post<{ session: Session }>(`/sessions/${id}/tick`, undefined, portal),
@@ -471,6 +483,8 @@ export const apiClient = {
   paymentProviders: () => request<PaymentProvider[]>('/payments/providers'),
   createTopUpOrder: (portal: Portal, provider: 'payme' | 'click', amount: number) =>
     post<{ order: PaymentOrder; checkoutUrl: string; sandbox: boolean }>('/payments/topup', { provider, amount }, portal),
+  /** Your own recent top-up orders, newest first. */
+  listPayments: (portal: Portal) => request<PaymentOrder[]>('/payments', { portal }),
   sandboxConfirm: (portal: Portal, id: string) =>
     post<{ order: PaymentOrder; balance: number | null }>(`/payments/order/${id}/sandbox-confirm`, undefined, portal),
   joinQueue: (portal: Portal, stationId: string) =>

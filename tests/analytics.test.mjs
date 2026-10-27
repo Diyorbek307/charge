@@ -137,6 +137,47 @@ describe('commission', () => {
   });
 });
 
+describe('company-paid charging', () => {
+  test('a fleet employee charges to the company, within the monthly limit', async () => {
+    const driver = await login('driver');
+    const fleet = await login('business');
+    const state = (await call('/state', { token: driver })).data;
+    assert.equal(state.employer?.employeeId, 'emp-01', 'the fleet driver has no employer');
+    const running = state.sessions.find(s => s.status === 'active' && s.userId === 'acc-driver');
+    if (running) await call(`/sessions/${running.id}/stop`, { method: 'POST', token: driver });
+    const st = state.stations.find(s => s.connectors.some(c => c.status === 'available'));
+    const c = st.connectors.find(x => x.status === 'available');
+    const start = () => call('/sessions/start', { method: 'POST', token: driver, body: { stationId: st.id, connectorId: c.id, payer: 'company' } });
+
+    // Limit used up: refused, and the driver is told why.
+    await call('/employees/emp-01/limit', { method: 'POST', token: fleet, body: { limit: state.employer.spent } });
+    const refused = await start();
+    assert.equal(refused.status, 402);
+    assert.match(refused.data.error, /Лимит/);
+
+    await call('/employees/emp-01/limit', { method: 'POST', token: fleet, body: { limit: state.employer.spent + 5_000_000 } });
+    const balance = (await call('/state', { token: fleet })).data.wallets['biz-001'].balance;
+    const started = await start();
+    assert.equal(started.status, 200);
+    assert.equal(started.data.session.corporate, true);
+    const stopped = (await call(`/sessions/${started.data.session.id}/stop`, { method: 'POST', token: driver })).data.session;
+    assert.ok(stopped.cost > 0);
+    assert.equal((await call('/state', { token: fleet })).data.wallets['biz-001'].balance, balance - stopped.cost);
+    const fa = (await call('/analytics', { token: fleet })).data;
+    assert.ok(fa.trips.some(t => t.id === stopped.id && t.employeeId === 'emp-01'));
+    assert.equal(fa.employees.find(e => e.id === 'emp-01').spentMonth, state.employer.spent + stopped.cost);
+  });
+
+  test('only fleet employees may charge to a company', async () => {
+    const admin = await login('admin');
+    const state = (await call('/state', { token: admin })).data;
+    const st = state.stations.find(s => s.connectors.some(c => c.status === 'available'));
+    const c = st.connectors.find(x => x.status === 'available');
+    const res = await call('/sessions/start', { method: 'POST', token: admin, body: { stationId: st.id, connectorId: c.id, payer: 'company' } });
+    assert.equal(res.status, 403);
+  });
+});
+
 describe('admin users', () => {
   test('lists drivers with activity; only the admin may', async () => {
     const admin = await login('admin');

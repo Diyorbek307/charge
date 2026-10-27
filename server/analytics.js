@@ -18,6 +18,22 @@ const tkWeekday = ms => (new Date(ms + TZ).getUTCDay() + 6) % 7; // Mon = 0
 const tkMidnight = ms => Math.floor((ms + TZ) / DAY) * DAY - TZ;
 const monthKey = ms => tkDate(ms).slice(0, 7);
 
+/** Start of the current month in Tashkent. */
+export const monthStart = (now = Date.now()) => {
+  const d = new Date(now + TZ);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - TZ;
+};
+
+/** What a fleet employee has charged to the company this month — limits are checked against it. */
+export function monthSpend(driverId, now = Date.now()) {
+  const from = monthStart(now);
+  let sum = 0;
+  for (const s of db.data.sessions) {
+    if (s.userId === driverId && s.corporate && s.status === 'completed' && Date.parse(s.start) >= from) sum += s.cost;
+  }
+  return sum;
+}
+
 /** Masks a phone for viewers who should not see it in full. */
 export const maskPhone = p => (p ? `${p.slice(0, 6)} ${p.slice(6, 8)} ••• •• ${p.slice(-2)}` : '');
 
@@ -221,6 +237,13 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
     row.commission += Math.round(s.cost * (rateFor(s) / 100));
     monthly.set(key, row);
   }
+  // Without roll-ups, the month the demo history starts in is only partly
+  // covered; showing it would read as a real, very quiet month.
+  if (!ownMonthly.length && scoped.length) {
+    const first = scoped.reduce((m, s) => Math.min(m, Date.parse(s.start)), Infinity);
+    const generated = Date.parse(db.data.historyStart ?? '');
+    if (first < generated + 2 * DAY && first > monthStart(first) + DAY) monthly.delete(monthKey(first));
+  }
   const months = [...monthly.values()].sort((a, b) => a.month.localeCompare(b.month)).slice(-6);
 
   const result = {
@@ -324,7 +347,7 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
         dept: e.dept,
         vehicle: e.vehicle,
         limit: e.limit,
-        spentMonth: e.spent,
+        spentMonth: monthSpend(e.driverId, now),
         sessions: list.length,
         energy: round(list.reduce((n, s) => n + s.energy, 0), 1),
         spent: list.reduce((n, s) => n + s.cost, 0),
@@ -338,6 +361,51 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
       depts.set(e.dept, d);
     }
     result.departments = [...depts.values()].sort((a, b) => b.spent - a.spent);
+  }
+
+  // A fleet sees every corporate charge of the period, with who and which car.
+  if (viewer?.portal === 'business') {
+    const employees = new Map(db.data.employees.map(e => [e.driverId, e]));
+    const vehicles = new Map(db.data.vehicles.map(v => [v.driverId, v]));
+    const cityOf = new Map(db.data.stations.map(st => [st.id, st.city]));
+    result.trips = inRange
+      .filter(s => s.status !== 'active')
+      .sort((a, b) => b.start.localeCompare(a.start))
+      .map(s => {
+        const e = employees.get(s.userId);
+        const v = vehicles.get(s.userId);
+        return {
+          id: s.id,
+          start: s.start,
+          end: s.end,
+          status: s.status,
+          stationId: s.stationId,
+          station: s.stationName,
+          city: cityOf.get(s.stationId) ?? '',
+          connector: s.connector,
+          energy: s.energy,
+          cost: s.cost,
+          price: s.price,
+          night: (s.multiplier ?? 1) < 1,
+          employeeId: e?.id ?? null,
+          employee: e?.name ?? s.user,
+          dept: e?.dept ?? '',
+          vehicle: v?.model ?? '',
+          plate: v?.plate ?? '',
+        };
+      });
+    const wallet = db.data.wallets[viewer.orgId];
+    const budget = db.data.employees.reduce((n, e) => n + e.limit, 0);
+    const spentMonth = db.data.employees.reduce((n, e) => n + monthSpend(e.driverId, now), 0);
+    result.account = {
+      balance: wallet?.balance ?? 0,
+      threshold: wallet?.threshold ?? 0,
+      autoTopUp: !!wallet?.autoTopUp,
+      budget,
+      spentMonth,
+      // At the current pace, how many days the balance lasts.
+      runwayDays: totals.revenue ? Math.floor((wallet?.balance ?? 0) / (totals.revenue / span)) : null,
+    };
   }
 
   return result;

@@ -7,7 +7,7 @@ import { generateSecret, verifyTotp, otpauthUri } from './totp.js';
 import { hashPassword } from './seed.js';
 import { normalizePhone, issueCode, consumeCode, PURPOSES, smsConfigured } from './sms.js';
 import { submitLead, listLeads, updateLead, LEAD_KINDS } from './leads.js';
-import { analyticsFor, adminUsers, setUserStatus, isBlocked } from './analytics.js';
+import { analyticsFor, adminUsers, setUserStatus, isBlocked, monthSpend } from './analytics.js';
 import { demoEnergy } from './history.js';
 import { validateEndpoint, signedHeaders, kick as kickWebhooks } from './webhooks.js';
 
@@ -111,6 +111,8 @@ function scopeOf({ type, entity, payload = {} }) {
     case 'ocpp.offline':
       return { operatorId: stationOperator(entity), public: true };
     case 'employee.limit':
+    case 'fleet.limit':
+    case 'fleet.balance':
       return { fleet: true };
     case 'operator.status':
     case 'commission.update':
@@ -258,7 +260,7 @@ function stateFor(viewer) {
       transactions: d.transactions.slice(0, 150),
       alerts: d.alerts,
       vehicles: d.vehicles,
-      employees: d.employees,
+      employees: employeesNow(),
       wallets: d.wallets,
       queues,
       bookings: d.bookings,
@@ -287,7 +289,7 @@ function stateFor(viewer) {
       sessions,
       transactions: txFor(sessions),
       vehicles: d.vehicles,
-      employees: d.employees,
+      employees: employeesNow(),
       wallets: d.wallets[viewer.orgId] ? { [viewer.orgId]: d.wallets[viewer.orgId] } : {},
       queues: queues.map(ownQueue),
       bookings: bookingsFor(viewer),
@@ -301,11 +303,39 @@ function stateFor(viewer) {
     sessions,
     transactions: txFor(sessions),
     vehicles: d.vehicles.filter(v => v.driverId === viewer.id),
+    employer: employerOf(viewer.id),
     wallets: d.wallets[viewer.id] ? { [viewer.id]: d.wallets[viewer.id] } : {},
     queues: queues.map(ownQueue),
     bookings: bookingsFor(viewer),
   };
 }
+
+/** Employees with this month's spending, which resets on the 1st. */
+function employeesNow() {
+  return db.data.employees.map(e => {
+    const spent = monthSpend(e.driverId);
+    return { ...e, spent, status: spent > e.limit ? 'warning' : 'active' };
+  });
+}
+
+/** For a driver who is a fleet employee: whose account they may charge to, and what is left. */
+function employerOf(driverId) {
+  const e = db.find('employees', x => x.driverId === driverId);
+  if (!e) return null;
+  const company = db.find('accounts', a => a.portal === 'business' && a.orgId === 'biz-001');
+  const spent = monthSpend(driverId);
+  return {
+    org: company?.org ?? 'Компания',
+    employeeId: e.id,
+    limit: e.limit,
+    spent,
+    left: Math.max(0, e.limit - spent),
+    vehicle: e.vehicle,
+  };
+}
+
+/** Drivers who asked for a company-paid charge on a station that starts over OCPP. */
+const companyIntent = new Map();
 
 /** Records an event in the activity log and pushes it to every live portal. */
 function emit({ type, portal, actor, message, entity = null, payload = {} }) {
@@ -862,6 +892,7 @@ export function setPushHook(fn) {
  */
 export function beginSession(account, stationId, connectorId, opts = {}) {
   const { source = 'app', ocppTransactionId = null, meterStartWh = null, dryRun = false, simulated = false } = opts;
+  const wantsCompany = opts.corporate ?? companyIntent.get(account.id) ?? false;
   const { station, connector } = findConnector(stationId, connectorId);
   if (!station || !connector) return { status: 404, error: 'Коннектор не найден' };
   if (connector.status === 'occupied') return { status: 409, error: 'Коннектор уже занят' };
@@ -890,13 +921,30 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
 
   // Refuse to start what the wallet cannot pay for; otherwise settlement clamps
   // the balance at zero and the charge is effectively free.
-  const walletId = account.portal === 'business' ? 'biz-001' : account.id;
-  const wallet = db.data.wallets[walletId];
+  // A fleet employee may charge to the company, within their monthly limit.
+  const employee = account.portal === 'driver' ? db.find('employees', e => e.driverId === account.id) : null;
+  if (wantsCompany && !employee) return { status: 403, error: 'Зарядка за счёт компании доступна только сотрудникам автопарка' };
+  const corporate = account.portal === 'business' || (wantsCompany && !!employee);
   const minimum = connector.price * MIN_PREPAID_KWH;
+  if (corporate && employee) {
+    const left = employee.limit - monthSpend(account.id);
+    if (left < minimum) {
+      return { status: 402, error: `Лимит компании на этот месяц исчерпан: осталось ${Math.max(0, left).toLocaleString('ru-RU')} сум. Оплатите из своего кошелька или попросите менеджера увеличить лимит` };
+    }
+  }
+
+  // Refuse to start what the wallet cannot pay for; otherwise settlement clamps
+  // the balance at zero and the charge is effectively free.
+  const walletId = corporate ? 'biz-001' : account.id;
+  const wallet = db.data.wallets[walletId];
   if (wallet && wallet.balance < minimum) {
-    return { status: 402, error: `Недостаточно средств: нужно минимум ${minimum.toLocaleString('ru-RU')} сум` };
+    return {
+      status: 402,
+      error: corporate && employee ? 'На счёте компании недостаточно средств — сообщите менеджеру автопарка' : `Недостаточно средств: нужно минимум ${minimum.toLocaleString('ru-RU')} сум`,
+    };
   }
   if (dryRun) return { ok: true };
+  companyIntent.delete(account.id);
 
   const band = tariffBand(tashkentHour());
   const session = {
@@ -921,7 +969,7 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     // Platform commission is locked at start too, so a rate change is not retroactive.
     commissionRate: db.byId('operators', station.operatorId)?.commission ?? 3,
     status: 'active',
-    corporate: account.portal === 'business',
+    corporate,
     source: simulated ? 'demo' : source,
     ocppTransactionId,
     meterStartWh,
@@ -950,19 +998,22 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
 }
 
 api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), async (req, res) => {
-  const { stationId, connectorId } = req.body ?? {};
+  const { stationId, connectorId, payer } = req.body ?? {};
+  const corporate = payer === 'company';
 
   // A station connected over OCPP is the source of truth: ask it to start, and
   // the session opens when it reports StartTransaction.
   if (gateway?.isConnected(stationId)) {
-    const check = beginSession(req.account, stationId, connectorId, { dryRun: true });
+    const check = beginSession(req.account, stationId, connectorId, { dryRun: true, corporate });
     if (check.error) return res.status(check.status).json({ error: check.error });
+    if (corporate) companyIntent.set(req.account.id, true);
+    else companyIntent.delete(req.account.id);
     const accepted = await gateway.remoteStart(stationId, connectorId, req.account.id);
     if (!accepted) return res.status(502).json({ error: 'Станция не приняла команду запуска' });
     return res.status(202).json({ pending: true, stats: statsFor(req.account) });
   }
 
-  const result = beginSession(req.account, stationId, connectorId);
+  const result = beginSession(req.account, stationId, connectorId, { corporate });
   if (result.error) return res.status(result.status).json({ error: result.error });
   res.json({ session: result.session, stats: statsFor(req.account) });
 });
@@ -993,8 +1044,11 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
   if (vehicle) {
     vehicle.status = 'available';
     vehicle.battery = Math.min(100, vehicle.battery + Math.round(energy / 1.2));
-    vehicle.charged += 1;
-    vehicle.cost += cost;
+    // Only charges on the company account count towards the car's costs.
+    if (session.corporate) {
+      vehicle.charged += 1;
+      vehicle.cost += cost;
+    }
   }
 
   const transaction = {
@@ -1011,6 +1065,7 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
 
   const walletId = session.corporate ? 'biz-001' : session.userId;
   const wallet = db.data.wallets[walletId];
+  const balanceBefore = wallet?.balance ?? 0;
   if (wallet) wallet.balance = Math.max(0, wallet.balance - cost);
 
   const operator = db.byId('operators', session.operatorId);
@@ -1020,8 +1075,10 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
   }
 
   const employee = session.corporate ? db.find('employees', e => e.driverId === session.userId) : null;
+  const spentBefore = employee ? monthSpend(employee.driverId) - cost : 0;
   if (employee) {
-    employee.spent += cost;
+    // Recounted from sessions, so the figure starts from zero each month.
+    employee.spent = monthSpend(employee.driverId);
     employee.sessions += 1;
     employee.status = employee.spent > employee.limit ? 'warning' : 'active';
   }
@@ -1036,6 +1093,33 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
     entity: session.id,
     payload: { transactionId: transaction.id, operatorId: session.operatorId, energy, cost, ...(simulated ? { simulated: true } : {}) },
   });
+
+  // Tell the fleet manager once per threshold, at the charge that crosses it.
+  if (employee && employee.limit > 0) {
+    const crossed = [1, 0.8].find(k => spentBefore < employee.limit * k && employee.spent >= employee.limit * k);
+    if (crossed) {
+      emit({
+        type: 'fleet.limit',
+        portal: 'system',
+        actor: 'Платформа',
+        message: crossed === 1
+          ? `${employee.name}: лимит исчерпан — ${employee.spent.toLocaleString('ru-RU')} из ${employee.limit.toLocaleString('ru-RU')} сум`
+          : `${employee.name}: израсходовано 80% лимита — ${employee.spent.toLocaleString('ru-RU')} из ${employee.limit.toLocaleString('ru-RU')} сум`,
+        entity: employee.id,
+        payload: { share: crossed, spent: employee.spent, limit: employee.limit },
+      });
+    }
+  }
+  if (session.corporate && wallet && wallet.threshold && balanceBefore >= wallet.threshold && wallet.balance < wallet.threshold) {
+    emit({
+      type: 'fleet.balance',
+      portal: 'system',
+      actor: 'Платформа',
+      message: `Баланс корпоративного счёта ниже порога: ${wallet.balance.toLocaleString('ru-RU')} сум`,
+      entity: walletId,
+      payload: { balance: wallet.balance, threshold: wallet.threshold },
+    });
+  }
 
   promoteQueue(session.stationId, session.connectorId);
   return { session, transaction };
@@ -1757,6 +1841,7 @@ api.post('/employees/:id/limit', requireAuth('business', 'admin'), (req, res) =>
   if (!employee) return res.status(404).json({ error: 'Сотрудник не найден' });
 
   employee.limit = limit;
+  employee.spent = monthSpend(employee.driverId);
   employee.status = employee.spent > limit ? 'warning' : 'active';
   db.save();
 

@@ -7,7 +7,7 @@ import {
   Wifi, Coffee, ParkingCircle, Toilet, CalendarCheck, Minus,
   AlertTriangle, Send, ThumbsUp, Flag, Trash2, StarIcon, Download, Phone,
   Gift, Trophy, Share2, Copy, TrendingUp, Award, Sparkles, Wallet, ArrowDownCircle,
-  Smartphone, Monitor
+  Smartphone, Monitor, Building2
 } from 'lucide-react';
 import { Station } from '../data/mockData';
 import { useLiveStations, useLiveDriverSessions } from '../lib/live';
@@ -187,14 +187,20 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
   );
 }
 
-function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station: Station | null; onBack: () => void; onConfirm: () => void; onOpenQR?: () => void }) {
+function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station: Station | null; onBack: () => void; onConfirm: (connectorId: string | null, payer: 'self' | 'company') => void; onOpenQR?: () => void }) {
+  const { state, sessions: portalSessions } = useSync();
+  const me = portalSessions.driver;
+  const balance = (me && state?.wallets[me.id]?.balance) ?? 0;
+  const employer = state?.employer ?? null;
+  const [payer, setPayer] = useState<'self' | 'company'>(employer && employer.left > 0 ? 'company' : 'self');
   const [launchMode, setLaunchMode] = useState<'qr' | 'remote'>('qr');
   const [selectedConnector, setSelectedConnector] = useState(station?.connectors.find(c => c.status === 'available') || station?.connectors[0] || null);
   const [targetPct, setTargetPct] = useState(80);
   const [scanning, setScanning] = useState(false);
   const [scanned, setScanned] = useState(false);
 
-  const currentBattery = 34;
+  // The driver's own car when the account has one, otherwise a typical arrival charge.
+  const currentBattery = state?.vehicles.find(v => v.driverId === me?.id)?.battery ?? 34;
   const kwNeeded = selectedConnector ? ((targetPct - currentBattery) / 100) * 85 : 0;
   const estCost = selectedConnector ? Math.round(kwNeeded * selectedConnector.price) : 0;
   const estMinutes = selectedConnector ? Math.round((kwNeeded / selectedConnector.power) * 60) : 0;
@@ -320,21 +326,40 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
         {/* Payment */}
         <div className="bg-white rounded-2xl p-4 border border-slate-100">
           <p className="text-xs font-semibold text-slate-500 mb-2">ОПЛАТА</p>
-          <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-            <div className="w-8 h-5 bg-gradient-to-r from-orange-400 to-orange-600 rounded flex items-center justify-center">
-              <span className="text-white text-xs font-bold">H</span>
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-slate-800">Humo •••• 4521</p>
-              <p className="text-xs text-slate-400">Основная карта</p>
-            </div>
-            <ChevronDown size={16} className="text-slate-400" />
+          <div className="space-y-2" role="radiogroup" aria-label="Кто платит">
+            <button
+              role="radio"
+              aria-checked={payer === 'self'}
+              onClick={() => setPayer('self')}
+              className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${payer === 'self' ? 'border-sky-500 bg-sky-50' : 'border-slate-200'}`}
+            >
+              <div className="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center"><Wallet size={16} /></div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-slate-800">Мой кошелёк</p>
+                <p className="text-xs text-slate-400">{`Баланс ${balance.toLocaleString('ru-RU')} сум · пополнение через Payme или Click`}</p>
+              </div>
+            </button>
+            {employer && (
+              <button
+                role="radio"
+                aria-checked={payer === 'company'}
+                onClick={() => setPayer('company')}
+                disabled={employer.left <= 0}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all disabled:opacity-50 ${payer === 'company' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}`}
+              >
+                <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center"><Building2 size={16} /></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-slate-800">{`За счёт компании · ${employer.org}`}</p>
+                  <p className="text-xs text-slate-400">{employer.left > 0 ? `Осталось ${employer.left.toLocaleString('ru-RU')} из ${employer.limit.toLocaleString('ru-RU')} сум в этом месяце` : 'Лимит на этот месяц исчерпан'}</p>
+                </div>
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       <div className="px-4 pb-6 pt-2">
-        <button onClick={onConfirm}
+        <button onClick={() => onConfirm(selectedConnector?.id ?? null, payer)}
           disabled={launchMode === 'qr' && !scanned}
           className={`w-full rounded-2xl py-4 font-bold text-base transition-colors flex items-center justify-center gap-2 ${launchMode === 'qr' && !scanned ? 'bg-slate-200 text-slate-400' : 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sm'}`}>
           <Zap size={18} />Подтвердить и начать зарядку
@@ -4547,7 +4572,6 @@ export default function DriverApp() {
   const [screen, setScreen] = useState<Screen>('map');
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const toastTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const pushToast = (t: Omit<Toast, 'id'>) =>
     setToasts(p => [...p, { ...t, id: Date.now().toString() }]);
@@ -4570,14 +4594,16 @@ export default function DriverApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events, driverAccount]);
 
-  const startCharging = async () => {
+  const startCharging = async (connectorId: string | null = null, payer: 'self' | 'company' = 'self') => {
     const station = selectedStation;
     const connector =
-      station?.connectors.find(c => c.status === 'available') ?? station?.connectors[0];
+      station?.connectors.find(c => c.id === connectorId && c.status === 'available') ??
+      station?.connectors.find(c => c.status === 'available') ??
+      station?.connectors[0];
 
     if (station && connector && driverAccount) {
       try {
-        await actions.startSession('driver', station.id, connector.id);
+        await actions.startSession('driver', station.id, connector.id, payer);
         await refresh();
       } catch (err) {
         pushToast({
@@ -4617,21 +4643,6 @@ export default function DriverApp() {
   const dismissToast = (id: string) =>
     setToasts(p => p.filter(t => t.id !== id));
 
-  // Demo toasts after onboarding completes
-  useEffect(() => {
-    if (showOnboarding) return;
-    const demos: [number, Omit<Toast, 'id'>][] = [
-      [3000, { icon: '⚡', title: 'Зарядка доступна', body: 'GreenCharge Toshkent · EVSE-2 свободен · 150 кВт', color: '#22C55E' }],
-      [8000, { icon: '🔋', title: 'Заряд 80%', body: 'BYD Han EV · Рекомендуем отключить', color: '#0AAF97' }],
-      [14000, { icon: '💳', title: 'Оплата прошла', body: '184 000 сум · Humo ••4521', color: '#4F6BFF' }],
-      [20000, { icon: '📍', title: 'Станция рядом', body: 'EcoVolt Yunusobod · 0.4 км от вас', color: '#F59E0B' }],
-    ];
-    demos.forEach(([delay, t]) => {
-      const timer = setTimeout(() => pushToast(t), delay);
-      toastTimers.current.push(timer);
-    });
-    return () => toastTimers.current.forEach(clearTimeout);
-  }, [showOnboarding]);
 
   const handleSelectStation = (s: Station) => {
     setSelectedStation(s);
