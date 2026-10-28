@@ -5,6 +5,7 @@ import { useSync } from '../../lib/sync';
 import { useAnalytics, money, num, dateShort, plural } from '../../lib/analytics';
 import { Page, Card, Kpi, Loading, ErrorNote, Pill, CHART } from './ui';
 import { OcpiPartners } from './OcpiPartners';
+import { OperatorSetup } from './OperatorSetup';
 
 const STATUS = {
   active: { tone: 'green' as const, label: 'Активен' },
@@ -18,6 +19,7 @@ export default function AdminOperators({ onNavigate }: { onNavigate: (page: stri
   const [busy, setBusy] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
   const [failure, setFailure] = useState('');
+  const [setup, setSetup] = useState<string | null>(null);
 
   if (!data) return <Page title="Операторы">{error ? <ErrorNote text={error} /> : <Loading />}</Page>;
 
@@ -71,6 +73,7 @@ export default function AdminOperators({ onNavigate }: { onNavigate: (page: stri
                     <h3 className="text-base font-bold text-slate-900">{o.name}</h3>
                     <Pill tone={st.tone}>{st.label}</Pill>
                     <Pill tone="slate"><PlugZap size={11} />{o.integration}</Pill>
+                    {o.settlement === 'direct' && <Pill tone="amber">Оплата напрямую</Pill>}
                   </div>
                   <p className="text-xs text-slate-500 mt-1">{o.region}</p>
                   <p className="text-xs text-slate-400 mt-1 flex flex-wrap gap-x-3 gap-y-1">
@@ -79,6 +82,11 @@ export default function AdminOperators({ onNavigate }: { onNavigate: (page: stri
                   </p>
                 </div>
               </div>
+
+              <button onClick={() => setSetup(setup === o.id ? null : o.id)} aria-expanded={setup === o.id} className="mt-3 text-xs font-semibold text-[#8a5b00] hover:underline">
+                {setup === o.id ? 'Скрыть подключение и оплату' : 'Подключение и оплата'}
+              </button>
+              {setup === o.id && <OperatorSetup operatorId={o.id} onChanged={reload} />}
 
               <div className="grid grid-cols-4 gap-2 mt-4">
                 {[

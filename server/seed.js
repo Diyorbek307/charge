@@ -3,7 +3,7 @@ import { OPERATORS, buildStations, buildCustomers, buildHistory, buildMonthly, p
 
 // Bump when the shape below changes so existing stores reseed instead of
 // silently serving a stale schema.
-export const SCHEMA_VERSION = 17;
+export const SCHEMA_VERSION = 18;
 
 export function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   const hash = crypto.scryptSync(password, salt, 32).toString('hex');

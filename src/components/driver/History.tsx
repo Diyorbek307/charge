@@ -50,7 +50,7 @@ export default function HistoryScreen() {
     ['Длительность', `${minutesOf(s)} мин`],
     ['Энергия', `${s.energy} кВт·ч`],
     ['Цена', `${(s.price ?? 0).toLocaleString('ru-RU')} сум/кВт·ч${band(s.multiplier) ? ` (${band(s.multiplier)})` : ''}`],
-    ['Оплата', s.corporate ? 'Корпоративный счёт' : s.credit ? 'В долг' : s.familyOwner ? 'Семейный кошелёк' : 'Кошелёк'],
+    ['Оплата', s.corporate ? 'Корпоративный счёт' : s.credit ? 'В долг' : s.familyOwner ? 'Семейный кошелёк' : s.direct ? `Баланс сети ${s.operator}` : 'Кошелёк'],
     ['Итого', sum(s.cost)],
   ];
 
@@ -73,7 +73,7 @@ export default function HistoryScreen() {
             <p className="text-xs text-slate-500 mt-0.5">{`${done.length} ${plural(done.length, ['зарядка', 'зарядки', 'зарядок'])} · ${Math.round(energy)} кВт·ч · ${sum(cost)}`}</p>
           </div>
           <button
-            onClick={() => exportCsv('charging-history', ['ID', 'Дата', 'Станция', 'Разъём', 'кВт·ч', 'Сумма, сум', 'Оплата', 'Статус'], list.map(s => [s.id, when(s.start), s.stationName, s.connector, s.energy, s.cost, s.corporate ? 'Компания' : s.credit ? 'В долг' : s.familyOwner ? 'Семья' : 'Кошелёк', s.status === 'failed' ? 'Ошибка' : 'Завершена']))}
+            onClick={() => exportCsv('charging-history', ['ID', 'Дата', 'Станция', 'Разъём', 'кВт·ч', 'Сумма, сум', 'Оплата', 'Статус'], list.map(s => [s.id, when(s.start), s.stationName, s.connector, s.energy, s.cost, s.corporate ? 'Компания' : s.credit ? 'В долг' : s.familyOwner ? 'Семья' : s.direct ? 'Баланс сети' : 'Кошелёк', s.status === 'failed' ? 'Ошибка' : 'Завершена']))}
             disabled={!list.length}
             aria-label="Скачать историю (CSV)"
             title="Скачать историю (CSV)"
@@ -136,7 +136,7 @@ export default function HistoryScreen() {
                     ) : (
                       <p className="text-sm font-bold text-slate-900 tabular-nums">{sum(s.cost)}</p>
                     )}
-                    <p className="text-[11px] text-slate-400 flex items-center gap-1 justify-end">{s.corporate ? <><Building2 size={10} />компания</> : s.credit ? <><ScanFace size={10} />в долг</> : s.familyOwner ? <><Wallet size={10} />семья</> : <><Wallet size={10} />кошелёк</>}</p>
+                    <p className="text-[11px] text-slate-400 flex items-center gap-1 justify-end">{s.corporate ? <><Building2 size={10} />компания</> : s.credit ? <><ScanFace size={10} />в долг</> : s.familyOwner ? <><Wallet size={10} />семья</> : s.direct ? <><Wallet size={10} />баланс сети</> : <><Wallet size={10} />кошелёк</>}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-slate-500">

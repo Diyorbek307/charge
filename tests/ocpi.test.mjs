@@ -40,7 +40,7 @@ async function until(fn, what, ms = 8000) {
   }
   throw new Error(`timed out waiting for ${what}`);
 }
-const partnerStations = async token => (await call('/state', { token })).data.stations.filter(s => s.operator.startsWith('Партнёр OCPI'));
+const partnerStations = async token => (await call('/state', { token })).data.stations.filter(s => s.operator.startsWith('OCPI Demo'));
 
 before(async () => {
   cpo = mockCpo({ base: `http://127.0.0.1:${CPO_PORT}`, meterEveryMs: 100, speed: 3600 });
@@ -106,7 +106,7 @@ describe('OCPI partner networks', () => {
     assert.equal(stations.length, 2);
     const chilonzor = stations.find(s => s.name.endsWith('Chilonzor'));
     assert.deepEqual(chilonzor.connectors.map(c => [c.type, c.power, c.price, c.status]), [['CCS2', 120, 2200, 'available'], ['Type2', 22, 1400, 'available']]);
-    const op = (await call('/state', { token: adm })).data.operators.find(o => o.name.startsWith('Партнёр OCPI'));
+    const op = (await call('/state', { token: adm })).data.operators.find(o => o.name.startsWith('OCPI Demo'));
     assert.equal(op.integration, 'OCPI 2.2.1');
   });
 

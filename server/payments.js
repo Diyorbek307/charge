@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import express from 'express';
 import { db } from './db.js';
 import { emit } from './api.js';
+import { isDirect, creditNetwork, reverseTopUp, netBalance } from './direct.js';
 
 /**
  * Wallet top-ups through Payme and Click, Uzbekistan's two main payment rails.
@@ -11,6 +12,11 @@ import { emit } from './api.js';
  *     tiyin, transaction states 1 / 2 / -1 / -2, 12-hour creation timeout.
  *   - Click SHOP API: Prepare (action 0) then Complete (action 1), each signed
  *     with an MD5 of the request fields and the merchant secret.
+ *
+ * A partner network paid directly has its own Payme cashbox / Click service:
+ * its callbacks come to /payme/<operatorId> and /click/<operatorId>/…, are
+ * checked with that network's key, and credit the driver's balance at that
+ * network — the money itself goes to the network (server/direct.js).
  *
  * A wallet is credited only when the provider confirms the payment in a signed
  * callback. With no merchant keys configured, demo sandbox credentials are
@@ -34,6 +40,21 @@ const CLICK = {
   secret: process.env.CLICK_SECRET_KEY || (DEMO_MODE ? 'demo-click-secret' : ''),
   live: Boolean(process.env.CLICK_SECRET_KEY),
 };
+
+/** Whose cashbox takes the money: ours, or a partner network's. */
+function merchantFor(operatorId) {
+  if (!operatorId) return { payme: PAYME, click: CLICK, sandbox: !PAYME.live && !CLICK.live };
+  const op = db.byId('operators', operatorId);
+  if (!isDirect(op)) return null;
+  const sandbox = !!op.payout.sandbox;
+  return {
+    operator: op,
+    sandbox,
+    payme: op.payout.payme ? { merchantId: op.payout.payme.merchantId, key: op.payout.payme.key, checkout: PAYME.checkout, live: !sandbox } : { key: '' },
+    click: op.payout.click ? { serviceId: op.payout.click.serviceId, merchantId: op.payout.click.merchantId, secret: op.payout.click.secret, live: !sandbox } : { secret: '' },
+  };
+}
+const sameMerchant = (order, operatorId) => (order.operatorId ?? null) === (operatorId ?? null);
 
 const MIN_TOPUP = 1_000;
 const MAX_TOPUP = 10_000_000;
@@ -71,6 +92,23 @@ function expireStale() {
 }
 
 function credit(order, provider) {
+  if (order.operatorId) {
+    // Paid into the network's own cashbox: the driver's balance at that network grows.
+    const balance = creditNetwork(order, provider);
+    order.status = 'paid';
+    order.paidAt = new Date().toISOString();
+    db.save();
+    const name = db.byId('operators', order.operatorId)?.name ?? order.operatorId;
+    emit({
+      type: 'wallet.topup',
+      portal: 'system',
+      actor: provider === 'payme' ? 'Payme' : 'Click',
+      message: `Пополнение баланса сети ${name} через ${provider === 'payme' ? 'Payme' : 'Click'} · +${order.amount.toLocaleString('ru-RU')} сум — деньги поступили сети`,
+      entity: order.userId,
+      payload: { amount: order.amount, balance, provider, orderId: order.id, operatorId: order.operatorId, userId: order.userId },
+    });
+    return;
+  }
   const wallet = db.data.wallets[order.walletId];
   if (!wallet) throw new Error('wallet missing');
   wallet.balance += order.amount;
@@ -89,13 +127,14 @@ function credit(order, provider) {
 
 function checkoutUrl(order) {
   const back = `${PUBLIC_URL}/?portal=driver`;
+  const m = merchantFor(order.operatorId);
   if (order.provider === 'payme') {
-    const params = `m=${PAYME.merchantId};ac.order_id=${order.id};a=${order.amount * 100};c=${back}`;
+    const params = `m=${m.payme.merchantId};ac.order_id=${order.id};a=${order.amount * 100};c=${back}`;
     return `${PAYME.checkout}/${Buffer.from(params).toString('base64')}`;
   }
   const q = new URLSearchParams({
-    service_id: CLICK.serviceId,
-    merchant_id: CLICK.merchantId,
+    service_id: m.click.serviceId,
+    merchant_id: m.click.merchantId,
     amount: String(order.amount),
     transaction_param: order.id,
     return_url: back,
@@ -110,6 +149,7 @@ const publicOrder = o => ({
   status: o.status,
   created: o.created,
   paidAt: o.paidAt ?? null,
+  operatorId: o.operatorId ?? null,
 });
 
 // ---------------------------------------------------------------------------
@@ -130,8 +170,13 @@ paymentsApi.post('/topup', (req, res) => {
 
   const provider = req.body?.provider;
   if (!['payme', 'click'].includes(provider)) return res.status(400).json({ error: 'Выберите Payme или Click' });
-  if (!(provider === 'payme' ? PAYME.key : CLICK.secret)) {
-    return res.status(503).json({ error: 'Платёжный провайдер не настроен' });
+  // A network paid directly: the money goes to its own cashbox.
+  const operatorId = req.body?.operatorId ? String(req.body.operatorId) : null;
+  if (operatorId && account.portal !== 'driver') return res.status(403).json({ error: 'Баланс сети пополняет водитель' });
+  const merchant = merchantFor(operatorId);
+  if (!merchant) return res.status(404).json({ error: 'Эта сеть не принимает оплату напрямую' });
+  if (!(provider === 'payme' ? merchant.payme.key : merchant.click.secret)) {
+    return res.status(503).json({ error: operatorId ? `${merchant.operator.name} не подключила ${provider === 'payme' ? 'Payme' : 'Click'} — выберите другой способ` : 'Платёжный провайдер не настроен' });
   }
   const amount = Number(req.body?.amount);
   if (!Number.isInteger(amount) || amount < MIN_TOPUP || amount > MAX_TOPUP) {
@@ -150,6 +195,7 @@ paymentsApi.post('/topup', (req, res) => {
     provider,
     userId: account.id,
     walletId,
+    ...(operatorId ? { operatorId } : {}),
     amount,
     status: 'pending',
     created: new Date().toISOString(),
@@ -161,7 +207,7 @@ paymentsApi.post('/topup', (req, res) => {
   if (orders().length > 3000) orders().length = 3000;
   db.save();
 
-  const live = provider === 'payme' ? PAYME.live : CLICK.live;
+  const live = provider === 'payme' ? merchant.payme.live : merchant.click.live;
   res.json({ order: publicOrder(order), checkoutUrl: checkoutUrl(order), sandbox: !live });
 });
 
@@ -197,16 +243,16 @@ class PaymeError extends Error {
 
 const paymeMessage = (ru, en = ru, uz = ru) => ({ ru, uz, en });
 
-function paymeOrderFor(account) {
+function paymeOrderFor(account, operatorId) {
   const order = findOrder(String(account?.order_id ?? ''));
-  if (!order || order.provider !== 'payme') {
+  if (!order || order.provider !== 'payme' || !sameMerchant(order, operatorId)) {
     throw new PaymeError(-31050, paymeMessage('Заказ не найден', 'Order not found', 'Buyurtma topilmadi'), 'order_id');
   }
   return order;
 }
 
-function paymeTransaction(id) {
-  const order = orders().find(o => o.payme?.id === id);
+function paymeTransaction(id, operatorId) {
+  const order = orders().find(o => o.payme?.id === id && sameMerchant(o, operatorId));
   if (!order) throw new PaymeError(-31003, paymeMessage('Транзакция не найдена', 'Transaction not found', 'Tranzaksiya topilmadi'));
   return order;
 }
@@ -232,10 +278,10 @@ const paymeView = order => ({
   reason: order.payme.reason,
 });
 
-export function paymeRpc(method, params = {}) {
+export function paymeRpc(method, params = {}, operatorId = null) {
   switch (method) {
     case 'CheckPerformTransaction': {
-      const order = paymeOrderFor(params.account);
+      const order = paymeOrderFor(params.account, operatorId);
       if (order.status !== 'pending') {
         throw new PaymeError(-31051, paymeMessage('Заказ уже оплачен или отменён', 'Order is not payable'), 'order_id');
       }
@@ -246,7 +292,7 @@ export function paymeRpc(method, params = {}) {
     }
 
     case 'CreateTransaction': {
-      const existing = orders().find(o => o.payme?.id === params.id);
+      const existing = orders().find(o => o.payme?.id === params.id && sameMerchant(o, operatorId));
       if (existing) {
         if (existing.payme.state !== 1) {
           throw new PaymeError(-31008, paymeMessage('Невозможно выполнить операцию', 'Unable to perform operation'));
@@ -258,8 +304,8 @@ export function paymeRpc(method, params = {}) {
         return { create_time: existing.payme.createTime, transaction: existing.payme.id, state: 1 };
       }
 
-      paymeRpc('CheckPerformTransaction', params);
-      const order = paymeOrderFor(params.account);
+      paymeRpc('CheckPerformTransaction', params, operatorId);
+      const order = paymeOrderFor(params.account, operatorId);
       // One order, one Payme transaction: a second attempt means the order is busy.
       if (order.payme?.id) {
         throw new PaymeError(-31050, paymeMessage('По заказу уже есть транзакция', 'Order already has a transaction'), 'order_id');
@@ -270,7 +316,7 @@ export function paymeRpc(method, params = {}) {
     }
 
     case 'PerformTransaction': {
-      const order = paymeTransaction(String(params.id));
+      const order = paymeTransaction(String(params.id), operatorId);
       if (order.payme.state === 2) {
         return { transaction: order.payme.id, perform_time: order.payme.performTime, state: 2 };
       }
@@ -288,9 +334,13 @@ export function paymeRpc(method, params = {}) {
     }
 
     case 'CancelTransaction': {
-      const order = paymeTransaction(String(params.id));
+      const order = paymeTransaction(String(params.id), operatorId);
       if (order.payme.state === 1) {
         paymeCancel(order, -1, Number(params.reason) || null);
+      } else if (order.payme.state === 2 && order.operatorId) {
+        // A network's top-up comes back only while it is unspent.
+        if (!reverseTopUp(order)) throw new PaymeError(-31007, paymeMessage('Средства уже израсходованы', 'Funds already spent'));
+        paymeCancel(order, -2, Number(params.reason) || null);
       } else if (order.payme.state === 2) {
         // Refund only what is still in the wallet; money already spent on
         // charging cannot be clawed back automatically.
@@ -313,14 +363,14 @@ export function paymeRpc(method, params = {}) {
     }
 
     case 'CheckTransaction':
-      return paymeView(paymeTransaction(String(params.id)));
+      return paymeView(paymeTransaction(String(params.id), operatorId));
 
     case 'GetStatement': {
       const from = Number(params.from);
       const to = Number(params.to);
       return {
         transactions: orders()
-          .filter(o => o.payme && o.payme.createTime >= from && o.payme.createTime <= to)
+          .filter(o => o.payme && sameMerchant(o, operatorId) && o.payme.createTime >= from && o.payme.createTime <= to)
           .map(o => ({ id: o.payme.id, time: o.payme.time, amount: o.amount * 100, account: { order_id: o.id }, ...paymeView(o) })),
       };
     }
@@ -330,17 +380,20 @@ export function paymeRpc(method, params = {}) {
   }
 }
 
-paymentsApi.post('/payme', (req, res) => {
+/** Our cashbox at /payme; a partner network's cashbox at /payme/<operatorId>, checked with its own key. */
+function paymeEndpoint(req, res) {
   const id = req.body?.id ?? null;
   const reply = body => res.json({ jsonrpc: '2.0', id, ...body });
 
+  const operatorId = req.params.operatorId ?? null;
+  const key = merchantFor(operatorId)?.payme.key ?? '';
   const header = req.get('authorization') || '';
-  const expected = `Basic ${Buffer.from(`Paycom:${PAYME.key}`).toString('base64')}`;
-  if (!PAYME.key || !safeEqual(header, expected)) {
+  const expected = `Basic ${Buffer.from(`Paycom:${key}`).toString('base64')}`;
+  if (!key || !safeEqual(header, expected)) {
     return reply({ error: { code: -32504, message: paymeMessage('Недостаточно прав', 'Insufficient privileges') } });
   }
   try {
-    reply({ result: paymeRpc(req.body?.method, req.body?.params) });
+    reply({ result: paymeRpc(req.body?.method, req.body?.params, operatorId) });
   } catch (err) {
     if (!(err instanceof PaymeError)) {
       console.error('[payme]', err);
@@ -348,7 +401,9 @@ paymentsApi.post('/payme', (req, res) => {
     }
     reply({ error: { code: err.code, message: err.message && typeof err.message === 'object' ? err.message : err.message, data: err.data } });
   }
-});
+}
+paymentsApi.post('/payme', paymeEndpoint);
+paymentsApi.post('/payme/:operatorId', paymeEndpoint);
 
 // PaymeError carries a localized message object; keep it intact on the wire.
 PaymeError.prototype.toJSON = function toJSON() {
@@ -359,8 +414,8 @@ PaymeError.prototype.toJSON = function toJSON() {
 // Click SHOP API
 // ---------------------------------------------------------------------------
 
-export function clickSign(f, withPrepare) {
-  const parts = [f.click_trans_id, f.service_id, CLICK.secret, f.merchant_trans_id];
+export function clickSign(f, withPrepare, secret = CLICK.secret) {
+  const parts = [f.click_trans_id, f.service_id, secret, f.merchant_trans_id];
   if (withPrepare) parts.push(f.merchant_prepare_id);
   parts.push(f.amount, f.action, f.sign_time);
   return crypto.createHash('md5').update(parts.map(v => String(v ?? '')).join('')).digest('hex');
@@ -374,22 +429,23 @@ const clickReply = (f, error, note, extra = {}) => ({
   error_note: note,
 });
 
-function clickCommon(f, action, withPrepare) {
-  if (!CLICK.secret || !safeEqual(String(f.sign_string ?? ''), clickSign(f, withPrepare))) {
+function clickCommon(f, action, withPrepare, operatorId) {
+  const click = merchantFor(operatorId)?.click ?? { secret: '' };
+  if (!click.secret || !safeEqual(String(f.sign_string ?? ''), clickSign(f, withPrepare, click.secret))) {
     return { fail: clickReply(f, -1, 'SIGN CHECK FAILED') };
   }
-  if (String(f.service_id) !== String(CLICK.serviceId)) return { fail: clickReply(f, -8, 'Error in request from click') };
+  if (String(f.service_id) !== String(click.serviceId)) return { fail: clickReply(f, -8, 'Error in request from click') };
   if (String(f.action) !== action) return { fail: clickReply(f, -3, 'Action not found') };
   const order = findOrder(String(f.merchant_trans_id ?? ''));
-  if (!order || order.provider !== 'click') return { fail: clickReply(f, -5, 'User does not exist') };
+  if (!order || order.provider !== 'click' || !sameMerchant(order, operatorId)) return { fail: clickReply(f, -5, 'User does not exist') };
   if (order.status === 'paid') return { fail: clickReply(f, -4, 'Already paid') };
   if (order.status !== 'pending') return { fail: clickReply(f, -9, 'Transaction cancelled') };
   if (Math.abs(Number(f.amount) - order.amount) > 0.001) return { fail: clickReply(f, -2, 'Incorrect parameter amount') };
   return { order };
 }
 
-export function clickPrepare(f) {
-  const { fail, order } = clickCommon(f, '0', false);
+export function clickPrepare(f, operatorId = null) {
+  const { fail, order } = clickCommon(f, '0', false, operatorId);
   if (fail) return fail;
   if (!order.click) {
     db.data.counters.clickPrepare = (db.data.counters.clickPrepare ?? 0) + 1;
@@ -399,8 +455,8 @@ export function clickPrepare(f) {
   return clickReply(f, 0, 'Success', { merchant_prepare_id: order.click.prepareId });
 }
 
-export function clickComplete(f) {
-  const { fail, order } = clickCommon(f, '1', true);
+export function clickComplete(f, operatorId = null) {
+  const { fail, order } = clickCommon(f, '1', true, operatorId);
   if (fail) return fail;
   if (!order.click || String(order.click.prepareId) !== String(f.merchant_prepare_id)) {
     return clickReply(f, -6, 'Transaction does not exist');
@@ -417,6 +473,8 @@ export function clickComplete(f) {
 
 paymentsApi.post('/click/prepare', (req, res) => res.json(clickPrepare(req.body ?? {})));
 paymentsApi.post('/click/complete', (req, res) => res.json(clickComplete(req.body ?? {})));
+paymentsApi.post('/click/:operatorId/prepare', (req, res) => res.json(clickPrepare(req.body ?? {}, req.params.operatorId)));
+paymentsApi.post('/click/:operatorId/complete', (req, res) => res.json(clickComplete(req.body ?? {}, req.params.operatorId)));
 
 // ---------------------------------------------------------------------------
 // Sandbox: drives the real callback logic when no merchant account exists.
@@ -427,20 +485,22 @@ paymentsApi.post('/order/:id/sandbox-confirm', (req, res) => {
   if (!account) return res.status(401).json({ error: 'Не авторизован' });
   const order = findOrder(req.params.id);
   if (!order || order.userId !== account.id) return res.status(404).json({ error: 'Счёт не найден' });
-  const live = order.provider === 'payme' ? PAYME.live : CLICK.live;
+  const merchant = merchantFor(order.operatorId);
+  const live = !merchant || (order.provider === 'payme' ? merchant.payme.live : merchant.click.live);
   if (!DEMO_MODE || live) return res.status(404).json({ error: 'Песочница отключена' });
+  const op = order.operatorId ?? null;
 
   try {
     if (order.provider === 'payme') {
       const txId = crypto.randomBytes(12).toString('hex');
       const base = { amount: order.amount * 100, account: { order_id: order.id } };
-      paymeRpc('CheckPerformTransaction', base);
-      paymeRpc('CreateTransaction', { ...base, id: txId, time: Date.now() });
-      paymeRpc('PerformTransaction', { id: txId });
+      paymeRpc('CheckPerformTransaction', base, op);
+      paymeRpc('CreateTransaction', { ...base, id: txId, time: Date.now() }, op);
+      paymeRpc('PerformTransaction', { id: txId }, op);
     } else {
       const f = {
         click_trans_id: String(Date.now()),
-        service_id: CLICK.serviceId,
+        service_id: merchant.click.serviceId,
         click_paydoc_id: String(Date.now()),
         merchant_trans_id: order.id,
         amount: String(order.amount),
@@ -449,14 +509,14 @@ paymentsApi.post('/order/:id/sandbox-confirm', (req, res) => {
         error_note: 'Success',
         sign_time: new Date().toISOString().replace('T', ' ').slice(0, 19),
       };
-      const prepared = clickPrepare({ ...f, sign_string: clickSign(f, false) });
+      const prepared = clickPrepare({ ...f, sign_string: clickSign(f, false, merchant.click.secret) }, op);
       if (prepared.error !== 0) throw new Error(prepared.error_note);
       const done = { ...f, action: '1', merchant_prepare_id: String(prepared.merchant_prepare_id) };
-      const completed = clickComplete({ ...done, sign_string: clickSign(done, true) });
+      const completed = clickComplete({ ...done, sign_string: clickSign(done, true, merchant.click.secret) }, op);
       if (completed.error !== 0) throw new Error(completed.error_note);
     }
   } catch (err) {
     return res.status(409).json({ error: err.message?.ru ?? err.message ?? 'Оплата не прошла' });
   }
-  res.json({ order: publicOrder(order), balance: db.data.wallets[order.walletId]?.balance ?? null });
+  res.json({ order: publicOrder(order), balance: order.operatorId ? netBalance(order.userId, order.operatorId) : db.data.wallets[order.walletId]?.balance ?? null });
 });

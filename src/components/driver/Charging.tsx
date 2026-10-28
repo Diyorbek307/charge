@@ -108,7 +108,7 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
           </div>
           <div className="text-right">
             {band && <p className="text-[10px] text-emerald-300 flex items-center gap-1 justify-end"><Moon size={10} />{band}</p>}
-            <p className="text-white/50 text-[11px] flex items-center gap-1 justify-end">{session.corporate ? <><Building2 size={11} />за счёт компании</> : session.credit ? <><ScanFace size={11} />в долг</> : session.familyOwner ? <><Wallet size={11} />из семейного кошелька</> : <><Wallet size={11} />из кошелька</>}</p>
+            <p className="text-white/50 text-[11px] flex items-center gap-1 justify-end">{session.corporate ? <><Building2 size={11} />за счёт компании</> : session.credit ? <><ScanFace size={11} />в долг</> : session.familyOwner ? <><Wallet size={11} />из семейного кошелька</> : session.direct ? <><Wallet size={11} />с баланса сети</> : <><Wallet size={11} />из кошелька</>}</p>
           </div>
         </div>
         <p className="mt-2 text-white/30 text-[10px] text-center">{metered ? 'Энергия — по счётчику станции.' : `Процент — оценка для батареи ${pack} кВт·ч; к оплате — по энергии.`}</p>
@@ -149,7 +149,7 @@ export function ChargingDoneScreen({ session, onClose }: { session: Session | nu
   const minutes = Math.max(1, Math.round((Date.parse(session.end ?? session.start) - Date.parse(session.start)) / 60000));
   const band = bandOf(session.multiplier);
   const employer = state?.employer;
-  const payer = session.corporate ? `Корпоративный счёт${employer ? ` · ${employer.org}` : ''}` : session.credit ? 'В долг — оплатить в течение 14 дней' : session.familyOwner ? 'Семейный кошелёк' : 'Кошелёк';
+  const payer = session.corporate ? `Корпоративный счёт${employer ? ` · ${employer.org}` : ''}` : session.credit ? 'В долг — оплатить в течение 14 дней' : session.familyOwner ? 'Семейный кошелёк' : session.direct ? `Баланс сети ${session.operator}` : 'Кошелёк';
   const rows: [string, string][] = [
     ['Станция', session.stationName],
     ['Оператор', session.operator],

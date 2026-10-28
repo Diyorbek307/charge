@@ -10,6 +10,8 @@ import { startWebhookWorker } from "./server/webhooks.js";
 import { startDemoLife } from "./server/demoLife.js";
 import { ocpiApi, registerPartner, ourUrls } from "./server/ocpi.js";
 import { mockCpo } from "./scripts/ocpi-cpo-mock.mjs";
+import { sandboxPayout } from "./server/direct.js";
+import { networkApi } from "./server/networkApi.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -30,6 +32,8 @@ app.get("/health", (_req, res) => {
 app.use("/api/payments", paymentsApi);
 // Web Push subscriptions.
 app.use("/api/push", pushApi);
+// Networks without OCPI push their stations and charges here.
+app.use("/api/network/v1", networkApi);
 app.use("/api", api);
 // OCPI 2.2.1: partner networks call us here (we are the eMSP).
 app.use("/ocpi", ocpiApi);
@@ -60,9 +64,16 @@ const server = app.listen(PORT, () => {
 /** Connects the demo partner once; after a restart both sides pick up the credentials they already share. */
 async function connectDemoPartner() {
   const known = (db.data.ocpiPartners ?? []).find(p => p.versionsUrl === demoCpo.versionsUrl && p.status === "connected");
-  if (known) return demoCpo.restore({ tokenB: known.tokenB, versionsUrl: ourUrls(known.base).versions, tokenC: known.tokenC });
+  if (known) {
+    const op = db.byId("operators", known.operatorId);
+    if (op && !op.payout) sandboxPayout(op);
+    return demoCpo.restore({ tokenB: known.tokenB, versionsUrl: ourUrls(known.base).versions, tokenC: known.tokenC });
+  }
   const r = await registerPartner({ versionsUrl: demoCpo.versionsUrl, token: demoCpo.tokenA, base: `http://127.0.0.1:${PORT}` });
   console.log(r.error ? `[ocpi] demo partner: ${r.error}` : `[ocpi] demo partner connected · ${r.synced} stations`);
+  // Paid directly, through a sandbox cashbox: the whole money trail runs without charging anyone.
+  const op = r.partner && db.byId("operators", r.partner.operatorId);
+  if (op) sandboxPayout(op);
 }
 
 // OCPP 1.6-J charge points connect over WebSocket on the same port.

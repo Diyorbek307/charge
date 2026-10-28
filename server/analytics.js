@@ -195,6 +195,7 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
       logo: o.logo,
       status: o.status,
       integration: o.integration,
+      settlement: o.payout?.mode ?? 'platform',
       since: o.since,
       region: o.region,
       contact: o.contact,

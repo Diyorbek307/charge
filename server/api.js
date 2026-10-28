@@ -21,6 +21,9 @@ import {
   creditFor, enrollCredit, verifyFace, consumeFaceToken, creditRefusal, recordDebt, repayCredit, refundDebt,
   deleteCredit, creditOverview, updateCreditProfile, CREDIT_LIMIT, CREDIT_DAYS, CREDIT_TERMS_VERSION,
 } from './credit.js';
+import {
+  directOperatorOf, netBalance, chargeNetwork, refundNetwork, networkWalletsFor, publicPayout, setPayout, directReport,
+} from './direct.js';
 
 export const api = express.Router();
 // Face photos for charging on credit are larger than an ordinary request.
@@ -328,6 +331,7 @@ function stateFor(viewer) {
     employer: employerOf(viewer.id),
     family: familyFor(viewer.id),
     credit: creditFor(viewer.id),
+    networkWallets: networkWalletsFor(viewer.id),
     wallets: d.wallets[viewer.id] ? { [viewer.id]: d.wallets[viewer.id] } : {},
     queues: queues.map(ownQueue),
     bookings: bookingsFor(viewer),
@@ -1006,6 +1010,37 @@ api.post('/credit/delete', requireAuth('driver'), (req, res) => {
 
 api.get('/admin/credit', requireAuth('admin'), (_req, res) => res.json(creditOverview()));
 
+// Direct settlement: a network's cashbox, and the money trail per network.
+const callbackBase = req => process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
+
+api.get('/admin/operators/:id/payout', requireAuth('admin'), (req, res) => {
+  const op = db.byId('operators', req.params.id);
+  if (!op) return res.status(404).json({ error: 'Оператор не найден' });
+  res.json(publicPayout(op, callbackBase(req)));
+});
+
+api.put('/admin/operators/:id/payout', requireAuth('admin'), (req, res) => {
+  const op = db.byId('operators', req.params.id);
+  if (!op) return res.status(404).json({ error: 'Оператор не найден' });
+  const r = setPayout(op, req.body ?? {});
+  if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
+  emit({
+    type: 'operator.payout',
+    portal: 'admin',
+    actor: req.account.name,
+    message: op.payout.mode === 'direct' ? `${op.name}: оплата напрямую сети` : `${op.name}: расчёты через платформу`,
+    entity: op.id,
+  });
+  res.json(publicPayout(op, callbackBase(req)));
+});
+
+api.get('/admin/direct-settlement', requireAuth('admin'), (req, res) => res.json(directReport({ days: req.query.days })));
+
+api.get('/operator/direct-settlement', requireAuth('operator'), (req, res) => {
+  const op = db.byId('operators', req.account.orgId);
+  res.json({ ...directReport({ operatorId: req.account.orgId, days: req.query.days }), payout: op ? publicPayout(op, callbackBase(req)) : null });
+});
+
 api.post('/admin/credit/:userId', requireAuth('admin'), (req, res) => {
   const r = updateCreditProfile(req.params.userId, req.body ?? {});
   if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
@@ -1173,10 +1208,11 @@ let gateway = null;
  * Partner networks over OCPI (server/ocpi.js): their stations are started and
  * stopped through the partner's own system, not by us.
  */
-let roaming = null;
+const roamers = [];
 export function setRoaming(r) {
-  roaming = r;
+  roamers.push(r);
 }
+const roamerFor = station => roamers.find(r => r.isRoaming(station)) ?? null;
 export function setGateway(g) {
   gateway = g;
 }
@@ -1206,6 +1242,10 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
   if (connector.status === 'unavailable') return { status: 409, error: 'Коннектор недоступен' };
   if (db.byId('operators', station.operatorId)?.status === 'suspended') {
     return { status: 409, error: 'Сеть оператора временно приостановлена' };
+  }
+  // A network with no integration is on the map only; its own app runs the charge.
+  if (db.byId('operators', station.operatorId)?.integration === 'Только карта') {
+    return { status: 409, error: `Зарядка на станциях сети ${station.operator} — в её приложении. Здесь вы видите станцию, цены и статус` };
   }
 
   // One car, one plug: without this a single account could occupy the network.
@@ -1247,6 +1287,19 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     if (allowance.left < minimum) return { status: 402, error: `Семейный лимит на этот месяц исчерпан: осталось ${Math.max(0, allowance.left).toLocaleString('ru-RU')} сум` };
   }
 
+  // A network paid directly: its stations are paid from the driver's balance
+  // at that network, which went straight to the network's own cashbox.
+  const directOp = directOperatorOf(station);
+  if (directOp) {
+    if (corporate || familyOwner || onCredit) {
+      return { status: 409, error: `На станциях сети ${directOp.name} оплата только с баланса этой сети — деньги поступают ей напрямую` };
+    }
+    const have = netBalance(account.id, directOp.id);
+    if (have < minimum) {
+      return { status: 402, error: `На балансе сети ${directOp.name} ${have.toLocaleString('ru-RU')} сум, нужно минимум ${minimum.toLocaleString('ru-RU')} сум. Пополните баланс сети — деньги поступят ей напрямую` };
+    }
+  }
+
   // On credit: the face was checked at the door; the limit and overdue debts decide.
   if (onCredit) {
     if (corporate || familyOwner) return { status: 400, error: 'Выберите один способ оплаты' };
@@ -1258,7 +1311,7 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
   // the balance at zero and the charge is effectively free.
   const walletId = corporate ? 'biz-001' : familyOwner ?? account.id;
   const wallet = db.data.wallets[walletId];
-  if (!onCredit && wallet && wallet.balance < minimum) {
+  if (!onCredit && !directOp && wallet && wallet.balance < minimum) {
     return {
       status: 402,
       error: corporate && employee ? 'На счёте компании недостаточно средств — сообщите менеджеру автопарка' : `Недостаточно средств: нужно минимум ${minimum.toLocaleString('ru-RU')} сум`,
@@ -1293,6 +1346,7 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     corporate,
     ...(familyOwner && !corporate ? { familyOwner } : {}),
     ...(onCredit ? { credit: true } : {}),
+    ...(directOp ? { direct: directOp.id } : {}),
     source: simulated ? 'demo' : source,
     ocppTransactionId,
     meterStartWh,
@@ -1334,7 +1388,8 @@ api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), async (r
   // A partner network's station is started by the partner's system; the
   // session opens when the partner reports it.
   const roamingStation = db.byId('stations', stationId);
-  if (roaming?.isRoaming(roamingStation)) {
+  const roaming = roamerFor(roamingStation);
+  if (roaming) {
     const check = beginSession(req.account, stationId, connectorId, { dryRun: true, corporate, family, credit });
     if (check.error) return res.status(check.status).json({ error: check.error });
     if (corporate || family || credit) companyIntent.set(req.account.id, { corporate, family, credit });
@@ -1402,7 +1457,7 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
     userId: session.userId,
     user: session.user,
     amount: cost,
-    method: session.corporate ? 'Корпоративный счёт' : session.familyOwner ? 'Семейный кошелёк' : session.credit ? 'В долг' : 'Кошелёк',
+    method: session.corporate ? 'Корпоративный счёт' : session.familyOwner ? 'Семейный кошелёк' : session.credit ? 'В долг' : session.direct ? `Баланс сети ${session.operator}` : 'Кошелёк',
     status: 'completed',
     time: session.end,
   };
@@ -1413,6 +1468,8 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
   const balanceBefore = wallet?.balance ?? 0;
   // A credit charge is owed, not taken from the wallet.
   if (session.credit) recordDebt(session);
+  // Paid from the driver's balance at the network; the money is already the network's.
+  else if (session.direct) chargeNetwork(session);
   else if (wallet) wallet.balance = Math.max(0, wallet.balance - cost);
 
   const operator = db.byId('operators', session.operatorId);
@@ -1521,7 +1578,8 @@ api.post('/sessions/:id/stop', requireAuth('driver', 'business', 'admin', 'opera
   if (session.status !== 'active') return res.status(409).json({ error: 'Сессия уже завершена' });
 
   // On a partner network the partner stops it and sends the final record.
-  if (session.source === 'ocpi' && roaming) {
+  const roaming = roamers.find(r => r.source === session.source);
+  if (roaming) {
     const accepted = await roaming.stopRemote(session);
     if (!accepted) return res.status(502).json({ error: 'Сеть партнёра не приняла команду остановки' });
     return res.status(202).json({ pending: true, session, stats: statsFor(req.account) });
@@ -1544,7 +1602,7 @@ api.post('/sessions/:id/tick', requireAuth(), (req, res) => {
   const session = db.byId('sessions', req.params.id);
   if (!session || session.status !== 'active') return res.status(404).json({ error: 'Нет активной сессии' });
   // A charge point connected over OCPP owns the meter for its sessions.
-  if (session.source === 'ocpp' || session.source === 'ocpi') return res.json({ session });
+  if (['ocpp', 'ocpi', 'network'].includes(session.source)) return res.json({ session });
 
   const minutes = Math.max(0, (Date.now() - new Date(session.start).getTime()) / 60000);
   session.energy = demoEnergy(session.power ?? 50, minutes);
@@ -2565,6 +2623,9 @@ api.post('/transactions/:id/refund', requireAuth('admin'), (req, res) => {
   if (session?.credit) {
     // The debt is written off; only what was already repaid comes back.
     refundDebt(session.id);
+  } else if (session?.direct) {
+    // Back to the driver's balance at that network.
+    refundNetwork(session, txn.amount);
   } else {
     const walletId = session?.corporate ? 'biz-001' : session?.familyOwner ?? txn.userId;
     const wallet = (db.data.wallets[walletId] ??= { balance: 0, currency: 'UZS', autoTopUp: false, threshold: 0, card: null });

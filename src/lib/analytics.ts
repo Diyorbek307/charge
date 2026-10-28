@@ -43,6 +43,8 @@ export interface OperatorStat extends Totals {
   logo: string;
   status: string;
   integration: string;
+  /** platform: paid from the Zaryad24 wallet; direct: straight to the network’s cashbox. */
+  settlement?: 'platform' | 'direct';
   since: string;
   region: string;
   contact: string;

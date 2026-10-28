@@ -16,7 +16,7 @@ const now = () => new Date().toISOString();
 const envelope = (data, status_code = 1000, status_message = 'Success') => ({ data, status_code, status_message, timestamp: now() });
 const b64 = t => Buffer.from(t).toString('base64');
 
-export function mockCpo({ base, name = 'Партнёр OCPI (демо)', partyId = 'DMO', tokenA = crypto.randomBytes(12).toString('hex'), meterEveryMs = 2000, speed = 1 } = {}) {
+export function mockCpo({ base, name = 'OCPI Demo', partyId = 'DMO', tokenA = crypto.randomBytes(12).toString('hex'), meterEveryMs = 2000, speed = 1 } = {}) {
   const root = `${base.replace(/\/$/, '')}/ocpi`;
   const cpo = `${root}/cpo/2.2.1`;
   let tokenC = null;

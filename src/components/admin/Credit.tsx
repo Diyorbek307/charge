@@ -62,7 +62,7 @@ export function AdminCredit() {
                   <tr key={r.userId} className="border-b border-slate-50 last:border-0">
                     <td className="px-4 py-3">
                       <p className="font-medium text-slate-800">{r.user}</p>
-                      <p className="text-xs text-slate-500">{`${r.phone ?? ''} · условия приняты ${dateTime(r.acceptedAt)}`}</p>
+                      <p className="text-xs text-slate-500">{r.phone ? `${r.phone} · условия приняты ${dateTime(r.acceptedAt)}` : `условия приняты ${dateTime(r.acceptedAt)}`}</p>
                     </td>
                     <td className="px-4 py-3 tabular-nums font-semibold text-slate-900">{money(r.debt)}</td>
                     <td className="px-4 py-3">

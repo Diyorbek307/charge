@@ -574,7 +574,7 @@ ocpiApi.post(`/emsp/${OCPI_VERSION}/tokens/:uid/authorize`, partnerAuth, (req, r
 ocpiApi.get(`/emsp/${OCPI_VERSION}/tokens`, partnerAuth, (_req, res) => ok(res, []));
 
 // Hand the API what it needs to start and stop on partner networks.
-setRoaming({ isRoaming: station => !!partnerOf(station), startRemote, stopRemote });
+setRoaming({ source: 'ocpi', isRoaming: station => !!partnerOf(station), startRemote, stopRemote });
 
 export const ocpiPartners = () => partners().map(publicPartner);
 

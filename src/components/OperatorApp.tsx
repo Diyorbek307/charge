@@ -13,7 +13,7 @@ import {
   CheckCircle,
   Link, Bell, Copy, Eye, EyeOff,
   Plus, Trash2, Shield, Globe, Lock, Users, Menu,
-  AlertTriangle, AlertCircle, Info
+  AlertTriangle, AlertCircle, Info, Landmark
 } from 'lucide-react';
 import { useLiveStations, useLiveAlerts } from '../lib/live';
 import { useSync } from '../lib/sync';
@@ -24,8 +24,9 @@ import AIChat from './AIChat';
 import AccountSettings from './admin/AccountSettings';
 import { BRAND } from '../brand';
 import { LogoMark } from '../landing/Logo';
+import { DirectSettlement } from './admin/DirectSettlement';
 
-type Page = 'dashboard' | 'stations' | 'sessions' | 'alerts' | 'tariffs' | 'finance' | 'customers' | 'integration' | 'settings' | 'help';
+type Page = 'dashboard' | 'stations' | 'sessions' | 'alerts' | 'tariffs' | 'finance' | 'direct' | 'customers' | 'integration' | 'settings' | 'help';
 
 const statusBg: Record<string, string> = {
   available: 'bg-green-100 text-green-700', occupied: 'bg-red-100 text-red-700',
@@ -59,6 +60,7 @@ function Sidebar({ current, onChange, onBack, isOpen, onClose }: { current: Page
       items: [
         { id: 'tariffs' as Page, label: t('nav.tariffs'), icon: <DollarSign size={14} /> },
         { id: 'finance' as Page, label: t('nav.finance'), icon: <BarChart2 size={14} /> },
+        { id: 'direct' as Page, label: 'Прямые оплаты', icon: <Landmark size={14} /> },
       ],
     },
     {
@@ -624,7 +626,7 @@ export default function OperatorApp({ onBack }: { onBack: () => void }) {
     const pages: Record<string, ReactNode> = {
       stations: station ? <StationDetailPage stationId={station} onBack={() => setStation(null)} /> : <OperatorStations onOpen={setStation} />,
       sessions: <AdminSessions portal="operator" />, alerts: <AlertsPage />, tariffs: <OperatorTariffs />,
-      finance: <OperatorFinance />, customers: <OperatorCustomers />,
+      finance: <OperatorFinance />, direct: <DirectSettlement portal="operator" />, customers: <OperatorCustomers />,
       integration: <OperatorIntegration />, settings: <AccountSettings portal="operator" />, help: <HelpPage onNavigate={go} />,
     };
     return (

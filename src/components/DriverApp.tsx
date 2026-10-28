@@ -27,6 +27,7 @@ import { useFavorites } from './driver/favorites';
 import { StationForecastBlock, StationCommunityBlock } from './driver/StationExtras';
 import { FinanceScreen, LoyaltyScreen, FamilyScreen, HostScreen, SosSheet } from './driver/Extras';
 import { CreditScreen, FaceCheck } from './driver/Credit';
+import { NetworkTopUp, NetworkWalletList } from './driver/NetworkWallets';
 import type { Payer } from '../lib/api';
 import { useMyLocation, km, fmtKm, driveMinutes, routeLinks } from '../lib/geo';
 import { inTelegram, telegramInitData } from '../lib/telegram';
@@ -61,6 +62,7 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
   const queue = (state?.queues ?? []).filter(q => q.stationId === station.id);
   const myIndex = queue.findIndex(q => q.userId === me?.id);
   const myTurn = myIndex >= 0 && queue[myIndex].notified;
+  const mapOnly = state?.operators.find(o => o.id === (station as Station & { operatorId?: string }).operatorId)?.integration === 'Только карта';
   const [queueBusy, setQueueBusy] = useState(false);
   const [queueError, setQueueError] = useState<string | null>(null);
 
@@ -172,6 +174,13 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
         )}
 
         {/* Actions */}
+        {mapOnly ? (
+          // A network with no integration: we show where and how much; its own app runs the charge.
+          <div className="mb-2 rounded-xl bg-slate-50 border border-slate-100 px-3 py-3">
+            <p className="text-sm font-semibold text-slate-800">{`Зарядка — в приложении ${station.operator}`}</p>
+            <p className="text-xs text-slate-500 mt-0.5">Эта сеть пока не подключена к запуску из Zaryad24. Здесь — расположение, разъёмы и цены.</p>
+          </div>
+        ) : (
         <div className="grid grid-cols-2 gap-2 mb-2">
           {free === 0 && !myTurn ? (
             <button onClick={toggleQueue} disabled={queueBusy}
@@ -190,6 +199,7 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
             <CalendarCheck size={16} />Забронировать
           </button>
         </div>
+        )}
         <GreenHourBanner />
         {queueError && (
           <p role="alert" className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-2">{queueError}</p>
@@ -227,6 +237,9 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
   const credit = state?.credit?.enrolled ? state.credit : null;
   const [payer, setPayer] = useState<Payer>(employer && employer.left > 0 ? 'company' : 'self');
   const [faceCheck, setFaceCheck] = useState(false);
+  // Networks paid directly take only the driver's balance at that network.
+  const netWallet = state?.networkWallets?.find(w => w.direct && w.operatorId === (station as (Station & { operatorId?: string }) | null)?.operatorId) ?? null;
+  const [netTopUp, setNetTopUp] = useState(false);
   const [launchMode, setLaunchMode] = useState<'qr' | 'remote'>('qr');
   const [selectedConnector, setSelectedConnector] = useState(station?.connectors.find(c => c.status === 'available') || station?.connectors[0] || null);
   const [targetPct, setTargetPct] = useState(80);
@@ -238,6 +251,9 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
   const kwNeeded = selectedConnector ? ((targetPct - currentBattery) / 100) * 85 : 0;
   const estCost = selectedConnector ? Math.round(kwNeeded * selectedConnector.price) : 0;
   const estMinutes = selectedConnector ? Math.round((kwNeeded / selectedConnector.power) * 60) : 0;
+  // The server asks for 5 kWh up front before a start.
+  const netMinimum = selectedConnector ? selectedConnector.price * 5 : 0;
+  const netShort = netWallet ? Math.max(0, netMinimum - netWallet.balance) : 0;
 
   const doScan = () => {
     setScanning(true);
@@ -245,7 +261,7 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
   };
 
   return (
-    <div className="h-full flex flex-col bg-slate-50">
+    <div className="h-full flex flex-col bg-slate-50 relative">
       <div className="bg-white px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100">
         <button onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
         <div>
@@ -360,6 +376,20 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
         {/* Payment */}
         <div className="bg-white rounded-2xl p-4 border border-slate-100">
           <p className="text-xs font-semibold text-slate-500 mb-2">ОПЛАТА</p>
+          {netWallet ? (
+            // A network paid directly: only the driver's balance at that network pays here.
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 p-3 rounded-xl border-2 border-[#FFB000] bg-amber-50">
+                <span className="w-8 h-8 rounded-lg bg-white grid place-items-center text-lg" aria-hidden="true">{netWallet.logo}</span>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-slate-800">{`Баланс сети ${netWallet.name}`}</p>
+                  <p className="text-xs text-slate-500">{`${netWallet.balance.toLocaleString('ru-RU')} сум · деньги поступают сети напрямую`}</p>
+                </div>
+                <button onClick={() => setNetTopUp(true)} className="px-3 py-1.5 rounded-xl bg-[#FFC83D] text-[#111] text-xs font-semibold">Пополнить</button>
+              </div>
+              {netShort > 0 && <p className="text-xs text-amber-800 bg-amber-50 rounded-xl px-3 py-2">{`Для старта нужно ещё ${netShort.toLocaleString('ru-RU')} сум на балансе этой сети`}</p>}
+            </div>
+          ) : (
           <div className="space-y-2" role="radiogroup" aria-label="Кто платит">
             <button
               role="radio"
@@ -422,11 +452,13 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
               </button>
             )}
           </div>
+          )}
         </div>
       </div>
+      {netTopUp && netWallet && <NetworkTopUp wallet={netWallet} need={netMinimum} onClose={() => setNetTopUp(false)} />}
 
       <div className="px-4 pb-6 pt-2">
-        <button onClick={() => (payer === 'credit' ? setFaceCheck(true) : onConfirm(selectedConnector?.id ?? null, payer))}
+        <button onClick={() => (netWallet ? onConfirm(selectedConnector?.id ?? null, 'self') : payer === 'credit' ? setFaceCheck(true) : onConfirm(selectedConnector?.id ?? null, payer))}
           disabled={launchMode === 'qr' && !scanned}
           className={`w-full rounded-2xl py-4 font-bold text-base transition-colors flex items-center justify-center gap-2 ${launchMode === 'qr' && !scanned ? 'bg-slate-200 text-slate-400' : 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sm'}`}>
           <Zap size={18} />Подтвердить и начать зарядку
@@ -603,13 +635,17 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
   }, [actions, balance]);
   const fmt = (iso: string) => new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tashkent' });
   const transactions = [
-    ...orders.filter(o => o.status === 'paid').map(o => ({ id: o.id, type: 'topup', amount: o.amount, label: `Пополнение — ${o.provider === 'payme' ? 'Payme' : 'Click'}`, at: o.paidAt ?? o.created })),
+    ...orders.filter(o => o.status === 'paid').map(o => {
+      const network = o.operatorId ? state?.networkWallets?.find(w => w.operatorId === o.operatorId)?.name ?? o.operatorId : null;
+      return { id: o.id, type: 'topup', amount: o.amount, label: network ? `Баланс сети ${network} — ${o.provider === 'payme' ? 'Payme' : 'Click'}` : `Пополнение — ${o.provider === 'payme' ? 'Payme' : 'Click'}`, at: o.paidAt ?? o.created };
+    }),
     ...(state?.transactions ?? [])
-      .filter(t => t.userId === driverId && t.method === 'Кошелёк')
+      .filter(t => t.userId === driverId && (t.method === 'Кошелёк' || t.method.startsWith('Баланс сети')))
       .map(t => {
         const ses = state?.sessions.find(x => x.id === t.sessionId);
         const refunded = t.status === 'refunded';
-        return { id: t.id, type: refunded ? 'topup' : 'charge', amount: refunded ? t.amount : -t.amount, label: `${refunded ? 'Возврат' : 'Зарядка'} — ${ses?.stationName ?? t.sessionId}`, at: t.time };
+        const viaNetwork = t.method.startsWith('Баланс сети');
+        return { id: t.id, type: refunded ? 'topup' : 'charge', amount: refunded ? t.amount : -t.amount, label: `${refunded ? 'Возврат' : 'Зарядка'} — ${ses?.stationName ?? t.sessionId}${viaNetwork ? ' · баланс сети' : ''}`, at: t.time };
       }),
   ]
     .sort((a, b) => b.at.localeCompare(a.at))
@@ -666,12 +702,14 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
           <p className="text-xs text-slate-400 mb-4">Пополнение через Payme или Click · списывается за каждую зарядку по счётчику</p>
           <div className="flex gap-2">
             <button onClick={() => setShowTopUp(true)}
-              className="flex-1 py-2.5 bg-sky-500 hover:bg-sky-400 rounded-2xl text-sm font-semibold transition-colors active:scale-95">
+              className="flex-1 py-2.5 bg-[#FFC83D] hover:bg-[#FFB000] text-[#111] rounded-2xl text-sm font-semibold transition-colors active:scale-95">
               Пополнить
             </button>
 
           </div>
         </div>
+
+        <NetworkWalletList />
 
         {/* Transaction history */}
         <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">

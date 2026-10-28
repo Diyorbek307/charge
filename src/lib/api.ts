@@ -71,6 +71,26 @@ export interface CreditOverview {
   totals: { drivers: number; debt: number; overdue: number; overdueDrivers: number };
   limit: number; days: number; provider: 'sandbox' | 'myid';
 }
+/** A driver's balance at a network that is paid directly (money goes to the network's own cashbox). */
+export interface NetworkWallet { operatorId: string; name: string; logo: string; balance: number; direct: boolean; payme: boolean; click: boolean }
+export interface PayoutSettings {
+  mode: 'platform' | 'direct';
+  sandbox: boolean;
+  payme: { merchantId: string; configured: boolean } | null;
+  click: { serviceId: string; merchantId: string; configured: boolean } | null;
+  updatedAt: string | null;
+  callbacks: { payme: string; clickPrepare: string; clickComplete: string };
+}
+export interface DirectLedgerLine { id: string; at: string; kind: 'topup' | 'topup-reversed' | 'charge' | 'refund'; operatorId: string; network: string; userId: string; user: string; amount: number; commission?: number; provider?: string; ref: string }
+export interface DirectReport {
+  days: number;
+  rows: { operatorId: string; name: string; mode: 'platform' | 'direct'; sandbox: boolean; received: number; payments: number; charged: number; charges: number; commission: number; totalReceived: number; totalCommission: number; held: number; byDay: { date: string; received: number; charged: number }[] }[];
+  totals: { received: number; charged: number; commission: number; held: number };
+  lines: DirectLedgerLine[];
+  payout?: PayoutSettings | null;
+}
+export type IntegrationType = 'OCPP 1.6-J' | 'OCPI 2.2.1' | 'Network API' | 'Только карта';
+export interface IntegrationSettings { type: string; networkApi: { keyPrefix: string; webhookUrl: string; createdAt: string } | null; key?: string | null; secret?: string | null }
 /** A partner network connected over OCPI 2.2.1 (we are the eMSP, they are the CPO). */
 export interface OcpiPartner {
   id: string; name: string; status: 'connecting' | 'connected' | 'disconnected'; versionsUrl: string; country_code: string; party_id: string;
@@ -175,6 +195,8 @@ export interface Session {
   familyOwner?: string;
   /** Charged on credit: owed, not taken from the wallet. */
   credit?: boolean;
+  /** Paid from the driver's balance at this network (operator id): the money is the network's. */
+  direct?: string;
   /** Tariff band at start: 0.7 at night, 0.9 by day, 1.25 at the evening peak. */
   multiplier?: number;
   basePrice?: number;
@@ -302,6 +324,8 @@ export interface PlatformState {
   family?: FamilyState;
   /** Charging on credit, for a driver. */
   credit?: CreditState;
+  /** The driver's balances at networks paid directly. */
+  networkWallets?: NetworkWallet[];
   queues?: QueueEntry[];
   bookings?: Booking[];
   events: SyncEvent[];
@@ -393,6 +417,8 @@ export interface PaymentOrder {
   status: 'pending' | 'paid' | 'cancelled' | 'expired';
   created: string;
   paidAt: string | null;
+  /** Set when the money went straight to a partner network's cashbox. */
+  operatorId?: string | null;
 }
 
 export interface ReportRecord {
@@ -597,6 +623,14 @@ export const apiClient = {
   verifyFace: (image: string) => post<{ faceToken: string; provider: string }>('/credit/verify', { image }, 'driver'),
   repayCredit: (amount?: number) => post<{ paid: number; credit: CreditState; wallet: Wallet }>('/credit/repay', amount ? { amount } : {}, 'driver'),
   deleteCredit: () => post<CreditState>('/credit/delete', undefined, 'driver'),
+  payout: (portal: Portal, operatorId: string) => request<PayoutSettings>(`/admin/operators/${operatorId}/payout`, { portal }),
+  setPayout: (portal: Portal, operatorId: string, body: Record<string, unknown>) =>
+    request<PayoutSettings>(`/admin/operators/${operatorId}/payout`, { method: 'PUT', body: JSON.stringify(body), portal }),
+  directSettlement: (portal: Portal, days = 30) => request<DirectReport>(portal === 'operator' ? `/operator/direct-settlement?days=${days}` : `/admin/direct-settlement?days=${days}`, { portal }),
+  integration: (portal: Portal, operatorId: string) => request<IntegrationSettings>(`/admin/operators/${operatorId}/integration`, { portal }),
+  setIntegration: (portal: Portal, operatorId: string, body: { type: IntegrationType; webhookUrl?: string }) =>
+    request<IntegrationSettings>(`/admin/operators/${operatorId}/integration`, { method: 'PUT', body: JSON.stringify(body), portal }),
+  rotateNetworkKey: (portal: Portal, operatorId: string) => post<IntegrationSettings>(`/admin/operators/${operatorId}/integration/rotate`, undefined, portal),
   ocpi: (portal: Portal) => request<OcpiOverview>('/admin/ocpi', { portal }),
   connectOcpi: (portal: Portal, versionsUrl: string, token: string) => post<{ partner: OcpiPartner; synced: number }>('/admin/ocpi', { versionsUrl, token }, portal),
   syncOcpi: (portal: Portal, id: string) => post<{ stations: number; partner: OcpiPartner }>('/admin/ocpi/' + encodeURIComponent(id) + '/sync', undefined, portal),
@@ -647,8 +681,9 @@ export const apiClient = {
   cancelBooking: (portal: Portal, id: string) =>
     request<{ booking: Booking; refunded: boolean }>(`/bookings/${id}`, { method: 'DELETE', portal }),
   paymentProviders: () => request<PaymentProvider[]>('/payments/providers'),
-  createTopUpOrder: (portal: Portal, provider: 'payme' | 'click', amount: number) =>
-    post<{ order: PaymentOrder; checkoutUrl: string; sandbox: boolean }>('/payments/topup', { provider, amount }, portal),
+  /** With operatorId the money goes straight to that network's cashbox and tops up the balance there. */
+  createTopUpOrder: (portal: Portal, provider: 'payme' | 'click', amount: number, operatorId?: string) =>
+    post<{ order: PaymentOrder; checkoutUrl: string; sandbox: boolean }>('/payments/topup', { provider, amount, ...(operatorId ? { operatorId } : {}) }, portal),
   /** Your own recent top-up orders, newest first. */
   listPayments: (portal: Portal) => request<PaymentOrder[]>('/payments', { portal }),
   sandboxConfirm: (portal: Portal, id: string) =>
