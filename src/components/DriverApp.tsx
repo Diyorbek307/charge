@@ -652,7 +652,7 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
     <div className="h-full flex flex-col bg-slate-50 relative">
       {/* Header */}
       <div className="bg-white px-4 pt-4 pb-4 border-b border-slate-100 flex items-center gap-3 shrink-0">
-        <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-slate-100 transition-colors">
+        <button onClick={onBack} aria-label="Назад" className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-slate-100 transition-colors">
           <ArrowLeft size={18} className="text-slate-700" />
         </button>
         <h1 className="text-base font-bold text-slate-900">Мой кошелёк</h1>
@@ -2289,6 +2289,8 @@ export default function DriverApp() {
   };
   const [activeTab, setActiveTab] = useState<Tab>('map');
   const [screen, setScreen] = useState<Screen>('map');
+  // The wallet opens from the profile or from the balance on the map; Back returns there.
+  const walletFrom = useRef<Screen>('profile');
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -2412,7 +2414,7 @@ export default function DriverApp() {
     if (screen === 'favorites') return <FavoritesScreen onBack={() => setScreen('map')} onSelectStation={s => { setSelectedStation(s); setScreen('station'); }} />;
     if (screen === 'qr-scan') return <QRScanScreen onBack={() => setScreen(selectedStation ? 'station' : 'map')} onStartCharging={s => { setSelectedStation(s); setScreen('charging-start'); }} />;
     if (screen === 'app-settings') return <AppSettingsScreen onBack={() => setScreen('profile')} />;
-    if (screen === 'wallet') return <WalletScreen onBack={() => setScreen('profile')} />;
+    if (screen === 'wallet') return <WalletScreen onBack={() => setScreen(walletFrom.current)} />;
     if (screen === 'eco') return <EcoScreen onBack={() => setScreen('profile')} />;
     if (screen === 'security') return <SecurityScreen onBack={() => setScreen('profile')} />;
     if (screen === 'finance') return <FinanceScreen onBack={() => setScreen('profile')} />;
@@ -2423,13 +2425,13 @@ export default function DriverApp() {
     if (screen === 'support') return <SupportScreen onBack={() => setScreen('profile')} onReport={() => setScreen(selectedStation ? 'report' : 'map')} />;
 
     if (activeTab === 'history') return <HistoryScreen />;
-    if (activeTab === 'profile') return <ProfileScreen onNavigate={s => setScreen(s as Screen)} />;
+    if (activeTab === 'profile') return <ProfileScreen onNavigate={s => { walletFrom.current = 'profile'; setScreen(s as Screen); }} />;
     if (activeTab === 'trips') return <TripPlannerScreen onBack={() => setActiveTab('map')} onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} />;
     if (activeTab === 'charging') return <ChargingHubScreen onNavigate={(s) => { setScreen(s as Screen); setActiveTab('map'); }} onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} onOpenCharge={() => { setActiveTab('map'); setScreen('charging-active'); }} />;
 
     return (
       <div className="relative w-full h-full">
-        <DriverMap onSelectStation={handleSelectStation} />
+        <DriverMap onSelectStation={handleSelectStation} onOpenWallet={() => { walletFrom.current = 'map'; setScreen('wallet'); }} />
         {/* QR scan FAB */}
         {screen === 'map' && (
           <button onClick={() => setScreen('qr-scan')}

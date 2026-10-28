@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
-import { Search, Filter, Navigation, X, Zap } from 'lucide-react';
+import { Search, Filter, Navigation, X, Zap, Wallet } from 'lucide-react';
 import type { Station } from '../data/mockData';
 import { useLiveStations } from '../lib/live';
 import { useSync } from '../lib/sync';
@@ -45,7 +45,7 @@ function stationIcon(color: string, free: number, total: number) {
 }
 
 function clusterIcon(count: number, free: number) {
-  const size = count >= 10 ? 48 : 42;
+  const size = count >= 10 ? 56 : 50;
   const html = `<div style="width:${size}px;height:${size}px;border-radius:50%;background:rgba(17,17,17,0.18);display:flex;align-items:center;justify-content:center">
     <div style="width:${size - 10}px;height:${size - 10}px;border-radius:50%;background:#111111;border:2.5px solid #FFC83D;box-shadow:0 2px 10px rgba(0,0,0,0.3);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#FFC83D;font:800 13px/1 Inter,sans-serif">
       ${count}<span style="font:700 8px/1 Inter,sans-serif;opacity:.85;margin-top:2px">${free} своб.</span>
@@ -126,7 +126,7 @@ function MapBridge({ target }: { target: { lat: number; lng: number; zoom: numbe
   return null;
 }
 
-export default function DriverMap({ onSelectStation }: { onSelectStation: (s: Station) => void }) {
+export default function DriverMap({ onSelectStation, onOpenWallet }: { onSelectStation: (s: Station) => void; onOpenWallet?: () => void }) {
   const stations = useLiveStations();
   const [status, setStatus] = useState('all');
   const [connector, setConnector] = useState('all');
@@ -139,8 +139,9 @@ export default function DriverMap({ onSelectStation }: { onSelectStation: (s: St
   const [locateNote, setLocateNote] = useState('');
 
   // The driver's own car, when they have told us: "only stations that fit my car".
-  const { sessions } = useSync();
+  const { sessions, state } = useSync();
   const car = sessions.driver?.car ?? null;
+  const balance = (sessions.driver && state?.wallets[sessions.driver.id]?.balance) ?? 0;
   const [onlyFree, setOnlyFree] = useState(false);
   const [onlyMine, setOnlyMine] = useState(false);
 
@@ -246,6 +247,16 @@ export default function DriverMap({ onSelectStation }: { onSelectStation: (s: St
               </button>
             )}
             {(onlyFree || onlyMine) && <span className="shrink-0 self-center text-[11px] font-semibold text-slate-600 bg-white/90 rounded-full px-2 py-1 shadow-sm">{`${filtered.length} ${plural(filtered.length, ['станция', 'станции', 'станций'])}`}</span>}
+            {/* The wallet is always one glance away, as in every charging app drivers know. */}
+            {onOpenWallet && sessions.driver && (
+              <button onClick={onOpenWallet} aria-label="Кошелёк" className="ml-auto shrink-0 flex items-center gap-1.5 pl-1.5 pr-3 py-1 rounded-full bg-white border border-slate-100 shadow-sm">
+                <span className="w-6 h-6 rounded-full bg-[#FFC83D] text-[#111] grid place-items-center"><Wallet size={12} /></span>
+                <span className="text-left leading-tight">
+                  <span className="block text-[10px] text-slate-500">Баланс</span>
+                  <span className="block text-xs font-bold text-slate-900 tabular-nums">{`${balance.toLocaleString('ru-RU')} сум`}</span>
+                </span>
+              </button>
+            )}
           </div>
         )}
 
