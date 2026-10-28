@@ -16,7 +16,7 @@ const ru = {
     compare: 'Сравнение', faq: 'Вопросы', map: 'Сеть', join: 'Подключиться', demo: 'Открыть демо', download: 'Скачать', menu: 'Меню', close: 'Закрыть',
   },
   hero: {
-    badge: 'Национальная сеть зарядки · запуск MVP — Q4 2026',
+    badge: 'Все сети зарядки — в одном приложении · запуск MVP — Q4 2026',
     title: ['Вся зарядка', 'Узбекистана.', 'В одном приложении.'],
     sub: 'Находите свободные станции любых операторов, запускайте зарядку с телефона и платите через Payme или Click. Ночью — на 30% дешевле.',
     primary: 'Попробовать демо',
@@ -153,8 +153,8 @@ const ru = {
       },
       {
         id: 'operator', label: 'Операторам', title: 'Operator Portal', portal: 'operator',
-        d: 'Для владельцев станций: подключите зарядки по OCPP и получите водителей всей страны.',
-        points: ['OCPP 1.6-J из коробки', 'Станции, разъёмы, сессии live', 'Тарифы и зелёные часы', 'Оповещения и жалобы водителей', 'Финансы и выплаты'],
+        d: 'Для сетей зарядки: ваши станции и ваше приложение остаются вашими, а водители всей страны находят и оплачивают их в одном месте.',
+        points: ['Подключение через API вашей системы или по OCPP 1.6-J', 'Станции, разъёмы, сессии live', 'Тарифы и зелёные часы', 'Оповещения и жалобы водителей', 'Финансы и выплаты'],
       },
       {
         id: 'api', label: 'Разработчикам', title: 'Partner API', portal: 'api',
@@ -194,7 +194,7 @@ const ru = {
     done: 'Готово',
     items: [
       { when: 'Сентябрь 2026', t: 'Платформа', d: 'Шесть порталов, OCPP 1.6-J, Payme и Click, вход по SMS, push.', done: true },
-      { when: 'Q4 2026', t: 'Запуск MVP', d: 'Ташкент, первые операторы, App Store и Google Play.' },
+      { when: 'Q4 2026', t: 'Запуск MVP', d: 'Ташкент, первые сети-партнёры по договору, App Store и Google Play.' },
       { when: 'Q1 2027', t: 'Трасса М-37', d: 'Ташкент — Самарканд — Бухара, корпоративные автопарки.' },
       { when: 'Q2 2027', t: 'Роуминг', d: 'OCPP 2.0.1 и OCPI 2.3: одна зарядка во всех сетях без отдельных договоров.' },
       { when: 'H2 2027', t: 'Plug & Charge', d: 'ISO 15118: вставил кабель — зарядка началась и оплатилась сама.' },
@@ -215,7 +215,7 @@ const ru = {
     tabs: { driver: 'Водителям', operator: 'Операторам станций', fleet: 'Автопаркам', partner: 'Партнёрам' },
     pitch: {
       driver: 'Сообщим о запуске в числе первых и откроем ранний доступ к приложению.',
-      operator: 'Подключите станции по OCPP 1.6-J и получите водителей со всей страны.',
+      operator: 'Подключим вашу сеть по договору — через API вашей системы или по OCPP. Ваше приложение остаётся вашим.',
       fleet: 'Один счёт на все машины и лимиты для водителей — расскажем, как перевести парк.',
       partner: 'ТЦ, отели, автодилеры, навигаторы — зарядка на вашей площадке или в вашем приложении.',
     },
@@ -250,10 +250,11 @@ const ru = {
       { q: `Что такое ${B}?`, a: `${B} — единая платформа зарядки электромобилей в Узбекистане. Мы не строим свои станции, а объединяем сети разных операторов в одном приложении: карта, запуск, оплата и очередь работают одинаково везде.` },
       { q: 'Сколько стоит зарядка?', a: 'Базовую цену за кВт·ч ставит оператор станции, вы видите её до старта. Ночью (23:00–07:00) цена ×0.7, днём ×0.9, в вечерний пик ×1.25 — множитель фиксируется в момент начала зарядки.' },
       { q: 'Как оплатить?', a: 'Пополните кошелёк через Payme или Click — картой Humo, Uzcard или другой, которую принимает платёжная система. Деньги зачисляются только после подтверждения платежа, зарядка списывается по факту кВт·ч.' },
+      { q: 'Можно зарядиться в долг?', a: 'Да. Один раз сохраните фото лица и примите условия — после этого при старте зарядки можно выбрать «В долг»: до 300 000 сум, оплатить в течение 14 дней, без процентов. Перед каждой такой зарядкой приложение проверяет лицо, поэтому за ваш счёт никто другой не зарядится.' },
       { q: 'Что если все разъёмы заняты?', a: 'Встаньте в очередь в приложении. Когда разъём освободится, мы удержим его за вами 5 минут и пришлём уведомление — занять его другой водитель не сможет.' },
       { q: 'Можно забронировать разъём заранее?', a: 'Да: от 10 минут до 24 часов вперёд. У вас будет 15 минут на подъезд, сбор за бронь — 2 000 сум. Неиспользованная бронь истекает сама.' },
       { q: 'Подойдёт ли моя машина?', a: 'Приложение показывает тип и мощность каждого разъёма, а фильтр оставит только подходящие станции. Для поездок планировщик учитывает батарею и расход вашей модели.' },
-      { q: 'Я владелец станций. Как подключиться?', a: 'Станции подключаются по OCPP 1.6-J — это стандарт большинства зарядок. Вы получаете кабинет оператора: сессии, тарифы, оповещения, финансы. Водители всей страны видят ваши станции сразу.' },
+      { q: 'У нас своя сеть и своё приложение. Как подключиться?', a: `Своих станций у ${B} нет — мы работаем с сетями по договору. Если у вас уже есть система и приложение, подключаемся к ним через ваш API: станции, статусы, цены и запуск зарядки появляются у нас, а ваше приложение продолжает работать. Если системы нет, станции подключаются напрямую по OCPP 1.6-J. Вы получаете кабинет оператора: сессии, тарифы, оповещения, выплаты.` },
       { q: 'Есть ли решение для компаний?', a: 'Business Portal: один счёт на все машины, лимиты на сотрудников по сумме и кВт·ч, отчёты по расходам в CSV и PDF.' },
       { q: 'Когда запуск?', a: 'Запуск MVP в Ташкенте запланирован на Q4 2026. Демо со всеми функциями уже работает — его можно открыть с этой страницы.' },
     ],
@@ -288,7 +289,7 @@ const uz: LandingCopy = {
     compare: 'Taqqoslash', faq: 'Savollar', map: 'Tarmoq', join: 'Ulanish', demo: 'Demoni ochish', download: 'Yuklab olish', menu: 'Menyu', close: 'Yopish',
   },
   hero: {
-    badge: 'Milliy zaryadlash tarmog‘i · MVP ishga tushishi — 2026-yil IV chorak',
+    badge: 'Barcha zaryadlash tarmoqlari — bitta ilovada · MVP ishga tushishi — 2026-yil IV chorak',
     title: ['O‘zbekistondagi', 'barcha zaryadlash.', 'Bitta ilovada.'],
     sub: 'Istalgan operatorning bo‘sh stansiyalarini toping, zaryadlashni telefondan boshlang va Payme yoki Click orqali to‘lang. Tunda — 30% arzonroq.',
     primary: 'Demoni sinab ko‘ring',
@@ -425,7 +426,7 @@ const uz: LandingCopy = {
       },
       {
         id: 'operator', label: 'Operatorlarga', title: 'Operator Portal', portal: 'operator',
-        d: 'Stansiya egalari uchun: zaryadlagichlarni OCPP orqali ulang va butun mamlakat haydovchilarini oling.',
+        d: 'Zaryadlash tarmoqlari uchun: stansiyalaringiz va ilovangiz sizniki bo‘lib qoladi, butun mamlakat haydovchilari esa ularni bitta joyda topib, to‘laydi.',
         points: ['Tayyor OCPP 1.6-J', 'Stansiyalar, ulagichlar, seanslar live', 'Tariflar va yashil soatlar', 'Ogohlantirishlar va shikoyatlar', 'Moliya va to‘lovlar'],
       },
       {
@@ -466,7 +467,7 @@ const uz: LandingCopy = {
     done: 'Tayyor',
     items: [
       { when: '2026-yil sentabr', t: 'Platforma', d: 'Oltita portal, OCPP 1.6-J, Payme va Click, SMS orqali kirish, push.', done: true },
-      { when: '2026 IV chorak', t: 'MVP ishga tushishi', d: 'Toshkent, birinchi operatorlar, App Store va Google Play.' },
+      { when: '2026 IV chorak', t: 'MVP ishga tushishi', d: 'Toshkent, shartnoma asosidagi birinchi hamkor tarmoqlar, App Store va Google Play.' },
       { when: '2027 I chorak', t: 'M-37 trassasi', d: 'Toshkent — Samarqand — Buxoro, korporativ avtoparklar.' },
       { when: '2027 II chorak', t: 'Rouming', d: 'OCPP 2.0.1 va OCPI 2.3: alohida shartnomalarsiz barcha tarmoqlarda bitta zaryadlash.' },
       { when: '2027 II yarim', t: 'Plug & Charge', d: 'ISO 15118: kabelni uladingiz — zaryadlash boshlandi va o‘zi to‘landi.' },
@@ -487,7 +488,7 @@ const uz: LandingCopy = {
     tabs: { driver: 'Haydovchilarga', operator: 'Stansiya operatorlariga', fleet: 'Avtoparklarga', partner: 'Hamkorlarga' },
     pitch: {
       driver: 'Ishga tushish haqida birinchilardan bo‘lib xabar beramiz va ilovaga erta kirish ochamiz.',
-      operator: 'Stansiyalarni OCPP 1.6-J orqali ulang va butun mamlakat haydovchilarini oling.',
+      operator: 'Tarmog‘ingizni shartnoma asosida ulaymiz — tizimingiz API orqali yoki OCPP bilan. Ilovangiz sizniki bo‘lib qoladi.',
       fleet: 'Barcha mashinalar uchun bitta hisob va haydovchilarga limitlar — parkni qanday o‘tkazishni aytib beramiz.',
       partner: 'Savdo markazlari, mehmonxonalar, dilerlar, navigatorlar — maydoningizda yoki ilovangizda zaryadlash.',
     },
@@ -522,10 +523,11 @@ const uz: LandingCopy = {
       { q: `${B} nima?`, a: `${B} — O‘zbekistondagi yagona elektromobil zaryadlash platformasi. Biz o‘z stansiyalarimizni qurmaymiz, balki turli operatorlar tarmoqlarini bitta ilovaga birlashtiramiz: xarita, boshlash, to‘lov va navbat hamma joyda bir xil ishlaydi.` },
       { q: 'Zaryadlash qancha turadi?', a: 'kVt·s uchun asosiy narxni stansiya operatori belgilaydi, uni boshlashdan oldin ko‘rasiz. Tunda (23:00–07:00) narx ×0.7, kunduzi ×0.9, kechki cho‘qqida ×1.25 — koeffitsient zaryadlash boshlangan paytda qayd etiladi.' },
       { q: 'Qanday to‘lash mumkin?', a: 'Hamyonni Payme yoki Click orqali to‘ldiring — Humo, Uzcard yoki to‘lov tizimi qabul qiladigan boshqa karta bilan. Pul faqat to‘lov tasdiqlangandan keyin tushadi, zaryadlash haqiqiy kVt·s bo‘yicha yechiladi.' },
+      { q: 'Qarzga zaryadlash mumkinmi?', a: 'Ha. Bir marta yuzingiz suratini saqlang va shartlarni qabul qiling — shundan so‘ng zaryadlashni boshlashda «Qarzga»ni tanlash mumkin: 300 000 so‘mgacha, 14 kun ichida to‘lash, foizsiz. Har bir bunday zaryadlashdan oldin ilova yuzni tekshiradi, shuning uchun sizning hisobingizdan boshqa hech kim zaryadlay olmaydi.' },
       { q: 'Hamma ulagichlar band bo‘lsa-chi?', a: 'Ilovada navbatga turing. Ulagich bo‘shaganda uni 5 daqiqa siz uchun saqlaymiz va bildirishnoma yuboramiz — boshqa haydovchi uni egallay olmaydi.' },
       { q: 'Ulagichni oldindan band qilsa bo‘ladimi?', a: 'Ha: 10 daqiqadan 24 soatgacha oldin. Yetib kelish uchun 15 daqiqa beriladi, bron yig‘imi — 2 000 so‘m. Foydalanilmagan bron o‘zi tugaydi.' },
       { q: 'Mashinam mos keladimi?', a: 'Ilova har bir ulagichning turi va quvvatini ko‘rsatadi, filtr esa faqat mos stansiyalarni qoldiradi. Sayohatlar uchun rejalashtiruvchi modelingiz batareyasi va sarfini hisobga oladi.' },
-      { q: 'Men stansiya egasiman. Qanday ulanaman?', a: 'Stansiyalar OCPP 1.6-J orqali ulanadi — bu ko‘pchilik zaryadlagichlarning standarti. Siz operator kabinetini olasiz: seanslar, tariflar, ogohlantirishlar, moliya. Butun mamlakat haydovchilari stansiyalaringizni darhol ko‘radi.' },
+      { q: 'Bizning o‘z tarmog‘imiz va ilovamiz bor. Qanday ulanamiz?', a: `${B}ning o‘z stansiyalari yo‘q — biz tarmoqlar bilan shartnoma asosida ishlaymiz. Agar sizda tizim va ilova bo‘lsa, ularga API orqali ulanamiz: stansiyalar, holatlar, narxlar va zaryadlashni boshlash bizda paydo bo‘ladi, ilovangiz esa ishlashda davom etadi. Tizim bo‘lmasa, stansiyalar to‘g‘ridan-to‘g‘ri OCPP 1.6-J orqali ulanadi. Siz operator kabinetini olasiz: seanslar, tariflar, ogohlantirishlar, to‘lovlar.` },
       { q: 'Kompaniyalar uchun yechim bormi?', a: 'Business Portal: barcha mashinalar uchun bitta hisob, xodimlarga summa va kVt·s bo‘yicha limitlar, CSV va PDF xarajat hisobotlari.' },
       { q: 'Qachon ishga tushadi?', a: 'Toshkentda MVP 2026-yil IV choragida ishga tushishi rejalashtirilgan. Barcha funksiyalarga ega demo allaqachon ishlayapti — uni shu sahifadan ochish mumkin.' },
     ],
@@ -558,7 +560,7 @@ const en: LandingCopy = {
     compare: 'Compare', faq: 'FAQ', map: 'Network', join: 'Join', demo: 'Open demo', download: 'Download', menu: 'Menu', close: 'Close',
   },
   hero: {
-    badge: 'National charging network · MVP launch — Q4 2026',
+    badge: 'Every charging network in one app · MVP launch — Q4 2026',
     title: ['Every charger', 'in Uzbekistan.', 'One app.'],
     sub: 'Find free chargers from every operator, start charging from your phone and pay with Payme or Click. 30% cheaper at night.',
     primary: 'Try the demo',
@@ -695,8 +697,8 @@ const en: LandingCopy = {
       },
       {
         id: 'operator', label: 'Operators', title: 'Operator Portal', portal: 'operator',
-        d: 'For charger owners: connect over OCPP and reach drivers across the whole country.',
-        points: ['OCPP 1.6-J out of the box', 'Live stations, connectors, sessions', 'Tariffs and green hours', 'Alerts and driver reports', 'Finance and payouts'],
+        d: 'For charging networks: your chargers and your app stay yours, and drivers across the country find and pay for them in one place.',
+        points: ['Connect through your system’s API or over OCPP 1.6-J', 'Live stations, connectors, sessions', 'Tariffs and green hours', 'Alerts and driver reports', 'Finance and payouts'],
       },
       {
         id: 'api', label: 'Developers', title: 'Partner API', portal: 'api',
@@ -736,7 +738,7 @@ const en: LandingCopy = {
     done: 'Done',
     items: [
       { when: 'September 2026', t: 'Platform', d: 'Six portals, OCPP 1.6-J, Payme and Click, SMS sign-in, push.', done: true },
-      { when: 'Q4 2026', t: 'MVP launch', d: 'Tashkent, first operators, App Store and Google Play.' },
+      { when: 'Q4 2026', t: 'MVP launch', d: 'Tashkent, the first partner networks under contract, App Store and Google Play.' },
       { when: 'Q1 2027', t: 'M-37 highway', d: 'Tashkent — Samarkand — Bukhara, corporate fleets.' },
       { when: 'Q2 2027', t: 'Roaming', d: 'OCPP 2.0.1 and OCPI 2.3: one account on every network without separate contracts.' },
       { when: 'H2 2027', t: 'Plug & Charge', d: 'ISO 15118: plug in and charging starts and pays by itself.' },
@@ -757,7 +759,7 @@ const en: LandingCopy = {
     tabs: { driver: 'Drivers', operator: 'Charger operators', fleet: 'Fleets', partner: 'Partners' },
     pitch: {
       driver: 'Be among the first to hear about the launch, with early access to the app.',
-      operator: 'Connect your chargers over OCPP 1.6-J and reach drivers across the country.',
+      operator: 'We connect your network under contract — through your system’s API or over OCPP. Your app stays yours.',
       fleet: 'One account for every car and limits per driver — we’ll walk you through moving your fleet.',
       partner: 'Malls, hotels, car dealers, navigation apps — charging at your venue or inside your app.',
     },
@@ -792,10 +794,11 @@ const en: LandingCopy = {
       { q: `What is ${B}?`, a: `${B} is a single EV charging platform for Uzbekistan. We don’t build our own chargers — we bring different operators’ networks into one app, so the map, starting, paying and queuing work the same everywhere.` },
       { q: 'How much does charging cost?', a: 'The station operator sets the base price per kWh and you see it before you start. At night (23:00–07:00) it’s ×0.7, by day ×0.9 and at evening peak ×1.25 — the multiplier locks when charging starts.' },
       { q: 'How do I pay?', a: 'Top up your wallet through Payme or Click — with Humo, Uzcard or any card they accept. Money arrives only after the payment is confirmed, and charging is billed for the kWh you used.' },
+      { q: 'Can I charge now and pay later?', a: 'Yes. Save a photo of your face once and accept the terms — then choose “On credit” when you start a charge: up to 300,000 UZS, paid back within 14 days, no interest. The app checks your face before every such charge, so nobody else can charge on your account.' },
       { q: 'What if every connector is busy?', a: 'Join the queue in the app. When a connector frees up we hold it for you for 5 minutes and send a notification — no other driver can take it.' },
       { q: 'Can I book a connector in advance?', a: 'Yes, from 10 minutes to 24 hours ahead. You get 15 minutes to arrive and the booking fee is 2,000 UZS. Unused bookings expire on their own.' },
       { q: 'Will my car work?', a: 'The app shows each connector’s type and power, and a filter keeps only compatible chargers. For trips, the planner uses your model’s battery and consumption.' },
-      { q: 'I own chargers. How do I join?', a: 'Chargers connect over OCPP 1.6-J, the standard most chargers speak. You get an operator console: sessions, tariffs, alerts, finance. Drivers across the country see your chargers right away.' },
+      { q: 'We have our own network and app. How do we join?', a: `${B} owns no chargers — we work with networks under contract. If you already run a system and an app, we connect to it through your API: chargers, statuses, prices and remote start appear in ${B}, and your app keeps working. Without a system of your own, chargers connect directly over OCPP 1.6-J. You get an operator console: sessions, tariffs, alerts, payouts.` },
       { q: 'Do you have something for companies?', a: 'The Business Portal: one account for every car, limits per employee by amount and kWh, and spend reports in CSV and PDF.' },
       { q: 'When do you launch?', a: 'The MVP launch in Tashkent is planned for Q4 2026. A demo with every feature already runs — you can open it from this page.' },
     ],

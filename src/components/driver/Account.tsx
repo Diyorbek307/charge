@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   ArrowLeft, Car, ChevronRight, Plus, Wallet, Heart, Bell, Lock, Settings, Phone, LogOut, Building2,
   Zap, CheckCircle, LoaderCircle, Smartphone, Monitor, Calendar, Users, AlertTriangle, KeyRound, Send, PieChart, Gift, Home,
+  ScanFace,
 } from 'lucide-react';
 import type { SyncEvent, SignedInDevice } from '../../lib/api';
 import { useSync } from '../../lib/sync';
@@ -55,6 +56,7 @@ export function ProfileScreen({ onNavigate }: { onNavigate: (s: string) => void 
     { icon: <Wallet size={16} className="text-emerald-500" />, label: 'Кошелёк', badge: sum(balance), screen: 'wallet' },
     { icon: <PieChart size={16} className="text-sky-500" />, label: 'Расходы и экономия', screen: 'finance' },
     { icon: <Gift size={16} className="text-violet-500" />, label: 'Баллы', screen: 'loyalty' },
+    { icon: <ScanFace size={16} className="text-amber-500" />, label: 'Зарядка в долг', badge: state?.credit?.debt ? sum(state.credit.debt) : undefined, screen: 'credit' },
     { icon: <Users size={16} className="text-indigo-500" />, label: 'Семейный кошелёк', badge: pendingFamily ? String(pendingFamily) : undefined, screen: 'family' },
     { icon: <Home size={16} className="text-emerald-600" />, label: 'Моя зарядка для других', screen: 'host' },
     { icon: <Heart size={16} className="text-red-400" />, label: 'Избранные станции', badge: favorites.length ? String(favorites.length) : undefined, screen: 'favorites' },

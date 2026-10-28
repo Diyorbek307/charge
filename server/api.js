@@ -17,8 +17,14 @@ import {
   applyHost, decideHost, hostApplicationsFor, allHostApplications, hostEarnings, HOST_COMMISSION,
 } from './driverFeatures.js';
 import { validateEndpoint, signedHeaders, kick as kickWebhooks } from './webhooks.js';
+import {
+  creditFor, enrollCredit, verifyFace, consumeFaceToken, creditRefusal, recordDebt, repayCredit, refundDebt,
+  deleteCredit, creditOverview, updateCreditProfile, CREDIT_LIMIT, CREDIT_DAYS, CREDIT_TERMS_VERSION,
+} from './credit.js';
 
 export const api = express.Router();
+// Face photos for charging on credit are larger than an ordinary request.
+api.use(/^\/credit\//, express.json({ limit: '600kb' }));
 api.use(express.json());
 
 // Carries the current request through synchronous handler code so emit() can
@@ -321,6 +327,7 @@ function stateFor(viewer) {
     vehicles: d.vehicles.filter(v => v.driverId === viewer.id),
     employer: employerOf(viewer.id),
     family: familyFor(viewer.id),
+    credit: creditFor(viewer.id),
     wallets: d.wallets[viewer.id] ? { [viewer.id]: d.wallets[viewer.id] } : {},
     queues: queues.map(ownQueue),
     bookings: bookingsFor(viewer),
@@ -966,6 +973,45 @@ api.post('/admin/sos/:id/status', requireAuth('admin'), (req, res) => {
   res.json(r);
 });
 
+// Charging on credit, behind a face check.
+api.get('/credit', requireAuth('driver'), (req, res) => res.json(creditFor(req.account.id)));
+
+api.get('/credit/terms', (_req, res) => res.json({ version: CREDIT_TERMS_VERSION, limit: CREDIT_LIMIT, days: CREDIT_DAYS }));
+
+api.post('/credit/enroll', requireAuth('driver'), (req, res) => {
+  const r = enrollCredit(req.account, req.body ?? {});
+  if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
+  emit({ type: 'credit.enrolled', portal: 'driver', actor: req.account.name, message: `${req.account.name} подключил зарядку в долг`, entity: req.account.id });
+  res.status(201).json(r.credit);
+});
+
+api.post('/credit/verify', requireAuth('driver'), (req, res) => {
+  const r = verifyFace(req.account, req.body ?? {});
+  if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
+  res.json(r);
+});
+
+api.post('/credit/repay', requireAuth('driver'), (req, res) => {
+  const r = repayCredit(req.account.id, req.body?.amount);
+  if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
+  emit({ type: 'credit.repaid', portal: 'driver', actor: req.account.name, message: `Погашен долг · ${r.paid.toLocaleString('ru-RU')} сум`, entity: req.account.id, payload: { userId: req.account.id } });
+  res.json(r);
+});
+
+api.post('/credit/delete', requireAuth('driver'), (req, res) => {
+  const r = deleteCredit(req.account.id);
+  if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
+  res.json(r.credit);
+});
+
+api.get('/admin/credit', requireAuth('admin'), (_req, res) => res.json(creditOverview()));
+
+api.post('/admin/credit/:userId', requireAuth('admin'), (req, res) => {
+  const r = updateCreditProfile(req.params.userId, req.body ?? {});
+  if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
+  res.json(creditOverview());
+});
+
 api.get('/family', requireAuth('driver'), (req, res) => res.json(familyFor(req.account.id)));
 
 api.post('/family/invite', requireAuth('driver'), (req, res) => {
@@ -1145,6 +1191,7 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
   const intent = companyIntent.get(account.id);
   const wantsCompany = opts.corporate ?? intent?.corporate ?? false;
   const familyOwner = opts.family ?? intent?.family ?? null;
+  const onCredit = !!(opts.credit ?? intent?.credit);
   const { station, connector } = findConnector(stationId, connectorId);
   if (!station || !connector) return { status: 404, error: 'Коннектор не найден' };
   if (connector.status === 'occupied') return { status: 409, error: 'Коннектор уже занят' };
@@ -1192,11 +1239,18 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     if (allowance.left < minimum) return { status: 402, error: `Семейный лимит на этот месяц исчерпан: осталось ${Math.max(0, allowance.left).toLocaleString('ru-RU')} сум` };
   }
 
+  // On credit: the face was checked at the door; the limit and overdue debts decide.
+  if (onCredit) {
+    if (corporate || familyOwner) return { status: 400, error: 'Выберите один способ оплаты' };
+    const refusal = creditRefusal(account.id, minimum);
+    if (refusal) return refusal;
+  }
+
   // Refuse to start what the wallet cannot pay for; otherwise settlement clamps
   // the balance at zero and the charge is effectively free.
   const walletId = corporate ? 'biz-001' : familyOwner ?? account.id;
   const wallet = db.data.wallets[walletId];
-  if (wallet && wallet.balance < minimum) {
+  if (!onCredit && wallet && wallet.balance < minimum) {
     return {
       status: 402,
       error: corporate && employee ? 'На счёте компании недостаточно средств — сообщите менеджеру автопарка' : `Недостаточно средств: нужно минимум ${minimum.toLocaleString('ru-RU')} сум`,
@@ -1230,6 +1284,7 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     status: 'active',
     corporate,
     ...(familyOwner && !corporate ? { familyOwner } : {}),
+    ...(onCredit ? { credit: true } : {}),
     source: simulated ? 'demo' : source,
     ocppTransactionId,
     meterStartWh,
@@ -1262,20 +1317,25 @@ api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), async (r
   const corporate = payer === 'company';
   // "family:<ownerId>" charges a relative's wallet.
   const family = typeof payer === 'string' && payer.startsWith('family:') ? payer.slice(7) : null;
+  // On credit only with a face check made in the last few minutes, by this driver.
+  const credit = payer === 'credit';
+  if (credit && (req.account.portal !== 'driver' || !consumeFaceToken(req.account.id, req.body?.faceToken))) {
+    return res.status(403).json({ error: 'Подтвердите лицо, чтобы зарядиться в долг' });
+  }
 
   // A station connected over OCPP is the source of truth: ask it to start, and
   // the session opens when it reports StartTransaction.
   if (gateway?.isConnected(stationId)) {
-    const check = beginSession(req.account, stationId, connectorId, { dryRun: true, corporate, family });
+    const check = beginSession(req.account, stationId, connectorId, { dryRun: true, corporate, family, credit });
     if (check.error) return res.status(check.status).json({ error: check.error });
-    if (corporate || family) companyIntent.set(req.account.id, { corporate, family });
+    if (corporate || family || credit) companyIntent.set(req.account.id, { corporate, family, credit });
     else companyIntent.delete(req.account.id);
     const accepted = await gateway.remoteStart(stationId, connectorId, req.account.id);
     if (!accepted) return res.status(502).json({ error: 'Станция не приняла команду запуска' });
     return res.status(202).json({ pending: true, stats: statsFor(req.account) });
   }
 
-  const result = beginSession(req.account, stationId, connectorId, { corporate, family });
+  const result = beginSession(req.account, stationId, connectorId, { corporate, family, credit });
   if (result.error) return res.status(result.status).json({ error: result.error });
   res.json({ session: result.session, stats: statsFor(req.account) });
 });
@@ -1319,7 +1379,7 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
     userId: session.userId,
     user: session.user,
     amount: cost,
-    method: session.corporate ? 'Корпоративный счёт' : session.familyOwner ? 'Семейный кошелёк' : 'Кошелёк',
+    method: session.corporate ? 'Корпоративный счёт' : session.familyOwner ? 'Семейный кошелёк' : session.credit ? 'В долг' : 'Кошелёк',
     status: 'completed',
     time: session.end,
   };
@@ -1328,7 +1388,9 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
   const walletId = session.corporate ? 'biz-001' : session.familyOwner ?? session.userId;
   const wallet = db.data.wallets[walletId];
   const balanceBefore = wallet?.balance ?? 0;
-  if (wallet) wallet.balance = Math.max(0, wallet.balance - cost);
+  // A credit charge is owed, not taken from the wallet.
+  if (session.credit) recordDebt(session);
+  else if (wallet) wallet.balance = Math.max(0, wallet.balance - cost);
 
   const operator = db.byId('operators', session.operatorId);
   if (operator) {
@@ -2470,9 +2532,14 @@ api.post('/transactions/:id/refund', requireAuth('admin'), (req, res) => {
   if (!txn) return res.status(404).json({ error: 'Транзакция не найдена' });
   if (txn.status !== 'completed' || !txn.amount) return res.status(409).json({ error: 'Вернуть можно только оплаченную зарядку' });
   const session = db.byId('sessions', txn.sessionId);
-  const walletId = session?.corporate ? 'biz-001' : session?.familyOwner ?? txn.userId;
-  const wallet = (db.data.wallets[walletId] ??= { balance: 0, currency: 'UZS', autoTopUp: false, threshold: 0, card: null });
-  wallet.balance += txn.amount;
+  if (session?.credit) {
+    // The debt is written off; only what was already repaid comes back.
+    refundDebt(session.id);
+  } else {
+    const walletId = session?.corporate ? 'biz-001' : session?.familyOwner ?? txn.userId;
+    const wallet = (db.data.wallets[walletId] ??= { balance: 0, currency: 'UZS', autoTopUp: false, threshold: 0, card: null });
+    wallet.balance += txn.amount;
+  }
   txn.status = 'refunded';
   txn.refundedAt = new Date().toISOString();
   txn.refundedBy = req.account.name;

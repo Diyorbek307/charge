@@ -60,6 +60,18 @@ export interface FamilyState {
   members: { memberId: string; name: string; phone: string; limit: number; status: 'pending' | 'active'; spent: number }[];
   payers: { ownerId: string; name: string; limit: number; status: 'pending' | 'active'; spent: number; left: number }[];
 }
+/** Charging on credit: the face is enrolled once and checked before every credit charge. */
+export interface CreditDebt { id: string; sessionId: string; station: string; amount: number; repaid: number; left: number; createdAt: string; dueAt: string; paidAt: string | null; refunded?: boolean }
+export interface CreditState {
+  enrolled: boolean; status: 'active' | 'paused' | null; provider: 'sandbox' | 'myid'; limit: number; days: number; termsVersion: string;
+  acceptedAt: string | null; faceSavedAt: string | null; debt: number; available: number; overdue: boolean; nextDue: string | null; debts: CreditDebt[];
+}
+export interface CreditOverview {
+  rows: { userId: string; user: string; phone: string | null; status: 'active' | 'paused'; limit: number; acceptedAt: string; faceSavedAt: string; provider: string; lastVerifiedAt: string | null; debt: number; overdue: boolean; nextDue: string | null; charges: number }[];
+  totals: { drivers: number; debt: number; overdue: number; overdueDrivers: number };
+  limit: number; days: number; provider: 'sandbox' | 'myid';
+}
+export type Payer = 'self' | 'company' | 'credit' | `family:${string}`;
 export type HostKind = 'home' | 'hotel' | 'business' | 'parking' | 'cafe';
 export interface HostApplication {
   id: string; userId: string; user: string; phone: string; kind: HostKind; name: string; city: string; address: string; lat: number; lng: number;
@@ -153,6 +165,10 @@ export interface Session {
   price?: number;
   status: 'active' | 'completed' | 'failed';
   corporate: boolean;
+  /** Paid from a relative's wallet. */
+  familyOwner?: string;
+  /** Charged on credit: owed, not taken from the wallet. */
+  credit?: boolean;
   /** Tariff band at start: 0.7 at night, 0.9 by day, 1.25 at the evening peak. */
   multiplier?: number;
   basePrice?: number;
@@ -278,6 +294,8 @@ export interface PlatformState {
   employer?: Employer | null;
   /** Family wallets: relatives I pay for, and whose wallets I may use. */
   family?: FamilyState;
+  /** Charging on credit, for a driver. */
+  credit?: CreditState;
   queues?: QueueEntry[];
   bookings?: Booking[];
   events: SyncEvent[];
@@ -568,6 +586,13 @@ export const apiClient = {
   mySos: () => request<SosRequest[]>('/sos/mine', { portal: 'driver' }),
   adminSos: (portal: Portal) => request<SosRequest[]>('/admin/sos', { portal }),
   setSosStatus: (portal: Portal, id: string, status: 'taken' | 'closed') => post<{ sos: SosRequest }>(`/admin/sos/${id}/status`, { status }, portal),
+  credit: () => request<CreditState>('/credit', { portal: 'driver' }),
+  enrollCredit: (image: string, accept: string) => post<CreditState>('/credit/enroll', { image, accept }, 'driver'),
+  verifyFace: (image: string) => post<{ faceToken: string; provider: string }>('/credit/verify', { image }, 'driver'),
+  repayCredit: (amount?: number) => post<{ paid: number; credit: CreditState; wallet: Wallet }>('/credit/repay', amount ? { amount } : {}, 'driver'),
+  deleteCredit: () => post<CreditState>('/credit/delete', undefined, 'driver'),
+  adminCredit: (portal: Portal) => request<CreditOverview>('/admin/credit', { portal }),
+  updateCredit: (portal: Portal, userId: string, body: { status?: 'active' | 'paused'; limit?: number }) => post<CreditOverview>(`/admin/credit/${userId}`, body, portal),
   family: () => request<FamilyState>('/family', { portal: 'driver' }),
   inviteFamily: (phone: string, limit: number) => post<FamilyState>('/family/invite', { phone, limit }, 'driver'),
   answerFamily: (ownerId: string, accept: boolean) => post<FamilyState>('/family/answer', { ownerId, accept }, 'driver'),
@@ -596,8 +621,8 @@ export const apiClient = {
   logout: (portal: Portal) => post<{ ok: boolean }>('/auth/logout', undefined, portal),
 
   /** payer 'company' charges a fleet employee's session to their employer, within the monthly limit. */
-  startSession: (portal: Portal, stationId: string, connectorId: string, payer: 'self' | 'company' | `family:${string}` = 'self') =>
-    post<{ session: Session; stats: Stats }>('/sessions/start', { stationId, connectorId, payer }, portal),
+  startSession: (portal: Portal, stationId: string, connectorId: string, payer: Payer = 'self', faceToken?: string) =>
+    post<{ session: Session; stats: Stats }>('/sessions/start', { stationId, connectorId, payer, ...(faceToken ? { faceToken } : {}) }, portal),
   rateSession: (portal: Portal, id: string, stars: number) =>
     post<{ station: Station; session: Session }>(`/sessions/${id}/rating`, { stars }, portal),
   stopSession: (portal: Portal, id: string) =>
