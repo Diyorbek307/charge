@@ -4,6 +4,7 @@ import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { useSync } from '../../lib/sync';
 import { useAnalytics, money, num, dateShort, plural } from '../../lib/analytics';
 import { Page, Card, Kpi, Loading, ErrorNote, Pill, CHART } from './ui';
+import { OcpiPartners } from './OcpiPartners';
 
 const STATUS = {
   active: { tone: 'green' as const, label: 'Активен' },
@@ -53,6 +54,8 @@ export default function AdminOperators({ onNavigate }: { onNavigate: (page: stri
         <Kpi label="Разъёмы" value={num(data.network.connectors)} sub={`${data.network.online} онлайн`} icon={<Zap size={14} />} tone="amber" />
         <Kpi label="Оборот сети" value={money(data.totals.revenue, false)} sub="сум за 30 дней" change={data.deltas.revenue} icon={<Wallet size={14} />} tone="violet" />
       </div>
+
+      <OcpiPartners onChanged={reload} />
 
       {failure && <ErrorNote text={failure} />}
 

@@ -144,9 +144,14 @@ describe('driver features', () => {
     assert.equal((await call('/state', { token: owner })).data.wallets['acc-driver'].balance, ownerWallet - done.cost);
     const fam = (await call('/family', { token: owner })).data;
     assert.equal(fam.members[0].spent, done.cost);
-    // Limit used up: refused.
+    // Limit used up: refused. The lowest limit is 10 000 сум, so pick a connector
+    // whose minimum prepaid charge (5 kWh) is above what is left, whatever the hour.
     await call(`/family/${kid.id}`, { method: 'POST', token: owner, body: { limit: 10000 } });
-    const { st: st2, c: c2 } = await freeConnector(kid.token);
+    const pricey = (await call('/state', { token: kid.token })).data.stations
+      .flatMap(s => s.connectors.filter(c => c.status === 'available').map(c => ({ st: s, c })))
+      .sort((a, b) => b.c.price - a.c.price)[0];
+    assert.ok(pricey.c.price * 5 > 10000 - done.cost, 'no connector expensive enough for this check');
+    const { st: st2, c: c2 } = pricey;
     assert.equal((await call('/sessions/start', { method: 'POST', token: kid.token, body: { stationId: st2.id, connectorId: c2.id, payer: 'family:acc-driver' } })).status, 402);
   });
 

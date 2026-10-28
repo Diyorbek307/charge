@@ -71,6 +71,12 @@ export interface CreditOverview {
   totals: { drivers: number; debt: number; overdue: number; overdueDrivers: number };
   limit: number; days: number; provider: 'sandbox' | 'myid';
 }
+/** A partner network connected over OCPI 2.2.1 (we are the eMSP, they are the CPO). */
+export interface OcpiPartner {
+  id: string; name: string; status: 'connecting' | 'connected' | 'disconnected'; versionsUrl: string; country_code: string; party_id: string;
+  operatorId: string; createdAt: string; lastSync: string | null; error: string | null; stations: number; endpoints: Record<string, string>;
+}
+export interface OcpiOverview { partners: OcpiPartner[]; version: string; ourVersionsUrl: string; party: { country_code: string; party_id: string } }
 export type Payer = 'self' | 'company' | 'credit' | `family:${string}`;
 export type HostKind = 'home' | 'hotel' | 'business' | 'parking' | 'cafe';
 export interface HostApplication {
@@ -591,6 +597,9 @@ export const apiClient = {
   verifyFace: (image: string) => post<{ faceToken: string; provider: string }>('/credit/verify', { image }, 'driver'),
   repayCredit: (amount?: number) => post<{ paid: number; credit: CreditState; wallet: Wallet }>('/credit/repay', amount ? { amount } : {}, 'driver'),
   deleteCredit: () => post<CreditState>('/credit/delete', undefined, 'driver'),
+  ocpi: (portal: Portal) => request<OcpiOverview>('/admin/ocpi', { portal }),
+  connectOcpi: (portal: Portal, versionsUrl: string, token: string) => post<{ partner: OcpiPartner; synced: number }>('/admin/ocpi', { versionsUrl, token }, portal),
+  syncOcpi: (portal: Portal, id: string) => post<{ stations: number; partner: OcpiPartner }>('/admin/ocpi/' + encodeURIComponent(id) + '/sync', undefined, portal),
   adminCredit: (portal: Portal) => request<CreditOverview>('/admin/credit', { portal }),
   updateCredit: (portal: Portal, userId: string, body: { status?: 'active' | 'paused'; limit?: number }) => post<CreditOverview>(`/admin/credit/${userId}`, body, portal),
   family: () => request<FamilyState>('/family', { portal: 'driver' }),

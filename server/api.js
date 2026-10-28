@@ -1169,6 +1169,14 @@ function findConnector(stationId, connectorId) {
  * injected here, so this module never imports the WebSocket layer.
  */
 let gateway = null;
+/**
+ * Partner networks over OCPI (server/ocpi.js): their stations are started and
+ * stopped through the partner's own system, not by us.
+ */
+let roaming = null;
+export function setRoaming(r) {
+  roaming = r;
+}
 export function setGateway(g) {
   gateway = g;
 }
@@ -1259,7 +1267,7 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
   if (dryRun) return { ok: true };
   companyIntent.delete(account.id);
 
-  const band = tariffBand(tashkentHour());
+  const band = station.ocpi ? { multiplier: 1 } : tariffBand(tashkentHour());
   const session = {
     id: db.nextId('session', 'S-'),
     userId: account.id,
@@ -1323,6 +1331,20 @@ api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), async (r
     return res.status(403).json({ error: 'Подтвердите лицо, чтобы зарядиться в долг' });
   }
 
+  // A partner network's station is started by the partner's system; the
+  // session opens when the partner reports it.
+  const roamingStation = db.byId('stations', stationId);
+  if (roaming?.isRoaming(roamingStation)) {
+    const check = beginSession(req.account, stationId, connectorId, { dryRun: true, corporate, family, credit });
+    if (check.error) return res.status(check.status).json({ error: check.error });
+    if (corporate || family || credit) companyIntent.set(req.account.id, { corporate, family, credit });
+    else companyIntent.delete(req.account.id);
+    const connector = roamingStation.connectors.find(c => c.id === connectorId);
+    const accepted = await roaming.startRemote(roamingStation, connector, req.account);
+    if (!accepted) return res.status(502).json({ error: 'Сеть партнёра не приняла команду запуска' });
+    return res.status(202).json({ pending: true, stats: statsFor(req.account) });
+  }
+
   // A station connected over OCPP is the source of truth: ask it to start, and
   // the session opens when it reports StartTransaction.
   if (gateway?.isConnected(stationId)) {
@@ -1344,7 +1366,7 @@ api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), async (r
  * Closes a session and settles it. Energy comes from the charge point's meter
  * when it reports one, otherwise from the demo charging curve.
  */
-export function completeSession(session, actor, { energyKwh = null, simulated = false } = {}) {
+export function completeSession(session, actor, { energyKwh = null, simulated = false, cost: billed = null } = {}) {
   const minutes = Math.max(1, (Date.now() - new Date(session.start).getTime()) / 60000);
   // Demo charging curve: what a car really draws (DC tapers, AC is capped by
   // the onboard charger), capped at 80 kWh so short demos stay readable.
@@ -1352,7 +1374,8 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
     energyKwh === null
       ? demoEnergy(session.power ?? 50, minutes)
       : round(Math.max(0, energyKwh), 1);
-  const cost = Math.round(energy * (session.price ?? 1800));
+  // A partner network's charge record states the price; otherwise our locked price applies.
+  const cost = billed ?? Math.round(energy * (session.price ?? 1800));
 
   session.status = 'completed';
   session.end = new Date().toISOString();
@@ -1497,6 +1520,13 @@ api.post('/sessions/:id/stop', requireAuth('driver', 'business', 'admin', 'opera
   }
   if (session.status !== 'active') return res.status(409).json({ error: 'Сессия уже завершена' });
 
+  // On a partner network the partner stops it and sends the final record.
+  if (session.source === 'ocpi' && roaming) {
+    const accepted = await roaming.stopRemote(session);
+    if (!accepted) return res.status(502).json({ error: 'Сеть партнёра не приняла команду остановки' });
+    return res.status(202).json({ pending: true, session, stats: statsFor(req.account) });
+  }
+
   // A charge under OCPP control is stopped by the charge point, which then
   // reports the final meter reading.
   if (session.source === 'ocpp' && gateway?.isConnected(session.stationId)) {
@@ -1514,7 +1544,7 @@ api.post('/sessions/:id/tick', requireAuth(), (req, res) => {
   const session = db.byId('sessions', req.params.id);
   if (!session || session.status !== 'active') return res.status(404).json({ error: 'Нет активной сессии' });
   // A charge point connected over OCPP owns the meter for its sessions.
-  if (session.source === 'ocpp') return res.json({ session });
+  if (session.source === 'ocpp' || session.source === 'ocpi') return res.json({ session });
 
   const minutes = Math.max(0, (Date.now() - new Date(session.start).getTime()) / 60000);
   session.energy = demoEnergy(session.power ?? 50, minutes);
@@ -2685,4 +2715,4 @@ api.post('/admin/reset', requireAuth('admin'), (req, res) => {
   res.json({ ok: true, stats: statsFor(req.account) });
 });
 
-export { emit, computeStats };
+export { emit, computeStats, requireAuth };

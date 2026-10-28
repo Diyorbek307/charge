@@ -2376,9 +2376,15 @@ export default function DriverApp() {
   const stopCharging = async () => {
     if (liveSession) {
       try {
-        const { session } = await actions.stopSession('driver', liveSession.id);
+        const r = await actions.stopSession('driver', liveSession.id);
+        // A station on OCPP or a partner network stops on its own time: the receipt
+        // opens once its final record settles the session (the effect above).
+        if ((r as { pending?: boolean }).pending) {
+          pushToast({ icon: '⏳', title: 'Останавливаем зарядку', body: 'Ждём подтверждения от станции — чек откроется сам', color: '#FFB000' });
+          return;
+        }
         watched.current = null;
-        setLastSession(session);
+        setLastSession(r.session);
         await refresh();
       } catch {
         /* already stopped elsewhere — the done screen is still correct */

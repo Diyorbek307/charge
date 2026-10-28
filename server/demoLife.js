@@ -21,7 +21,8 @@ const MAX_GAP_MS = 30 * 86400_000;
 const SYSTEM = { id: 'system', name: 'OCPP', portal: 'system' };
 
 const hourNow = () => new Date(Date.now() + TZ).getUTCHours();
-const eligible = () => db.data.stations.slice(6).filter(st => db.byId('operators', st.operatorId)?.status === 'active');
+// Partner networks over OCPI report their own traffic; the demo never invents it there.
+const eligible = () => db.data.stations.slice(6).filter(st => !st.ocpi && db.byId('operators', st.operatorId)?.status === 'active');
 
 /** Generates the sessions that would have happened while the server was down. */
 function fillGap() {

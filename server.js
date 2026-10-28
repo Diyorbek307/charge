@@ -8,6 +8,8 @@ import { paymentsApi } from "./server/payments.js";
 import { pushApi, attachPush } from "./server/push.js";
 import { startWebhookWorker } from "./server/webhooks.js";
 import { startDemoLife } from "./server/demoLife.js";
+import { ocpiApi, registerPartner, ourUrls } from "./server/ocpi.js";
+import { mockCpo } from "./scripts/ocpi-cpo-mock.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -29,6 +31,14 @@ app.use("/api/payments", paymentsApi);
 // Web Push subscriptions.
 app.use("/api/push", pushApi);
 app.use("/api", api);
+// OCPI 2.2.1: partner networks call us here (we are the eMSP).
+app.use("/ocpi", ocpiApi);
+
+// The demo includes one partner network connected over OCPI, so the whole
+// roaming flow can be seen without a real partner.
+const DEMO_LIFE = process.env.DEMO_MODE !== "false" && process.env.DEMO_SIMULATION !== "false";
+const demoCpo = DEMO_LIFE && process.env.OCPI_DEMO !== "false" ? mockCpo({ base: `http://127.0.0.1:${PORT}/demo-cpo` }) : null;
+if (demoCpo) app.use("/demo-cpo", demoCpo.router);
 
 // Статика собранного Vite-приложения
 app.use(express.static(distDir));
@@ -43,15 +53,24 @@ app.get("*", (req, res, next) => {
 await db.ready;
 
 const server = app.listen(PORT, () => {
-  console.log(`ONE CHARGE UZ running on port ${PORT}`);
+  console.log(`Zaryad24 running on port ${PORT}`);
+  if (demoCpo) connectDemoPartner();
 });
+
+/** Connects the demo partner once; after a restart both sides pick up the credentials they already share. */
+async function connectDemoPartner() {
+  const known = (db.data.ocpiPartners ?? []).find(p => p.versionsUrl === demoCpo.versionsUrl && p.status === "connected");
+  if (known) return demoCpo.restore({ tokenB: known.tokenB, versionsUrl: ourUrls(known.base).versions, tokenC: known.tokenC });
+  const r = await registerPartner({ versionsUrl: demoCpo.versionsUrl, token: demoCpo.tokenA, base: `http://127.0.0.1:${PORT}` });
+  console.log(r.error ? `[ocpi] demo partner: ${r.error}` : `[ocpi] demo partner connected · ${r.synced} stations`);
+}
 
 // OCPP 1.6-J charge points connect over WebSocket on the same port.
 attachOcpp(server);
 attachPush();
 startWebhookWorker();
 // The demo network keeps charging on its own; tests turn this off.
-if (process.env.DEMO_MODE !== "false" && process.env.DEMO_SIMULATION !== "false") startDemoLife();
+if (DEMO_LIFE) startDemoLife();
 
 // Render sends SIGTERM on every deploy; flush pending writes before exiting.
 let shuttingDown = false;

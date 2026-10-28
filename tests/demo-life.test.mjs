@@ -28,7 +28,7 @@ const admin = async () => (await call('/auth/login', { method: 'POST', body: { p
 
 async function start() {
   server = spawn(process.execPath, ['server.js'], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, DEMO_TICK_MS: '400', DATABASE_URL: '' },
+    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, DEMO_TICK_MS: '400', DATABASE_URL: '', OCPI_DEMO: 'false' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   const until = Date.now() + 15000;
