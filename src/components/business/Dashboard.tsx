@@ -90,7 +90,7 @@ export default function BusinessDashboard({ onNavigate }: { onNavigate: (page: s
             {employees.slice(0, 5).map(e => (
               <li key={e.id}>
                 <div className="flex items-baseline justify-between gap-3 text-sm mb-1">
-                  <span className="text-slate-700 truncate">{e.name} <span className="text-xs text-slate-400">{e.dept}</span></span>
+                  <span className="min-w-0"><span className="block text-slate-700 truncate">{e.name}</span><span className="block text-xs text-slate-400 truncate">{e.dept}</span></span>
                   <span className="font-semibold text-slate-800 tabular-nums shrink-0"><span>{money(e.spentMonth, false)}</span> / <span>{money(e.limit)}</span></span>
                 </div>
                 <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${Math.min(100, e.share * 100)}%`, background: e.color }} /></div>

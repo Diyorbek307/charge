@@ -272,7 +272,7 @@ function Overview({ go }: { go: (s: Section) => void }) {
         ].map(([k, v]) => (
           <div key={k} className="bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-3">
             <p className="text-[11px] text-slate-500">{k}</p>
-            <p className="text-sm text-slate-200 font-mono break-all">{v}</p>
+            <p className="text-sm text-slate-200 font-mono break-words">{v}</p>
           </div>
         ))}
       </div>

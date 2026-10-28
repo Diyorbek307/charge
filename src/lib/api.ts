@@ -18,6 +18,8 @@ export interface Account {
   twoFactorEnabled?: boolean;
   /** A driver's own car, when they have told us. */
   car?: Car | null;
+  /** Linked Telegram account: one-tap sign-in in the Mini App and bot notifications. */
+  telegram?: { id: string; username: string | null; firstName: string; linkedAt: string; notify?: boolean } | null;
 }
 
 export interface Car {
@@ -27,6 +29,8 @@ export interface Car {
   battery: number;
   port: string;
   maxKw: number;
+  /** Stop charging at this level, %; 80 by default. */
+  chargeLimit?: number;
 }
 
 export interface RiskFinding {
@@ -529,6 +533,10 @@ export const apiClient = {
   signOutOthers: (portal: Portal) => post<{ revoked: number }>('/auth/sessions/revoke-others', undefined, portal),
   changePassword: (portal: Portal, current: string, next: string) => post<{ ok: boolean }>('/auth/password', { current, next }, portal),
   notifications: (portal: Portal) => request<SyncEvent[]>('/notifications', { portal }),
+  telegramStatus: () => request<{ configured: boolean }>('/auth/telegram/status'),
+  telegramSignIn: (initData: string) => post<{ token: string; user: Account }>('/auth/telegram', { initData }),
+  telegramLink: (initData: string) => post<{ user: Account }>('/auth/telegram/link', { initData }, 'driver'),
+  telegramUnlink: () => post<{ user: Account }>('/auth/telegram/unlink', undefined, 'driver'),
   saveCar: (portal: Portal, car: Car) => request<{ user: Account }>('/me/car', { method: 'PUT', body: JSON.stringify(car), portal }),
   logout: (portal: Portal) => post<{ ok: boolean }>('/auth/logout', undefined, portal),
 

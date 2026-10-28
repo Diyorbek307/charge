@@ -2,6 +2,7 @@ import express from 'express';
 import webpush from 'web-push';
 import { db } from './db.js';
 import { setPushHook } from './api.js';
+import { notifyTelegram } from './telegram.js';
 
 /**
  * Web Push notifications, so a driver hears "your turn" with the app closed.
@@ -123,6 +124,8 @@ async function deliver(event) {
   if (!kind || (kind.when && !kind.when(event))) return;
   const ids = recipients(event);
   if (ids.size === 0) return;
+  // Accounts linked to Telegram get the same notice from the bot.
+  void notifyTelegram(ids, kind.title, event.message);
   const targets = subs().filter(s => ids.has(s.accountId));
   if (targets.length === 0) return;
   await sendTo(targets, { title: kind.title, body: event.message, tag: event.type, url: kind.url });

@@ -8,7 +8,7 @@ import { exportPdf } from '../../lib/export';
 const effectiveKw = (power: number) => (power >= 50 ? power * 0.6 : Math.min(power, 11) * 0.95);
 /** A typical usable battery; the app does not know every car's capacity. */
 const PACK_KWH = 75;
-const TARGET = 80;
+const DEFAULT_TARGET = 80;
 
 const BAND: Record<string, string> = { '0.7': 'ночной тариф ×0.7', '0.9': 'дневной тариф ×0.9', '1.25': 'пиковый тариф ×1.25' };
 const bandOf = (m?: number) => (m && m !== 1 ? BAND[String(m)] ?? `×${m}` : null);
@@ -22,8 +22,9 @@ const mmss = (s: number) => `${String(Math.floor(s / 3600)).padStart(2, '0')}:${
  * metered energy over OCPP; otherwise the figures follow the same curve the
  * server bills by when the session stops.
  */
-export function ChargingActiveScreen({ session, startBattery, packKwh, onStop }: { session: Session | null; startBattery: number | null; packKwh?: number | null; onStop: () => void }) {
+export function ChargingActiveScreen({ session, startBattery, packKwh, limit, onStop }: { session: Session | null; startBattery: number | null; packKwh?: number | null; limit?: number | null; onStop: () => void }) {
   const pack = packKwh || PACK_KWH;
+  const TARGET = limit || DEFAULT_TARGET;
   const [now, setNow] = useState(Date.now());
   const [stopping, setStopping] = useState(false);
   useEffect(() => {

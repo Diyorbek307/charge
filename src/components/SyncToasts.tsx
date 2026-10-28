@@ -26,8 +26,17 @@ const ICONS: Record<string, typeof Zap> = {
 const MUTED = new Set(['session.tick']);
 
 export default function SyncToasts() {
-  const { events } = useSync();
+  const { events, sessions } = useSync();
   const [visible, setVisible] = useState<SyncEvent[]>([]);
+  // A demo showcase of cross-portal sync: on a phone it would cover the page header.
+  const [wide, setWide] = useState(() => typeof window === 'undefined' || window.matchMedia('(min-width: 640px)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 640px)');
+    const on = () => setWide(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  const mine = new Set(Object.values(sessions).filter(Boolean).map(a => a!.name));
   const seen = useRef<Set<string> | null>(null);
 
   useEffect(() => {
@@ -37,7 +46,8 @@ export default function SyncToasts() {
       return;
     }
 
-    const fresh = events.filter(e => !seen.current!.has(e.id) && !MUTED.has(e.type));
+    // Your own sign-in is not news to you.
+    const fresh = events.filter(e => !seen.current!.has(e.id) && !MUTED.has(e.type) && !(e.type === 'auth.login' && mine.has(e.actor)));
     if (fresh.length === 0) return;
     fresh.forEach(e => seen.current!.add(e.id));
 
@@ -49,7 +59,7 @@ export default function SyncToasts() {
     return () => clearTimeout(timer);
   }, [events]);
 
-  if (visible.length === 0) return null;
+  if (visible.length === 0 || !wide) return null;
 
   return (
     <div className="fixed z-[160] top-3 left-1/2 -translate-x-1/2 w-[min(340px,calc(100vw-24px))] space-y-2 pointer-events-none">

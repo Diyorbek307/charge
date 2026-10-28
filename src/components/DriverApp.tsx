@@ -23,6 +23,8 @@ import ChargingHubScreen from './driver/Hub';
 import TripPlannerScreen from './driver/Trip';
 import { ProfileScreen, SecurityScreen, NotificationsScreen } from './driver/Account';
 import { useFavorites } from './driver/favorites';
+import { useMyLocation, km, fmtKm, driveMinutes, routeLinks } from '../lib/geo';
+import { inTelegram, telegramInitData } from '../lib/telegram';
 import type { Booking, Session, PaymentOrder } from '../lib/api';
 import AuthFlow from './AuthFlow';
 
@@ -48,6 +50,9 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
   const me = portalSessions.driver;
   const favorites = useFavorites();
   const favorite = favorites.has(station.id);
+  const here = useMyLocation();
+  const dist = here ? km(here, { lat: station.geoLat, lng: station.geoLng }) : null;
+  const route = routeLinks({ lat: station.geoLat, lng: station.geoLng });
   const queue = (state?.queues ?? []).filter(q => q.stationId === station.id);
   const myIndex = queue.findIndex(q => q.userId === me?.id);
   const myTurn = myIndex >= 0 && queue[myIndex].notified;
@@ -86,7 +91,7 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
             <div className="flex items-center gap-2 mb-0.5">
               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: statusColor[station.status] }} />
               <span className="text-xs font-medium" style={{ color: statusColor[station.status] }}>{statusLabel[station.status]}</span>
-              <span className="text-xs text-slate-400">· {station.distance} км</span>
+              {dist !== null && <span className="text-xs text-slate-400">{`· ${fmtKm(dist)} · ~${driveMinutes(dist)} мин`}</span>}
             </div>
             <h2 className="text-lg font-bold text-slate-900">{station.name}</h2>
             <p className="text-sm text-slate-500">{station.operator}</p>
@@ -181,6 +186,14 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
         {queueError && (
           <p role="alert" className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-2">{queueError}</p>
         )}
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <a href={route.yandex} target="_blank" rel="noopener noreferrer" className="bg-slate-900 text-white rounded-xl py-2.5 font-semibold text-sm flex items-center justify-center gap-1.5">
+            <Navigation size={14} />Маршрут · Яндекс
+          </a>
+          <a href={route.google} target="_blank" rel="noopener noreferrer" className="bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl py-2.5 font-medium text-sm flex items-center justify-center gap-1.5">
+            <Navigation size={14} />Google Maps
+          </a>
+        </div>
         <div className="grid grid-cols-3 gap-2">
           <button onClick={() => favorites.toggle(station.id)} aria-pressed={favorite} className={`rounded-xl py-2 font-medium text-sm transition-colors flex items-center justify-center gap-1.5 ${favorite ? 'bg-red-50 text-red-500' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
             <Heart size={13} className={favorite ? 'fill-red-500' : ''} />{favorite ? 'В избранном' : 'Избранное'}
@@ -779,13 +792,16 @@ const portTypes: { type: string; label: string; maxKw: number }[] = [
   { type: 'NACS', label: 'NACS (Tesla)', maxKw: 250 },
 ];
 
-function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { brand: string; model: string; year: number; battery: number; port: string; maxKw: number }) => void }) {
-  const [brand, setBrand] = useState('BYD');
-  const [model, setModel] = useState('Han EV');
-  const [year, setYear] = useState(2024);
-  const [battery, setBattery] = useState(85);
-  const [port, setPort] = useState('CCS2');
-  const [maxKw, setMaxKw] = useState(150);
+function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { brand: string; model: string; year: number; battery: number; port: string; maxKw: number; chargeLimit: number }) => void }) {
+  // Editing starts from the car already saved, if there is one.
+  const saved = useSync().sessions.driver?.car;
+  const [brand, setBrand] = useState(saved?.brand ?? 'BYD');
+  const [model, setModel] = useState(saved?.model ?? 'Han EV');
+  const [year, setYear] = useState(saved?.year ?? 2024);
+  const [battery, setBattery] = useState(saved?.battery ?? 85);
+  const [port, setPort] = useState(saved?.port.replace(/^Type (\d)$/, 'Type$1') ?? 'CCS2');
+  const [maxKw, setMaxKw] = useState(saved?.maxKw ?? 150);
+  const [chargeLimit, setChargeLimit] = useState(saved?.chargeLimit ?? 80);
   const [step, setStep] = useState<'form' | 'confirm'>('form');
 
   const selectedPort = portTypes.find(p => p.type === port);
@@ -837,7 +853,7 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
           </div>
         </div>
         <div className="px-4 pb-8 pt-2">
-          <button onClick={() => onSave({ brand, model, year, battery, port, maxKw })}
+          <button onClick={() => onSave({ brand, model, year, battery, port, maxKw, chargeLimit })}
             className="w-full bg-sky-500 text-white rounded-2xl py-4 font-bold text-base">
             Добавить автомобиль
           </button>
@@ -932,6 +948,14 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
           <input type="range" min="3" max={selectedPort?.maxKw || 150} step="1" value={maxKw} onChange={e => setMaxKw(Number(e.target.value))}
             className="w-full accent-sky-500" />
           <div className="flex justify-between text-xs text-slate-400 mt-1"><span>3 кВт</span><span>{selectedPort?.maxKw} кВт</span></div>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-100 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-slate-500">ЛИМИТ ЗАРЯДА</p>
+            <span className="text-sm font-bold text-slate-900 mono">{chargeLimit}%</span>
+          </div>
+          <input type="range" min="50" max="100" step="5" value={chargeLimit} onChange={e => setChargeLimit(Number(e.target.value))} aria-label="Лимит заряда, %" className="w-full accent-sky-500" />
+          <p className="text-xs text-slate-400 mt-1">{`Запас хода при ${chargeLimit}% ≈ ${Math.round((battery * chargeLimit) / 100 / 0.18)} км. До 80% быстрее и бережнее для батареи.`}</p>
         </div>
       </div>
       <div className="px-4 pb-6 pt-2">
@@ -2274,7 +2298,16 @@ export default function DriverApp() {
     }
   }, [liveSession, screen, state]);
 
-  const saveCar = async (car: { brand: string; model: string; year: number; battery: number; port: string; maxKw: number }) => {
+  // Signed in inside Telegram with a password: link the two so next time is one tap.
+  useEffect(() => {
+    if (!driverAccount || driverAccount.telegram || !inTelegram()) return;
+    void telegramInitData().then(initData => {
+      if (initData) actions.telegramLink(initData).then(r => updateAccount('driver', r.user)).catch(() => {});
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [driverAccount?.id]);
+
+  const saveCar = async (car: { brand: string; model: string; year: number; battery: number; port: string; maxKw: number; chargeLimit: number }) => {
     try {
       const { user } = await actions.saveCar('driver', { ...car, port: car.port.replace(/^Type(\d)$/, 'Type $1') });
       updateAccount('driver', user);
@@ -2313,7 +2346,7 @@ export default function DriverApp() {
 
   const renderContent = () => {
     if (screen === 'charging-start') return <ChargingStartScreen station={selectedStation} onBack={() => setScreen('station')} onConfirm={startCharging} onOpenQR={() => setScreen('qr-scan')} />;
-    if (screen === 'charging-active') return <ChargingActiveScreen session={liveSession} startBattery={state?.vehicles.find(v => v.driverId === driverAccount?.id)?.battery ?? null} packKwh={driverAccount?.car?.battery} onStop={stopCharging} />;
+    if (screen === 'charging-active') return <ChargingActiveScreen session={liveSession} startBattery={state?.vehicles.find(v => v.driverId === driverAccount?.id)?.battery ?? null} packKwh={driverAccount?.car?.battery} limit={driverAccount?.car?.chargeLimit} onStop={stopCharging} />;
     if (screen === 'charging-done') return <ChargingDoneScreen session={lastSession} onClose={handleBack} />;
     if (screen === 'trip') return <TripPlannerScreen onBack={() => setScreen('map')} onSelectStation={handleSelectStation} />;
     if (screen === 'booking') return <BookingScreen station={selectedStation} onBack={() => setScreen('station')} onConfirm={b => { setLastBooking(b); setScreen('booking-done'); }} />;
@@ -2388,14 +2421,14 @@ export default function DriverApp() {
 
       {/* Tab bar */}
       {showTabs && (
-        <div className="bg-white border-t border-slate-100 px-2 py-2 flex items-center justify-around shrink-0">
+        <div className="bg-white border-t border-slate-100 px-1 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-around shrink-0">
           {tabs.map(tab => {
             const isActive = activeTab === tab.id && !['station'].includes(screen);
             // The badge means a charge is running right now, nothing else.
             const isCharging = tab.id === 'charging' && !!liveSession;
             return (
               <button key={tab.id} aria-current={isActive ? 'page' : undefined} onClick={() => { setActiveTab(tab.id); setScreen('map'); setSelectedStation(null); }}
-                className={`relative flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors ${isActive ? 'text-sky-500' : 'text-slate-400'}`}>
+                className={`relative flex-1 min-w-0 flex flex-col items-center gap-0.5 px-1 py-1 rounded-xl transition-colors ${isActive ? 'text-sky-500' : 'text-slate-400'}`}>
                 {isCharging && (
                   <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -2405,7 +2438,7 @@ export default function DriverApp() {
                   </span>
                 )}
                 {tab.icon}
-                <span className="text-xs">{tab.label}</span>
+                <span className="text-[11px] sm:text-xs max-w-full truncate">{tab.label}</span>
                 {isActive && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-sky-500 rounded-full" />}
               </button>
             );

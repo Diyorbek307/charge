@@ -120,13 +120,13 @@ export function Pill({ tone = 'slate', children }: { tone?: keyof typeof PILL; c
 
 export function Segmented<T extends string | number>({ options, value, onChange }: { options: { id: T; label: string }[]; value: T; onChange: (v: T) => void }) {
   return (
-    <div className="inline-flex p-1 rounded-xl bg-slate-100" role="group">
+    <div className="inline-flex max-w-full overflow-x-auto no-scrollbar p-1 rounded-xl bg-slate-100" role="group">
       {options.map(o => (
         <button
           key={String(o.id)}
           onClick={() => onChange(o.id)}
           aria-pressed={value === o.id}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${value === o.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${value === o.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
         >
           {o.label}
         </button>
@@ -146,13 +146,14 @@ export function BarList({ rows, color = '#0AAF97' }: { rows: { key: string; labe
             <span className="min-w-0 truncate text-slate-700">
               <span className="text-slate-400 mr-2 tabular-nums">{i + 1}</span>
               {r.label}
-              {r.sub && <span className="text-xs text-slate-400 ml-2">{r.sub}</span>}
             </span>
             <span className="font-semibold text-slate-800 tabular-nums shrink-0">{r.display}</span>
           </div>
           <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
             <div className="h-full rounded-full" style={{ width: `${(r.value / max) * 100}%`, background: color }} />
           </div>
+          {/* On its own line, so a long name never pushes it out of view. */}
+          {r.sub && <p className="text-[11px] text-slate-400 mt-0.5 truncate">{r.sub}</p>}
         </li>
       ))}
     </ol>

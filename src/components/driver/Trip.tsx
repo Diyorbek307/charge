@@ -29,7 +29,7 @@ const USE = 0.18;
 /** Left in the battery on arrival at the destination, and at a charger. */
 const RESERVE = 10;
 const STOP_RESERVE = 15;
-const TARGET = 80;
+const DEFAULT_TARGET = 80;
 const SPEED = 80;
 /** How far off the road a charger may be. */
 const DETOUR_KM = 20;
@@ -51,7 +51,7 @@ function project(from: { lat: number; lng: number }, to: { lat: number; lng: num
   return { along: t * len, off, len };
 }
 
-export function plan(stations: Station[], from: { lat: number; lng: number }, to: { lat: number; lng: number }, startSoc: number, pack: number, carKw: number): Plan {
+export function plan(stations: Station[], from: { lat: number; lng: number }, to: { lat: number; lng: number }, startSoc: number, pack: number, carKw: number, TARGET = DEFAULT_TARGET): Plan {
   const line = project(from, to, to);
   const total = line.len * ROAD;
   const candidates = stations
@@ -118,7 +118,7 @@ export default function TripPlannerScreen({ onBack, onSelectStation }: { onBack:
 
   const a = CITIES.find(c => c.id === from)!;
   const b = CITIES.find(c => c.id === to)!;
-  const result = useMemo(() => (from === to ? null : plan(stations, a, b, soc, pack, carKw)), [stations, a, b, soc, pack, carKw, from, to]);
+  const result = useMemo(() => (from === to ? null : plan(stations, a, b, soc, pack, carKw, me?.car?.chargeLimit ?? DEFAULT_TARGET)), [stations, a, b, soc, pack, carKw, from, to, me?.car?.chargeLimit]);
   const driveMin = result ? Math.round((result.km / SPEED) * 60) : 0;
 
   return (

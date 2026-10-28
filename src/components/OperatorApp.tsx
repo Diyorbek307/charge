@@ -636,7 +636,7 @@ export default function OperatorApp({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <div className="h-full flex relative dash-surface">
+    <div className="h-full flex relative dash-surface safe-top">
       {sidebarOpen && <div onClick={() => setSidebarOpen(false)} className="md:hidden fixed inset-0 bg-black/40 z-20" />}
       <Sidebar current={page} onChange={go} onBack={onBack} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 overflow-hidden relative">

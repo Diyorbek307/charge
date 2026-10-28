@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { resetDemo, signIn, skipOnboarding } from './helpers.mjs';
+import { resetDemo, signIn, skipOnboarding, openStation } from './helpers.mjs';
 
 test.beforeEach(async ({ request }) => {
   await resetDemo(request);
@@ -38,4 +38,23 @@ test('the driver app fills a phone screen and every tab stays in view', async ({
     expect(box.x, `${tab} tab is off screen`).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width, `${tab} tab is off screen`).toBeLessThanOrEqual(width + 1);
   }
+});
+
+test('on a phone the station card sits above the map, not under it', async ({ page }) => {
+  await signIn(page, 'driver');
+  await skipOnboarding(page);
+  await openStation(page, 'Samarqand Gateway');
+  // Leaflet's panes use z-index 400+. Unless the map is its own stacking context they paint over
+  // the station card and the QR button — and tiles let taps through, so a hit test cannot tell.
+  const contained = await page.evaluate(() => {
+    const map = document.querySelector('.leaflet-container');
+    for (let el = map?.parentElement; el && el !== document.body; el = el.parentElement) {
+      const cs = getComputedStyle(el);
+      if (cs.isolation === 'isolate' || (cs.position !== 'static' && cs.zIndex !== 'auto')) return el.contains(map);
+      if (el.querySelector(':scope > button, :scope > div > button')) break;
+    }
+    return false;
+  });
+  expect(contained, 'the map layers can cover the station card').toBe(true);
+  await expect(page.getByRole('button', { name: /Начать зарядку|Встать в очередь|Ваша очередь/ }).first()).toBeVisible();
 });

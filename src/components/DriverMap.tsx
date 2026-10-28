@@ -4,6 +4,9 @@ import L from 'leaflet';
 import { Search, Filter, Navigation, X, Zap } from 'lucide-react';
 import type { Station } from '../data/mockData';
 import { useLiveStations } from '../lib/live';
+import { useSync } from '../lib/sync';
+import { locate as askLocation, samePort } from '../lib/geo';
+import { plural } from '../lib/analytics';
 
 const statusColor: Record<string, string> = {
   available: '#22C55E',
@@ -34,11 +37,11 @@ const POWER = [
 
 const TASHKENT: [number, number] = [41.3111, 69.2797];
 
-function stationIcon(color: string, free: number) {
-  const html = `<div style="width:34px;height:34px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;color:white;font:800 12px Manrope,sans-serif">
-    ${free > 0 ? free : '<div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:12px solid white;margin-bottom:2px"></div>'}
+function stationIcon(color: string, free: number, total: number) {
+  const html = `<div style="width:38px;height:38px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;color:white;font:800 11px Manrope,sans-serif;letter-spacing:-.02em">
+    ${free > 0 ? `${free}/${total}` : '<div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:12px solid white;margin-bottom:2px"></div>'}
   </div>`;
-  return L.divIcon({ html, className: '', iconSize: [34, 34], iconAnchor: [17, 17], popupAnchor: [0, -20] });
+  return L.divIcon({ html, className: '', iconSize: [38, 38], iconAnchor: [19, 19], popupAnchor: [0, -22] });
 }
 
 function clusterIcon(count: number, free: number) {
@@ -86,7 +89,7 @@ function ClusteredMarkers({ stations, onSelect }: { stations: Station[]; onSelec
           const maxKw = Math.max(...s.connectors.map(c => c.power));
           const minPrice = Math.min(...s.connectors.map(c => c.price));
           return (
-            <Marker key={s.id} position={[s.geoLat, s.geoLng]} icon={stationIcon(statusColor[s.status], freeOf(s))} eventHandlers={{ click: () => onSelect(s) }}>
+            <Marker key={s.id} position={[s.geoLat, s.geoLng]} icon={stationIcon(statusColor[s.status], freeOf(s), s.connectors.length)} eventHandlers={{ click: () => onSelect(s) }}>
               <Popup>
                 <div style={{ fontFamily: 'Manrope, sans-serif', minWidth: 150 }}>
                   <p style={{ fontWeight: 700, fontSize: 13, margin: '0 0 2px 0', color: '#0F172A' }}>{s.name}</p>
@@ -135,10 +138,22 @@ export default function DriverMap({ onSelectStation }: { onSelectStation: (s: St
   const [locating, setLocating] = useState(false);
   const [locateNote, setLocateNote] = useState('');
 
+  // The driver's own car, when they have told us: "only stations that fit my car".
+  const { sessions } = useSync();
+  const car = sessions.driver?.car ?? null;
+  const [onlyFree, setOnlyFree] = useState(false);
+  const [onlyMine, setOnlyMine] = useState(false);
+
   const powerTest = POWER.find(p => p.id === power)!.test;
   const filtered = stations.filter(s => {
     if (status !== 'all' && s.status !== status) return false;
-    const conns = s.connectors.filter(c => (connector === 'all' || c.type === connector) && powerTest(c.power));
+    const conns = s.connectors.filter(
+      c =>
+        (connector === 'all' || samePort(c.type, connector)) &&
+        powerTest(c.power) &&
+        (!onlyMine || !car || samePort(c.type, car.port) || (car.port === 'CCS2' && samePort(c.type, 'Type 2'))) &&
+        (!onlyFree || c.status === 'available'),
+    );
     if (!conns.length) return false;
     return true;
   });
@@ -161,24 +176,21 @@ export default function DriverMap({ onSelectStation }: { onSelectStation: (s: St
       return;
     }
     setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        setLocating(false);
-        const p: [number, number] = [pos.coords.latitude, pos.coords.longitude];
-        setMe(p);
-        setTarget({ lat: p[0], lng: p[1], zoom: 13, n: Date.now() });
-      },
-      () => {
-        setLocating(false);
+    // Shared with the station card, which then shows distance and drive time.
+    void askLocation().then(pos => {
+      setLocating(false);
+      if (pos) {
+        setMe([pos.lat, pos.lng]);
+        setTarget({ lat: pos.lat, lng: pos.lng, zoom: 13, n: Date.now() });
+      } else {
         setLocateNote('Геолокация недоступна — показываем Ташкент');
         setTarget({ lat: TASHKENT[0], lng: TASHKENT[1], zoom: 12, n: Date.now() });
-      },
-      { timeout: 8000 },
-    );
+      }
+    });
   };
 
   return (
-    <div className="relative w-full h-full" style={{ fontFamily: 'Manrope, sans-serif' }}>
+    <div className="relative isolate w-full h-full" style={{ fontFamily: 'Manrope, sans-serif' }}>
       <MapContainer center={[41.2, 66.6]} zoom={6} style={{ height: '100%', width: '100%' }} zoomControl={false}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -222,6 +234,20 @@ export default function DriverMap({ onSelectStation }: { onSelectStation: (s: St
             )}
           </button>
         </div>
+
+        {!q && !showFilters && (
+          <div className="mt-2 flex gap-1.5 overflow-x-auto no-scrollbar" role="group" aria-label="Быстрые фильтры">
+            <button onClick={() => setOnlyFree(v => !v)} aria-pressed={onlyFree} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm border ${onlyFree ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-slate-700 border-slate-100'}`}>
+              Свободные
+            </button>
+            {car && (
+              <button onClick={() => setOnlyMine(v => !v)} aria-pressed={onlyMine} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm border ${onlyMine ? 'bg-sky-500 text-white border-sky-500' : 'bg-white text-slate-700 border-slate-100'}`}>
+                {`Для ${car.brand} ${car.model}`}
+              </button>
+            )}
+            {(onlyFree || onlyMine) && <span className="shrink-0 self-center text-[11px] font-semibold text-slate-600 bg-white/90 rounded-full px-2 py-1 shadow-sm">{`${filtered.length} ${plural(filtered.length, ['станция', 'станции', 'станций'])}`}</span>}
+          </div>
+        )}
 
         {q && (
           <div className="mt-2 bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden" role="listbox" aria-label="Найденные станции">
@@ -280,7 +306,7 @@ export default function DriverMap({ onSelectStation }: { onSelectStation: (s: St
             </div>
             <div className="flex items-center gap-2 pt-1">
               <p className="flex-1 text-xs text-slate-500">Найдено станций: <b className="text-slate-800">{filtered.length}</b></p>
-              <button onClick={() => { setStatus('all'); setConnector('all'); setPower('all'); }} className="px-3 py-2 bg-slate-100 text-slate-500 text-xs font-medium rounded-xl hover:bg-slate-200 transition-colors">
+              <button onClick={() => { setStatus('all'); setConnector('all'); setPower('all'); setOnlyFree(false); setOnlyMine(false); }} className="px-3 py-2 bg-slate-100 text-slate-500 text-xs font-medium rounded-xl hover:bg-slate-200 transition-colors">
                 Сбросить
               </button>
               <button onClick={() => setShowFilters(false)} className="px-4 py-2 bg-sky-500 text-white text-xs font-semibold rounded-xl hover:bg-sky-600 transition-colors">
@@ -301,7 +327,7 @@ export default function DriverMap({ onSelectStation }: { onSelectStation: (s: St
         ))}
         <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100">
           <Zap size={10} className="text-slate-400" />
-          <span className="text-[10px] text-slate-500">цифра — свободных</span>
+          <span className="text-[10px] text-slate-500">свободно / всего</span>
         </div>
       </div>
 

@@ -10,6 +10,7 @@ import { submitLead, listLeads, updateLead, LEAD_KINDS } from './leads.js';
 import { analyticsFor, adminUsers, setUserStatus, isBlocked, monthSpend } from './analytics.js';
 import { demoEnergy } from './history.js';
 import { riskReport, reviewFinding, cdrReport, bandFor, tariffBands, setTariffBands } from './admin.js';
+import { verifyInitData, accountByTelegram, telegramConfigured } from './telegram.js';
 import { validateEndpoint, signedHeaders, kick as kickWebhooks } from './webhooks.js';
 
 export const api = express.Router();
@@ -843,8 +844,44 @@ api.put('/me/car', requireAuth('driver'), (req, res) => {
   if (!Number.isFinite(battery) || battery < 10 || battery > 250) return res.status(400).json({ error: 'Ёмкость батареи — от 10 до 250 кВт·ч' });
   if (!CAR_PORTS.includes(b.port)) return res.status(400).json({ error: 'Выберите разъём из списка' });
   if (!Number.isFinite(maxKw) || maxKw < 3 || maxKw > 400) return res.status(400).json({ error: 'Мощность зарядки — от 3 до 400 кВт' });
-  const car = { brand, model, year, battery: Math.round(battery), port: b.port, maxKw: Math.round(maxKw) };
+  // Where the driver likes to stop charging; 80% is kinder to the battery and the queue.
+  const chargeLimit = b.chargeLimit === undefined ? 80 : Number(b.chargeLimit);
+  if (!Number.isInteger(chargeLimit) || chargeLimit < 50 || chargeLimit > 100) return res.status(400).json({ error: 'Лимит заряда — от 50 до 100%' });
+  const car = { brand, model, year, battery: Math.round(battery), port: b.port, maxKw: Math.round(maxKw), chargeLimit };
   db.update('accounts', req.account.id, { car });
+  res.json({ user: publicAccount(db.byId('accounts', req.account.id)) });
+});
+
+// ---------------------------------------------------------------------------
+// Telegram Mini App: one-tap sign-in for drivers who linked their account
+// ---------------------------------------------------------------------------
+
+api.get('/auth/telegram/status', (_req, res) => res.json({ configured: telegramConfigured() }));
+
+api.post('/auth/telegram', (req, res) => {
+  const checked = verifyInitData(req.body?.initData);
+  if (checked.error) return res.status(checked.error === 'Telegram не настроен' ? 503 : 401).json({ error: checked.error });
+  const account = accountByTelegram(checked.user.id);
+  // Not linked yet: the app shows the usual sign-in and links afterwards.
+  if (!account) return res.status(404).json({ error: 'Telegram ещё не привязан к аккаунту', telegram: { firstName: checked.user.firstName } });
+  if (isBlocked(account.id)) return res.status(403).json({ error: 'Аккаунт заблокирован — обратитесь в поддержку' });
+  const token = db.issueToken(account, req);
+  db.update('accounts', account.id, { lastLogin: new Date().toISOString() });
+  res.json({ token, user: publicAccount(db.byId('accounts', account.id)) });
+});
+
+api.post('/auth/telegram/link', requireAuth('driver'), (req, res) => {
+  const checked = verifyInitData(req.body?.initData);
+  if (checked.error) return res.status(checked.error === 'Telegram не настроен' ? 503 : 401).json({ error: checked.error });
+  const owner = accountByTelegram(checked.user.id);
+  if (owner && owner.id !== req.account.id) return res.status(409).json({ error: 'Этот Telegram уже привязан к другому аккаунту' });
+  const telegram = { id: checked.user.id, username: checked.user.username, firstName: checked.user.firstName, linkedAt: new Date().toISOString(), notify: true };
+  db.update('accounts', req.account.id, { telegram });
+  res.json({ user: publicAccount(db.byId('accounts', req.account.id)) });
+});
+
+api.post('/auth/telegram/unlink', requireAuth('driver'), (req, res) => {
+  db.update('accounts', req.account.id, { telegram: null });
   res.json({ user: publicAccount(db.byId('accounts', req.account.id)) });
 });
 

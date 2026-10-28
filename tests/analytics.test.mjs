@@ -232,9 +232,11 @@ describe('account self-service', () => {
     assert.ok(Array.isArray(notes));
     assert.ok(notes.every(n => !('scope' in n)));
     assert.equal((await call('/me/car', { method: 'PUT', token: driver, body: { brand: 'BYD', model: 'Seal', year: 2025, battery: 999, port: 'CCS2', maxKw: 150 } })).status, 400);
-    const saved = await call('/me/car', { method: 'PUT', token: driver, body: { brand: 'BYD', model: 'Seal', year: 2025, battery: 82, port: 'CCS2', maxKw: 150 } });
+    assert.equal((await call('/me/car', { method: 'PUT', token: driver, body: { brand: 'BYD', model: 'Seal', year: 2025, battery: 82, port: 'CCS2', maxKw: 150, chargeLimit: 30 } })).status, 400);
+    const saved = await call('/me/car', { method: 'PUT', token: driver, body: { brand: 'BYD', model: 'Seal', year: 2025, battery: 82, port: 'CCS2', maxKw: 150, chargeLimit: 90 } });
     assert.equal(saved.status, 200);
     assert.equal((await call('/auth/me', { token: driver })).data.user.car.model, 'Seal');
+    assert.equal(saved.data.user.car.chargeLimit, 90);
     assert.equal((await call('/me/car', { method: 'PUT', token: await login('operator'), body: {} })).status, 403);
   });
 });

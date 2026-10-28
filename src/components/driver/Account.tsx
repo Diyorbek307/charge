@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   ArrowLeft, Car, ChevronRight, Plus, Wallet, Heart, Bell, Lock, Settings, Phone, LogOut, Building2,
-  Zap, CheckCircle, LoaderCircle, Smartphone, Monitor, Calendar, Users, AlertTriangle, KeyRound,
+  Zap, CheckCircle, LoaderCircle, Smartphone, Monitor, Calendar, Users, AlertTriangle, KeyRound, Send,
 } from 'lucide-react';
 import type { SyncEvent, SignedInDevice } from '../../lib/api';
 import { useSync } from '../../lib/sync';
@@ -30,7 +30,7 @@ function Header({ title, onBack }: { title: string; onBack: () => void }) {
 }
 
 export function ProfileScreen({ onNavigate }: { onNavigate: (s: string) => void }) {
-  const { state, sessions, logout } = useSync();
+  const { state, sessions, logout, updateAccount } = useSync();
   const me = sessions.driver;
   const { ids: favorites } = useFavorites();
   const [unread, setUnread] = useState(0);
@@ -90,6 +90,7 @@ export function ProfileScreen({ onNavigate }: { onNavigate: (s: string) => void 
               <div className="flex-1">
                 <p className="text-sm font-semibold text-slate-800">{`${car.brand} ${car.model}`}</p>
                 <p className="text-xs text-slate-400">{`${car.year} · ${car.battery} кВт·ч · ${car.port} · до ${car.maxKw} кВт`}</p>
+                <p className="text-xs text-sky-600">{`Лимит ${car.chargeLimit ?? 80}% · запас хода ≈ ${Math.round((car.battery * (car.chargeLimit ?? 80)) / 100 / 0.18)} км`}</p>
               </div>
               <ChevronRight size={16} className="text-slate-400" />
             </button>
@@ -120,6 +121,17 @@ export function ProfileScreen({ onNavigate }: { onNavigate: (s: string) => void 
         </button>
 
         <PushToggle portal="driver" />
+
+        {me.telegram && (
+          <div className="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-500 flex items-center justify-center"><Send size={17} /></div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-slate-800">{`Telegram${me.telegram.username ? ` · @${me.telegram.username}` : ''}`}</p>
+              <p className="text-xs text-slate-400">Вход в один тап в Telegram, уведомления приходят от бота</p>
+            </div>
+            <button onClick={() => void actions.telegramUnlink().then(r => updateAccount('driver', r.user)).catch(() => {})} className="text-xs text-red-500 font-medium">Отвязать</button>
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
           {menu.map(item => (

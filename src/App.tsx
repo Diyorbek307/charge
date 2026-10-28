@@ -18,6 +18,7 @@ const ApiDocsApp = lazy(() => import('./components/ApiDocsApp'));
 const SplitView = lazy(() => import('./components/SplitView'));
 import { useSync } from './lib/sync';
 import type { Portal as AuthPortal } from './lib/api';
+import { inTelegram, telegramInitData } from './lib/telegram';
 
 type Portal = 'selector' | 'driver' | 'operator' | 'admin' | 'business' | 'api' | 'architecture';
 
@@ -272,6 +273,7 @@ const VALID_PORTALS: Portal[] = ['selector', 'driver', 'operator', 'admin', 'bus
 
 /** Lets a portal be deep-linked (?portal=operator) — used by the split view. */
 function initialPortal(): Portal {
+  if (inTelegram()) return 'driver';
   try {
     const p = new URLSearchParams(window.location.search).get('portal') as Portal | null;
     if (p && VALID_PORTALS.includes(p)) return p;
@@ -287,8 +289,21 @@ export default function App() {
   const [splitView, setSplitView] = useState(false);
   // Split view embeds the app in iframes; nested chrome there would be noise.
   const embedded = typeof window !== 'undefined' && window.self !== window.top;
-  const { sessions } = useSync();
+  const { sessions, actions, adoptSession } = useSync();
   const driverSession = sessions.driver;
+
+  // Inside Telegram a linked driver is signed in straight away.
+  useEffect(() => {
+    if (!inTelegram() || sessions.driver) return;
+    void telegramInitData().then(initData => {
+      if (!initData) return;
+      actions.telegramSignIn(initData).then(r => adoptSession('driver', r.token, r.user)).catch(() => {
+        /* not linked yet: the regular sign-in links it afterwards */
+      });
+    });
+    // Once on start; signing out inside Telegram should not sign straight back in.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('oc-theme') === 'dark');
 
   useEffect(() => {
@@ -324,7 +339,7 @@ export default function App() {
             {/* Device body — only drawn around the app on wider screens */}
             <div className="absolute inset-0 sm:rounded-[42px] sm:shadow-[0_32px_80px_rgba(0,0,0,0.6),0_0_0_2px_rgba(255,255,255,0.08)] overflow-hidden" style={{ background: 'linear-gradient(135deg, #2a2a2e 0%, #1a1a1e 100%)' }}>
               <div className="absolute inset-0 sm:inset-[2px] bg-black sm:rounded-[40px] overflow-hidden">
-                <div className="w-full h-full bg-white sm:rounded-[40px] overflow-hidden">
+                <div className="w-full h-full bg-white sm:rounded-[40px] overflow-hidden safe-top">
                   {driverSession ? (
                     <DriverApp />
                   ) : (
