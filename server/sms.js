@@ -106,7 +106,7 @@ export async function issueCode(phone, purpose, client) {
 
   if (smsConfigured()) {
     try {
-      await eskizSend(phone, `ONE CHARGE: kod ${code}. Hech kimga aytmang. / Код ${code}. Никому не сообщайте.`);
+      await eskizSend(phone, `Zaryad24: kod ${code}. Hech kimga aytmang. / Код ${code}. Никому не сообщайте.`);
     } catch (err) {
       console.warn('[sms]', err.message);
       return { status: 502, error: 'Не удалось отправить SMS — попробуйте позже' };

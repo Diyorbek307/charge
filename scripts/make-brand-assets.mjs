@@ -16,15 +16,13 @@ const pub = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
 const url = process.env.URL ?? 'http://localhost:3000/';
 
 // Same drawing as LogoMark in src/landing/Logo.tsx.
+// App icons fill the whole square (launchers round it themselves) and keep the
+// bolt inside the maskable safe zone.
+const BOLT = 'M28.5 6 L12.5 27.5 H22.5 L19 42 L35.5 19.5 H25.5 Z';
 const mark = (bg) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3BF0C8"/><stop offset=".55" stop-color="#4CC9F0"/><stop offset="1" stop-color="#FFC857"/></linearGradient></defs>
-${bg ? '<rect width="48" height="48" fill="#04060c"/>' : ''}
-<g transform="translate(24 24)${bg ? ' scale(.72)' : ''}">
-<rect x="-15" y="-15" width="30" height="30" rx="4" fill="url(#g)"/>
-<rect x="-15" y="-15" width="30" height="30" rx="4" fill="url(#g)" transform="rotate(45)"/>
-<circle r="10.5" fill="#04060c"/>
-<path d="M2.6 -8.5 L-5 1.2 H-0.6 L-2.6 8.5 L5 -1.4 H0.6 Z" fill="url(#g)"/>
-</g></svg>`;
+<rect width="48" height="48"${bg ? '' : ' rx="12"'} fill="#FFC83D"/>
+<path d="${BOLT}" fill="#111111"${bg ? ' transform="translate(24 24) scale(.78) translate(-24 -24)"' : ''}/>
+</svg>`;
 
 writeFileSync(join(pub, 'favicon.svg'), mark(false));
 
@@ -34,16 +32,16 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ deviceScaleFactor: 1 });
 
-// Icons sit on the dark brand background with a safe margin, so they also
+// Icons are the yellow brand square with a safe margin, so they also
 // work as maskable icons that launchers crop to a circle.
 for (const [file, size] of [['icon-192.png', 192], ['icon-512.png', 512], ['apple-touch-icon.png', 180]]) {
   await page.setViewportSize({ width: size, height: size });
-  await page.setContent(`<style>html,body{margin:0;background:#04060c}svg{display:block;width:${size}px;height:${size}px}</style>${mark(true)}`);
+  await page.setContent(`<style>html,body{margin:0;background:#FFC83D}svg{display:block;width:${size}px;height:${size}px}</style>${mark(true)}`);
   await page.screenshot({ path: join(pub, file) });
 }
 
 await page.setViewportSize({ width: 1200, height: 630 });
-await page.goto(url, { waitUntil: 'networkidle' });
+await page.goto(url, { waitUntil: 'load' });
 await page.waitForTimeout(4000);
 await page.addStyleTag({ content: '.lp-nav-right .lp-btn, .lp-scroll, .lp-hero-foot { display: none !important; }' });
 await page.waitForTimeout(500);

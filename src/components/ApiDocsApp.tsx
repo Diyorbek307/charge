@@ -6,6 +6,7 @@ import {
 import WebhooksLive from './WebhooksLive';
 import { tokenStore } from '../lib/api';
 import { BRAND } from '../brand';
+import { LogoMark } from '../landing/Logo';
 
 type Section = 'overview' | 'auth' | 'stations' | 'tariffs' | 'events' | 'webhooks' | 'ocpp' | 'errors' | 'roadmap' | 'status';
 
@@ -300,7 +301,7 @@ function Overview({ go }: { go: (s: Section) => void }) {
 
 const VERIFY_NODE = `import crypto from 'node:crypto';
 
-// header: X-OneCharge-Signature: t=1730108472,v1=5f2b…
+// header: X-Zaryad24-Signature: t=1730108472,v1=5f2b…
 export function verify(rawBody, header, secret, toleranceSec = 300) {
   const parts = Object.fromEntries(header.split(',').map(p => p.split('=')));
   const t = Number(parts.t);
@@ -338,7 +339,7 @@ function Webhooks() {
       </div>
       <div>
         <p className="text-sm font-semibold text-white mb-2">Что приходит</p>
-        <Code id="wh-body" text={`POST /your/endpoint\nX-OneCharge-Event: session.start\nX-OneCharge-Timestamp: 1730108472\nX-OneCharge-Signature: t=1730108472,v1=5f2b…\n\n{\n  "id": "EV-1042",\n  "type": "session.start",\n  "created": "2026-10-28T09:41:12.000Z",\n  "data": { "message": "Старт зарядки · Toshkent Siti Hub", "stationId": "st-001", "connectorId": "c1" }\n}`} />
+        <Code id="wh-body" text={`POST /your/endpoint\nX-Zaryad24-Event: session.start\nX-Zaryad24-Timestamp: 1730108472\nX-Zaryad24-Signature: t=1730108472,v1=5f2b…\n\n{\n  "id": "EV-1042",\n  "type": "session.start",\n  "created": "2026-10-28T09:41:12.000Z",\n  "data": { "message": "Старт зарядки · Toshkent Siti Hub", "stationId": "st-001", "connectorId": "c1" }\n}`} />
         <p className="text-xs text-slate-500 mt-2">Данные обезличены: без водителей и сумм. Ответьте 2xx в течение 10 секунд; обработку делайте асинхронно и по полю id отбрасывайте дубли.</p>
       </div>
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
@@ -513,12 +514,12 @@ export default function ApiDocsApp({ onBack }: { onBack: () => void }) {
   })();
 
   return (
-    <div className="h-full flex flex-col md:flex-row bg-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+    <div className="h-full flex flex-col md:flex-row bg-slate-900" style={{ fontFamily: 'Inter, sans-serif' }}>
       <aside className="md:w-60 bg-slate-950 flex flex-col shrink-0 border-b md:border-b-0 md:border-r border-slate-800">
         <div className="px-4 py-4 md:py-5 border-b border-slate-800 flex md:block items-center justify-between gap-3">
           <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-white text-xs md:mb-4"><ArrowLeft size={13} />Назад</button>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-gradient-to-br from-sky-400 to-sky-600 rounded-xl flex items-center justify-center"><Zap size={14} className="text-white" /></div>
+            <LogoMark size={32} />
             <div>
               <p className="text-white font-bold text-sm leading-tight">{BRAND.name}</p>
               <p className="text-slate-500 text-[11px]">Partner API</p>

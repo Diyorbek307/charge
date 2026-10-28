@@ -3,7 +3,7 @@ import { OPERATORS, buildStations, buildCustomers, buildHistory, buildMonthly, p
 
 // Bump when the shape below changes so existing stores reseed instead of
 // silently serving a stale schema.
-export const SCHEMA_VERSION = 16;
+export const SCHEMA_VERSION = 17;
 
 export function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   const hash = crypto.scryptSync(password, salt, 32).toString('hex');
@@ -40,11 +40,11 @@ export const DEMO_ACCOUNTS = [
   {
     id: 'acc-admin',
     portal: 'admin',
-    login: 'admin@onecharge.uz',
+    login: 'admin@zaryad24.uz',
     password: 'Admin2026',
     name: 'Nodira Baxtiyorova',
     role: 'Администратор платформы',
-    org: 'ONE CHARGE UZ',
+    org: 'Zaryad24',
     avatar: 'NB',
   },
   {
@@ -61,7 +61,7 @@ export const DEMO_ACCOUNTS = [
   {
     id: 'acc-partner',
     portal: 'api',
-    login: 'partner@onecharge.uz',
+    login: 'partner@zaryad24.uz',
     password: 'Partner2026',
     name: 'Integration Partner',
     role: 'API-партнёр',

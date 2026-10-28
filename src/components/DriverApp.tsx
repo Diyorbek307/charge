@@ -630,7 +630,7 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         {/* Balance card */}
         <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-5 text-white shadow-xl">
-          <p className="text-xs font-semibold tracking-widest text-slate-400 uppercase mb-1">БАЛАНС ONE CHARGE</p>
+          <p className="text-xs font-semibold tracking-widest text-slate-400 uppercase mb-1">БАЛАНС Zaryad24</p>
           <p className="text-3xl font-bold tracking-tight mb-3">{balance.toLocaleString()} сум</p>
           <p className="text-xs text-slate-400 mb-4">Пополнение через Payme или Click · списывается за каждую зарядку по счётчику</p>
           <div className="flex gap-2">
@@ -858,7 +858,7 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
           </div>
           <div className="bg-sky-50 border border-sky-100 rounded-2xl p-4">
             <p className="text-xs font-semibold text-sky-700 mb-2 flex items-center gap-1.5">
-              <Zap size={12} />Совместимость с сетью ONE CHARGE
+              <Zap size={12} />Совместимость с сетью Zaryad24
             </p>
             <div className="space-y-1.5">
               {portTypes.filter(p => p.type === port || p.type === 'Type2').map(pt => (
@@ -869,7 +869,7 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
               ))}
               <div className="flex items-center gap-2 text-xs">
                 <CheckCircle size={12} className="text-green-500" />
-                <span className="text-sky-700">108 станций в сети ONE CHARGE · 276 EVSE</span>
+                <span className="text-sky-700">108 станций в сети Zaryad24 · 276 EVSE</span>
               </div>
             </div>
           </div>
@@ -1538,22 +1538,22 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
 
       <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
         {/* Main CTA */}
-        <div className="rounded-3xl overflow-hidden relative" style={{ background: 'linear-gradient(145deg,#0C1A3A,#0A1628)', boxShadow: '0 12px 40px rgba(10, 175, 151,0.25)' }}>
+        <div className="rounded-3xl overflow-hidden relative" style={{ background: 'linear-gradient(145deg,#1F1F1F,#111111)', boxShadow: '0 12px 40px rgba(255, 200, 61,0.25)' }}>
           {/* Ambient glow */}
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full opacity-20"
-              style={{ background: '#0AAF97', filter: 'blur(40px)' }} />
+              style={{ background: '#FFC83D', filter: 'blur(40px)' }} />
           </div>
           <div className="relative z-10 px-6 py-8 flex flex-col items-center">
             {/* QR icon */}
             <div className="relative mb-5">
               <div className="w-20 h-20 rounded-2xl flex items-center justify-center relative"
-                style={{ background: 'rgba(10, 175, 151,0.15)', border: '1.5px solid rgba(10, 175, 151,0.3)' }}>
+                style={{ background: 'rgba(255, 200, 61,0.15)', border: '1.5px solid rgba(255, 200, 61,0.3)' }}>
                 {/* Corner accents */}
                 {[['top-0 left-0','border-t-2 border-l-2'],['top-0 right-0','border-t-2 border-r-2'],['bottom-0 left-0','border-b-2 border-l-2'],['bottom-0 right-0','border-b-2 border-r-2']].map(([pos,cls],i) => (
-                  <div key={i} className={`absolute ${pos} w-4 h-4 border-sky-400 rounded-sm`} style={{ [pos.includes('top') ? 'top' : 'bottom']: -1, [pos.includes('left') ? 'left' : 'right']: -1, borderTopColor: cls.includes('border-t') ? '#20D4B6' : 'transparent', borderBottomColor: cls.includes('border-b') ? '#20D4B6' : 'transparent', borderLeftColor: cls.includes('border-l') ? '#20D4B6' : 'transparent', borderRightColor: cls.includes('border-r') ? '#20D4B6' : 'transparent', borderWidth: 2 }} />
+                  <div key={i} className={`absolute ${pos} w-4 h-4 border-sky-400 rounded-sm`} style={{ [pos.includes('top') ? 'top' : 'bottom']: -1, [pos.includes('left') ? 'left' : 'right']: -1, borderTopColor: cls.includes('border-t') ? '#FFC83D' : 'transparent', borderBottomColor: cls.includes('border-b') ? '#FFC83D' : 'transparent', borderLeftColor: cls.includes('border-l') ? '#FFC83D' : 'transparent', borderRightColor: cls.includes('border-r') ? '#FFC83D' : 'transparent', borderWidth: 2 }} />
                 ))}
-                <Scan size={32} className="text-sky-400" style={{ filter: 'drop-shadow(0 0 8px #20D4B6)' }} />
+                <Scan size={32} className="text-sky-400" style={{ filter: 'drop-shadow(0 0 8px #FFC83D)' }} />
               </div>
               {/* Pulse rings */}
               {[1,2].map(i => (
@@ -1564,9 +1564,9 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
             <p className="text-sky-200/60 text-xs text-center mb-6">QR-код расположен на корпусе\nзарядного разъёма или табличке</p>
             <button onClick={startScan}
               className="w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 active:scale-95 transition-all"
-              style={{ background: 'linear-gradient(135deg,#0AAF97,#078C7C)', boxShadow: '0 6px 24px rgba(10, 175, 151,0.4)' }}>
-              <Scan size={18} className="text-white" />
-              <span className="text-white">Открыть камеру</span>
+              style={{ background: 'linear-gradient(135deg,#FFC83D,#FFB000)', boxShadow: '0 6px 24px rgba(255, 200, 61,0.35)' }}>
+              <Scan size={18} className="text-[#111]" />
+              <span className="text-[#111]">Открыть камеру</span>
             </button>
           </div>
         </div>
@@ -1625,7 +1625,7 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
             {[
               { icon: '🔌', text: 'На кабеле или корпусе разъёма' },
               { icon: '📋', text: 'На информационной табличке станции' },
-              { icon: '📱', text: 'В приложении ONE CHARGE (раздел бронирований)' },
+              { icon: '📱', text: 'В приложении Zaryad24 (раздел бронирований)' },
             ].map((t, i) => (
               <div key={i} className="flex items-start gap-2.5">
                 <span className="text-base leading-none shrink-0 mt-0.5">{t.icon}</span>
@@ -1656,7 +1656,7 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
   // ── PERMISSION ──
   if (phase === 'permission') return (
     <div className="h-full flex flex-col items-center justify-center" style={{ background: '#0A0F1E' }}>
-      <div className="w-16 h-16 rounded-2xl bg-sky-500/20 flex items-center justify-center mb-4" style={{ border: '1px solid rgba(10, 175, 151,0.3)' }}>
+      <div className="w-16 h-16 rounded-2xl bg-sky-500/20 flex items-center justify-center mb-4" style={{ border: '1px solid rgba(255, 200, 61,0.3)' }}>
         <Scan size={28} className="text-sky-400" />
       </div>
       <p className="text-white font-bold text-base mb-1">Доступ к камере</p>
@@ -1708,7 +1708,7 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
               style={{ boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)', zIndex: 1 }}>
               {/* Scanning laser */}
               <div className="absolute left-0 right-0 h-0.5 pointer-events-none"
-                style={{ top: `${boxY}px`, background: 'linear-gradient(90deg,transparent,#20D4B6,#53EDCF,#20D4B6,transparent)', boxShadow: '0 0 12px #20D4B6, 0 0 24px rgba(32, 212, 182,0.5)', zIndex: 3, transition: 'top 0.016s linear' }} />
+                style={{ top: `${boxY}px`, background: 'linear-gradient(90deg,transparent,#FFC83D,#FFE58A,#FFC83D,transparent)', boxShadow: '0 0 12px #FFC83D, 0 0 24px rgba(255, 200, 61,0.5)', zIndex: 3, transition: 'top 0.016s linear' }} />
               {/* Fake QR pattern (subtle) */}
               <div className="absolute inset-4 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(0deg,rgba(255,255,255,0.3) 0px,rgba(255,255,255,0.3) 1px,transparent 1px,transparent 8px),repeating-linear-gradient(90deg,rgba(255,255,255,0.3) 0px,rgba(255,255,255,0.3) 1px,transparent 1px,transparent 8px)' }} />
             </div>
@@ -1722,12 +1722,12 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
                   style={{ [top ? 'top' : 'bottom']: -1, [left ? 'left' : 'right']: -1, width: 28, height: 28 }}>
                   <div className="absolute" style={{
                     [top ? 'top' : 'bottom']: 0, [left ? 'left' : 'right']: 0, width: 28, height: 28,
-                    borderTop: top ? '3px solid #20D4B6' : 'none',
-                    borderBottom: !top ? '3px solid #20D4B6' : 'none',
-                    borderLeft: left ? '3px solid #20D4B6' : 'none',
-                    borderRight: !left ? '3px solid #20D4B6' : 'none',
+                    borderTop: top ? '3px solid #FFC83D' : 'none',
+                    borderBottom: !top ? '3px solid #FFC83D' : 'none',
+                    borderLeft: left ? '3px solid #FFC83D' : 'none',
+                    borderRight: !left ? '3px solid #FFC83D' : 'none',
                     borderRadius: top && left ? '10px 0 0 0' : top && !left ? '0 10px 0 0' : !top && left ? '0 0 0 10px' : '0 0 10px 0',
-                    filter: 'drop-shadow(0 0 6px #20D4B6)',
+                    filter: 'drop-shadow(0 0 6px #FFC83D)',
                   }} />
                 </div>
               );
@@ -1761,8 +1761,8 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
             <span className="text-white/60 text-[10px]">Ввести код</span>
           </button>
 
-          <div className="w-16 h-16 rounded-full bg-sky-500/20 flex items-center justify-center" style={{ border: '2px solid rgba(32, 212, 182,0.5)', boxShadow: '0 0 20px rgba(32, 212, 182,0.3)' }}>
-            <Scan size={26} className="text-sky-400" style={{ animation: 'pulse 1.5s ease-in-out infinite', filter: 'drop-shadow(0 0 4px #20D4B6)' }} />
+          <div className="w-16 h-16 rounded-full bg-sky-500/20 flex items-center justify-center" style={{ border: '2px solid rgba(255, 200, 61,0.5)', boxShadow: '0 0 20px rgba(255, 200, 61,0.3)' }}>
+            <Scan size={26} className="text-sky-400" style={{ animation: 'pulse 1.5s ease-in-out infinite', filter: 'drop-shadow(0 0 4px #FFC83D)' }} />
           </div>
 
           <button className="flex flex-col items-center gap-1.5 active:scale-90 transition-transform">
@@ -1786,7 +1786,7 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
         <div className="absolute inset-0 rounded-full border-2 border-sky-500/30" style={{ animation: 'spin-cw 1s linear infinite' }} />
         <div className="absolute inset-2 rounded-full border-2 border-sky-400/50" style={{ animation: 'spin-ccw 0.7s linear infinite' }} />
         <div className="absolute inset-0 flex items-center justify-center">
-          <Scan size={28} className="text-sky-400" style={{ filter: 'drop-shadow(0 0 8px #20D4B6)' }} />
+          <Scan size={28} className="text-sky-400" style={{ filter: 'drop-shadow(0 0 8px #FFC83D)' }} />
         </div>
       </div>
       <p className="text-white font-bold text-base mb-1">Считываем код…</p>
@@ -1815,7 +1815,7 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
               <div className="absolute inset-0 rounded-2xl" style={{ border: '2px solid rgba(255,255,255,0.3)', animation: 'pulse-halo 1.8s ease-out 1' }} />
             </div>
             <p className="font-bold text-emerald-700 text-base">QR распознан!</p>
-            <p className="text-slate-400 text-xs mt-0.5">Станция подтверждена системой ONE CHARGE</p>
+            <p className="text-slate-400 text-xs mt-0.5">Станция подтверждена системой Zaryad24</p>
           </div>
 
           {/* Station card */}
@@ -1886,7 +1886,7 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
               onClick={() => avail.length > 0 && onStartCharging(scannedStation)}
               disabled={avail.length === 0}
               className="w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: avail.length > 0 ? 'linear-gradient(135deg,#0AAF97,#078C7C)' : undefined, backgroundColor: avail.length === 0 ? '#E2E8F0' : undefined, color: avail.length > 0 ? '#fff' : '#94A3B8', boxShadow: avail.length > 0 ? '0 6px 20px rgba(10, 175, 151,0.35)' : undefined }}>
+              style={{ background: avail.length > 0 ? 'linear-gradient(135deg,#FFC83D,#FFB000)' : undefined, backgroundColor: avail.length === 0 ? '#E2E8F0' : undefined, color: avail.length > 0 ? '#111' : '#94A3B8', boxShadow: avail.length > 0 ? '0 6px 20px rgba(255, 200, 61,0.35)' : undefined }}>
               <Zap size={18} />Начать зарядку
             </button>
 
@@ -1928,8 +1928,8 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
         </div>
         <div className="w-full space-y-2.5 pt-2">
           <button onClick={startScan}
-            className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 text-white active:scale-95 transition-all"
-            style={{ background: 'linear-gradient(135deg,#0AAF97,#078C7C)', boxShadow: '0 4px 16px rgba(10, 175, 151,0.3)' }}>
+            className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 text-[#111] active:scale-95 transition-all"
+            style={{ background: 'linear-gradient(135deg,#FFC83D,#FFB000)', boxShadow: '0 4px 16px rgba(255, 200, 61,0.3)' }}>
             <Scan size={16} />Сканировать ещё раз
           </button>
           <button onClick={() => { setPhase('manual'); setManualCode(''); }}
@@ -2031,7 +2031,7 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
       <div className="px-4 pb-6 pt-2 space-y-2">
         <button onClick={submitManual} disabled={!manualCode.trim()}
           className="w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40"
-          style={{ background: manualCode.trim() ? 'linear-gradient(135deg,#0AAF97,#078C7C)' : '#E2E8F0', color: manualCode.trim() ? '#fff' : '#94A3B8', boxShadow: manualCode.trim() ? '0 6px 20px rgba(10, 175, 151,0.35)' : 'none' }}>
+          style={{ background: manualCode.trim() ? 'linear-gradient(135deg,#FFC83D,#FFB000)' : '#E2E8F0', color: manualCode.trim() ? '#111' : '#94A3B8', boxShadow: manualCode.trim() ? '0 6px 20px rgba(255, 200, 61,0.35)' : 'none' }}>
           <CheckCircle size={18} />Найти станцию
         </button>
         <button onClick={startScan}
@@ -2173,7 +2173,7 @@ function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
   ];
 
   return (
-    <div className="absolute inset-0 bg-white flex flex-col" style={{ zIndex: 9999, fontFamily: 'Manrope, sans-serif' }}>
+    <div className="absolute inset-0 bg-white flex flex-col" style={{ zIndex: 9999, fontFamily: 'Inter, sans-serif' }}>
       <div className="px-4 pt-4 pb-2 flex items-center justify-between shrink-0">
         <span className="text-sm font-bold text-sky-500">{BRAND.name}</span>
         <button onClick={() => onComplete()} className="text-xs text-slate-400 font-medium px-3 py-1.5 rounded-xl hover:bg-slate-100">Пропустить</button>
@@ -2401,8 +2401,8 @@ export default function DriverApp() {
         {/* QR scan FAB */}
         {screen === 'map' && (
           <button onClick={() => setScreen('qr-scan')}
-            className="absolute bottom-4 right-4 z-20 flex items-center gap-2 pl-3 pr-4 py-3 rounded-2xl font-semibold text-sm text-white active:scale-95 transition-all"
-            style={{ background: 'linear-gradient(135deg,#0AAF97,#078C7C)', boxShadow: '0 6px 20px rgba(10, 175, 151,0.45)' }}>
+            className="absolute bottom-4 right-4 z-20 flex items-center gap-2 pl-3 pr-4 py-3 rounded-2xl font-semibold text-sm text-[#111] active:scale-95 transition-all"
+            style={{ background: 'linear-gradient(135deg,#FFC83D,#FFB000)', boxShadow: '0 6px 20px rgba(255, 200, 61,0.45)' }}>
             <Scan size={17} />
             QR
           </button>
@@ -2421,7 +2421,7 @@ export default function DriverApp() {
   const showTabs = !['charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host'].includes(screen);
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden relative" style={{ fontFamily: 'Manrope, sans-serif' }}>
+    <div className="h-full flex flex-col bg-white overflow-hidden relative" style={{ fontFamily: 'Inter, sans-serif' }}>
       {showOnboarding && <OnboardingScreen onComplete={finishOnboarding} />}
       {/* Status bar of the device mock — a real phone draws its own */}
       <div className="bg-white px-4 pt-2 pb-1 hidden sm:flex items-center justify-between shrink-0 border-b border-slate-100">

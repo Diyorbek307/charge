@@ -25,7 +25,7 @@ async function call(path, { method = 'GET', token, body } = {}) {
 }
 const login = async (portal, l, p) => (await call('/auth/login', { method: 'POST', body: { portal, login: l, password: p } })).data.token;
 const driver = () => login('driver', '+998901234567', 'Driver2026');
-const admin = () => login('admin', 'admin@onecharge.uz', 'Admin2026');
+const admin = () => login('admin', 'admin@zaryad24.uz', 'Admin2026');
 
 /** A second driver, registered the way a real one would be. */
 async function newDriver(phone, name) {

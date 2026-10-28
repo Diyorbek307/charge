@@ -5,13 +5,9 @@ import { useI18n } from '../lib/i18n';
 import type { Portal } from '../lib/api';
 import DriverAccountForm from './DriverAccountForm';
 
-const THEME: Record<Portal, { grad: string; accent: string; ring: string; glow: string }> = {
-  driver: { grad: 'from-sky-500 to-cyan-400', accent: 'text-sky-400', ring: 'focus:border-sky-400/60 focus:ring-sky-400/20', glow: 'rgba(10, 175, 151,0.35)' },
-  operator: { grad: 'from-emerald-500 to-green-400', accent: 'text-emerald-400', ring: 'focus:border-emerald-400/60 focus:ring-emerald-400/20', glow: 'rgba(16,185,129,0.35)' },
-  admin: { grad: 'from-violet-500 to-purple-400', accent: 'text-violet-400', ring: 'focus:border-violet-400/60 focus:ring-violet-400/20', glow: 'rgba(79, 107, 255,0.35)' },
-  business: { grad: 'from-indigo-500 to-violet-500', accent: 'text-indigo-400', ring: 'focus:border-indigo-400/60 focus:ring-indigo-400/20', glow: 'rgba(99,102,241,0.35)' },
-  api: { grad: 'from-slate-500 to-slate-400', accent: 'text-slate-300', ring: 'focus:border-slate-400/60 focus:ring-slate-400/20', glow: 'rgba(100,116,139,0.3)' },
-};
+// Every portal signs in under the same brand: a yellow button with near-black text.
+const BRAND_THEME = { grad: 'from-[#FFC83D] to-[#FFB000]', accent: 'text-[#FFC83D]', ring: 'focus:border-[#FFC83D]/60 focus:ring-[#FFC83D]/20', glow: 'rgba(255, 200, 61,0.3)' };
+const THEME: Record<Portal, typeof BRAND_THEME> = { driver: BRAND_THEME, operator: BRAND_THEME, admin: BRAND_THEME, business: BRAND_THEME, api: BRAND_THEME };
 
 interface Props {
   portal: Portal;
@@ -81,7 +77,7 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
   return (
     <div
       className="min-h-full w-full flex items-center justify-center px-4 py-8 sm:py-12 relative overflow-auto"
-      style={{ background: 'radial-gradient(ellipse at 50% 0%, #0a1424 0%, #04070e 55%, #02040a 100%)' }}
+      style={{ background: 'radial-gradient(ellipse at 50% 0%, #1a1a1a 0%, #0d0d0d 55%, #080808 100%)' }}
     >
       <div className="absolute inset-0 dot-grid opacity-40 pointer-events-none" />
 
@@ -96,7 +92,7 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
 
         <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-6 sm:p-7">
           <div
-            className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${theme.grad} flex items-center justify-center text-white mb-5`}
+            className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${theme.grad} flex items-center justify-center text-[#111] mb-5`}
             style={{ boxShadow: `0 4px 20px ${theme.glow}` }}
           >
             {icon}
@@ -145,7 +141,7 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
               <button
                 type="submit"
                 disabled={busy || code.length !== 6}
-                className={`w-full bg-gradient-to-r ${theme.grad} text-white font-semibold py-3 rounded-xl text-sm transition-all hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+                className={`w-full bg-gradient-to-r ${theme.grad} text-[#111] font-semibold py-3 rounded-xl text-sm transition-all hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
               >
                 {busy ? <LoaderCircle size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
                 {busy ? t('auth.checking') : t('auth.signIn')}
@@ -210,7 +206,7 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
             <button
               type="submit"
               disabled={busy || !loginValue || !password}
-              className={`w-full bg-gradient-to-r ${theme.grad} text-white font-semibold py-3 rounded-xl text-sm transition-all hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+              className={`w-full bg-gradient-to-r ${theme.grad} text-[#111] font-semibold py-3 rounded-xl text-sm transition-all hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
             >
               {busy ? <LoaderCircle size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
               {busy ? t('auth.checking') : t('auth.signIn')}

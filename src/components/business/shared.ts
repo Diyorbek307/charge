@@ -1,7 +1,7 @@
 import type { Session, Vehicle } from '../../lib/api';
 
 /** Lapis — the fleet portal's accent, shared by its charts. */
-export const FLEET = '#4F6BFF';
+export const FLEET = '#FFB000';
 
 export type VehicleState = 'charging' | 'low' | 'ready';
 

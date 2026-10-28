@@ -23,7 +23,7 @@ import { inTelegram, telegramInitData } from './lib/telegram';
 type Portal = 'selector' | 'driver' | 'operator' | 'admin' | 'business' | 'api' | 'architecture';
 
 const FLOW_LABELS = [
-  { label: 'OCPP 2.0.1', color: '#20D4B6' },
+  { label: 'OCPP 2.0.1', color: '#FFC83D' },
   { label: 'REST / OCPI', color: '#8DA2FF' },
   { label: 'OCPI 2.3.0', color: '#34D399' },
   { label: 'OCPP 2.0.1', color: '#FBBF24' },
@@ -77,11 +77,11 @@ function ArchitectureDiagram({ onBack }: { onBack: () => void }) {
         { label: 'Driver App', sub: 'iOS / Android', icon: '📱', color: 'bg-sky-500', detail: 'React Native · Auth flow · Map · Booking · History · AI Trip Planner · Push уведомления · Humo/Uzcard оплата' },
         { label: 'Business App', sub: 'Корпорации', icon: '🏢', color: 'bg-sky-600', detail: 'Управление флотом · Лимиты сотрудников · CDR-отчёты · Корпоративный счёт · IBAN-выплаты' },
         { label: 'Operator Dashboard', sub: 'Веб-кабинет', icon: '💻', color: 'bg-sky-700', detail: 'Управление станциями · EVSE real-time · Тарифы · Финансы · OCPI/OCPP настройки' },
-        { label: 'Admin Center', sub: 'ONE CHARGE team', icon: '🔐', color: 'bg-sky-800', detail: 'Полный контроль · Fraud ML · CDR validation · Settlements · Роли & права · Аудит лог' },
+        { label: 'Admin Center', sub: 'Zaryad24 team', icon: '🔐', color: 'bg-sky-800', detail: 'Полный контроль · Fraud ML · CDR validation · Settlements · Роли & права · Аудит лог' },
       ],
     },
     {
-      id: 'core', label: 'ONE CHARGE CORE', color: 'border-white/30 bg-white/5',
+      id: 'core', label: 'Zaryad24 CORE', color: 'border-white/30 bg-white/5',
       desc: 'Микросервисная архитектура на Kubernetes. Каждый сервис независимо масштабируется',
       nodes: [
         { label: 'API Gateway', sub: 'Auth / Rate Limit', icon: '🔀', color: 'bg-slate-600', detail: 'OAuth 2.0 · JWT · 1000 req/min · TLS 1.3 · DDoS protection · Load balancing' },
@@ -134,13 +134,13 @@ function ArchitectureDiagram({ onBack }: { onBack: () => void }) {
   ];
 
   return (
-    <div className="h-full flex flex-col bg-slate-950 overflow-auto" style={{ fontFamily: 'Manrope, sans-serif' }}>
+    <div className="h-full flex flex-col bg-slate-950 overflow-auto" style={{ fontFamily: 'Inter, sans-serif' }}>
       <div className="px-6 py-4 border-b border-slate-800 flex items-center gap-4 shrink-0">
         <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors">
           <ArrowRight size={14} className="rotate-180" />Назад
         </button>
         <div>
-          <h1 className="text-white font-bold">ONE CHARGE UZ · Архитектура платформы</h1>
+          <h1 className="text-white font-bold">Zaryad24 · Архитектура платформы</h1>
           <p className="text-slate-400 text-xs">Полная техническая схема национальной eMobility-экосистемы</p>
         </div>
         <div className="ml-auto flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-400/8 border border-emerald-400/15 px-3 py-1.5 rounded-full font-medium">
@@ -259,9 +259,9 @@ function PortalLoading() {
       <div className="flex flex-col items-center gap-3">
         <div
           className="w-9 h-9 rounded-xl grid place-items-center"
-          style={{ background: 'linear-gradient(135deg,#20D4B6,#078C7C)', animation: 'pulse 1.6s ease-in-out infinite' }}
+          style={{ background: 'linear-gradient(135deg,#FFC83D,#FFB000)', animation: 'pulse 1.6s ease-in-out infinite' }}
         >
-          <Zap size={17} className="text-white" />
+          <Zap size={17} className="text-[#111]" />
         </div>
         <p className="text-xs text-slate-500">Загружаем портал…</p>
       </div>
@@ -304,11 +304,25 @@ export default function App() {
     // Once on start; signing out inside Telegram should not sign straight back in.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('oc-theme') === 'dark');
+  // 'light' | 'dark' | 'auto' — auto follows the phone or computer setting.
+  const systemDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const [darkMode, setDarkMode] = useState(() => {
+    const t = localStorage.getItem('oc-theme');
+    return t === 'dark' || (t === 'auto' && systemDark());
+  });
 
   useEffect(() => {
-    localStorage.setItem('oc-theme', darkMode ? 'dark' : 'light');
+    if (localStorage.getItem('oc-theme') !== 'auto') localStorage.setItem('oc-theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const follow = () => {
+      if (localStorage.getItem('oc-theme') === 'auto') setDarkMode(mq.matches);
+    };
+    mq.addEventListener('change', follow);
+    return () => mq.removeEventListener('change', follow);
+  }, []);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -327,7 +341,7 @@ export default function App() {
         <div className="h-full flex items-center justify-center relative overflow-clip" style={{ background: 'radial-gradient(ellipse at 50% 30%, #0f1e3a 0%, #080d19 50%, #050810 100%)' }}>
           {/* Animated ambient orbs */}
           <div className="absolute pointer-events-none">
-            <div className="anim-orb-1" style={{ position: 'absolute', top: -200, left: -100, width: 500, height: 500, background: 'radial-gradient(circle, rgba(10, 175, 151,0.12) 0%, transparent 65%)', borderRadius: '50%', filter: 'blur(30px)' }} />
+            <div className="anim-orb-1" style={{ position: 'absolute', top: -200, left: -100, width: 500, height: 500, background: 'radial-gradient(circle, rgba(255, 200, 61,0.12) 0%, transparent 65%)', borderRadius: '50%', filter: 'blur(30px)' }} />
             <div className="anim-orb-3" style={{ position: 'absolute', bottom: -100, right: -100, width: 400, height: 400, background: 'radial-gradient(circle, rgba(52,211,153,0.08) 0%, transparent 65%)', borderRadius: '50%', filter: 'blur(30px)' }} />
           </div>
           {/* Dot grid overlay */}
@@ -370,7 +384,7 @@ export default function App() {
             <ArrowRight size={14} className="rotate-180" /> Порталы
           </button>
           <div className="absolute bottom-5 left-0 right-0 text-center text-xs text-white/25 inter tracking-wider hidden sm:block">
-            ONE CHARGE · Driver App · iOS / Android
+            Zaryad24 · Driver App · iOS / Android
           </div>
         </div>
       )}

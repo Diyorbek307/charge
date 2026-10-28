@@ -25,6 +25,7 @@ import {
 import { useI18n } from '../lib/i18n';
 import SidebarThemeToggle from './SidebarThemeToggle';
 import AIChat from './AIChat';
+import { LogoMark } from '../landing/Logo';
 
 type Page = 'dashboard' | 'map' | 'sos' | 'hosts' | 'operators' | 'leads' | 'users' | 'sessions' | 'payments' | 'settlement' | 'analytics' | 'ai' | 'fraud' | 'cdr' | 'commissions' | 'tariffs_global' | 'audit' | 'roles' | 'settings' | 'system_health';
 
@@ -79,15 +80,13 @@ function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current:
   ];
 
   return (
-    <div className={`w-[210px] flex flex-col h-full shrink-0 absolute inset-y-0 left-0 z-30 md:relative md:translate-x-0 transition-transform duration-200 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: '#080C18', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+    <div className={`w-[210px] flex flex-col h-full shrink-0 absolute inset-y-0 left-0 z-30 md:relative md:translate-x-0 transition-transform duration-200 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: '#111111', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
       {/* Brand */}
       <div className="px-4 pt-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="flex items-center gap-2.5 mb-4">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #4F6BFF, #3B4FE0)' }}>
-            <Zap size={15} className="text-white" />
-          </div>
+          <LogoMark size={32} />
           <div>
-            <p className="text-white font-bold text-sm leading-tight">ONE CHARGE</p>
+            <p className="text-white font-bold text-sm leading-tight">Zaryad<span style={{ color: '#FFC83D' }}>24</span></p>
             <p className="text-[11px] leading-none mt-0.5" style={{ color: 'rgba(148,163,184,0.7)' }}>Admin Control Center</p>
           </div>
         </div>
@@ -95,7 +94,7 @@ function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current:
           <div className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white" style={{ background: 'linear-gradient(135deg, #4F6BFF, #2F3DB8)' }}>A</div>
           <div className="flex-1 min-w-0">
             <p className="text-white text-xs font-semibold truncate">Super Admin</p>
-            <p className="text-[10px] truncate" style={{ color: 'rgba(148,163,184,0.5)' }}>ONE CHARGE UZ</p>
+            <p className="text-[10px] truncate" style={{ color: 'rgba(148,163,184,0.5)' }}>Zaryad24</p>
           </div>
           <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
         </div>

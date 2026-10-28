@@ -42,7 +42,7 @@ const S = 1.15; // world units per degree of latitude
 const DEPTH = 0.32; // extrusion height of the country slab
 const TOP = DEPTH + 0.004;
 
-const MINT = new THREE.Color('#3BF0C8');
+const MINT = new THREE.Color('#FFC83D');
 const TEAL = new THREE.Color('#0E7C86');
 const GOLD = new THREE.Color('#FFC857');
 

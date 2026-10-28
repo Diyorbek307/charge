@@ -88,7 +88,7 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         {live && (
-          <button onClick={onOpenCharge} className="w-full rounded-2xl p-4 text-left text-white flex items-center gap-3" style={{ background: 'linear-gradient(135deg, #059669, #0AAF97)' }}>
+          <button onClick={onOpenCharge} className="w-full rounded-2xl p-4 text-left text-white flex items-center gap-3" style={{ background: 'linear-gradient(135deg, #065F46, #047857)' }}>
             <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center"><Zap size={18} /></div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold">Идёт зарядка</p>

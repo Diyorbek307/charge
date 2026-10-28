@@ -46,7 +46,7 @@ export function exportCsv(baseName: string, headers: string[], rows: CsvValue[][
 
 const text = (v: CsvValue) => (v === null || v === undefined ? '' : String(v));
 
-const FONT = '"Manrope", "Segoe UI", system-ui, sans-serif';
+const FONT = '"Inter", "Segoe UI", system-ui, sans-serif';
 const ROW_H = 34;
 const HEAD_H = 40;
 const PAD = 14;
@@ -115,7 +115,7 @@ function renderPage(
   ctx.fillStyle = '#0F172A';
   ctx.font = `700 19px ${FONT}`;
   ctx.textBaseline = 'middle';
-  ctx.fillText('ONE CHARGE UZ', PAD, 26);
+  ctx.fillText('Zaryad24', PAD, 26);
 
   ctx.fillStyle = '#64748B';
   ctx.font = `13px ${FONT}`;

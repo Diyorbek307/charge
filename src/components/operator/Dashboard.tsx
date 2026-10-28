@@ -24,18 +24,18 @@ export default function OperatorDashboard({ onNavigate }: { onNavigate: (page: s
 
   return (
     <Page title={`${greeting()}, ${me?.org ?? 'оператор'}`} subtitle={<>{todayLong()} · ваша сеть, показатели за 30 дней</>}>
-      <div className="relative overflow-hidden rounded-2xl px-5 py-4 flex flex-wrap items-center justify-between gap-4 text-white bg-gradient-to-r from-sky-500 to-sky-600" style={{ boxShadow: '0 4px 24px rgba(10,175,151,0.3)' }}>
+      <div className="relative overflow-hidden rounded-2xl px-5 py-4 flex flex-wrap items-center justify-between gap-4 text-[#111] bg-gradient-to-r from-[#FFC83D] to-[#FFB000]" style={{ boxShadow: '0 4px 24px rgba(255,176,0,0.25)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center"><Zap size={20} /></div>
+          <div className="w-10 h-10 bg-black/10 rounded-xl flex items-center justify-center"><Zap size={20} /></div>
           <div>
-            <p className="text-white/80 text-xs font-medium">Мощность сейчас</p>
+            <p className="text-black/70 text-xs font-medium">Мощность сейчас</p>
             <p className="text-2xl font-bold tabular-nums">{powerKw >= 1000 ? `${num(powerKw / 1000, 2)} МВт` : `${num(powerKw, 0)} кВт`}</p>
           </div>
         </div>
         <div className="flex gap-6 text-center">
-          <div><p className="text-3xl font-bold tabular-nums">{running.length}</p><p className="text-white/80 text-xs">{plural(running.length, ['зарядка идёт', 'зарядки идут', 'зарядок идёт'])}</p></div>
-          <div><p className="text-3xl font-bold tabular-nums">{data.today.completed}</p><p className="text-white/80 text-xs">завершено сегодня</p></div>
-          <div><p className="text-3xl font-bold tabular-nums">{num(busyShare, 0)}%</p><p className="text-white/80 text-xs">разъёмов занято</p></div>
+          <div><p className="text-3xl font-bold tabular-nums">{running.length}</p><p className="text-black/70 text-xs">{plural(running.length, ['зарядка идёт', 'зарядки идут', 'зарядок идёт'])}</p></div>
+          <div><p className="text-3xl font-bold tabular-nums">{data.today.completed}</p><p className="text-black/70 text-xs">завершено сегодня</p></div>
+          <div><p className="text-3xl font-bold tabular-nums">{num(busyShare, 0)}%</p><p className="text-black/70 text-xs">разъёмов занято</p></div>
         </div>
       </div>
 

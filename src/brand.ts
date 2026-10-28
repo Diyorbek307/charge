@@ -1,14 +1,14 @@
 /**
  * Product name and domain in one place, so a rename is a one-line change.
  *
- * Working name — the final one still needs a trademark search at the
- * Intellectual Property Agency (ima.uz) before launch.
+ * Before launch: register the domain and file the trademark with the
+ * Intellectual Property Agency (ima.uz).
  */
 export const BRAND = {
-  name: 'IpakVolt',
-  /** Two-part wordmark: the first part is drawn in the accent colour. */
-  wordmark: ['Ipak', 'Volt'] as const,
-  domain: 'ipakvolt.uz',
-  /** Placeholder until the domain is registered and mail is set up. */
-  email: 'hello@ipakvolt.uz',
+  name: 'Zaryad24',
+  /** Two-part wordmark: the second part is drawn in the accent colour. */
+  wordmark: ['Zaryad', '24'] as const,
+  tagline: 'Одна карта. Все станции.',
+  domain: 'zaryad24.uz',
+  email: 'hello@zaryad24.uz',
 };

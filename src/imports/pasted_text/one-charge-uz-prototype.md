@@ -1,9 +1,9 @@
-Создай полноценный профессиональный UI/UX-прототип цифровой платформы **ONE CHARGE UZ** — единой национальной экосистемы для зарядки электромобилей в Узбекистане.
+Создай полноценный профессиональный UI/UX-прототип цифровой платформы **Zaryad24** — единой национальной экосистемы для зарядки электромобилей в Узбекистане.
 
 **Ключевая идея продукта:**
 «ОДНО ПРИЛОЖЕНИЕ. ЛЮБАЯ ЗАРЯДНАЯ СТАНЦИЯ.»
 
-Пользователь один раз регистрируется в ONE CHARGE, добавляет банковскую карту и автомобиль и получает доступ к зарядным станциям разных операторов через единый интерфейс. ONE CHARGE выступает как национальная roaming/eMobility-платформа, объединяющая водителей, операторов зарядных станций, платежную инфраструктуру и государственно-административный уровень.
+Пользователь один раз регистрируется в Zaryad24, добавляет банковскую карту и автомобиль и получает доступ к зарядным станциям разных операторов через единый интерфейс. Zaryad24 выступает как национальная roaming/eMobility-платформа, объединяющая водителей, операторов зарядных станций, платежную инфраструктуру и государственно-административный уровень.
 
 ## 1. ЕДИНАЯ DESIGN SYSTEM
 
@@ -170,14 +170,14 @@ GB/T DC, GB/T AC, CCS1, CCS2, CHAdeMO, Type 1, Type 2, NACS и другие.
 
 ## 4. ПЛАТЕЖИ
 
-Создай единый платежный центр ONE CHARGE.
+Создай единый платежный центр Zaryad24.
 
 Поддержать:
 
 * банковские карты;
 * локальные платежные карты;
 * Apple Pay / Google Pay при доступности;
-* ONE CHARGE WALLET как дополнительную функцию.
+* Zaryad24 WALLET как дополнительную функцию.
 
 Основной сценарий: карта автоматически списывает стоимость после завершения зарядки.
 
@@ -326,7 +326,7 @@ Dashboard показывает:
 Показывай:
 
 * gross revenue;
-* ONE CHARGE commission;
+* Zaryad24 commission;
 * operator revenue;
 * pending settlement;
 * completed settlement;
@@ -334,9 +334,9 @@ Dashboard показывает:
 * payout history.
 
 Модель:
-**Пользователь → ONE CHARGE → Оператор.**
+**Пользователь → Zaryad24 → Оператор.**
 
-ONE CHARGE удерживает комиссию, после чего выполняется расчет с оператором.
+Zaryad24 удерживает комиссию, после чего выполняется расчет с оператором.
 
 ## 9. ИНТЕГРАЦИЯ ОПЕРАТОРОВ
 
@@ -372,7 +372,7 @@ ONE CHARGE удерживает комиссию, после чего выпол
 
 ## 10. PARTNER API
 
-Создай документацию ONE CHARGE PARTNER API.
+Создай документацию Zaryad24 PARTNER API.
 
 Разделы:
 
@@ -394,7 +394,7 @@ ONE CHARGE удерживает комиссию, после чего выпол
 
 ## 11. ADMIN CONTROL CENTER
 
-Создай отдельную enterprise-панель администратора ONE CHARGE.
+Создай отдельную enterprise-панель администратора Zaryad24.
 
 Sidebar:
 **Overview / Live Map / Operators / Stations / Users / Sessions / Payments / Settlement / Analytics / AI Insights / Fraud / CDR Validation / Integrations / Support / Commissions / Roles / Audit Log / Settings.**
@@ -518,7 +518,7 @@ AI должен формировать рекомендации:
 
 ## 13. БИЗНЕС-ФУНКЦИИ
 
-Создай ONE CHARGE BUSINESS для корпоративных клиентов и автопарков.
+Создай Zaryad24 BUSINESS для корпоративных клиентов и автопарков.
 
 Функции:
 
@@ -552,17 +552,17 @@ booking, reviews, navigation, AI, Plug & Charge, corporate accounts, loyalty, su
 
 Визуально и логически отрази архитектуру:
 
-**DRIVER → ONE CHARGE APP → ONE CHARGE BACKEND → ROAMING / INTEGRATION LAYER → OCPI / API → OPERATORS → OCPP → CHARGING STATIONS**
+**DRIVER → Zaryad24 APP → Zaryad24 BACKEND → ROAMING / INTEGRATION LAYER → OCPI / API → OPERATORS → OCPP → CHARGING STATIONS**
 
 Параллельно:
 
-**ONE CHARGE BACKEND → PAYMENT GATEWAY → BANKS**
+**Zaryad24 BACKEND → PAYMENT GATEWAY → BANKS**
 
 и
 
-**ONE CHARGE BACKEND → CLEARING & SETTLEMENT → OPERATORS**
+**Zaryad24 BACKEND → CLEARING & SETTLEMENT → OPERATORS**
 
-Операторы сохраняют собственные приложения и системы. ONE CHARGE является дополнительным единым каналом доступа к их инфраструктуре.
+Операторы сохраняют собственные приложения и системы. Zaryad24 является дополнительным единым каналом доступа к их инфраструктуре.
 
 ## 16. PROTOTYPE
 
@@ -583,4 +583,4 @@ Admin Login → Dashboard → Operator → Station → Session → Payment → A
 Организуй Figma-файл профессионально:
 **Design System / Mobile App / Operator Portal / Admin Control Center / Components / Prototype.**
 
-Главная цель: получить цельный, масштабируемый, современный UI/UX-дизайн реального национального EV-roaming продукта **ONE CHARGE UZ**, готового для дальнейшей разработки.
+Главная цель: получить цельный, масштабируемый, современный UI/UX-дизайн реального национального EV-roaming продукта **Zaryad24**, готового для дальнейшей разработки.

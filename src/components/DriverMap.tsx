@@ -38,7 +38,7 @@ const POWER = [
 const TASHKENT: [number, number] = [41.3111, 69.2797];
 
 function stationIcon(color: string, free: number, total: number) {
-  const html = `<div style="width:38px;height:38px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;color:white;font:800 11px Manrope,sans-serif;letter-spacing:-.02em">
+  const html = `<div style="width:38px;height:38px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;color:white;font:800 11px Inter,sans-serif;letter-spacing:-.02em">
     ${free > 0 ? `${free}/${total}` : '<div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:12px solid white;margin-bottom:2px"></div>'}
   </div>`;
   return L.divIcon({ html, className: '', iconSize: [38, 38], iconAnchor: [19, 19], popupAnchor: [0, -22] });
@@ -46,9 +46,9 @@ function stationIcon(color: string, free: number, total: number) {
 
 function clusterIcon(count: number, free: number) {
   const size = count >= 10 ? 48 : 42;
-  const html = `<div style="width:${size}px;height:${size}px;border-radius:50%;background:rgba(10,175,151,0.18);display:flex;align-items:center;justify-content:center">
-    <div style="width:${size - 10}px;height:${size - 10}px;border-radius:50%;background:#0AAF97;border:2.5px solid white;box-shadow:0 2px 10px rgba(0,0,0,0.3);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font:800 13px/1 Manrope,sans-serif">
-      ${count}<span style="font:700 8px/1 Manrope,sans-serif;opacity:.85;margin-top:2px">${free} своб.</span>
+  const html = `<div style="width:${size}px;height:${size}px;border-radius:50%;background:rgba(17,17,17,0.18);display:flex;align-items:center;justify-content:center">
+    <div style="width:${size - 10}px;height:${size - 10}px;border-radius:50%;background:#111111;border:2.5px solid #FFC83D;box-shadow:0 2px 10px rgba(0,0,0,0.3);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#FFC83D;font:800 13px/1 Inter,sans-serif">
+      ${count}<span style="font:700 8px/1 Inter,sans-serif;opacity:.85;margin-top:2px">${free} своб.</span>
     </div>
   </div>`;
   return L.divIcon({ html, className: '', iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
@@ -91,7 +91,7 @@ function ClusteredMarkers({ stations, onSelect }: { stations: Station[]; onSelec
           return (
             <Marker key={s.id} position={[s.geoLat, s.geoLng]} icon={stationIcon(statusColor[s.status], freeOf(s), s.connectors.length)} eventHandlers={{ click: () => onSelect(s) }}>
               <Popup>
-                <div style={{ fontFamily: 'Manrope, sans-serif', minWidth: 150 }}>
+                <div style={{ fontFamily: 'Inter, sans-serif', minWidth: 150 }}>
                   <p style={{ fontWeight: 700, fontSize: 13, margin: '0 0 2px 0', color: '#0F172A' }}>{s.name}</p>
                   <p style={{ fontSize: 12, margin: 0, color: '#64748B' }}>
                     {freeOf(s)}/{s.connectors.length} свободно · до {maxKw} кВт · от {minPrice.toLocaleString('ru-RU')} сум
@@ -190,7 +190,7 @@ export default function DriverMap({ onSelectStation }: { onSelectStation: (s: St
   };
 
   return (
-    <div className="relative isolate w-full h-full" style={{ fontFamily: 'Manrope, sans-serif' }}>
+    <div className="relative isolate w-full h-full" style={{ fontFamily: 'Inter, sans-serif' }}>
       <MapContainer center={[41.2, 66.6]} zoom={6} style={{ height: '100%', width: '100%' }} zoomControl={false}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

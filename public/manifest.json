@@ -1,12 +1,12 @@
 {
-  "name": "IpakVolt — зарядка электромобилей",
-  "short_name": "IpakVolt",
+  "name": "Zaryad24 — зарядка электромобилей",
+  "short_name": "Zaryad24",
   "description": "Вся зарядка Узбекистана в одном приложении",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#04060c",
-  "theme_color": "#04060c",
+  "background_color": "#111111",
+  "theme_color": "#111111",
   "lang": "ru",
   "icons": [
     {

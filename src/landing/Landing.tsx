@@ -332,7 +332,7 @@ function Phone({ c, variant }: { c: LandingCopy; variant: 'map' | 'charge' }) {
               <svg viewBox="0 0 120 120">
                 <defs>
                   <linearGradient id="pmg" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stopColor="#3BF0C8" />
+                    <stop offset="0" stopColor="#FFC83D" />
                     <stop offset="1" stopColor="#FFC857" />
                   </linearGradient>
                 </defs>

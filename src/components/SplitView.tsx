@@ -6,7 +6,7 @@ import { useI18n } from '../lib/i18n';
 type PaneId = 'driver' | 'operator' | 'admin' | 'business' | 'api' | 'architecture';
 
 const PANES: { id: PaneId; label: string; color: string }[] = [
-  { id: 'driver', label: 'Driver App', color: '#20D4B6' },
+  { id: 'driver', label: 'Driver App', color: '#FFC83D' },
   { id: 'operator', label: 'Operator Portal', color: '#34D399' },
   { id: 'admin', label: 'Admin Center', color: '#8DA2FF' },
   { id: 'business', label: 'Business Portal', color: '#818CF8' },
@@ -80,15 +80,15 @@ export default function SplitView({ onClose }: { onClose: () => void }) {
   const dot = connection === 'live' ? '#34D399' : connection === 'connecting' ? '#FBBF24' : '#F87171';
 
   return (
-    <div className="fixed inset-0 z-[300] flex flex-col bg-slate-950" style={{ fontFamily: 'Manrope, sans-serif' }}>
+    <div className="fixed inset-0 z-[300] flex flex-col bg-slate-950" style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* Toolbar */}
       <div className="flex items-center gap-2 sm:gap-3 px-3 py-2.5 border-b border-white/10 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <div
             className="w-7 h-7 rounded-lg grid place-items-center shrink-0"
-            style={{ background: 'linear-gradient(135deg,#20D4B6,#078C7C)' }}
+            style={{ background: 'linear-gradient(135deg,#FFC83D,#FFB000)' }}
           >
-            <Zap size={14} className="text-white" />
+            <Zap size={14} className="text-[#111]" />
           </div>
           <div className="min-w-0 hidden sm:block">
             <p className="text-xs font-bold text-white leading-none">{t('split.title')}</p>

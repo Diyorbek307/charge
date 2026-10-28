@@ -1,4 +1,4 @@
-# ONE CHARGE UZ
+# Zaryad24
 
 Прототип национальной платформы зарядной инфраструктуры для электромобилей в Узбекистане.
 
@@ -18,9 +18,9 @@
 | --- | --- | --- |
 | Driver App | `+998901234567` | `Driver2026` |
 | Operator Portal | `operator@greencharge.uz` | `Operator2026` |
-| Admin Control Center | `admin@onecharge.uz` | `Admin2026` |
+| Admin Control Center | `admin@zaryad24.uz` | `Admin2026` |
 | Business Portal | `fleet@uzauto.uz` | `Business2026` |
-| Partner API | `partner@onecharge.uz` | `Partner2026` |
+| Partner API | `partner@zaryad24.uz` | `Partner2026` |
 
 ---
 

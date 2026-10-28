@@ -97,10 +97,10 @@ export function signedHeaders(secret, event, body) {
   const { timestamp, signature } = sign(secret, body);
   return {
     'Content-Type': 'application/json',
-    'User-Agent': 'OneCharge-Webhooks/1.0',
-    'X-OneCharge-Event': event,
-    'X-OneCharge-Timestamp': String(timestamp),
-    'X-OneCharge-Signature': `t=${timestamp},v1=${signature}`,
+    'User-Agent': 'Zaryad24-Webhooks/1.0',
+    'X-Zaryad24-Event': event,
+    'X-Zaryad24-Timestamp': String(timestamp),
+    'X-Zaryad24-Signature': `t=${timestamp},v1=${signature}`,
   };
 }
 

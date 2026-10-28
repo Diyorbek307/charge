@@ -23,6 +23,7 @@ import PushToggle from './PushToggle';
 import AIChat from './AIChat';
 import AccountSettings from './admin/AccountSettings';
 import { BRAND } from '../brand';
+import { LogoMark } from '../landing/Logo';
 
 type Page = 'dashboard' | 'stations' | 'sessions' | 'alerts' | 'tariffs' | 'finance' | 'customers' | 'integration' | 'settings' | 'help';
 
@@ -72,15 +73,13 @@ function Sidebar({ current, onChange, onBack, isOpen, onClose }: { current: Page
   ];
 
   return (
-    <div className={`w-[210px] flex flex-col h-full shrink-0 absolute inset-y-0 left-0 z-30 md:relative md:translate-x-0 transition-transform duration-200 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: '#061510', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+    <div className={`w-[210px] flex flex-col h-full shrink-0 absolute inset-y-0 left-0 z-30 md:relative md:translate-x-0 transition-transform duration-200 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: '#111111', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
       {/* Brand */}
       <div className="px-4 pt-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="flex items-center gap-2.5 mb-4">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
-            <Zap size={15} className="text-white" />
-          </div>
+          <LogoMark size={32} />
           <div>
-            <p className="text-white font-bold text-sm leading-tight">ONE CHARGE</p>
+            <p className="text-white font-bold text-sm leading-tight">Zaryad<span style={{ color: '#FFC83D' }}>24</span></p>
             <p className="text-[11px] leading-none mt-0.5" style={{ color: 'rgba(148,163,184,0.6)' }}>Operator Portal</p>
           </div>
         </div>

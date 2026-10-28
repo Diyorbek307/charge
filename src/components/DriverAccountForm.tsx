@@ -112,7 +112,7 @@ export default function DriverAccountForm({ mode, ring, grad, onCancel, onNeedsL
           <button
             type="submit"
             disabled={busy || phone.replace(/\D/g, '').length < 9 || (mode === 'register' && name.trim().length < 2)}
-            className={`w-full bg-gradient-to-r ${grad} text-white font-semibold py-3 rounded-xl text-sm transition-all hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+            className={`w-full bg-gradient-to-r ${grad} text-[#111] font-semibold py-3 rounded-xl text-sm transition-all hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
           >
             {busy ? <LoaderCircle size={15} className="animate-spin" /> : <MessageSquareText size={15} />}
             Получить SMS-код
@@ -161,7 +161,7 @@ export default function DriverAccountForm({ mode, ring, grad, onCancel, onNeedsL
           <button
             type="submit"
             disabled={busy || code.length !== 6 || password.length < 8}
-            className={`w-full bg-gradient-to-r ${grad} text-white font-semibold py-3 rounded-xl text-sm transition-all hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+            className={`w-full bg-gradient-to-r ${grad} text-[#111] font-semibold py-3 rounded-xl text-sm transition-all hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
           >
             {busy ? <LoaderCircle size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
             {mode === 'register' ? 'Зарегистрироваться' : 'Сохранить пароль'}

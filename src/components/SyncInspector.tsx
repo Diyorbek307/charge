@@ -5,7 +5,7 @@ import { useI18n } from '../lib/i18n';
 import type { SyncEvent } from '../lib/api';
 
 const PORTAL_STYLE: Record<string, { label: string; color: string; bg: string }> = {
-  driver: { label: 'DRIVER', color: '#20D4B6', bg: 'rgba(32, 212, 182,0.12)' },
+  driver: { label: 'DRIVER', color: '#FFC83D', bg: 'rgba(255, 200, 61,0.12)' },
   operator: { label: 'OPERATOR', color: '#34D399', bg: 'rgba(52,211,153,0.12)' },
   admin: { label: 'ADMIN', color: '#8DA2FF', bg: 'rgba(167,139,250,0.12)' },
   business: { label: 'BUSINESS', color: '#818CF8', bg: 'rgba(129,140,248,0.12)' },

@@ -11,7 +11,7 @@ import { notifyTelegram } from './telegram.js';
  * a notification can only ever reach someone who is allowed to see the event.
  */
 
-const SUBJECT = process.env.VAPID_SUBJECT || 'mailto:support@onecharge.uz';
+const SUBJECT = process.env.VAPID_SUBJECT || 'mailto:support@zaryad24.uz';
 const MAX_SUBS_PER_ACCOUNT = 5;
 
 // The subscription endpoint is a URL the client supplies and the server then
@@ -197,7 +197,7 @@ pushApi.post('/test', requireViewer, async (req, res) => {
   const targets = subs().filter(s => s.accountId === req.account.id);
   if (targets.length === 0) return res.status(404).json({ error: 'Уведомления не включены на этом устройстве' });
   const sent = await sendTo(targets, {
-    title: 'ONE CHARGE UZ',
+    title: 'Zaryad24',
     body: 'Уведомления работают — сообщим, когда подойдёт очередь или закончится зарядка.',
     tag: 'test',
     url: '/',

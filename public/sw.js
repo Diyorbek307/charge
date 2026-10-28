@@ -1,4 +1,4 @@
-/* ONE CHARGE UZ — service worker.
+/* Zaryad24 — service worker.
  *
  * Goals, in order: never serve a stale build, keep the app openable offline,
  * and stay entirely out of the way of the live-sync channel.
@@ -119,7 +119,7 @@ self.addEventListener('push', event => {
     data = { body: event.data ? event.data.text() : '' };
   }
   event.waitUntil(
-    self.registration.showNotification(data.title || 'IpakVolt', {
+    self.registration.showNotification(data.title || 'Zaryad24', {
       body: data.body || '',
       tag: data.tag,
       icon: '/icon-192.png',

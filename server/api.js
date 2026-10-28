@@ -167,7 +167,7 @@ function publicView(event) {
     id: event.id,
     type: event.type,
     portal: 'system',
-    actor: 'ONE CHARGE',
+    actor: 'Zaryad24',
     message: PUBLIC_MESSAGE[event.type]?.(event) ?? event.message,
     entity: null,
     payload,
@@ -1091,7 +1091,7 @@ function promoteQueue(stationId, connectorId) {
   emit({
     type: 'queue.ready',
     portal: 'system',
-    actor: 'ONE CHARGE',
+    actor: 'Zaryad24',
     message: `Коннектор ${connectorId} освободился — очередь подошла для ${next.user}`,
     entity: next.id,
     payload: { userId: next.userId, stationId, connectorId },
@@ -1825,7 +1825,7 @@ function pruneBookings() {
     emit({
       type: 'booking.expire',
       portal: 'system',
-      actor: 'ONE CHARGE',
+      actor: 'Zaryad24',
       message: `Бронь ${b.code} истекла — водитель не приехал`,
       entity: b.id,
       payload: { stationId: b.stationId, connectorId: b.connectorId },

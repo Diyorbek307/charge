@@ -136,7 +136,7 @@ export function Segmented<T extends string | number>({ options, value, onChange 
 }
 
 /** Horizontal bars with labels — for rankings. */
-export function BarList({ rows, color = '#0AAF97' }: { rows: { key: string; label: ReactNode; value: number; display: ReactNode; sub?: ReactNode }[]; color?: string }) {
+export function BarList({ rows, color = '#FFB000' }: { rows: { key: string; label: ReactNode; value: number; display: ReactNode; sub?: ReactNode }[]; color?: string }) {
   const max = Math.max(1, ...rows.map(r => r.value));
   return (
     <ol className="space-y-3">
@@ -191,13 +191,13 @@ export function SearchBox({ value, onChange, placeholder }: { value: string; onC
 
 /** Colour series shared by the charts. */
 export const CHART = {
-  primary: '#0AAF97',
+  primary: '#FFB000',
   secondary: '#4F6BFF',
   accent: '#F59E0B',
   muted: '#CBD5E1',
   grid: '#F1F5F9',
   axis: '#94A3B8',
-  palette: ['#0AAF97', '#4F6BFF', '#F59E0B', '#EF4444', '#8B5CF6', '#94A3B8'],
+  palette: ['#FFB000', '#4F6BFF', '#10B981', '#EF4444', '#8B5CF6', '#94A3B8'],
 };
 
 export const STATUS_PILL: Record<string, { tone: keyof typeof PILL; label: string }> = {

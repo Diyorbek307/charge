@@ -24,7 +24,7 @@ export default function BusinessDashboard({ onNavigate }: { onNavigate: (page: s
 
   return (
     <Page title={`${me?.org ?? 'Автопарк'}`} subtitle={<>{todayLong()} · корпоративные зарядки, показатели за 30 дней</>}>
-      <div className="relative overflow-hidden rounded-2xl px-5 py-4 flex flex-wrap items-center justify-between gap-4 text-white" style={{ background: 'linear-gradient(135deg, #2F3DB8, #4F6BFF)', boxShadow: '0 4px 24px rgba(79,107,255,0.3)' }}>
+      <div className="relative overflow-hidden rounded-2xl px-5 py-4 flex flex-wrap items-center justify-between gap-4 text-white" style={{ background: 'linear-gradient(135deg, #111111, #2A2A2A)', boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center"><Wallet size={20} /></div>
           <div>
@@ -40,7 +40,7 @@ export default function BusinessDashboard({ onNavigate }: { onNavigate: (page: s
           <div><p className="text-3xl font-bold tabular-nums">{num(budgetShare, 0)}%</p><p className="text-white/80 text-xs">бюджета месяца</p></div>
           <div><p className="text-3xl font-bold tabular-nums">{near.length}</p><p className="text-white/80 text-xs">у лимита</p></div>
         </div>
-        <button onClick={() => onNavigate('billing')} className="px-4 py-2 rounded-xl bg-white text-indigo-700 text-sm font-semibold hover:bg-white/90">Пополнить</button>
+        <button onClick={() => onNavigate('billing')} className="px-4 py-2 rounded-xl bg-[#FFC83D] text-[#111] text-sm font-semibold hover:bg-[#FFB000]">Пополнить</button>
       </div>
 
       {lowBalance && (
