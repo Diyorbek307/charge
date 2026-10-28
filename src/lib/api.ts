@@ -33,6 +33,40 @@ export interface Car {
   chargeLimit?: number;
 }
 
+export interface StationForecast {
+  stationId: string;
+  connectors: { id: string; status: string; freeInMin: number | null; basis?: 'planned' | 'typical' }[];
+  nextFreeInMin: number | null;
+  queue: number;
+  queueWaitMin: number | null;
+  typical: { dc: number; ac: number };
+}
+export type ReportKind = 'works' | 'broken' | 'queue' | 'no_queue' | 'power' | 'access';
+export interface CommunityReport { id: string; stationId: string; userId: string; user: string; kind: ReportKind; value: number | null; note: string; ts: string; confirms: number; verified: boolean }
+export interface StationCommunity { works: number; broken: number; queue: number; noQueue: number; access: number; power: number | null; reports: CommunityReport[] }
+export interface Loyalty {
+  balance: number;
+  earned90: number;
+  tier: 'start' | 'silver' | 'gold';
+  next: { tier: 'silver' | 'gold'; need: number } | null;
+  trusted: boolean;
+  confirmedReports: number;
+  valueUzs: number;
+  history: { id: string; delta: number; reason: string; ts: string }[];
+}
+export type SosKind = 'tow' | 'mobile_charge' | 'breakdown' | 'accident' | 'station' | 'other';
+export interface SosRequest { id: string; userId: string; user: string; phone: string; kind: SosKind; lat: number | null; lng: number | null; note: string; status: 'open' | 'taken' | 'closed'; ts: string; takenBy: string | null; closedAt: string | null }
+export interface FamilyState {
+  members: { memberId: string; name: string; phone: string; limit: number; status: 'pending' | 'active'; spent: number }[];
+  payers: { ownerId: string; name: string; limit: number; status: 'pending' | 'active'; spent: number; left: number }[];
+}
+export type HostKind = 'home' | 'hotel' | 'business' | 'parking' | 'cafe';
+export interface HostApplication {
+  id: string; userId: string; user: string; phone: string; kind: HostKind; name: string; city: string; address: string; lat: number; lng: number;
+  specs: { type: string; power: number; price: number }[]; hours: string; note: string; status: 'pending' | 'approved' | 'rejected'; ts: string; decidedAt: string | null; reason: string | null; stationId: string | null;
+}
+export interface HostOverview { applications: HostApplication[]; stations: Station[]; sessions: number; energy: number; gross: number; net: number; commission: number }
+
 export interface RiskFinding {
   id: string;
   rule: 'failed_starts' | 'impossible_energy' | 'parallel_sessions' | 'abandoned_payments' | 'repeated_refunds';
@@ -242,6 +276,8 @@ export interface PlatformState {
   wallets: Record<string, Wallet>;
   /** For a driver who works for a fleet client: the company account they may charge to. */
   employer?: Employer | null;
+  /** Family wallets: relatives I pay for, and whose wallets I may use. */
+  family?: FamilyState;
   queues?: QueueEntry[];
   bookings?: Booking[];
   events: SyncEvent[];
@@ -521,6 +557,25 @@ export const apiClient = {
     post<{ token: string; user: Account }>('/auth/otp/verify', { phone, code }),
 
   me: (portal: Portal) => request<{ user: Account }>('/auth/me', { portal }),
+  stationForecast: (stationId: string) => request<StationForecast>(`/stations/${stationId}/forecast`),
+  stationCommunity: (stationId: string) => request<StationCommunity>(`/stations/${stationId}/community`),
+  addCommunityReport: (stationId: string, body: { kind: ReportKind; value?: number; note?: string }) =>
+    post<{ report: CommunityReport; community: StationCommunity }>(`/stations/${stationId}/community`, body, 'driver'),
+  confirmCommunityReport: (id: string) => post<{ report: CommunityReport; community: StationCommunity }>(`/community/${id}/confirm`, undefined, 'driver'),
+  loyalty: () => request<Loyalty>('/loyalty', { portal: 'driver' }),
+  redeemPoints: (points: number) => post<{ wallet: Wallet; amount: number; loyalty: Loyalty }>('/loyalty/redeem', { points }, 'driver'),
+  sendSos: (body: { kind: SosKind; lat?: number; lng?: number; note?: string }) => post<{ sos: SosRequest }>('/sos', body, 'driver'),
+  mySos: () => request<SosRequest[]>('/sos/mine', { portal: 'driver' }),
+  adminSos: (portal: Portal) => request<SosRequest[]>('/admin/sos', { portal }),
+  setSosStatus: (portal: Portal, id: string, status: 'taken' | 'closed') => post<{ sos: SosRequest }>(`/admin/sos/${id}/status`, { status }, portal),
+  family: () => request<FamilyState>('/family', { portal: 'driver' }),
+  inviteFamily: (phone: string, limit: number) => post<FamilyState>('/family/invite', { phone, limit }, 'driver'),
+  answerFamily: (ownerId: string, accept: boolean) => post<FamilyState>('/family/answer', { ownerId, accept }, 'driver'),
+  updateFamily: (memberId: string, body: { limit?: number; remove?: boolean }) => post<FamilyState>(`/family/${memberId}`, body, 'driver'),
+  applyHost: (body: Record<string, unknown>) => post<{ application: HostApplication }>('/hosts/apply', body, 'driver'),
+  myHosting: () => request<HostOverview>('/hosts/mine', { portal: 'driver' }),
+  adminHosts: (portal: Portal) => request<HostApplication[]>('/admin/hosts', { portal }),
+  decideHost: (portal: Portal, id: string, approve: boolean, reason?: string) => post<{ application: HostApplication; station?: Station }>(`/admin/hosts/${id}/decision`, { approve, reason }, portal),
   riskReport: (portal: Portal) => request<RiskReport>('/admin/risk', { portal }),
   reviewRisk: (portal: Portal, id: string, decision: 'confirmed' | 'dismissed', block = false) =>
     post<{ review: RiskFinding['review'] }>(`/admin/risk/${encodeURIComponent(id)}/review`, { decision, block }, portal),
@@ -541,7 +596,7 @@ export const apiClient = {
   logout: (portal: Portal) => post<{ ok: boolean }>('/auth/logout', undefined, portal),
 
   /** payer 'company' charges a fleet employee's session to their employer, within the monthly limit. */
-  startSession: (portal: Portal, stationId: string, connectorId: string, payer: 'self' | 'company' = 'self') =>
+  startSession: (portal: Portal, stationId: string, connectorId: string, payer: 'self' | 'company' | `family:${string}` = 'self') =>
     post<{ session: Session; stats: Stats }>('/sessions/start', { stationId, connectorId, payer }, portal),
   rateSession: (portal: Portal, id: string, stars: number) =>
     post<{ station: Station; session: Session }>(`/sessions/${id}/rating`, { stars }, portal),

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   ArrowLeft, Car, ChevronRight, Plus, Wallet, Heart, Bell, Lock, Settings, Phone, LogOut, Building2,
-  Zap, CheckCircle, LoaderCircle, Smartphone, Monitor, Calendar, Users, AlertTriangle, KeyRound, Send,
+  Zap, CheckCircle, LoaderCircle, Smartphone, Monitor, Calendar, Users, AlertTriangle, KeyRound, Send, PieChart, Gift, Home,
 } from 'lucide-react';
 import type { SyncEvent, SignedInDevice } from '../../lib/api';
 import { useSync } from '../../lib/sync';
@@ -48,10 +48,15 @@ export function ProfileScreen({ onNavigate }: { onNavigate: (s: string) => void 
   const balance = state?.wallets[me.id]?.balance ?? 0;
   const companyCar = state?.vehicles.find(v => v.driverId === me.id);
   const employer = state?.employer;
+  const pendingFamily = (state?.family?.payers ?? []).filter(p => p.status === 'pending').length;
   const car = me.car;
 
   const menu: { icon: ReactNode; label: string; badge?: string; screen: string }[] = [
     { icon: <Wallet size={16} className="text-emerald-500" />, label: 'Кошелёк', badge: sum(balance), screen: 'wallet' },
+    { icon: <PieChart size={16} className="text-sky-500" />, label: 'Расходы и экономия', screen: 'finance' },
+    { icon: <Gift size={16} className="text-violet-500" />, label: 'Баллы', screen: 'loyalty' },
+    { icon: <Users size={16} className="text-indigo-500" />, label: 'Семейный кошелёк', badge: pendingFamily ? String(pendingFamily) : undefined, screen: 'family' },
+    { icon: <Home size={16} className="text-emerald-600" />, label: 'Моя зарядка для других', screen: 'host' },
     { icon: <Heart size={16} className="text-red-400" />, label: 'Избранные станции', badge: favorites.length ? String(favorites.length) : undefined, screen: 'favorites' },
     { icon: <Bell size={16} className="text-amber-400" />, label: 'Уведомления', badge: unread ? String(unread) : undefined, screen: 'notifications' },
     { icon: <Lock size={16} className="text-slate-400" />, label: 'Безопасность', screen: 'security' },

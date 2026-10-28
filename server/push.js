@@ -67,6 +67,12 @@ const KINDS = {
   'wallet.topup': { title: 'Кошелёк пополнен', url: '/?portal=driver', when: e => e.portal === 'system' },
   'fleet.limit': { title: 'Лимит сотрудника', url: '/?portal=business' },
   'fleet.balance': { title: 'Низкий баланс счёта', url: '/?portal=business' },
+  'sos.new': { title: 'SOS от водителя', url: '/?portal=admin' },
+  'sos.update': { title: 'SOS', url: '/?portal=driver' },
+  'family.invite': { title: 'Семейный кошелёк', url: '/?portal=driver' },
+  'host.decision': { title: 'Частная зарядка', url: '/?portal=driver' },
+  'host.applied': { title: 'Заявка на частную зарядку', url: '/?portal=admin' },
+  'community.broken': { title: 'Водитель: станция не работает', url: '/?portal=operator' },
 };
 
 function recipients(event) {
@@ -74,6 +80,13 @@ function recipients(event) {
   const ids = new Set();
   if (scope.userId) ids.add(scope.userId);
   if (event.type === 'alert.new' && scope.operatorId) {
+    for (const a of db.data.accounts) if (a.portal === 'operator' && a.orgId === scope.operatorId) ids.add(a.id);
+  }
+  // The dispatcher on duty is every admin.
+  if (event.type === 'sos.new' || event.type === 'host.applied') {
+    for (const a of db.data.accounts) if (a.portal === 'admin') ids.add(a.id);
+  }
+  if (event.type === 'community.broken' && scope.operatorId) {
     for (const a of db.data.accounts) if (a.portal === 'operator' && a.orgId === scope.operatorId) ids.add(a.id);
   }
   if ((event.type === 'wallet.topup' || event.type.startsWith('fleet.')) && scope.fleet) {

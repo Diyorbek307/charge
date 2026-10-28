@@ -17,15 +17,16 @@ import AdminTariffs from './admin/Tariffs';
 import AdminRoles from './admin/Roles';
 import AdminNetworkMap from './admin/NetworkMap';
 import AccountSettings, { DemoReset } from './admin/AccountSettings';
+import { AdminSos, AdminHosts } from './admin/SosHosts';
 import {
   LayoutDashboard, MapPin, Users, Activity, DollarSign, BarChart2, Settings, LogOut, Zap, Shield,
-  Building2, Brain, ScrollText, ClipboardCheck, Percent, UserCheck, Banknote, Tag, Menu, Inbox,
+  Building2, Brain, ScrollText, ClipboardCheck, Percent, UserCheck, Banknote, Tag, Menu, Inbox, Siren, Home,
 } from 'lucide-react';
 import { useI18n } from '../lib/i18n';
 import SidebarThemeToggle from './SidebarThemeToggle';
 import AIChat from './AIChat';
 
-type Page = 'dashboard' | 'map' | 'operators' | 'leads' | 'users' | 'sessions' | 'payments' | 'settlement' | 'analytics' | 'ai' | 'fraud' | 'cdr' | 'commissions' | 'tariffs_global' | 'audit' | 'roles' | 'settings' | 'system_health';
+type Page = 'dashboard' | 'map' | 'sos' | 'hosts' | 'operators' | 'leads' | 'users' | 'sessions' | 'payments' | 'settlement' | 'analytics' | 'ai' | 'fraud' | 'cdr' | 'commissions' | 'tariffs_global' | 'audit' | 'roles' | 'settings' | 'system_health';
 
 function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current: Page; onChange: (p: Page) => void; onBack: () => void; isOpen?: boolean; onClose?: () => void }) {
   const { t } = useI18n();
@@ -44,6 +45,8 @@ function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current:
         { id: 'leads' as Page, label: 'Заявки', icon: <Inbox size={14} /> },
         { id: 'users' as Page, label: t('nav.users'), icon: <Users size={14} /> },
         { id: 'sessions' as Page, label: t('nav.sessions'), icon: <Activity size={14} /> },
+        { id: 'sos' as Page, label: 'SOS водителей', icon: <Siren size={14} /> },
+        { id: 'hosts' as Page, label: 'Частные зарядки', icon: <Home size={14} /> },
       ],
     },
     {
@@ -168,7 +171,7 @@ export default function AdminApp({ onBack }: { onBack: () => void }) {
   const go = (p: string) => setPage(p as Page);
   const renderPage = () => {
     const pages: Record<string, ReactNode> = {
-      map: <AdminNetworkMap />, operators: <AdminOperators onNavigate={go} />, leads: <LeadsPage />, users: <AdminUsers />,
+      map: <AdminNetworkMap />, sos: <AdminSos />, hosts: <AdminHosts />, operators: <AdminOperators onNavigate={go} />, leads: <LeadsPage />, users: <AdminUsers />,
       settlement: <AdminSettlement />, commissions: <AdminCommissions />, tariffs_global: <AdminTariffs />,
       sessions: <AdminSessions />, payments: <AdminPayments />,
       analytics: <AdminAnalytics />, ai: <AdminInsights onNavigate={go} />, fraud: <AdminRisk />,

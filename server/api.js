@@ -11,6 +11,11 @@ import { analyticsFor, adminUsers, setUserStatus, isBlocked, monthSpend } from '
 import { demoEnergy } from './history.js';
 import { riskReport, reviewFinding, cdrReport, bandFor, tariffBands, setTariffBands } from './admin.js';
 import { verifyInitData, accountByTelegram, telegramConfigured } from './telegram.js';
+import {
+  stationForecast, addReport, confirmReport, stationCommunity, loyaltyFor, redeemPoints, addPoints,
+  createSos, setSosStatus, sosFor, allSos, inviteFamily, answerFamily, updateFamily, familyFor, familyAllowance,
+  applyHost, decideHost, hostApplicationsFor, allHostApplications, hostEarnings, HOST_COMMISSION,
+} from './driverFeatures.js';
 import { validateEndpoint, signedHeaders, kick as kickWebhooks } from './webhooks.js';
 
 export const api = express.Router();
@@ -113,6 +118,14 @@ function scopeOf({ type, entity, payload = {} }) {
     case 'ocpp.online':
     case 'ocpp.offline':
       return { operatorId: stationOperator(entity), public: true };
+    case 'sos.update':
+    case 'host.decision':
+    case 'family.invite':
+      return { userId: payload.userId };
+    case 'community.broken':
+      return { operatorId: stationOperator(entity) };
+    case 'wallet.points':
+      return { userId: entity };
     case 'employee.limit':
     case 'fleet.limit':
     case 'fleet.balance':
@@ -307,6 +320,7 @@ function stateFor(viewer) {
     transactions: txFor(sessions),
     vehicles: d.vehicles.filter(v => v.driverId === viewer.id),
     employer: employerOf(viewer.id),
+    family: familyFor(viewer.id),
     wallets: d.wallets[viewer.id] ? { [viewer.id]: d.wallets[viewer.id] } : {},
     queues: queues.map(ownQueue),
     bookings: bookingsFor(viewer),
@@ -885,6 +899,122 @@ api.post('/auth/telegram/unlink', requireAuth('driver'), (req, res) => {
   res.json({ user: publicAccount(db.byId('accounts', req.account.id)) });
 });
 
+// ---------------------------------------------------------------------------
+// Driver features: forecast, community, loyalty, SOS, family, private hosts
+// ---------------------------------------------------------------------------
+
+api.get('/stations/:id/forecast', (req, res) => {
+  const station = db.byId('stations', req.params.id);
+  if (!station) return res.status(404).json({ error: 'Станция не найдена' });
+  res.json(stationForecast(station));
+});
+
+api.get('/stations/:id/community', (req, res) => {
+  if (!db.byId('stations', req.params.id)) return res.status(404).json({ error: 'Станция не найдена' });
+  res.json(stationCommunity(req.params.id));
+});
+
+api.post('/stations/:id/community', requireAuth('driver'), (req, res) => {
+  const station = db.byId('stations', req.params.id);
+  if (!station) return res.status(404).json({ error: 'Станция не найдена' });
+  const r = addReport(req.account, station, req.body ?? {});
+  if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
+  // A driver saying the station is down is something its operator should see.
+  if (r.report.kind === 'broken') {
+    emit({ type: 'community.broken', portal: 'driver', actor: req.account.name, message: `Водитель отметил: не работает · ${station.name}`, entity: station.id, payload: { stationId: station.id } });
+  }
+  res.status(201).json({ report: r.report, community: stationCommunity(station.id) });
+});
+
+api.post('/community/:id/confirm', requireAuth('driver'), (req, res) => {
+  const r = confirmReport(req.account, req.params.id);
+  if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
+  res.json({ report: { ...r.report, confirms: r.report.confirms.length }, community: stationCommunity(r.report.stationId) });
+});
+
+api.get('/loyalty', requireAuth('driver'), (req, res) => res.json(loyaltyFor(req.account.id)));
+
+api.post('/loyalty/redeem', requireAuth('driver'), (req, res) => {
+  const r = redeemPoints(req.account.id, req.body?.points);
+  if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
+  emit({ type: 'wallet.points', portal: 'driver', actor: req.account.name, message: `Баллы обменяны на баланс · +${r.amount.toLocaleString('ru-RU')} сум`, entity: req.account.id });
+  res.json({ ...r, loyalty: loyaltyFor(req.account.id) });
+});
+
+api.post('/sos', requireAuth('driver'), (req, res) => {
+  const r = createSos(req.account, req.body ?? {});
+  if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
+  emit({ type: 'sos.new', portal: 'driver', actor: req.account.name, message: `SOS · ${req.account.name} · ${req.account.login}`, entity: r.sos.id, payload: { kind: r.sos.kind } });
+  res.status(201).json(r);
+});
+
+api.get('/sos/mine', requireAuth('driver'), (req, res) => res.json(sosFor(req.account.id)));
+
+api.get('/admin/sos', requireAuth('admin'), (_req, res) => res.json(allSos()));
+
+api.post('/admin/sos/:id/status', requireAuth('admin'), (req, res) => {
+  const r = setSosStatus(req.params.id, req.body?.status, req.account);
+  if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
+  emit({
+    type: 'sos.update',
+    portal: 'admin',
+    actor: req.account.name,
+    message: r.sos.status === 'taken' ? `Диспетчер принял вашу заявку SOS — ${req.account.name}` : 'Заявка SOS закрыта',
+    entity: r.sos.id,
+    payload: { userId: r.sos.userId },
+  });
+  res.json(r);
+});
+
+api.get('/family', requireAuth('driver'), (req, res) => res.json(familyFor(req.account.id)));
+
+api.post('/family/invite', requireAuth('driver'), (req, res) => {
+  const r = inviteFamily(req.account, { phone: normalizePhone(req.body?.phone), limit: req.body?.limit });
+  if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
+  emit({ type: 'family.invite', portal: 'driver', actor: req.account.name, message: `${req.account.name} приглашает вас в семейный кошелёк`, entity: r.member.id, payload: { userId: r.member.id } });
+  res.status(201).json(familyFor(req.account.id));
+});
+
+api.post('/family/answer', requireAuth('driver'), (req, res) => {
+  const r = answerFamily(req.account, req.body?.ownerId, !!req.body?.accept);
+  if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
+  res.json(familyFor(req.account.id));
+});
+
+api.post('/family/:memberId', requireAuth('driver'), (req, res) => {
+  const r = updateFamily(req.account, req.params.memberId, req.body ?? {});
+  if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
+  res.json(familyFor(req.account.id));
+});
+
+api.post('/hosts/apply', requireAuth('driver'), (req, res) => {
+  const r = applyHost(req.account, req.body ?? {}, stationInput);
+  if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
+  emit({ type: 'host.applied', portal: 'driver', actor: req.account.name, message: `Заявка на частную зарядку · ${r.application.name} · ${r.application.city}`, entity: r.application.id });
+  res.status(201).json(r);
+});
+
+api.get('/hosts/mine', requireAuth('driver'), (req, res) => {
+  const earnings = hostEarnings(req.account.id);
+  res.json({ applications: hostApplicationsFor(req.account.id), ...earnings, commission: HOST_COMMISSION });
+});
+
+api.get('/admin/hosts', requireAuth('admin'), (_req, res) => res.json(allHostApplications()));
+
+api.post('/admin/hosts/:id/decision', requireAuth('admin'), (req, res) => {
+  const r = decideHost(req.params.id, !!req.body?.approve, req.body?.reason, createStation);
+  if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
+  emit({
+    type: 'host.decision',
+    portal: 'admin',
+    actor: req.account.name,
+    message: r.application.status === 'approved' ? `Частная зарядка одобрена · ${r.application.name}` : `Заявка на частную зарядку отклонена · ${r.application.name}`,
+    entity: r.application.id,
+    payload: { userId: r.application.userId },
+  });
+  res.json(r);
+});
+
 api.post('/auth/logout', (req, res) => {
   db.revokeToken(bearer(req));
   res.json({ ok: true });
@@ -1012,7 +1142,9 @@ export function setPushHook(fn) {
  */
 export function beginSession(account, stationId, connectorId, opts = {}) {
   const { source = 'app', ocppTransactionId = null, meterStartWh = null, dryRun = false, simulated = false } = opts;
-  const wantsCompany = opts.corporate ?? companyIntent.get(account.id) ?? false;
+  const intent = companyIntent.get(account.id);
+  const wantsCompany = opts.corporate ?? intent?.corporate ?? false;
+  const familyOwner = opts.family ?? intent?.family ?? null;
   const { station, connector } = findConnector(stationId, connectorId);
   if (!station || !connector) return { status: 404, error: 'Коннектор не найден' };
   if (connector.status === 'occupied') return { status: 409, error: 'Коннектор уже занят' };
@@ -1053,9 +1185,16 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     }
   }
 
+  // A relative's wallet, within the monthly limit they set.
+  if (familyOwner && !corporate) {
+    const allowance = familyAllowance(account.id, familyOwner);
+    if (!allowance) return { status: 403, error: 'Этот семейный кошелёк вам недоступен' };
+    if (allowance.left < minimum) return { status: 402, error: `Семейный лимит на этот месяц исчерпан: осталось ${Math.max(0, allowance.left).toLocaleString('ru-RU')} сум` };
+  }
+
   // Refuse to start what the wallet cannot pay for; otherwise settlement clamps
   // the balance at zero and the charge is effectively free.
-  const walletId = corporate ? 'biz-001' : account.id;
+  const walletId = corporate ? 'biz-001' : familyOwner ?? account.id;
   const wallet = db.data.wallets[walletId];
   if (wallet && wallet.balance < minimum) {
     return {
@@ -1090,6 +1229,7 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     commissionRate: db.byId('operators', station.operatorId)?.commission ?? 3,
     status: 'active',
     corporate,
+    ...(familyOwner && !corporate ? { familyOwner } : {}),
     source: simulated ? 'demo' : source,
     ocppTransactionId,
     meterStartWh,
@@ -1120,20 +1260,22 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
 api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), async (req, res) => {
   const { stationId, connectorId, payer } = req.body ?? {};
   const corporate = payer === 'company';
+  // "family:<ownerId>" charges a relative's wallet.
+  const family = typeof payer === 'string' && payer.startsWith('family:') ? payer.slice(7) : null;
 
   // A station connected over OCPP is the source of truth: ask it to start, and
   // the session opens when it reports StartTransaction.
   if (gateway?.isConnected(stationId)) {
-    const check = beginSession(req.account, stationId, connectorId, { dryRun: true, corporate });
+    const check = beginSession(req.account, stationId, connectorId, { dryRun: true, corporate, family });
     if (check.error) return res.status(check.status).json({ error: check.error });
-    if (corporate) companyIntent.set(req.account.id, true);
+    if (corporate || family) companyIntent.set(req.account.id, { corporate, family });
     else companyIntent.delete(req.account.id);
     const accepted = await gateway.remoteStart(stationId, connectorId, req.account.id);
     if (!accepted) return res.status(502).json({ error: 'Станция не приняла команду запуска' });
     return res.status(202).json({ pending: true, stats: statsFor(req.account) });
   }
 
-  const result = beginSession(req.account, stationId, connectorId, { corporate });
+  const result = beginSession(req.account, stationId, connectorId, { corporate, family });
   if (result.error) return res.status(result.status).json({ error: result.error });
   res.json({ session: result.session, stats: statsFor(req.account) });
 });
@@ -1177,13 +1319,13 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
     userId: session.userId,
     user: session.user,
     amount: cost,
-    method: session.corporate ? 'Корпоративный счёт' : 'Кошелёк',
+    method: session.corporate ? 'Корпоративный счёт' : session.familyOwner ? 'Семейный кошелёк' : 'Кошелёк',
     status: 'completed',
     time: session.end,
   };
   db.insert('transactions', transaction);
 
-  const walletId = session.corporate ? 'biz-001' : session.userId;
+  const walletId = session.corporate ? 'biz-001' : session.familyOwner ?? session.userId;
   const wallet = db.data.wallets[walletId];
   const balanceBefore = wallet?.balance ?? 0;
   if (wallet) wallet.balance = Math.max(0, wallet.balance - cost);
@@ -1239,6 +1381,16 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
       entity: walletId,
       payload: { balance: wallet.balance, threshold: wallet.threshold },
     });
+  }
+
+  // A point per kWh for the driver; the demo's simulated traffic earns nothing.
+  if (!simulated && energy > 0) addPoints(session.userId, Math.round(energy), `Зарядка · ${session.stationName}`);
+  // A private host gets their share straight into their wallet.
+  const host = db.byId('stations', session.stationId)?.private;
+  if (host && cost > 0 && db.data.wallets[host.ownerId]) {
+    const net = Math.round(cost * (1 - (session.commissionRate ?? HOST_COMMISSION) / 100));
+    db.data.wallets[host.ownerId].balance += net;
+    db.save();
   }
 
   promoteQueue(session.stationId, session.connectorId);
@@ -1853,60 +2005,71 @@ const CONNECTOR_TYPES = ['CCS2', 'Type2', 'GB/T DC', 'CHAdeMO'];
  * Registers a new station for the caller's network. It stays unavailable to
  * drivers until the charger itself connects over OCPP and reports in.
  */
-api.post('/stations', requireAuth('operator'), (req, res) => {
-  const b = req.body ?? {};
+/** Checks a new station's fields; the same rules for operators and private hosts. */
+export function stationInput(b = {}) {
   const text = (v, max) => String(v ?? '').trim().replace(/\s+/g, ' ').slice(0, max);
   const name = text(b.name, 60);
   const city = text(b.city, 40);
   const address = text(b.address, 120);
   const lat = Number(b.geoLat);
   const lng = Number(b.geoLng);
-  if (name.length < 3) return res.status(400).json({ error: 'Название — от 3 символов' });
-  if (city.length < 2) return res.status(400).json({ error: 'Укажите город' });
-  if (address.length < 5) return res.status(400).json({ error: 'Укажите адрес' });
-  if (!(lat > 37 && lat < 46 && lng > 55.9 && lng < 73.2)) return res.status(400).json({ error: 'Координаты должны быть в пределах Узбекистана' });
-  if (db.data.stations.some(s => s.name.toLowerCase() === name.toLowerCase())) return res.status(409).json({ error: 'Станция с таким названием уже есть' });
+  if (name.length < 3) return { error: 'Название — от 3 символов' };
+  if (city.length < 2) return { error: 'Укажите город' };
+  if (address.length < 5) return { error: 'Укажите адрес' };
+  if (!(lat > 37 && lat < 46 && lng > 55.9 && lng < 73.2)) return { error: 'Координаты должны быть в пределах Узбекистана' };
+  if (db.data.stations.some(st => st.name.toLowerCase() === name.toLowerCase())) return { error: 'Станция с таким названием уже есть', status: 409 };
   const specs = Array.isArray(b.connectors) ? b.connectors.slice(0, 8) : [];
-  if (!specs.length) return res.status(400).json({ error: 'Добавьте хотя бы один разъём' });
+  if (!specs.length) return { error: 'Добавьте хотя бы один разъём' };
   for (const c of specs) {
-    if (!CONNECTOR_TYPES.includes(c.type)) return res.status(400).json({ error: 'Неизвестный тип разъёма' });
-    if (!(Number(c.power) >= 3.7 && Number(c.power) <= 400)) return res.status(400).json({ error: 'Мощность от 3,7 до 400 кВт' });
-    if (!(Number(c.price) >= 300 && Number(c.price) <= 5000)) return res.status(400).json({ error: 'Цена от 300 до 5 000 сум за кВт·ч' });
+    if (!CONNECTOR_TYPES.includes(c.type)) return { error: 'Неизвестный тип разъёма' };
+    if (!(Number(c.power) >= 3.7 && Number(c.power) <= 400)) return { error: 'Мощность от 3,7 до 400 кВт' };
+    if (!(Number(c.price) >= 300 && Number(c.price) <= 5000)) return { error: 'Цена от 300 до 5 000 сум за кВт·ч' };
   }
+  return { data: { name, city, address, lat, lng, specs, hours: text(b.hours, 20) || '24/7', amenities: Array.isArray(b.amenities) ? b.amenities.map(x => text(x, 20)).filter(Boolean).slice(0, 6) : [] } };
+}
 
-  const operator = db.byId('operators', req.account.orgId);
-  const nextStation = Math.max(...db.data.stations.map(s => Number(s.id.slice(3)) || 0)) + 1;
-  let nextConnector = Math.max(...db.data.stations.flatMap(s => s.connectors.map(c => Number(c.id.slice(1)) || 0))) + 1;
-  const connectors = specs.map(c => ({ id: `c${nextConnector++}`, type: c.type, power: Number(c.power), status: 'unavailable', price: Math.round(Number(c.price)) }));
+/** Adds a station for an operator; it waits for its charger to connect over OCPP. */
+export function createStation(operator, d) {
+  const nextStation = Math.max(...db.data.stations.map(st => Number(st.id.slice(3)) || 0)) + 1;
+  let nextConnector = Math.max(...db.data.stations.flatMap(st => st.connectors.map(c => Number(c.id.slice(1)) || 0))) + 1;
+  const connectors = d.specs.map(c => ({ id: `c${nextConnector++}`, type: c.type, power: Number(c.power), status: 'unavailable', price: Math.round(Number(c.price)) }));
   const station = {
     id: `st-${String(nextStation).padStart(3, '0')}`,
-    name,
+    name: d.name,
     operator: operator.name,
     operatorId: operator.id,
-    address,
-    city,
-    lat: Math.round(((45.6 - lat) / 8.4) * 100),
-    lng: Math.round(((lng - 56) / 17.2) * 100),
-    geoLat: lat,
-    geoLng: lng,
+    address: d.address,
+    city: d.city,
+    lat: Math.round(((45.6 - d.lat) / 8.4) * 100),
+    lng: Math.round(((d.lng - 56) / 17.2) * 100),
+    geoLat: d.lat,
+    geoLng: d.lng,
     connectors,
     rating: 0,
     reviews: 0,
     totalPower: Math.max(...connectors.map(c => c.power)),
-    hours: text(b.hours, 20) || '24/7',
-    amenities: [],
+    hours: d.hours,
+    amenities: d.amenities ?? [],
     image: 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=800&h=400&fit=crop&auto=format',
     ocpp: { online: false, awaiting: true },
   };
   db.data.stations.push(station);
-  operator.stations = db.data.stations.filter(s => s.operatorId === operator.id).length;
-  operator.evse += connectors.length;
+  operator.stations = db.data.stations.filter(st => st.operatorId === operator.id).length;
+  operator.evse = (operator.evse ?? 0) + connectors.length;
   db.save();
+  return station;
+}
+
+api.post('/stations', requireAuth('operator'), (req, res) => {
+  const checked = stationInput(req.body);
+  if (checked.error) return res.status(checked.status ?? 400).json({ error: checked.error });
+  const operator = db.byId('operators', req.account.orgId);
+  const station = createStation(operator, checked.data);
   emit({
     type: 'station.added',
     portal: 'operator',
     actor: req.account.name,
-    message: `Добавлена станция ${station.name} · ${connectors.length} разъём(а) · ожидает подключения OCPP`,
+    message: `Добавлена станция ${station.name} · ${station.connectors.length} разъём(а) · ожидает подключения OCPP`,
     entity: station.id,
     payload: { stationId: station.id },
   });
@@ -2307,7 +2470,7 @@ api.post('/transactions/:id/refund', requireAuth('admin'), (req, res) => {
   if (!txn) return res.status(404).json({ error: 'Транзакция не найдена' });
   if (txn.status !== 'completed' || !txn.amount) return res.status(409).json({ error: 'Вернуть можно только оплаченную зарядку' });
   const session = db.byId('sessions', txn.sessionId);
-  const walletId = session?.corporate ? 'biz-001' : txn.userId;
+  const walletId = session?.corporate ? 'biz-001' : session?.familyOwner ?? txn.userId;
   const wallet = (db.data.wallets[walletId] ??= { balance: 0, currency: 'UZS', autoTopUp: false, threshold: 0, card: null });
   wallet.balance += txn.amount;
   txn.status = 'refunded';

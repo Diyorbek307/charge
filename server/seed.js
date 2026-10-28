@@ -3,7 +3,7 @@ import { OPERATORS, buildStations, buildCustomers, buildHistory, buildMonthly, p
 
 // Bump when the shape below changes so existing stores reseed instead of
 // silently serving a stale schema.
-export const SCHEMA_VERSION = 15;
+export const SCHEMA_VERSION = 16;
 
 export function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   const hash = crypto.scryptSync(password, salt, 32).toString('hex');
@@ -277,6 +277,10 @@ export function seed(now = Date.now()) {
     queues: [],
     bookings: [],
     payments: history.payments,
+    // A point per kWh for charges already in the history, as if loyalty had always been on.
+    points: sessions
+      .filter(x => x.status === 'completed' && x.energy > 0)
+      .map((x, i) => ({ id: `PT-SEED${i}`, userId: x.userId, delta: Math.round(x.energy), reason: `Зарядка · ${x.stationName}`, ts: x.end })),
     // Generated history runs up to here; the demo simulation fills in after it.
     // The generated history covers this window; months it only partly covers are not shown as real ones.
     historyStart: new Date(now - 60 * 86400_000).toISOString(),

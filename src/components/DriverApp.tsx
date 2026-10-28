@@ -23,12 +23,14 @@ import ChargingHubScreen from './driver/Hub';
 import TripPlannerScreen from './driver/Trip';
 import { ProfileScreen, SecurityScreen, NotificationsScreen } from './driver/Account';
 import { useFavorites } from './driver/favorites';
+import { StationForecastBlock, StationCommunityBlock } from './driver/StationExtras';
+import { FinanceScreen, LoyaltyScreen, FamilyScreen, HostScreen, SosSheet } from './driver/Extras';
 import { useMyLocation, km, fmtKm, driveMinutes, routeLinks } from '../lib/geo';
 import { inTelegram, telegramInitData } from '../lib/telegram';
 import type { Booking, Session, PaymentOrder } from '../lib/api';
 import AuthFlow from './AuthFlow';
 
-type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'wallet' | 'security' | 'support' | 'eco';
+type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco';
 type Tab = 'map' | 'trips' | 'charging' | 'history' | 'profile';
 
 const statusColor: Record<string, string> = {
@@ -152,6 +154,9 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
           ))}
         </div>
 
+        <StationForecastBlock stationId={station.id} connectors={station.connectors} />
+        <StationCommunityBlock stationId={station.id} />
+
         {/* Amenities */}
         {station.amenities.length > 0 && (
           <div className="flex gap-2 flex-wrap mb-4">
@@ -210,12 +215,13 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
   );
 }
 
-function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station: Station | null; onBack: () => void; onConfirm: (connectorId: string | null, payer: 'self' | 'company') => void; onOpenQR?: () => void }) {
+function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station: Station | null; onBack: () => void; onConfirm: (connectorId: string | null, payer: 'self' | 'company' | `family:${string}`) => void; onOpenQR?: () => void }) {
   const { state, sessions: portalSessions } = useSync();
   const me = portalSessions.driver;
   const balance = (me && state?.wallets[me.id]?.balance) ?? 0;
   const employer = state?.employer ?? null;
-  const [payer, setPayer] = useState<'self' | 'company'>(employer && employer.left > 0 ? 'company' : 'self');
+  const familyWallets = (state?.family?.payers ?? []).filter(p => p.status === 'active');
+  const [payer, setPayer] = useState<'self' | 'company' | `family:${string}`>(employer && employer.left > 0 ? 'company' : 'self');
   const [launchMode, setLaunchMode] = useState<'qr' | 'remote'>('qr');
   const [selectedConnector, setSelectedConnector] = useState(station?.connectors.find(c => c.status === 'available') || station?.connectors[0] || null);
   const [targetPct, setTargetPct] = useState(80);
@@ -377,6 +383,22 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
                 </div>
               </button>
             )}
+            {familyWallets.map(f => (
+              <button
+                key={f.ownerId}
+                role="radio"
+                aria-checked={payer === `family:${f.ownerId}`}
+                onClick={() => setPayer(`family:${f.ownerId}`)}
+                disabled={f.left <= 0}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all disabled:opacity-50 ${payer === `family:${f.ownerId}` ? 'border-violet-500 bg-violet-50' : 'border-slate-200'}`}
+              >
+                <div className="w-8 h-8 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center"><Heart size={16} /></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-slate-800">{`Семейный кошелёк · ${f.name}`}</p>
+                  <p className="text-xs text-slate-400">{f.left > 0 ? `Осталось ${f.left.toLocaleString('ru-RU')} из ${f.limit.toLocaleString('ru-RU')} сум в этом месяце` : 'Лимит на этот месяц исчерпан'}</p>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -2214,6 +2236,7 @@ export default function DriverApp() {
   ) ?? null;
 
   const [lastSession, setLastSession] = useState<Session | null>(null);
+  const [sos, setSos] = useState(false);
   const watched = useRef<string | null>(null);
   const [lastBooking, setLastBooking] = useState<Booking | null>(null);
   // Shown once per account on this device.
@@ -2259,7 +2282,7 @@ export default function DriverApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events, driverAccount]);
 
-  const startCharging = async (connectorId: string | null = null, payer: 'self' | 'company' = 'self') => {
+  const startCharging = async (connectorId: string | null = null, payer: 'self' | 'company' | `family:${string}` = 'self') => {
     const station = selectedStation;
     const connector =
       station?.connectors.find(c => c.id === connectorId && c.status === 'available') ??
@@ -2361,6 +2384,10 @@ export default function DriverApp() {
     if (screen === 'wallet') return <WalletScreen onBack={() => setScreen('profile')} />;
     if (screen === 'eco') return <EcoScreen onBack={() => setScreen('profile')} />;
     if (screen === 'security') return <SecurityScreen onBack={() => setScreen('profile')} />;
+    if (screen === 'finance') return <FinanceScreen onBack={() => setScreen('profile')} />;
+    if (screen === 'loyalty') return <LoyaltyScreen onBack={() => setScreen('profile')} />;
+    if (screen === 'family') return <FamilyScreen onBack={() => setScreen('profile')} />;
+    if (screen === 'host') return <HostScreen onBack={() => setScreen('profile')} />;
     if (screen === 'support') return <SupportScreen onBack={() => setScreen('profile')} onReport={() => setScreen(selectedStation ? 'report' : 'map')} />;
 
     if (activeTab === 'history') return <HistoryScreen />;
@@ -2380,6 +2407,10 @@ export default function DriverApp() {
             QR
           </button>
         )}
+        {screen === 'map' && (
+          <button onClick={() => setSos(true)} aria-label="SOS — нужна помощь" className="absolute bottom-[136px] left-3 z-20 w-11 h-11 rounded-xl bg-red-600 text-white font-extrabold text-xs shadow-lg active:scale-95">SOS</button>
+        )}
+        {sos && <SosSheet onClose={() => setSos(false)} />}
         {screen === 'station' && selectedStation && (
           <StationDetailSheet station={selectedStation} onClose={handleBack} onStartCharging={() => setScreen('charging-start')} onBook={() => setScreen('booking')} onReviews={() => setScreen('reviews')} onReport={() => setScreen('report')} />
         )}
@@ -2387,7 +2418,7 @@ export default function DriverApp() {
     );
   };
 
-  const showTabs = !['charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support'].includes(screen);
+  const showTabs = !['charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host'].includes(screen);
 
   return (
     <div className="h-full flex flex-col bg-white overflow-hidden relative" style={{ fontFamily: 'Manrope, sans-serif' }}>

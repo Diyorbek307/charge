@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { MapPin, Scan, Route, Zap, Moon, Sun, Clock, Calendar, Users, Car, ChevronRight, Navigation } from 'lucide-react';
+import { MapPin, Scan, Route, Zap, Moon, Sun, Clock, Calendar, Users, Car, ChevronRight, Navigation, Wallet } from 'lucide-react';
 import type { Station } from '../../data/mockData';
 import type { TariffForecast } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 import { useLiveStations } from '../../lib/live';
+import { useMyLocation, locate as askLocation, samePort } from '../../lib/geo';
 
 const BAND_LABEL: Record<string, string> = { green: 'Зелёные часы', day: 'Дневной тариф', standard: 'Обычный тариф', peak: 'Вечерний пик' };
 const hh = (h: number) => `${String(h % 24).padStart(2, '0')}:00`;
@@ -21,7 +22,8 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
   const me = sessions.driver;
   const stations = useLiveStations();
   const [forecast, setForecast] = useState<TariffForecast | null>(null);
-  const [here, setHere] = useState<{ lat: number; lng: number } | null>(null);
+  // Shared with the map and the station card.
+  const here = useMyLocation();
   const [locating, setLocating] = useState(false);
 
   useEffect(() => {
@@ -41,14 +43,36 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
     .slice(0, 5);
 
   const locate = () => {
-    if (!navigator.geolocation) return;
     setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      p => { setHere({ lat: p.coords.latitude, lng: p.coords.longitude }); setLocating(false); },
-      () => setLocating(false),
-      { timeout: 8000 },
-    );
+    void askLocation().then(() => setLocating(false));
   };
+
+  /**
+   * The cheapest place to charge from here: the energy the car needs at each
+   * station's price right now, plus the energy spent driving there. Only free
+   * connectors that fit the car, within 60 km.
+   */
+  const mult = forecast?.current.multiplier ?? 1;
+  const needKwh = car ? Math.max(10, (car.battery * ((car.chargeLimit ?? 80) - 20)) / 100) : 30;
+  const fits = (type: string) => !car || samePort(type, car.port) || (car.port === 'CCS2' && samePort(type, 'Type 2'));
+  const options = here
+    ? stations
+        .map(st => {
+          const conns = st.connectors.filter(c => c.status === 'available' && fits(c.type));
+          if (!conns.length) return null;
+          const d = km(here, { lat: st.geoLat, lng: st.geoLng });
+          if (d > 60) return null;
+          const c = conns.reduce((a, b) => (b.price < a.price ? b : a));
+          const price = Math.round(c.price * mult);
+          const roadKwh = d * 1.3 * 0.18;
+          return { st, d, price, power: c.power, charge: needKwh * price, total: (needKwh + roadKwh) * price };
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null)
+    : [];
+  const nearest = options.length ? options.reduce((a, b) => (b.d < a.d ? b : a)) : null;
+  const ranked = [...options].sort((a, b) => a.total - b.total).slice(0, 3);
+  const cheapest = ranked[0];
+  const saving = cheapest && nearest && cheapest.st.id !== nearest.st.id ? Math.round(nearest.total - cheapest.total) : 0;
 
   const cur = forecast?.current;
   const best = forecast?.bestWindow;
@@ -93,6 +117,36 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
             </div>
           </div>
         ))}
+
+        <div className="bg-white rounded-2xl border border-slate-100 p-4">
+          <p className="text-sm font-semibold text-slate-800 flex items-center gap-1.5"><Wallet size={15} className="text-emerald-500" />Выгоднее всего сейчас</p>
+          {!here ? (
+            <button onClick={locate} disabled={locating} className="mt-2 w-full py-2.5 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-semibold inline-flex items-center justify-center gap-1.5 disabled:opacity-50">
+              <Navigation size={14} />{locating ? 'Определяем…' : 'Найти рядом со мной'}
+            </button>
+          ) : ranked.length === 0 ? (
+            <p className="text-xs text-slate-400 mt-1">В радиусе 60 км нет свободных подходящих разъёмов</p>
+          ) : (
+            <>
+              <p className="text-xs text-slate-500 mt-1">{`Для ${Math.round(needKwh)} кВт·ч с учётом дороги до станции`}</p>
+              {saving > 500 && <p className="text-xs text-emerald-700 bg-emerald-50 rounded-lg px-2.5 py-1.5 mt-2">{`${cheapest.st.name} выгоднее ближайшей на ${saving.toLocaleString('ru-RU')} сум, даже с дорогой`}</p>}
+              <ul className="mt-2 space-y-1.5">
+                {ranked.map((o, i) => (
+                  <li key={o.st.id}>
+                    <button onClick={() => onSelectStation(o.st)} className="w-full flex items-center gap-3 text-left rounded-xl px-2 py-1.5 hover:bg-slate-50">
+                      <span className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center ${i === 0 ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{i + 1}</span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-sm font-semibold text-slate-800 truncate">{o.st.name}</span>
+                        <span className="block text-xs text-slate-400">{`${o.d < 10 ? o.d.toFixed(1) : Math.round(o.d)} км · ${o.price.toLocaleString('ru-RU')} сум/кВт·ч · до ${o.power} кВт`}</span>
+                      </span>
+                      <span className="text-sm font-bold tabular-nums text-slate-800">{`${Math.round(o.total / 1000)}k`}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
 
         {cur && (
           <div className="bg-white rounded-2xl border border-slate-100 p-4">

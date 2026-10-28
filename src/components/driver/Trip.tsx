@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowUpDown, Zap, Flag, Circle, Clock, Wallet, AlertTriangle
 import type { Station } from '../../data/mockData';
 import { useSync } from '../../lib/sync';
 import { useLiveStations } from '../../lib/live';
+import NearbyStop from './Nearby';
 
 const CITIES: { id: string; name: string; lat: number; lng: number }[] = [
   { id: 'tashkent', name: 'Ташкент', lat: 41.311, lng: 69.24 },
@@ -126,7 +127,7 @@ export default function TripPlannerScreen({ onBack, onSelectStation }: { onBack:
       <div className="bg-white px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100 shrink-0">
         <button onClick={onBack} aria-label="Назад" className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
         <div>
-          <h1 className="text-base font-bold text-slate-900">Поездка между городами</h1>
+          <h1 className="text-base font-bold text-slate-900">Дорога по Узбекистану</h1>
           <p className="text-xs text-slate-500">{me?.car ? `${me.car.brand} ${me.car.model} · ${pack} кВт·ч` : `Батарея ${pack} кВт·ч — укажите свою машину в профиле`}</p>
         </div>
       </div>
@@ -179,14 +180,18 @@ export default function TripPlannerScreen({ onBack, onSelectStation }: { onBack:
                 <Circle size={14} className="text-emerald-500 fill-emerald-500 mt-0.5 shrink-0" />
                 <div><p className="text-sm font-semibold text-slate-800">{a.name}</p><p className="text-xs text-slate-400">{`старт · ${soc}%`}</p></div>
               </li>
-              {result.stops.map(s => (
+              {result.stops.map((s, i) => (
                 <li key={s.station.id} className="flex gap-3">
                   <Zap size={14} className="text-amber-500 mt-0.5 shrink-0" />
-                  <button onClick={() => onSelectStation(s.station)} className="text-left flex-1 min-w-0">
+                  <div className="flex-1 min-w-0">
+                  <button onClick={() => onSelectStation(s.station)} className="text-left w-full">
+                    {i === 0 && s.atKm < 30 && <p className="text-[11px] font-semibold text-amber-600">Подзарядитесь перед выездом</p>}
                     <p className="text-sm font-semibold text-slate-800 truncate">{s.station.name}</p>
                     <p className="text-xs text-slate-500">{`${s.atKm} км · ${s.station.city} · до ${s.power} кВт · ${s.price.toLocaleString('ru-RU')} сум/кВт·ч`}</p>
                     <p className="text-xs text-slate-400">{`${s.arrive}% → ${s.leave}% · ${s.kwh} кВт·ч · ${dur(s.minutes)} · ${s.cost.toLocaleString('ru-RU')} сум`}</p>
                   </button>
+                  <NearbyStop lat={s.station.geoLat} lng={s.station.geoLng} />
+                  </div>
                 </li>
               ))}
               {'error' in result ? (
