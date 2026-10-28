@@ -24,7 +24,9 @@ const mmss = (s: number) => `${String(Math.floor(s / 3600)).padStart(2, '0')}:${
  */
 export function ChargingActiveScreen({ session, startBattery, packKwh, limit, onStop }: { session: Session | null; startBattery: number | null; packKwh?: number | null; limit?: number | null; onStop: () => void }) {
   const pack = packKwh || PACK_KWH;
-  const TARGET = limit || DEFAULT_TARGET;
+  const goal = session?.goal;
+  // A goal set at the start wins over the car's default limit.
+  const TARGET = goal?.kind === 'percent' ? goal.value : limit || DEFAULT_TARGET;
   const [now, setNow] = useState(Date.now());
   const [stopping, setStopping] = useState(false);
   useEffect(() => {
@@ -34,7 +36,7 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
 
   if (!session) {
     return (
-      <div className="h-full flex flex-col items-center justify-center gap-3 px-8 text-center" style={{ background: '#050d1e' }}>
+      <div className="h-full flex flex-col items-center justify-center gap-3 px-8 text-center" style={{ background: '#111111' }}>
         <LoaderCircle size={28} className="text-emerald-300 animate-spin" />
         <p className="text-white font-semibold">Ждём ответа станции</p>
         <p className="text-white/50 text-sm">Станция подтверждает запуск. Если кабель не подключён — подключите его к машине.</p>
@@ -49,14 +51,24 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
   const energy = metered ? session.energy : Math.min((kw * seconds) / 3600, 80);
   const price = session.price ?? 0;
   const cost = metered && session.cost ? session.cost : energy * price;
-  const from = startBattery ?? 30;
+  const from = goal?.fromPct ?? startBattery ?? 30;
   const battery = Math.min(100, from + (energy / pack) * 100);
   const etaMin = battery < TARGET ? Math.ceil(((TARGET - battery) / 100) * pack / kw * 60) : 0;
   const band = bandOf(session.multiplier);
   const C = 2 * Math.PI * 60;
+  // A goal in km or money: how much is left at the current power.
+  const leftKwh = goal && goal.kind !== 'percent' ? (goal.stopKwh ? goal.stopKwh - energy : ((goal.stopCost ?? 0) - cost) / (price || 1800)) : 0;
+  const goalLine =
+    goal && goal.kind !== 'percent'
+      ? leftKwh > 0
+        ? `Цель ${goal.kind === 'km' ? `на ${goal.value} км` : `на ${goal.value.toLocaleString('ru-RU')} сум`} · ~${Math.max(1, Math.ceil((leftKwh / kw) * 60))} мин · остановим сами`
+        : 'Цель достигнута — останавливаем'
+      : battery < TARGET
+        ? `до ${TARGET}% · ~${etaMin} мин${goal ? ' · остановим сами' : ''}`
+        : `${TARGET}% достигнуто — можно отключаться`;
 
   return (
-    <div className="h-full flex flex-col relative overflow-hidden" style={{ background: 'linear-gradient(170deg, #050d1e 0%, #071428 40%, #030a14 100%)' }}>
+    <div className="h-full flex flex-col relative overflow-hidden" style={{ background: 'linear-gradient(170deg, #1a1a1a 0%, #111111 45%, #0a0a0a 100%)' }}>
       <div className="absolute top-0 inset-x-0 h-64 opacity-40 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% -20%, rgba(52,211,153,0.18) 0%, transparent 60%)' }} />
 
       <div className="relative px-4 pt-4 pb-1 flex items-center justify-between z-10">
@@ -84,7 +96,7 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
 
         <div className="mb-4 flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full">
           <Clock size={11} className="text-sky-400" />
-          <p className="text-white/70 text-xs">{battery < TARGET ? `до ${TARGET}% · ~${etaMin} мин` : `${TARGET}% достигнуто — можно отключаться`}</p>
+          <p className="text-white/70 text-xs">{goalLine}</p>
         </div>
 
         <div className="grid grid-cols-3 gap-2 w-full">

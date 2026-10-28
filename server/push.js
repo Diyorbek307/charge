@@ -61,7 +61,13 @@ const KINDS = {
   'queue.ready': { title: 'Ваша очередь подошла', url: '/?portal=driver' },
   'booking.expire': { title: 'Бронь истекла', url: '/?portal=driver' },
   // Only when someone else ended it — a driver who pressed stop already knows.
-  'session.stop': { title: 'Зарядка завершена', url: '/?portal=driver', when: e => !['driver', 'business'].includes(e.portal) },
+  // A charge stopped at its goal is announced by session.goal, with the reminder to free the spot.
+  'session.stop': { title: 'Зарядка завершена', url: '/?portal=driver', when: e => !['driver', 'business'].includes(e.portal) && db.byId('sessions', e.entity)?.stopReason !== 'goal' },
+  'session.goal': { title: 'Зарядка завершена — освободите место', url: '/?portal=driver' },
+  'session.progress': { title: 'Зарядка почти готова', url: '/?portal=driver' },
+  'session.failed': { title: 'Зарядка не началась', url: '/?portal=driver' },
+  'schedule.started': { title: 'Отложенная зарядка началась', url: '/?portal=driver' },
+  'schedule.failed': { title: 'Отложенная зарядка не началась', url: '/?portal=driver' },
   'alert.new': { title: 'Новое оповещение', url: '/?portal=operator' },
   // Only provider-confirmed top-ups, not the demo's direct button.
   'wallet.topup': { title: 'Кошелёк пополнен', url: '/?portal=driver', when: e => e.portal === 'system' },

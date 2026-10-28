@@ -34,9 +34,9 @@
   ],
   "shortcuts": [
     {
-      "name": "Найти станцию",
-      "short_name": "Карта",
-      "url": "/?tab=map",
+      "name": "Сканировать QR на станции",
+      "short_name": "QR",
+      "url": "/?portal=driver&go=qr",
       "icons": [
         {
           "src": "/icon-192.png",
@@ -45,9 +45,20 @@
       ]
     },
     {
-      "name": "Начать зарядку",
-      "short_name": "QR скан",
-      "url": "/?scan=true",
+      "name": "Ближайшая свободная станция",
+      "short_name": "Рядом",
+      "url": "/?portal=driver&go=nearest",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Моя зарядка",
+      "short_name": "Зарядка",
+      "url": "/?portal=driver&go=charging",
       "icons": [
         {
           "src": "/icon-192.png",

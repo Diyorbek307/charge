@@ -28,8 +28,8 @@ import { StationForecastBlock, StationCommunityBlock } from './driver/StationExt
 import { FinanceScreen, LoyaltyScreen, FamilyScreen, HostScreen, SosSheet } from './driver/Extras';
 import { CreditScreen, FaceCheck } from './driver/Credit';
 import { NetworkTopUp, NetworkWalletList } from './driver/NetworkWallets';
-import type { Payer } from '../lib/api';
-import { useMyLocation, km, fmtKm, driveMinutes, routeLinks } from '../lib/geo';
+import type { Payer, ChargeGoal } from '../lib/api';
+import { useMyLocation, km, fmtKm, driveMinutes, routeLinks, locate } from '../lib/geo';
 import { inTelegram, telegramInitData } from '../lib/telegram';
 import type { Booking, Session, PaymentOrder } from '../lib/api';
 import AuthFlow from './AuthFlow';
@@ -228,7 +228,10 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
   );
 }
 
-function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station: Station | null; onBack: () => void; onConfirm: (connectorId: string | null, payer: Payer, faceToken?: string) => void; onOpenQR?: () => void }) {
+/** What the driver wants from a charge, and when it should start. */
+type ChargeOptions = { goal?: ChargeGoal; startAt?: string };
+
+function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station: Station | null; onBack: () => void; onConfirm: (connectorId: string | null, payer: Payer, faceToken?: string, options?: ChargeOptions) => void; onOpenQR?: () => void }) {
   const { state, sessions: portalSessions } = useSync();
   const me = portalSessions.driver;
   const balance = (me && state?.wallets[me.id]?.balance) ?? 0;
@@ -242,15 +245,35 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
   const [netTopUp, setNetTopUp] = useState(false);
   const [launchMode, setLaunchMode] = useState<'qr' | 'remote'>('qr');
   const [selectedConnector, setSelectedConnector] = useState(station?.connectors.find(c => c.status === 'available') || station?.connectors[0] || null);
-  const [targetPct, setTargetPct] = useState(80);
   const [scanning, setScanning] = useState(false);
   const [scanned, setScanned] = useState(false);
 
   // The driver's own car when the account has one, otherwise a typical arrival charge.
   const currentBattery = state?.vehicles.find(v => v.driverId === me?.id)?.battery ?? 34;
-  const kwNeeded = selectedConnector ? ((targetPct - currentBattery) / 100) * 85 : 0;
-  const estCost = selectedConnector ? Math.round(kwNeeded * selectedConnector.price) : 0;
-  const estMinutes = selectedConnector ? Math.round((kwNeeded / selectedConnector.power) * 60) : 0;
+  const pack = me?.car?.battery ?? 75;
+  const [targetPct, setTargetPct] = useState(() => Math.min(100, Math.max(me?.car?.chargeLimit ?? 80, Math.ceil((currentBattery + 5) / 5) * 5)));
+  const [goalKind, setGoalKind] = useState<'percent' | 'sum' | 'km'>('percent');
+  const [goalSum, setGoalSum] = useState(30000);
+  const [goalKm, setGoalKm] = useState(100);
+  const [when, setWhen] = useState<'now' | 'night'>('now');
+  // Tashkent is UTC+5: the night tariff runs 23:00–07:00, i.e. 18:00–02:00 UTC.
+  const utcHour = new Date().getUTCHours();
+  const nightNow = utcHour >= 18 || utcHour < 2;
+  const nextNight = () => {
+    const d = new Date();
+    d.setUTCHours(18, 0, 0, 0);
+    if (d.getTime() <= Date.now()) d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString();
+  };
+  const price = selectedConnector?.price ?? 1800;
+  const kwNeeded = !selectedConnector ? 0
+    : goalKind === 'percent' ? Math.max(0, ((targetPct - currentBattery) / 100) * pack)
+    : goalKind === 'km' ? goalKm * 0.18
+    : goalSum / price;
+  const estCost = goalKind === 'sum' ? goalSum : Math.round(kwNeeded * price * (when === 'night' ? 0.7 : 1));
+  const estMinutes = selectedConnector ? Math.round((kwNeeded / Math.max(3, selectedConnector.power * 0.85)) * 60) : 0;
+  const goal = goalKind === 'percent' ? { kind: 'percent' as const, value: targetPct, fromPct: currentBattery } : goalKind === 'sum' ? { kind: 'sum' as const, value: goalSum } : { kind: 'km' as const, value: goalKm };
+  const options = { goal, ...(when === 'night' && !nightNow ? { startAt: nextNight() } : {}) };
   // The server asks for 5 kWh up front before a start.
   const netMinimum = selectedConnector ? selectedConnector.price * 5 : 0;
   const netShort = netWallet ? Math.max(0, netMinimum - netWallet.balance) : 0;
@@ -348,20 +371,44 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
           </div>
         )}
 
-        {/* Target charge */}
+        {/* Goal: the charge stops by itself when it gets there */}
         {(launchMode === 'remote' || scanned) && (
           <div className="bg-white rounded-2xl p-4 border border-slate-100">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-slate-500">ЗАРЯДИТЬ ДО</p>
-              <span className={`text-sm font-bold mono ${targetPct >= 80 ? 'text-green-600' : 'text-sky-600'}`}>{targetPct}%</span>
+            <p className="text-xs font-semibold text-slate-500 mb-2">СКОЛЬКО ЗАРЯДИТЬ</p>
+            <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-xl mb-3" role="radiogroup" aria-label="Цель зарядки">
+              {([['percent', 'До %'], ['sum', 'На сумму'], ['km', 'На км']] as const).map(([k, label]) => (
+                <button key={k} role="radio" aria-checked={goalKind === k} onClick={() => setGoalKind(k)}
+                  className={`py-1.5 rounded-lg text-xs font-semibold ${goalKind === k ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>{label}</button>
+              ))}
             </div>
-            <input type="range" min={currentBattery + 5} max={100} step={5} value={targetPct}
-              onChange={e => setTargetPct(Number(e.target.value))}
-              className="w-full accent-sky-500 mb-3" />
+            {goalKind === 'percent' && (
+              <>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-slate-500">{`Сейчас ≈ ${currentBattery}%`}</span>
+                  <span className={`text-sm font-bold mono ${targetPct >= 80 ? 'text-green-600' : 'text-sky-600'}`}>{targetPct}%</span>
+                </div>
+                <input type="range" min={Math.min(100, currentBattery + 5)} max={100} step={5} value={targetPct} aria-label="Зарядить до, %"
+                  onChange={e => setTargetPct(Number(e.target.value))}
+                  className="w-full accent-[#FFB000] mb-3" />
+              </>
+            )}
+            {goalKind !== 'percent' && (
+              <div className="grid grid-cols-4 gap-2 mb-3">
+                {(goalKind === 'sum' ? [20000, 30000, 50000, 100000] : [50, 100, 150, 250]).map(v => {
+                  const active = goalKind === 'sum' ? goalSum === v : goalKm === v;
+                  return (
+                    <button key={v} onClick={() => (goalKind === 'sum' ? setGoalSum(v) : setGoalKm(v))} aria-pressed={active}
+                      className={`py-2 rounded-xl text-sm font-semibold ${active ? 'bg-[#FFC83D] text-[#111]' : 'bg-slate-100 text-slate-700'}`}>
+                      {goalKind === 'sum' ? `${v / 1000}K` : `${v} км`}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-2 text-center">
               {[
-                { label: 'Нужно кВт·ч', value: kwNeeded.toFixed(1) },
-                { label: 'Стоимость', value: `~${(estCost / 1000).toFixed(0)}k сум` },
+                { label: 'кВт·ч', value: kwNeeded.toFixed(1) },
+                { label: 'Стоимость', value: `~${Math.round(estCost / 1000)}k сум` },
                 { label: 'Время', value: `~${estMinutes} мин` },
               ].map(s => (
                 <div key={s.label} className="bg-sky-50 rounded-xl py-2 px-1">
@@ -370,6 +417,26 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
                 </div>
               ))}
             </div>
+            <p className="text-[11px] text-slate-500 mt-2">Зарядка остановится сама, когда дойдёт до цели — пришлём уведомление.</p>
+
+            {/* When to start */}
+            {!nightNow && (
+              <div className="mt-3 pt-3 border-t border-slate-100">
+                <p className="text-xs font-semibold text-slate-500 mb-2">КОГДА НАЧАТЬ</p>
+                <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Когда начать">
+                  <button role="radio" aria-checked={when === 'now'} onClick={() => setWhen('now')}
+                    className={`p-2.5 rounded-xl border-2 text-left ${when === 'now' ? 'border-[#FFB000] bg-amber-50' : 'border-slate-200'}`}>
+                    <span className="block text-sm font-semibold text-slate-800">Сейчас</span>
+                  </button>
+                  <button role="radio" aria-checked={when === 'night'} onClick={() => setWhen('night')} disabled={payer === 'credit'}
+                    className={`p-2.5 rounded-xl border-2 text-left disabled:opacity-50 ${when === 'night' ? 'border-[#FFB000] bg-amber-50' : 'border-slate-200'}`}>
+                    <span className="block text-sm font-semibold text-slate-800">Ночью в 23:00</span>
+                    <span className="block text-[11px] text-emerald-700">на 30% дешевле</span>
+                  </button>
+                </div>
+                {when === 'night' && <p className="text-[11px] text-slate-500 mt-2">Оставьте машину подключённой — зарядка начнётся сама в 23:00 по ночному тарифу. Отменить можно на экране «Зарядка».</p>}
+              </div>
+            )}
           </div>
         )}
 
@@ -458,7 +525,7 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
       {netTopUp && netWallet && <NetworkTopUp wallet={netWallet} need={netMinimum} onClose={() => setNetTopUp(false)} />}
 
       <div className="px-4 pb-6 pt-2">
-        <button onClick={() => (netWallet ? onConfirm(selectedConnector?.id ?? null, 'self') : payer === 'credit' ? setFaceCheck(true) : onConfirm(selectedConnector?.id ?? null, payer))}
+        <button onClick={() => (netWallet ? onConfirm(selectedConnector?.id ?? null, 'self', undefined, options) : payer === 'credit' ? setFaceCheck(true) : onConfirm(selectedConnector?.id ?? null, payer, undefined, options))}
           disabled={launchMode === 'qr' && !scanned}
           className={`w-full rounded-2xl py-4 font-bold text-base transition-colors flex items-center justify-center gap-2 ${launchMode === 'qr' && !scanned ? 'bg-slate-200 text-slate-400' : 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sm'}`}>
           <Zap size={18} />Подтвердить и начать зарядку
@@ -469,7 +536,7 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
           onClose={() => setFaceCheck(false)}
           onVerified={token => {
             setFaceCheck(false);
-            onConfirm(selectedConnector?.id ?? null, 'credit', token);
+            onConfirm(selectedConnector?.id ?? null, 'credit', token, { goal });
           }}
         />
       )}
@@ -2340,6 +2407,51 @@ export default function DriverApp() {
    * through to the local screen either way — a demo shouldn't dead-end on a
    * connector someone else grabbed first.
    */
+  // Shortcuts from the app icon: ?go=qr opens the scanner, ?go=nearest the closest free station, ?go=charging the hub.
+  const liveStations = useLiveStations();
+  const shortcutDone = useRef(false);
+  useEffect(() => {
+    if (shortcutDone.current || !driverAccount || !liveStations.length) return;
+    const go = new URLSearchParams(window.location.search).get('go');
+    if (!go) return;
+    shortcutDone.current = true;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('go');
+    window.history.replaceState(null, '', url.toString());
+    if (go === 'qr') setScreen('qr-scan');
+    if (go === 'charging') setActiveTab('charging');
+    if (go === 'nearest') {
+      void locate().then(here => {
+        const free = liveStations.filter(s => s.connectors.some(c => c.status === 'available'));
+        const pick = here ? [...free].sort((a, b) => km(here, { lat: a.geoLat, lng: a.geoLng }) - km(here, { lat: b.geoLat, lng: b.geoLng }))[0] : free[0];
+        if (pick) {
+          setSelectedStation(pick);
+          setScreen('station');
+        }
+      });
+    }
+  }, [driverAccount, liveStations]);
+
+  // Progress of a charge and of a scheduled start, as they happen.
+  const seenChargeEvents = useRef(new Set<string>());
+  useEffect(() => {
+    const mine = events.filter(e => ['session.progress', 'session.goal', 'schedule.started', 'schedule.failed', 'session.failed'].includes(e.type) && !seenChargeEvents.current.has(e.id));
+    for (const e of mine.slice(0, 3)) {
+      seenChargeEvents.current.add(e.id);
+      // Only what happened in the last minute: older events are history, not news.
+      if (Date.now() - Date.parse(e.ts) > 60_000) continue;
+      const look = {
+        'session.progress': { icon: '⏳', title: 'Зарядка почти готова', color: '#FFB000' },
+        'session.goal': { icon: '✅', title: 'Зарядка завершена', color: '#22C55E' },
+        'schedule.started': { icon: '🌙', title: 'Отложенная зарядка началась', color: '#22C55E' },
+        'schedule.failed': { icon: '⚠️', title: 'Отложенная зарядка не началась', color: '#F59E0B' },
+        'session.failed': { icon: '⚠️', title: 'Зарядка не началась', color: '#F59E0B' },
+      }[e.type as 'session.goal'];
+      pushToast({ ...look, body: e.message });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events]);
+
   const seenQueueEvent = useRef<string | null>(null);
   useEffect(() => {
     const ready = events.find(
@@ -2353,16 +2465,30 @@ export default function DriverApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events, driverAccount]);
 
-  const startCharging = async (connectorId: string | null = null, payer: Payer = 'self', faceToken?: string) => {
-    const station = selectedStation;
+  const startCharging = async (connectorId: string | null = null, payer: Payer = 'self', faceToken?: string, options: ChargeOptions = {}, at: Station | null = selectedStation) => {
+    const station = at;
     const connector =
       station?.connectors.find(c => c.id === connectorId && c.status === 'available') ??
       station?.connectors.find(c => c.status === 'available') ??
       station?.connectors[0];
 
+    // "Start at 23:00": the server starts it then, at the night price.
+    if (options.startAt && station && connector) {
+      try {
+        await actions.scheduleCharge({ stationId: station.id, connectorId: connector.id, payer, goal: options.goal, at: options.startAt });
+        await refresh();
+        pushToast({ icon: '🌙', title: 'Зарядка начнётся в 23:00', body: `${station.name} · по ночному тарифу. Оставьте машину подключённой`, color: '#FFB000' });
+        setActiveTab('charging');
+        setScreen('map');
+      } catch (err) {
+        pushToast({ icon: '⚠️', title: 'Не удалось отложить зарядку', body: err instanceof Error ? err.message : 'Попробуйте ещё раз', color: '#F59E0B' });
+      }
+      return;
+    }
+
     if (station && connector && driverAccount) {
       try {
-        await actions.startSession('driver', station.id, connector.id, payer, faceToken);
+        await actions.startSession('driver', station.id, connector.id, payer, faceToken, options.goal);
         await refresh();
       } catch (err) {
         pushToast({
@@ -2471,7 +2597,7 @@ export default function DriverApp() {
     if (activeTab === 'history') return <HistoryScreen />;
     if (activeTab === 'profile') return <ProfileScreen onNavigate={s => { walletFrom.current = 'profile'; setScreen(s as Screen); }} />;
     if (activeTab === 'trips') return <TripPlannerScreen onBack={() => setActiveTab('map')} onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} />;
-    if (activeTab === 'charging') return <ChargingHubScreen onNavigate={(s) => { setScreen(s as Screen); setActiveTab('map'); }} onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} onOpenCharge={() => { setActiveTab('map'); setScreen('charging-active'); }} />;
+    if (activeTab === 'charging') return <ChargingHubScreen onNavigate={(s) => { setScreen(s as Screen); setActiveTab('map'); }} onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} onOpenCharge={() => { setActiveTab('map'); setScreen('charging-active'); }} onRepeat={(st, cid, goal) => { setActiveTab('map'); setSelectedStation(st); void startCharging(cid, 'self', undefined, { goal }, st); }} />;
 
     return (
       <div className="relative w-full h-full">

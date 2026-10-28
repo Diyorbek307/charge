@@ -93,7 +93,13 @@ function scopeOf({ type, entity, payload = {} }) {
     case 'session.stop':
       return { ...sessionScope(entity), public: true };
     case 'session.tick':
+    case 'session.progress':
+    case 'session.goal':
       return { ...sessionScope(entity), public: false };
+    case 'session.failed':
+    case 'schedule.started':
+    case 'schedule.failed':
+      return { userId: payload.userId };
     case 'evse.status':
       return { operatorId: stationOperator(payload.stationId), public: true };
     case 'alert.new':
@@ -332,6 +338,7 @@ function stateFor(viewer) {
     family: familyFor(viewer.id),
     credit: creditFor(viewer.id),
     networkWallets: networkWalletsFor(viewer.id),
+    scheduled: (d.scheduledStarts ?? []).filter(x => x.userId === viewer.id && x.status === 'pending'),
     wallets: d.wallets[viewer.id] ? { [viewer.id]: d.wallets[viewer.id] } : {},
     queues: queues.map(ownQueue),
     bookings: bookingsFor(viewer),
@@ -1236,6 +1243,7 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
   const wantsCompany = opts.corporate ?? intent?.corporate ?? false;
   const familyOwner = opts.family ?? intent?.family ?? null;
   const onCredit = !!(opts.credit ?? intent?.credit);
+  const goal = opts.goal ?? intent?.goal ?? null;
   const { station, connector } = findConnector(stationId, connectorId);
   if (!station || !connector) return { status: 404, error: 'Коннектор не найден' };
   if (connector.status === 'occupied') return { status: 409, error: 'Коннектор уже занят' };
@@ -1347,6 +1355,7 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     ...(familyOwner && !corporate ? { familyOwner } : {}),
     ...(onCredit ? { credit: true } : {}),
     ...(directOp ? { direct: directOp.id } : {}),
+    ...(goal ? { goal } : {}),
     source: simulated ? 'demo' : source,
     ocppTransactionId,
     meterStartWh,
@@ -1374,47 +1383,90 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
   return { session };
 }
 
-api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), async (req, res) => {
-  const { stationId, connectorId, payer } = req.body ?? {};
+/**
+ * What a driver wants from this charge: up to a battery level, for a sum, or
+ * for a distance. Turned into an energy or money threshold the session
+ * watcher stops at (server/sessionWatch.js).
+ */
+export function chargeGoal(account, raw) {
+  if (!raw || typeof raw !== 'object') return { goal: null };
+  const value = Math.round(Number(raw.value));
+  const kind = raw.kind;
+  if (kind === 'percent') {
+    if (!(value >= 10 && value <= 100)) return { error: 'Цель — от 10 до 100%' };
+    const pack = Number(account.car?.battery) || 75;
+    const soc = db.find('vehicles', v => v.driverId === account.id)?.battery ?? Math.min(95, Math.max(0, Number(raw.fromPct) || 30));
+    if (value <= soc) return { error: `Машина уже заряжена до ${soc}% — выберите цель выше` };
+    return { goal: { kind, value, fromPct: soc, stopKwh: Math.round(((value - soc) / 100) * pack * 10) / 10 } };
+  }
+  if (kind === 'km') {
+    if (!(value >= 10 && value <= 1000)) return { error: 'Цель — от 10 до 1 000 км' };
+    return { goal: { kind, value, stopKwh: Math.round(value * KWH_PER_KM * 10) / 10 } };
+  }
+  if (kind === 'sum') {
+    if (!(value >= 5_000 && value <= 5_000_000)) return { error: 'Сумма — от 5 000 до 5 000 000 сум' };
+    return { goal: { kind, value, stopCost: value } };
+  }
+  return { error: 'Неизвестная цель зарядки' };
+}
+const KWH_PER_KM = 0.18;
+
+/**
+ * Starts a charge for a driver, by whatever path the station needs: a
+ * partner network's system, the charge point over OCPP, or directly.
+ * Returns { status, body } for the route, the scheduler and the watcher.
+ */
+export async function startCharge(account, b = {}) {
+  const { stationId, connectorId, payer } = b;
   const corporate = payer === 'company';
   // "family:<ownerId>" charges a relative's wallet.
   const family = typeof payer === 'string' && payer.startsWith('family:') ? payer.slice(7) : null;
   // On credit only with a face check made in the last few minutes, by this driver.
   const credit = payer === 'credit';
-  if (credit && (req.account.portal !== 'driver' || !consumeFaceToken(req.account.id, req.body?.faceToken))) {
-    return res.status(403).json({ error: 'Подтвердите лицо, чтобы зарядиться в долг' });
+  if (credit && (account.portal !== 'driver' || !consumeFaceToken(account.id, b.faceToken))) {
+    return { status: 403, body: { error: 'Подтвердите лицо, чтобы зарядиться в долг' } };
   }
+  const g = chargeGoal(account, b.goal);
+  if (g.error) return { status: 400, body: { error: g.error } };
+  const goal = g.goal;
+  const remember = () => {
+    if (corporate || family || credit || goal) companyIntent.set(account.id, { corporate, family, credit, goal });
+    else companyIntent.delete(account.id);
+  };
 
   // A partner network's station is started by the partner's system; the
   // session opens when the partner reports it.
   const roamingStation = db.byId('stations', stationId);
   const roaming = roamerFor(roamingStation);
   if (roaming) {
-    const check = beginSession(req.account, stationId, connectorId, { dryRun: true, corporate, family, credit });
-    if (check.error) return res.status(check.status).json({ error: check.error });
-    if (corporate || family || credit) companyIntent.set(req.account.id, { corporate, family, credit });
-    else companyIntent.delete(req.account.id);
+    const check = beginSession(account, stationId, connectorId, { dryRun: true, corporate, family, credit });
+    if (check.error) return { status: check.status, body: { error: check.error } };
+    remember();
     const connector = roamingStation.connectors.find(c => c.id === connectorId);
-    const accepted = await roaming.startRemote(roamingStation, connector, req.account);
-    if (!accepted) return res.status(502).json({ error: 'Сеть партнёра не приняла команду запуска' });
-    return res.status(202).json({ pending: true, stats: statsFor(req.account) });
+    const accepted = await roaming.startRemote(roamingStation, connector, account);
+    if (!accepted) return { status: 502, body: { error: 'Сеть партнёра не приняла команду запуска' } };
+    return { status: 202, body: { pending: true, stats: statsFor(account) } };
   }
 
   // A station connected over OCPP is the source of truth: ask it to start, and
   // the session opens when it reports StartTransaction.
   if (gateway?.isConnected(stationId)) {
-    const check = beginSession(req.account, stationId, connectorId, { dryRun: true, corporate, family, credit });
-    if (check.error) return res.status(check.status).json({ error: check.error });
-    if (corporate || family || credit) companyIntent.set(req.account.id, { corporate, family, credit });
-    else companyIntent.delete(req.account.id);
-    const accepted = await gateway.remoteStart(stationId, connectorId, req.account.id);
-    if (!accepted) return res.status(502).json({ error: 'Станция не приняла команду запуска' });
-    return res.status(202).json({ pending: true, stats: statsFor(req.account) });
+    const check = beginSession(account, stationId, connectorId, { dryRun: true, corporate, family, credit });
+    if (check.error) return { status: check.status, body: { error: check.error } };
+    remember();
+    const accepted = await gateway.remoteStart(stationId, connectorId, account.id);
+    if (!accepted) return { status: 502, body: { error: 'Станция не приняла команду запуска' } };
+    return { status: 202, body: { pending: true, stats: statsFor(account) } };
   }
 
-  const result = beginSession(req.account, stationId, connectorId, { corporate, family, credit });
-  if (result.error) return res.status(result.status).json({ error: result.error });
-  res.json({ session: result.session, stats: statsFor(req.account) });
+  const result = beginSession(account, stationId, connectorId, { corporate, family, credit, goal });
+  if (result.error) return { status: result.status, body: { error: result.error } };
+  return { status: 200, body: { session: result.session, stats: statsFor(account) } };
+}
+
+api.post('/sessions/start', requireAuth('driver', 'business', 'admin'), async (req, res) => {
+  const r = await startCharge(req.account, req.body ?? {});
+  res.status(r.status).json(r.body);
 });
 
 /**
@@ -1569,32 +1621,37 @@ api.post('/sessions/:id/rating', requireAuth('driver', 'business'), (req, res) =
   res.json({ station, session });
 });
 
-api.post('/sessions/:id/stop', requireAuth('driver', 'business', 'admin', 'operator'), async (req, res) => {
-  const session = db.byId('sessions', req.params.id);
-  if (!session) return res.status(404).json({ error: 'Сессия не найдена' });
-  if (!canControlSession(req.account, session)) {
-    return res.status(403).json({ error: 'Нет прав на эту сессию' });
-  }
-  if (session.status !== 'active') return res.status(409).json({ error: 'Сессия уже завершена' });
-
+/** Stops a charge by whatever path started it. Returns { status, body }. */
+export async function stopCharge(session, actor) {
+  if (session.status !== 'active') return { status: 409, body: { error: 'Сессия уже завершена' } };
   // On a partner network the partner stops it and sends the final record.
   const roaming = roamers.find(r => r.source === session.source);
   if (roaming) {
     const accepted = await roaming.stopRemote(session);
-    if (!accepted) return res.status(502).json({ error: 'Сеть партнёра не приняла команду остановки' });
-    return res.status(202).json({ pending: true, session, stats: statsFor(req.account) });
+    if (!accepted) return { status: 502, body: { error: 'Сеть партнёра не приняла команду остановки' } };
+    return { status: 202, body: { pending: true, session, stats: statsFor(actor) } };
   }
 
   // A charge under OCPP control is stopped by the charge point, which then
   // reports the final meter reading.
   if (session.source === 'ocpp' && gateway?.isConnected(session.stationId)) {
     const accepted = await gateway.remoteStop(session.stationId, session.ocppTransactionId);
-    if (!accepted) return res.status(502).json({ error: 'Станция не приняла команду остановки' });
-    return res.status(202).json({ pending: true, session, stats: statsFor(req.account) });
+    if (!accepted) return { status: 502, body: { error: 'Станция не приняла команду остановки' } };
+    return { status: 202, body: { pending: true, session, stats: statsFor(actor) } };
   }
 
-  const { transaction } = completeSession(session, req.account);
-  res.json({ session, transaction, stats: statsFor(req.account) });
+  const { transaction } = completeSession(session, actor);
+  return { status: 200, body: { session, transaction, stats: statsFor(actor) } };
+}
+
+api.post('/sessions/:id/stop', requireAuth('driver', 'business', 'admin', 'operator'), async (req, res) => {
+  const session = db.byId('sessions', req.params.id);
+  if (!session) return res.status(404).json({ error: 'Сессия не найдена' });
+  if (!canControlSession(req.account, session)) {
+    return res.status(403).json({ error: 'Нет прав на эту сессию' });
+  }
+  const r = await stopCharge(session, req.account);
+  res.status(r.status).json(r.body);
 });
 
 /** Live meter tick so an in-progress session grows for every watching portal. */

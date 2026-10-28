@@ -12,6 +12,7 @@ import { ocpiApi, registerPartner, ourUrls } from "./server/ocpi.js";
 import { mockCpo } from "./scripts/ocpi-cpo-mock.mjs";
 import { sandboxPayout } from "./server/direct.js";
 import { networkApi } from "./server/networkApi.js";
+import { startSessionWatch } from "./server/sessionWatch.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -79,6 +80,8 @@ async function connectDemoPartner() {
 // OCPP 1.6-J charge points connect over WebSocket on the same port.
 attachOcpp(server);
 attachPush();
+// Charge goals, progress notices and scheduled starts.
+startSessionWatch();
 startWebhookWorker();
 // The demo network keeps charging on its own; tests turn this off.
 if (DEMO_LIFE) startDemoLife();

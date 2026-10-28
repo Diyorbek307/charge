@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { MapPin, Scan, Route, Zap, Moon, Sun, Clock, Calendar, Users, Car, ChevronRight, Navigation, Wallet } from 'lucide-react';
+import { MapPin, Scan, Route, Zap, Moon, Sun, Clock, Calendar, Users, Car, ChevronRight, Navigation, Wallet, RotateCcw, X } from 'lucide-react';
 import type { Station } from '../../data/mockData';
-import type { TariffForecast } from '../../lib/api';
+import type { TariffForecast, ChargeGoal } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 import { useLiveStations } from '../../lib/live';
 import { useMyLocation, locate as askLocation, samePort } from '../../lib/geo';
@@ -17,8 +17,8 @@ function km(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
 }
 
 /** The "Charging" tab: what is going on for me right now, and where I can charge next. */
-export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenCharge }: { onNavigate: (s: string) => void; onSelectStation: (s: Station) => void; onOpenCharge: () => void }) {
-  const { state, sessions, actions } = useSync();
+export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenCharge, onRepeat }: { onNavigate: (s: string) => void; onSelectStation: (s: Station) => void; onOpenCharge: () => void; onRepeat: (station: Station, connectorId: string, goal: ChargeGoal) => void }) {
+  const { state, sessions, actions, refresh } = useSync();
   const me = sessions.driver;
   const stations = useLiveStations();
   const [forecast, setForecast] = useState<TariffForecast | null>(null);
@@ -35,6 +35,14 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
   const queue = (state?.queues ?? []).filter(q => q.userId === me?.id);
   const car = me?.car;
   const companyCar = state?.vehicles.find(v => v.driverId === me?.id);
+  const scheduled = state?.scheduled ?? [];
+
+  // "Like last time": the same station, connector type and goal, in one tap.
+  const last = [...(state?.sessions ?? [])].filter(s => s.userId === me?.id && s.status === 'completed').sort((a, b) => (b.end ?? '').localeCompare(a.end ?? ''))[0];
+  const lastStation = last ? stations.find(s => s.id === last.stationId) : undefined;
+  const lastConnector = lastStation?.connectors.find(c => c.id === last?.connectorId && c.status === 'available') ?? lastStation?.connectors.find(c => c.status === 'available' && c.type === last?.connector);
+  const lastGoal: ChargeGoal = last?.goal ? (last.goal.kind === 'percent' ? { kind: 'percent', value: last.goal.value } : { kind: last.goal.kind, value: last.goal.value }) : { kind: 'percent', value: car?.chargeLimit ?? 80 };
+  const goalLabel = (g: ChargeGoal) => (g.kind === 'percent' ? `до ${g.value}%` : g.kind === 'km' ? `на ${g.value} км` : `на ${g.value.toLocaleString('ru-RU')} сум`);
 
   const free = stations
     .filter(s => s.connectors.some(c => c.status === 'available'))
@@ -117,6 +125,32 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
             </div>
           </div>
         ))}
+
+        {scheduled.map(x => (
+          <div key={x.id} className="bg-white rounded-2xl border border-amber-200 p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#111] flex items-center justify-center"><Moon size={17} className="text-[#FFC83D]" /></div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-slate-800 truncate">{`Начнётся в ${time(x.at)} · ${x.stationName}`}</p>
+              <p className="text-xs text-slate-500 truncate">{`${x.connector}${x.goal ? ` · ${goalLabel(x.goal)}` : ''} · ночной тариф`}</p>
+            </div>
+            <button onClick={() => actions.cancelSchedule(x.id).then(refresh).catch(() => {})} aria-label="Отменить отложенную зарядку" className="p-2 rounded-xl bg-slate-100"><X size={15} /></button>
+          </div>
+        ))}
+
+        {!live && last && lastStation && (
+          <div className="bg-white rounded-2xl border border-slate-100 p-4">
+            <p className="text-xs font-semibold text-slate-500 flex items-center gap-1.5"><RotateCcw size={13} />КАК В ПРОШЛЫЙ РАЗ</p>
+            <p className="text-sm font-semibold text-slate-800 mt-1 truncate">{lastStation.name}</p>
+            <p className="text-xs text-slate-500">{`${last.connector} · ${goalLabel(lastGoal)}`}</p>
+            <button
+              onClick={() => lastConnector && onRepeat(lastStation, lastConnector.id, lastGoal)}
+              disabled={!lastConnector}
+              className="mt-3 w-full py-2.5 rounded-xl bg-[#FFC83D] text-[#111] text-sm font-bold inline-flex items-center justify-center gap-1.5 disabled:bg-slate-100 disabled:text-slate-400"
+            >
+              <Zap size={15} />{lastConnector ? 'Зарядить так же' : 'Сейчас все такие разъёмы заняты'}
+            </button>
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl border border-slate-100 p-4">
           <p className="text-sm font-semibold text-slate-800 flex items-center gap-1.5"><Wallet size={15} className="text-emerald-500" />Выгоднее всего сейчас</p>

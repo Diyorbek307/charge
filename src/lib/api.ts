@@ -97,6 +97,10 @@ export interface OcpiPartner {
   operatorId: string; createdAt: string; lastSync: string | null; error: string | null; stations: number; endpoints: Record<string, string>;
 }
 export interface OcpiOverview { partners: OcpiPartner[]; version: string; ourVersionsUrl: string; party: { country_code: string; party_id: string } }
+/** What a driver wants from a charge; the server stops it there. */
+export type ChargeGoal = { kind: 'percent'; value: number; fromPct?: number } | { kind: 'sum'; value: number } | { kind: 'km'; value: number };
+export interface SessionGoal { kind: 'percent' | 'sum' | 'km'; value: number; fromPct?: number; stopKwh?: number; stopCost?: number }
+export interface ScheduledStart { id: string; stationId: string; stationName: string; connectorId: string; connector: string; payer: string; goal: ChargeGoal | null; at: string; status: 'pending' | 'starting' | 'started' | 'failed' | 'cancelled' }
 export type Payer = 'self' | 'company' | 'credit' | `family:${string}`;
 export type HostKind = 'home' | 'hotel' | 'business' | 'parking' | 'cafe';
 export interface HostApplication {
@@ -197,6 +201,8 @@ export interface Session {
   credit?: boolean;
   /** Paid from the driver's balance at this network (operator id): the money is the network's. */
   direct?: string;
+  /** Stops by itself at this goal. */
+  goal?: SessionGoal;
   /** Tariff band at start: 0.7 at night, 0.9 by day, 1.25 at the evening peak. */
   multiplier?: number;
   basePrice?: number;
@@ -326,6 +332,8 @@ export interface PlatformState {
   credit?: CreditState;
   /** The driver's balances at networks paid directly. */
   networkWallets?: NetworkWallet[];
+  /** Charges the driver asked to start later. */
+  scheduled?: ScheduledStart[];
   queues?: QueueEntry[];
   bookings?: Booking[];
   events: SyncEvent[];
@@ -664,8 +672,10 @@ export const apiClient = {
   logout: (portal: Portal) => post<{ ok: boolean }>('/auth/logout', undefined, portal),
 
   /** payer 'company' charges a fleet employee's session to their employer, within the monthly limit. */
-  startSession: (portal: Portal, stationId: string, connectorId: string, payer: Payer = 'self', faceToken?: string) =>
-    post<{ session: Session; stats: Stats }>('/sessions/start', { stationId, connectorId, payer, ...(faceToken ? { faceToken } : {}) }, portal),
+  startSession: (portal: Portal, stationId: string, connectorId: string, payer: Payer = 'self', faceToken?: string, goal?: ChargeGoal) =>
+    post<{ session: Session; stats: Stats }>('/sessions/start', { stationId, connectorId, payer, ...(faceToken ? { faceToken } : {}), ...(goal ? { goal } : {}) }, portal),
+  scheduleCharge: (body: { stationId: string; connectorId: string; payer: Payer; goal?: ChargeGoal; at: string }) => post<ScheduledStart>('/sessions/schedule', body, 'driver'),
+  cancelSchedule: (id: string) => request<ScheduledStart>(`/sessions/schedule/${id}`, { method: 'DELETE', portal: 'driver' }),
   rateSession: (portal: Portal, id: string, stars: number) =>
     post<{ station: Station; session: Session }>(`/sessions/${id}/rating`, { stars }, portal),
   stopSession: (portal: Portal, id: string) =>
