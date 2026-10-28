@@ -13,6 +13,7 @@ import { mockCpo } from "./scripts/ocpi-cpo-mock.mjs";
 import { sandboxPayout } from "./server/direct.js";
 import { networkApi } from "./server/networkApi.js";
 import { startSessionWatch } from "./server/sessionWatch.js";
+import "./server/cameras.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();

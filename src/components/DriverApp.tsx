@@ -28,13 +28,14 @@ import { StationForecastBlock, StationCommunityBlock } from './driver/StationExt
 import { FinanceScreen, LoyaltyScreen, FamilyScreen, HostScreen, SosSheet } from './driver/Extras';
 import { CreditScreen, FaceCheck } from './driver/Credit';
 import { NetworkTopUp, NetworkWalletList } from './driver/NetworkWallets';
+import Navigator from './driver/Navigator';
 import type { Payer, ChargeGoal } from '../lib/api';
-import { useMyLocation, km, fmtKm, driveMinutes, routeLinks, locate } from '../lib/geo';
+import { useMyLocation, km, fmtKm, driveMinutes, locate } from '../lib/geo';
 import { inTelegram, telegramInitData } from '../lib/telegram';
 import type { Booking, Session, PaymentOrder } from '../lib/api';
 import AuthFlow from './AuthFlow';
 
-type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit';
+type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate';
 type Tab = 'map' | 'trips' | 'charging' | 'history' | 'profile';
 
 const statusColor: Record<string, string> = {
@@ -50,7 +51,7 @@ const statusLabel: Record<string, string> = {
   reserved: 'Забронировано',
 };
 
-function StationDetailSheet({ station, onClose, onStartCharging, onBook, onReviews, onReport }: { station: Station; onClose: () => void; onStartCharging: () => void; onBook: () => void; onReviews: () => void; onReport: () => void }) {
+function StationDetailSheet({ station, onClose, onStartCharging, onBook, onReviews, onReport, onNavigate }: { station: Station; onClose: () => void; onStartCharging: () => void; onBook: () => void; onReviews: () => void; onReport: () => void; onNavigate: () => void }) {
   const free = station.connectors.filter(c => c.status === 'available').length;
   const { state, actions, sessions: portalSessions, refresh } = useSync();
   const me = portalSessions.driver;
@@ -58,7 +59,6 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
   const favorite = favorites.has(station.id);
   const here = useMyLocation();
   const dist = here ? km(here, { lat: station.geoLat, lng: station.geoLng }) : null;
-  const route = routeLinks({ lat: station.geoLat, lng: station.geoLng });
   const queue = (state?.queues ?? []).filter(q => q.stationId === station.id);
   const myIndex = queue.findIndex(q => q.userId === me?.id);
   const myTurn = myIndex >= 0 && queue[myIndex].notified;
@@ -204,14 +204,10 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
         {queueError && (
           <p role="alert" className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-2">{queueError}</p>
         )}
-        <div className="grid grid-cols-2 gap-2 mb-2">
-          <a href={route.yandex} target="_blank" rel="noopener noreferrer" className="bg-slate-900 text-white rounded-xl py-2.5 font-semibold text-sm flex items-center justify-center gap-1.5">
-            <Navigation size={14} />Маршрут · Яндекс
-          </a>
-          <a href={route.google} target="_blank" rel="noopener noreferrer" className="bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl py-2.5 font-medium text-sm flex items-center justify-center gap-1.5">
-            <Navigation size={14} />Google Maps
-          </a>
-        </div>
+        {/* Navigation inside the app: route, voice, cameras. */}
+        <button onClick={onNavigate} className="w-full mb-2 bg-[#111] text-white rounded-xl py-3 font-semibold text-sm flex items-center justify-center gap-1.5">
+          <Navigation size={15} className="text-[#FFC83D]" />{dist !== null ? `Поехать · ${fmtKm(dist)}` : 'Поехать'}
+        </button>
         <div className="grid grid-cols-3 gap-2">
           <button onClick={() => favorites.toggle(station.id)} aria-pressed={favorite} className={`rounded-xl py-2 font-medium text-sm transition-colors flex items-center justify-center gap-1.5 ${favorite ? 'bg-red-50 text-red-500' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
             <Heart size={13} className={favorite ? 'fill-red-500' : ''} />{favorite ? 'В избранном' : 'Избранное'}
@@ -2591,6 +2587,7 @@ export default function DriverApp() {
     if (screen === 'loyalty') return <LoyaltyScreen onBack={() => setScreen('profile')} />;
     if (screen === 'family') return <FamilyScreen onBack={() => setScreen('profile')} />;
     if (screen === 'credit') return <CreditScreen onBack={() => setScreen('profile')} />;
+    if (screen === 'navigate' && selectedStation) return <Navigator station={selectedStation} onClose={() => setScreen('station')} onArrive={() => setScreen('charging-start')} />;
     if (screen === 'host') return <HostScreen onBack={() => setScreen('profile')} />;
     if (screen === 'support') return <SupportScreen onBack={() => setScreen('profile')} onReport={() => setScreen(selectedStation ? 'report' : 'map')} />;
 
@@ -2616,13 +2613,13 @@ export default function DriverApp() {
         )}
         {sos && <SosSheet onClose={() => setSos(false)} />}
         {screen === 'station' && selectedStation && (
-          <StationDetailSheet station={selectedStation} onClose={handleBack} onStartCharging={() => setScreen('charging-start')} onBook={() => setScreen('booking')} onReviews={() => setScreen('reviews')} onReport={() => setScreen('report')} />
+          <StationDetailSheet station={selectedStation} onClose={handleBack} onStartCharging={() => setScreen('charging-start')} onBook={() => setScreen('booking')} onReviews={() => setScreen('reviews')} onReport={() => setScreen('report')} onNavigate={() => setScreen('navigate')} />
         )}
       </div>
     );
   };
 
-  const showTabs = !['charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host', 'credit'].includes(screen);
+  const showTabs = !['charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host', 'credit', 'navigate'].includes(screen);
 
   return (
     <div className="h-full flex flex-col bg-white overflow-hidden relative" style={{ fontFamily: 'Inter, sans-serif' }}>

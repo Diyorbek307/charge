@@ -52,11 +52,5 @@ export function driveMinutes(distanceKm: number) {
 
 export const fmtKm = (d: number) => (d < 10 ? `${d.toFixed(1).replace('.', ',')} км` : `${Math.round(d)} км`);
 
-/** Turn-by-turn in the driver's navigator: Yandex is what most drivers in Uzbekistan use. */
-export const routeLinks = (to: Point) => ({
-  yandex: `https://yandex.uz/maps/?rtext=~${to.lat},${to.lng}&rtt=auto`,
-  google: `https://www.google.com/maps/dir/?api=1&destination=${to.lat},${to.lng}&travelmode=driving`,
-});
-
 /** Connector names differ in spacing between sources ("Type 2" / "Type2"). */
 export const samePort = (a: string, b: string) => a.replace(/\s+/g, '').toLowerCase() === b.replace(/\s+/g, '').toLowerCase();

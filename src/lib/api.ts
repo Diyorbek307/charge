@@ -674,6 +674,7 @@ export const apiClient = {
   /** payer 'company' charges a fleet employee's session to their employer, within the monthly limit. */
   startSession: (portal: Portal, stationId: string, connectorId: string, payer: Payer = 'self', faceToken?: string, goal?: ChargeGoal) =>
     post<{ session: Session; stats: Stats }>('/sessions/start', { stationId, connectorId, payer, ...(faceToken ? { faceToken } : {}), ...(goal ? { goal } : {}) }, portal),
+  reportCamera: (lat: number, lng: number, maxspeed?: number) => post<{ camera: { id: string } }>('/cameras', { lat, lng, ...(maxspeed ? { maxspeed } : {}) }, 'driver'),
   scheduleCharge: (body: { stationId: string; connectorId: string; payer: Payer; goal?: ChargeGoal; at: string }) => post<ScheduledStart>('/sessions/schedule', body, 'driver'),
   cancelSchedule: (id: string) => request<ScheduledStart>(`/sessions/schedule/${id}`, { method: 'DELETE', portal: 'driver' }),
   rateSession: (portal: Portal, id: string, stars: number) =>

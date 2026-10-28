@@ -1,0 +1,177 @@
+/**
+ * Turn-by-turn navigation inside the app: the route from a routing service
+ * (OSRM by default; VITE_ROUTER_URL points at our own server in production),
+ * where the car is on it, what to do next, and the cameras ahead.
+ */
+
+export type LatLng = { lat: number; lng: number };
+export type Lang = 'ru' | 'uz' | 'en';
+
+export interface Step {
+  type: string;
+  modifier?: string;
+  exit?: number;
+  name: string;
+  /** Where the manoeuvre happens. */
+  at: LatLng;
+  /** Distance along the route to the manoeuvre, metres. */
+  along: number;
+}
+export interface Route {
+  line: LatLng[];
+  /** Cumulative metres along `line`. */
+  cum: number[];
+  length: number;
+  duration: number;
+  steps: Step[];
+}
+export interface Camera { id: string; lat: number; lng: number; maxspeed: number | null; kind: 'speed' | 'redlight' | 'average'; source: 'osm' | 'drivers'; confirmed?: number }
+
+const ROUTER = (import.meta.env.VITE_ROUTER_URL as string | undefined) ?? 'https://router.project-osrm.org';
+const R = 6371000;
+const rad = (d: number) => (d * Math.PI) / 180;
+
+/** Metres between two points. */
+export function dist(a: LatLng, b: LatLng) {
+  const h = Math.sin(rad(b.lat - a.lat) / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+/** Nearest point of the route to `p`: distance off the route, and how far along it that point is. */
+export function project(route: Route, p: LatLng): { off: number; along: number; point: LatLng; seg: number } {
+  let best = { off: Infinity, along: 0, point: route.line[0], seg: 0 };
+  const kx = Math.cos(rad(p.lat)) * 111320;
+  const ky = 110540;
+  for (let i = 0; i < route.line.length - 1; i++) {
+    const a = route.line[i];
+    const b = route.line[i + 1];
+    const ax = (a.lng - p.lng) * kx;
+    const ay = (a.lat - p.lat) * ky;
+    const bx = (b.lng - p.lng) * kx;
+    const by = (b.lat - p.lat) * ky;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    const t = len2 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2)) : 0;
+    const x = ax + t * dx;
+    const y = ay + t * dy;
+    const off = Math.hypot(x, y);
+    if (off < best.off) {
+      best = { off, along: route.cum[i] + t * (route.cum[i + 1] - route.cum[i]), point: { lat: a.lat + t * (b.lat - a.lat), lng: a.lng + t * (b.lng - a.lng) }, seg: i };
+    }
+  }
+  return best;
+}
+
+/** The point `along` metres from the start of the route. */
+export function pointAt(route: Route, along: number): LatLng {
+  const i = Math.max(0, route.cum.findIndex(c => c >= along) - 1);
+  const a = route.line[i];
+  const b = route.line[Math.min(i + 1, route.line.length - 1)];
+  const span = route.cum[i + 1] - route.cum[i] || 1;
+  const t = Math.max(0, Math.min(1, (along - route.cum[i]) / span));
+  return { lat: a.lat + t * (b.lat - a.lat), lng: a.lng + t * (b.lng - a.lng) };
+}
+
+/** Compass bearing from a to b, degrees. */
+export function bearing(a: LatLng, b: LatLng) {
+  const y = Math.sin(rad(b.lng - a.lng)) * Math.cos(rad(b.lat));
+  const x = Math.cos(rad(a.lat)) * Math.sin(rad(b.lat)) - Math.sin(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.cos(rad(b.lng - a.lng));
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
+
+interface OsrmStep { maneuver: { type: string; modifier?: string; exit?: number; location: [number, number] }; name: string; distance: number }
+
+export async function fetchRoute(from: LatLng, to: LatLng): Promise<Route> {
+  const url = `${ROUTER}/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+  if (!res.ok) throw new Error('Сервис маршрутов не ответил');
+  const json = (await res.json()) as { code: string; routes: { distance: number; duration: number; geometry: { coordinates: [number, number][] }; legs: { steps: OsrmStep[] }[] }[] };
+  if (json.code !== 'Ok' || !json.routes.length) throw new Error('Маршрут не найден');
+  const r = json.routes[0];
+  const line = r.geometry.coordinates.map(([lng, lat]) => ({ lat, lng }));
+  const cum = [0];
+  for (let i = 1; i < line.length; i++) cum.push(cum[i - 1] + dist(line[i - 1], line[i]));
+  const route: Route = { line, cum, length: cum[cum.length - 1], duration: r.duration, steps: [] };
+  route.steps = r.legs[0].steps.map(s => {
+    const at = { lat: s.maneuver.location[1], lng: s.maneuver.location[0] };
+    return { type: s.maneuver.type, modifier: s.maneuver.modifier, exit: s.maneuver.exit, name: s.name, at, along: project(route, at).along };
+  });
+  return route;
+}
+
+export async function fetchCameras(route: Route): Promise<Camera[]> {
+  const lats = route.line.map(p => p.lat);
+  const lngs = route.line.map(p => p.lng);
+  const box = [Math.min(...lats) - 0.01, Math.min(...lngs) - 0.01, Math.max(...lats) + 0.01, Math.max(...lngs) + 0.01].map(v => v.toFixed(4)).join(',');
+  const res = await fetch(`/api/cameras?bbox=${box}`);
+  if (!res.ok) return [];
+  const { cameras } = (await res.json()) as { cameras: Camera[] };
+  // Only those on the route itself: within 35 m of the line.
+  return cameras.filter(c => project(route, c).off < 35);
+}
+
+// ---------------------------------------------------------------------------
+// Words: what to do next, on screen and spoken
+// ---------------------------------------------------------------------------
+
+const WORDS: Record<Lang, Record<string, string>> = {
+  ru: {
+    right: 'Поверните направо', left: 'Поверните налево', 'slight right': 'Держитесь правее', 'slight left': 'Держитесь левее',
+    'sharp right': 'Резко направо', 'sharp left': 'Резко налево', uturn: 'Развернитесь', straight: 'Прямо',
+    roundabout: 'На круговом движении — съезд {n}', arrive: 'Вы приехали', depart: 'Поехали', in: 'Через {d}', onto: 'на {name}',
+    camera: 'Камера через {d}', limit: 'ограничение {v}', over: 'Снизьте скорость', reroute: 'Перестраиваем маршрут', m: 'м', km: 'км',
+  },
+  uz: {
+    right: 'O‘ngga buriling', left: 'Chapga buriling', 'slight right': 'O‘ngroqdan yuring', 'slight left': 'Chaproqdan yuring',
+    'sharp right': 'Keskin o‘ngga', 'sharp left': 'Keskin chapga', uturn: 'Orqaga buriling', straight: 'To‘g‘riga',
+    roundabout: 'Aylanma yo‘lda — {n}-chiqish', arrive: 'Yetib keldingiz', depart: 'Yo‘lga chiqdik', in: '{d} dan keyin', onto: '{name} ga',
+    camera: '{d} dan keyin kamera', limit: 'cheklov {v}', over: 'Tezlikni pasaytiring', reroute: 'Yo‘nalish qayta tuzilmoqda', m: 'm', km: 'km',
+  },
+  en: {
+    right: 'Turn right', left: 'Turn left', 'slight right': 'Keep right', 'slight left': 'Keep left',
+    'sharp right': 'Sharp right', 'sharp left': 'Sharp left', uturn: 'Make a U-turn', straight: 'Go straight',
+    roundabout: 'At the roundabout take exit {n}', arrive: 'You have arrived', depart: 'Let’s go', in: 'In {d}', onto: 'onto {name}',
+    camera: 'Camera in {d}', limit: 'limit {v}', over: 'Slow down', reroute: 'Rerouting', m: 'm', km: 'km',
+  },
+};
+export const word = (lang: Lang, k: string, vars: Record<string, string | number> = {}) =>
+  (WORDS[lang][k] ?? WORDS.ru[k] ?? k).replace(/\{(\w+)\}/g, (_, v) => String(vars[v] ?? ''));
+
+export function fmtDist(lang: Lang, m: number) {
+  if (m >= 1000) return `${(m / 1000).toFixed(m >= 10_000 ? 0 : 1).replace('.', lang === 'en' ? '.' : ',')} ${word(lang, 'km')}`;
+  return `${Math.max(10, Math.round(m / 10) * 10)} ${word(lang, 'm')}`;
+}
+
+/** The manoeuvre as words, without the distance: "Поверните направо на ул. Навои". */
+export function action(lang: Lang, s: Step) {
+  let base: string;
+  if (s.type === 'arrive') base = word(lang, 'arrive');
+  else if (s.type === 'depart') base = word(lang, 'depart');
+  else if (s.type === 'roundabout' || s.type === 'rotary') base = word(lang, 'roundabout', { n: s.exit ?? 1 });
+  else base = word(lang, s.modifier ?? 'straight');
+  return { base, street: s.name && s.type !== 'arrive' ? s.name : '' };
+}
+
+/** The language the device can speak: Uzbek voices are rare, Russian is understood by most drivers here. */
+export function voiceLang(lang: Lang): Lang {
+  try {
+    if (lang === 'uz' && !speechSynthesis.getVoices().some(v => v.lang.toLowerCase().startsWith('uz'))) return 'ru';
+  } catch {
+    /* no voices */
+  }
+  return lang;
+}
+
+/** Speaks text already written in the given language; quiet if the device has no voice. */
+export function say(lang: Lang, text: string) {
+  try {
+    if (!('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang === 'uz' ? 'uz-UZ' : lang === 'en' ? 'en-US' : 'ru-RU';
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  } catch {
+    /* no voice */
+  }
+}
