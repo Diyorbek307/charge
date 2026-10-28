@@ -21,6 +21,8 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY package.json server.js ./
 COPY server ./server
+# The demo partner network (OCPI) is served from the app itself.
+COPY scripts/ocpi-cpo-mock.mjs ./scripts/
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s CMD wget -qO- http://127.0.0.1:3000/health || exit 1
