@@ -43,7 +43,7 @@ test('a driver charges end to end and the session is billed', async ({ page, req
   await openStation(page, 'Samarqand Gateway');
 
   await page.getByRole('button', { name: 'Начать зарядку' }).first().click();
-  await page.getByRole('button', { name: 'Удалённо' }).click();
+  await page.getByRole('button', { name: 'Из приложения' }).click();
   await page.getByRole('button', { name: /Подтвердить и начать зарядку/ }).click();
   await expect(page.getByText(/ИДЁТ ЗАРЯДКА/i)).toBeVisible();
 
@@ -54,6 +54,7 @@ test('a driver charges end to end and the session is billed', async ({ page, req
   expect(active?.stationName).toBe('Samarqand Gateway');
 
   await page.getByRole('button', { name: 'Остановить зарядку' }).click();
+  await page.getByRole('button', { name: 'Да, остановить' }).click();
   await expect(page.getByRole('heading', { name: 'Зарядка завершена' })).toBeVisible();
   // The receipt is the real session, and the rating reaches the station.
   await expect(page.getByText(active.id).first()).toBeVisible();

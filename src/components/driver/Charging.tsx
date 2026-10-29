@@ -22,13 +22,20 @@ const mmss = (s: number) => `${String(Math.floor(s / 3600)).padStart(2, '0')}:${
  * metered energy over OCPP; otherwise the figures follow the same curve the
  * server bills by when the session stops.
  */
-export function ChargingActiveScreen({ session, startBattery, packKwh, limit, onStop }: { session: Session | null; startBattery: number | null; packKwh?: number | null; limit?: number | null; onStop: () => void }) {
+export function ChargingActiveScreen({ session, startBattery, packKwh, limit, onStop, onLeave }: { session: Session | null; startBattery: number | null; packKwh?: number | null; limit?: number | null; onStop: () => void; onLeave?: () => void }) {
   const pack = packKwh || PACK_KWH;
   const goal = session?.goal;
   // A goal set at the start wins over the car's default limit.
   const TARGET = goal?.kind === 'percent' ? goal.value : limit || DEFAULT_TARGET;
   const [now, setNow] = useState(Date.now());
   const [stopping, setStopping] = useState(false);
+  // A stray tap must not end a charge: the first tap asks, the second stops.
+  const [askStop, setAskStop] = useState(false);
+  useEffect(() => {
+    if (!askStop) return;
+    const t = setTimeout(() => setAskStop(false), 5000);
+    return () => clearTimeout(t);
+  }, [askStop]);
   const [shared, setShared] = useState<string | null>(null);
   const { actions } = useSync();
   /** The phone's share sheet where there is one; otherwise the link is copied. */
@@ -58,6 +65,11 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
         <LoaderCircle size={28} className="text-emerald-300 animate-spin" />
         <p className="text-white font-semibold">Ждём ответа станции</p>
         <p className="text-white/50 text-sm">Станция подтверждает запуск. Если кабель не подключён — подключите его к машине.</p>
+        {onLeave && (
+          <button onClick={onLeave} className="mt-4 px-5 py-2.5 rounded-2xl bg-white/10 border border-white/15 text-white/85 text-sm font-semibold">
+            Свернуть — пришлём уведомление
+          </button>
+        )}
       </div>
     );
   }
@@ -103,10 +115,14 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
           <svg viewBox="0 0 200 200" className="w-full h-full absolute inset-0">
             <circle cx="100" cy="100" r="60" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="9" />
             <circle cx="100" cy="100" r="60" fill="none" stroke="rgba(52,211,153,0.12)" strokeWidth="9" strokeDasharray={`${(C * TARGET) / 100} ${C}`} style={{ transform: 'rotate(-90deg)', transformOrigin: '100px 100px' }} />
-            <circle cx="100" cy="100" r="60" fill="none" stroke="#34D399" strokeWidth="9" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - battery / 100)} style={{ transform: 'rotate(-90deg)', transformOrigin: '100px 100px', transition: 'stroke-dashoffset 1s linear' }} />
+            <circle cx="100" cy="100" r="60" fill="none" stroke="#34D399" strokeWidth="9" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - battery / 100)} style={{ transform: 'rotate(-90deg)', transformOrigin: '100px 100px', transition: 'stroke-dashoffset 1s linear', filter: 'drop-shadow(0 0 6px rgba(52,211,153,.55))' }} />
+            <g className="pg-orbit" aria-hidden="true">
+              <circle cx="100" cy="28" r="3.2" fill="#A7F3D0" />
+              <circle cx="100" cy="28" r="7" fill="#34D399" opacity=".25" />
+            </g>
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <BatteryCharging size={20} className="text-emerald-300 mb-1" />
+            <BatteryCharging size={20} className="text-emerald-300 mb-1 animate-pulse" />
             <span className="text-[48px] font-bold text-white leading-none tabular-nums">{Math.floor(battery)}</span>
             <span className="text-emerald-400/70 text-xs font-semibold">% · оценка</span>
           </div>
@@ -149,15 +165,22 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
         <button onClick={share} className="w-full text-white/90 rounded-2xl py-3 font-semibold text-sm inline-flex items-center justify-center gap-2 bg-white/5 border border-white/10">
           <Share2 size={15} />Поделиться — когда будет готово
         </button>
-        <button
-          onClick={() => { setStopping(true); onStop(); }}
-          disabled={stopping}
-          className="w-full text-white rounded-2xl py-4 font-bold text-[15px] active:scale-95 disabled:opacity-60 inline-flex items-center justify-center gap-2"
-          style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)' }}
-        >
-          {stopping && <LoaderCircle size={16} className="animate-spin" />}
-          Остановить зарядку
-        </button>
+        {askStop && !stopping ? (
+          <div className="grid grid-cols-2 gap-2 pg-reveal">
+            <button onClick={() => setAskStop(false)} className="rounded-2xl py-4 font-semibold text-[15px] text-white/85 bg-white/5 border border-white/10">Продолжить</button>
+            <button onClick={() => { setStopping(true); onStop(); }} className="rounded-2xl py-4 font-bold text-[15px] text-white bg-red-500/90">Да, остановить</button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setAskStop(true)}
+            disabled={stopping}
+            className="w-full text-white rounded-2xl py-4 font-bold text-[15px] active:scale-95 disabled:opacity-60 inline-flex items-center justify-center gap-2"
+            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)' }}
+          >
+            {stopping && <LoaderCircle size={16} className="animate-spin" />}
+            {stopping ? 'Останавливаем…' : 'Остановить зарядку'}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -183,7 +206,7 @@ export function ChargingDoneScreen({ session, onClose }: { session: Session | nu
   const minutes = Math.max(1, Math.round((Date.parse(session.end ?? session.start) - Date.parse(session.start)) / 60000));
   const band = bandOf(session.multiplier);
   const employer = state?.employer;
-  const payer = session.corporate ? `Корпоративный счёт${employer ? ` · ${employer.org}` : ''}` : session.credit ? 'В долг — оплатить в течение 14 дней' : session.familyOwner ? 'Семейный кошелёк' : session.direct ? `Баланс сети ${session.operator}` : 'Кошелёк';
+  const payer = session.corporate ? `Корпоративный счёт${employer ? ` · ${employer.org}` : ''}` : session.credit ? `В долг — оплатить в течение ${state?.credit?.days ?? 14} дней` : session.familyOwner ? 'Семейный кошелёк' : session.direct ? `Баланс сети ${session.operator}` : 'Кошелёк';
   const rows: [string, string][] = [
     ['Станция', session.stationName],
     ['Оператор', session.operator],
@@ -193,6 +216,7 @@ export function ChargingDoneScreen({ session, onClose }: { session: Session | nu
     ['Длительность', `${minutes} мин`],
     ['Энергия', `${session.energy} кВт·ч`],
     ['Цена', `${(session.price ?? 0).toLocaleString('ru-RU')} сум/кВт·ч${band ? ` (${band})` : ''}`],
+    ...(session.promo ? [['Скидка сети', `−${session.promo.percent}% · ${session.promo.title}`] as [string, string]] : []),
     ['Оплата', payer],
   ];
 
@@ -210,7 +234,7 @@ export function ChargingDoneScreen({ session, onClose }: { session: Session | nu
   return (
     <div className="h-full flex flex-col bg-slate-50">
       <div className="bg-gradient-to-b from-emerald-500 to-emerald-600 px-4 pt-6 pb-6 text-white text-center">
-        <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3"><CheckCircle size={30} /></div>
+        <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 pg-pop"><CheckCircle size={30} /></div>
         <h2 className="text-xl font-bold">Зарядка завершена</h2>
         <p className="text-emerald-100 text-sm mt-0.5">{session.stationName}</p>
         <div className="grid grid-cols-3 gap-2 mt-5">
@@ -235,7 +259,7 @@ export function ChargingDoneScreen({ session, onClose }: { session: Session | nu
               <p className="text-xs font-semibold text-slate-500">ЭЛЕКТРОННЫЙ ЧЕК</p>
               <p className="text-xs text-slate-400 font-mono">{session.id}</p>
             </div>
-            <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Оплачено</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full ${session.credit ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-700'}`}>{session.credit ? 'К оплате' : session.corporate ? 'Счёт компании' : 'Оплачено'}</span>
           </div>
           <div className="p-4 space-y-2">
             {rows.map(([k, v]) => (
@@ -253,13 +277,13 @@ export function ChargingDoneScreen({ session, onClose }: { session: Session | nu
 
         <div className="bg-white rounded-2xl border border-slate-100 p-4 text-center">
           {sent ? (
-            <p className="text-sm font-semibold text-sky-700">{`Спасибо! Ваша оценка ${stars}/5 учтена в рейтинге станции`}</p>
+            <p className="text-sm font-semibold text-sky-700 pg-reveal">{`Спасибо! Ваша оценка ${stars}/5 учтена в рейтинге станции`}</p>
           ) : (
             <>
               <p className="text-sm font-semibold text-slate-700 mb-2">Оцените станцию</p>
               <div className="flex justify-center gap-2" role="radiogroup" aria-label="Оценка станции">
                 {[1, 2, 3, 4, 5].map(n => (
-                  <button key={n} onClick={() => rate(n)} role="radio" aria-checked={stars === n} aria-label={`${n} из 5`} className={`text-3xl transition-transform active:scale-90 ${n <= stars ? 'text-amber-400' : 'text-slate-200'}`}>★</button>
+                  <button key={n} onClick={() => rate(n)} role="radio" aria-checked={stars === n} aria-label={`${n} из 5`} className={`text-3xl transition-transform active:scale-90 hover:scale-110 ${n <= stars ? 'text-amber-400 pg-pop' : 'text-slate-200'}`} style={n <= stars ? { animationDelay: `${n * 40}ms` } : undefined}>★</button>
                 ))}
               </div>
               {error && <p className="text-xs text-red-500 mt-2">{error}</p>}

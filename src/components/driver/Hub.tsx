@@ -5,6 +5,7 @@ import type { TariffForecast, ChargeGoal } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 import { useLiveStations } from '../../lib/live';
 import { useMyLocation, locate as askLocation, samePort } from '../../lib/geo';
+import { promoNow, discounted, useDriverPromos } from '../../lib/promos';
 
 const BAND_LABEL: Record<string, string> = { green: 'Зелёные часы', day: 'Дневной тариф', standard: 'Обычный тариф', peak: 'Вечерний пик' };
 const hh = (h: number) => `${String(h % 24).padStart(2, '0')}:00`;
@@ -25,6 +26,23 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
   // Shared with the map and the station card.
   const here = useMyLocation();
   const [locating, setLocating] = useState(false);
+  const promos = useDriverPromos();
+  const [cancelling, setCancelling] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const cancelBooking = async (id: string) => {
+    setCancelling(id);
+    try {
+      const { refunded } = await actions.cancelBooking('driver', id);
+      await refresh();
+      setNote(refunded ? 'Бронь отменена — 2 000 сум вернулись на кошелёк' : 'Бронь отменена');
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : 'Не удалось отменить бронь');
+    } finally {
+      setCancelling(null);
+      setTimeout(() => setNote(null), 3500);
+    }
+  };
+  const stationOf = (id: string) => stations.find(s => s.id === id);
 
   useEffect(() => {
     actions.tariffForecast().then(setForecast).catch(() => setForecast(null));
@@ -70,8 +88,10 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
           if (!conns.length) return null;
           const d = km(here, { lat: st.geoLat, lng: st.geoLng });
           if (d > 60) return null;
+          // The network's own discount counts: it is what the driver will pay.
+          const promo = promoNow({ id: st.id, operatorId: (st as Station & { operatorId?: string }).operatorId }, promos);
           const c = conns.reduce((a, b) => (b.price < a.price ? b : a));
-          const price = Math.round(c.price * mult);
+          const price = Math.round(discounted(c.price, promo) * mult);
           const roadKwh = d * 1.3 * 0.18;
           return { st, d, price, power: c.power, charge: needKwh * price, total: (needKwh + roadKwh) * price };
         })
@@ -94,10 +114,12 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
         </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 pg-stagger">
+        {note && <p role="status" className="text-xs text-slate-700 bg-white border border-slate-100 rounded-xl px-3 py-2 pg-reveal">{note}</p>}
         {live && (
-          <button onClick={onOpenCharge} className="w-full rounded-2xl p-4 text-left text-white flex items-center gap-3" style={{ background: 'linear-gradient(135deg, #065F46, #047857)' }}>
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center"><Zap size={18} /></div>
+          <button onClick={onOpenCharge} className="w-full rounded-2xl p-4 text-left text-white flex items-center gap-3 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #065F46, #047857)' }}>
+            <span className="absolute inset-0 pointer-events-none opacity-30" style={{ background: 'linear-gradient(100deg,transparent 30%,rgba(255,255,255,.35) 50%,transparent 70%)', backgroundSize: '200% 100%', animation: 'pg-shine 2.4s linear infinite' }} />
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center pg-icon-charge"><Zap size={18} /></div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold">Идёт зарядка</p>
               <p className="text-xs text-white/80 truncate">{`${live.stationName} · с ${time(live.start)}`}</p>
@@ -106,25 +128,35 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
           </button>
         )}
 
-        {bookings.map(b => (
-          <div key={b.id} className="bg-white rounded-2xl border border-violet-100 p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center"><Calendar size={17} className="text-violet-600" /></div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-800 truncate">{`Бронь ${b.code ?? ''} · ${b.stationName ?? ''}`}</p>
-              <p className="text-xs text-slate-500">{`${time(b.startsAt)}–${time(b.endsAt)} · держим до ${time(b.graceUntil)}`}</p>
+        {bookings.map(b => {
+          const st = stationOf(b.stationId);
+          return (
+            <div key={b.id} className="bg-white rounded-2xl border border-violet-100 p-4 flex items-center gap-3">
+              <button onClick={() => st && onSelectStation(st)} disabled={!st} className="flex-1 min-w-0 flex items-center gap-3 text-left">
+                <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center shrink-0"><Calendar size={17} className="text-violet-600" /></div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 truncate">{`Бронь ${b.code ?? ''} · ${b.stationName ?? ''}`}</p>
+                  <p className="text-xs text-slate-500">{`${time(b.startsAt)}–${time(b.endsAt)} · держим до ${time(b.graceUntil)}`}</p>
+                </div>
+              </button>
+              <button onClick={() => void cancelBooking(b.id)} disabled={cancelling === b.id} aria-label={`Отменить бронь ${b.code ?? ''}`} className="p-2 rounded-xl bg-slate-100 disabled:opacity-50"><X size={15} /></button>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
-        {queue.map(q => (
-          <div key={q.id} className="bg-white rounded-2xl border border-sky-100 p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center"><Users size={17} className="text-sky-600" /></div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-800 truncate">{`Очередь · ${stations.find(s => s.id === q.stationId)?.name ?? q.stationId}`}</p>
-              <p className="text-xs text-slate-500">{q.notified ? 'Разъём освободился — держим его для вас 5 минут' : 'Сообщим, как только разъём освободится'}</p>
-            </div>
-          </div>
-        ))}
+        {queue.map(q => {
+          const st = stationOf(q.stationId);
+          return (
+            <button key={q.id} onClick={() => st && onSelectStation(st)} className={`w-full bg-white rounded-2xl border p-4 flex items-center gap-3 text-left ${q.notified ? 'border-emerald-300 ring-2 ring-emerald-100' : 'border-sky-100'}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${q.notified ? 'bg-emerald-50 animate-pulse' : 'bg-sky-50'}`}><Users size={17} className={q.notified ? 'text-emerald-600' : 'text-sky-600'} /></div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-800 truncate">{`Очередь · ${st?.name ?? q.stationId}`}</p>
+                <p className="text-xs text-slate-500">{q.notified ? 'Разъём освободился — держим его для вас 5 минут' : 'Сообщим, как только разъём освободится'}</p>
+              </div>
+              <ChevronRight size={16} className="text-slate-300" />
+            </button>
+          );
+        })}
 
         {scheduled.map(x => (
           <div key={x.id} className="bg-white rounded-2xl border border-amber-200 p-4 flex items-center gap-3">
@@ -196,8 +228,8 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
             )}
             {best && best.startsInHours === 0 && <p className="text-xs text-emerald-600 mt-2">Сейчас самый дешёвый тариф — хорошее время зарядиться</p>}
             <div className="flex gap-0.5 mt-3" aria-hidden="true">
-              {(forecast?.hours ?? []).slice(0, 24).map(h => (
-                <div key={h.hour} title={`${hh(h.hour)} ×${h.multiplier}`} className="flex-1 h-6 rounded-sm" style={{ background: h.band === 'green' ? '#10B981' : h.band === 'peak' ? '#EF4444' : h.band === 'day' ? '#FBBF24' : '#CBD5E1', opacity: h.hour === forecast?.currentHour ? 1 : 0.55 }} />
+              {(forecast?.hours ?? []).slice(0, 24).map((h, i) => (
+                <div key={h.hour} title={`${hh(h.hour)} ×${h.multiplier}`} className="flex-1 h-6 rounded-sm pg-grow" style={{ background: h.band === 'green' ? '#10B981' : h.band === 'peak' ? '#EF4444' : h.band === 'day' ? '#FBBF24' : '#CBD5E1', opacity: h.hour === forecast?.currentHour ? 1 : 0.55, animationDelay: `${i * 18}ms` }} />
               ))}
             </div>
             <div className="flex justify-between text-[10px] text-slate-400 mt-1"><span>сейчас</span><span>+12 ч</span><span>+24 ч</span></div>

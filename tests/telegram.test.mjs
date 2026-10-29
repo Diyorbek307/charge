@@ -43,7 +43,8 @@ before(async () => {
     env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, DEMO_SIMULATION: 'false', DATABASE_URL: '', TELEGRAM_BOT_TOKEN: TOKEN },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
-  for (let i = 0; i < 150; i++) {
+  // Twenty servers start at once under npm test; give this one room.
+  for (let i = 0; i < 400; i++) {
     try {
       if ((await fetch(`${BASE}/state`)).ok) return;
     } catch {

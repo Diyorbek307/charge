@@ -117,7 +117,7 @@ export default function HistoryScreen({ onBack }: { onBack?: () => void } = {}) 
             {months.map(b => (
               <div key={b.m} className="flex-1 flex flex-col items-center gap-1">
                 <span className="text-xs text-slate-500 tabular-nums">{b.kwh}</span>
-                <div className="w-full bg-sky-500 rounded-t-md" style={{ height: `${Math.max(2, (b.kwh / maxKwh) * 52)}px` }} />
+                <div key={`${period}-${b.kwh}`} className="w-full bg-sky-500 rounded-t-md pg-grow" style={{ height: `${Math.max(2, (b.kwh / maxKwh) * 52)}px` }} />
                 <span className="text-xs text-slate-400">{b.m}</span>
               </div>
             ))}
@@ -155,12 +155,12 @@ export default function HistoryScreen({ onBack }: { onBack?: () => void } = {}) 
                   <span className="flex items-center gap-1"><Zap size={11} />{`${s.energy} кВт·ч`}</span>
                   <span className="px-1.5 py-0.5 bg-sky-50 text-sky-600 rounded-md">{s.connector}</span>
                   {s.multiplier === 0.7 && <span className="flex items-center gap-1 text-emerald-600"><Moon size={11} />ночь</span>}
-                  <ChevronDown size={13} className={`ml-auto text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={13} className={`ml-auto text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
                 </div>
               </button>
 
               {isOpen && (
-                <div className="border-t border-slate-100 px-4 pb-4 pt-3 space-y-3">
+                <div className="border-t border-slate-100 px-4 pb-4 pt-3 space-y-3 pg-reveal">
                   <div className="bg-slate-50 rounded-xl p-3 space-y-1.5">
                     <p className="text-[11px] font-bold text-slate-400 tracking-wider">{`ЧЕК · ${s.id}`}</p>
                     {receiptRows(s).map(([k, v]) => (

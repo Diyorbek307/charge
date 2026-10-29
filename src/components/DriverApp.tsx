@@ -1,14 +1,9 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import {
-  MapPin, Navigation, Search, Filter, Zap, Clock, Star, ChevronRight, Home,
-  X, Battery, BatteryCharging, Scan, History,
-  User, Car, ArrowLeft, CheckCircle,
-  Heart, Route, Bell, Settings, Lock, LogOut, ChevronDown, Plus,
-  Wifi, Coffee, ParkingCircle, Toilet, CalendarCheck, Minus,
-  AlertTriangle, Send, ThumbsUp, Flag, Trash2, StarIcon, Download, Phone,
-  Gift, Trophy, Share2, Copy, TrendingUp, Award, Sparkles, Wallet, ArrowDownCircle,
-  Smartphone, Monitor, Building2, Moon,
-  ScanFace, Percent,
+  MapPin, Navigation, Search, Zap, Clock, Star, ChevronRight, Home, X, Battery, BatteryCharging,
+  Scan, History, User, ArrowLeft, CheckCircle, Heart, Route, ChevronDown, Plus, Wifi, Coffee,
+  ParkingCircle, Toilet, CalendarCheck, Minus, AlertTriangle, Send, Wallet, ArrowDownCircle,
+  Building2, Moon, ScanFace, Percent,
 } from 'lucide-react';
 import { Station } from '../data/mockData';
 import { useLiveStations } from '../lib/live';
@@ -30,30 +25,27 @@ import { CreditScreen, FaceCheck } from './driver/Credit';
 import { NetworkTopUp, NetworkWalletList } from './driver/NetworkWallets';
 import Navigator from './driver/Navigator';
 import DealsScreen from './driver/Deals';
+import QRScanScreen from './driver/QRScan';
 import { NetworkBadge } from './driver/NetworkBadge';
+import { ChargerFriend } from './driver/Illustration';
 import { promoNow, promosOf, promoHours, discounted, useDriverPromos } from '../lib/promos';
 import SupportChat from './driver/SupportChat';
 import { useI18n } from '../lib/i18n';
 import type { Payer, ChargeGoal } from '../lib/api';
-import { useMyLocation, km, fmtKm, driveMinutes, locate, openNow } from '../lib/geo';
+import { useMyLocation, km, fmtKm, driveMinutes, locate, openNow, samePort } from '../lib/geo';
 import { inTelegram, telegramInitData } from '../lib/telegram';
 import type { Booking, Session, PaymentOrder } from '../lib/api';
 import AuthFlow from './AuthFlow';
 
 type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate';
 type Tab = 'map' | 'charging' | 'deals' | 'profile';
+const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '—';
 
 const statusColor: Record<string, string> = {
   available: '#22C55E',
   occupied: '#EF4444',
   unavailable: '#94A3B8',
   reserved: '#F59E0B',
-};
-const statusLabel: Record<string, string> = {
-  available: 'Свободно',
-  occupied: 'Занято',
-  unavailable: 'Недоступно',
-  reserved: 'Забронировано',
 };
 
 function StationDetailSheet({ station, onClose, onStartCharging, onBook, onReviews, onReport, onNavigate }: { station: Station; onClose: () => void; onStartCharging: () => void; onBook: () => void; onReviews: () => void; onReport: () => void; onNavigate: () => void }) {
@@ -100,20 +92,61 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
     reserved: { text: 'Забронировано', color: '#D97706', bg: '#FFFBEB' },
     unavailable: { text: 'Не работает', color: '#64748B', bg: '#F8FAFC' },
   };
-  const maxKw = Math.max(...station.connectors.map(c => c.power));
+  const maxKw = Math.max(0, ...station.connectors.map(c => c.power));
+  // Nothing to queue for when every point is out of order, and no start while the site is shut.
+  const working = station.connectors.filter(c => c.status !== 'unavailable').length;
+  const closed = !openNow(station.hours);
+
+  // The card slides away the way it came: by the cross, or pulled down by its handle.
+  const sheet = useRef<HTMLDivElement>(null);
+  const [leaving, setLeaving] = useState(false);
+  const close = () => {
+    if (leaving) return;
+    setLeaving(true);
+    setTimeout(onClose, 220);
+  };
+  const drag = useRef<{ y: number; dy: number } | null>(null);
+  const dragStart = (e: React.PointerEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('button') || (sheet.current?.scrollTop ?? 0) > 0) return;
+    drag.current = { y: e.clientY, dy: 0 };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const dragMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = sheet.current;
+    if (!drag.current || !el) return;
+    drag.current.dy = Math.max(0, e.clientY - drag.current.y);
+    el.style.animation = 'none';
+    el.style.transition = 'none';
+    el.style.transform = `translateY(${drag.current.dy}px)`;
+  };
+  const dragEnd = () => {
+    const el = sheet.current;
+    const d = drag.current;
+    drag.current = null;
+    if (!el || !d) return;
+    if (d.dy > 90) {
+      el.style.transition = 'transform .22s cubic-bezier(.4,0,1,1)';
+      el.style.transform = 'translateY(105%)';
+      setLeaving(true);
+      setTimeout(onClose, 200);
+    } else {
+      el.style.transition = 'transform .35s cubic-bezier(.34,1.56,.64,1)';
+      el.style.transform = '';
+    }
+  };
 
   return (
-    <div className="absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-[28px] shadow-[0_-12px_40px_rgba(15,23,42,0.18)] max-h-[82%] overflow-y-auto" style={{ animation: 'enter-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) both' }}>
-      {/* Handle and the network it belongs to */}
-      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur pt-2.5 pb-2 px-4">
+    <div ref={sheet} className={`absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-[28px] shadow-[0_-12px_40px_rgba(15,23,42,0.18)] max-h-[82%] overflow-y-auto overscroll-contain ${leaving ? 'pg-sheet-out' : 'pg-sheet-in'}`}>
+      {/* Handle and the network it belongs to; pull it down to close */}
+      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur pt-2.5 pb-2 px-4 touch-none cursor-grab active:cursor-grabbing" onPointerDown={dragStart} onPointerMove={dragMove} onPointerUp={dragEnd} onPointerCancel={dragEnd}>
         <div className="mx-auto w-10 h-1 bg-slate-200 rounded-full mb-2" />
         <div className="flex items-center gap-2">
-          <button onClick={onClose} aria-label="Закрыть" className="w-9 h-9 -ml-1 rounded-xl grid place-items-center hover:bg-slate-100">
+          <button onClick={close} aria-label="Закрыть" className="w-9 h-9 -ml-1 rounded-xl grid place-items-center hover:bg-slate-100">
             <X size={20} className="text-slate-700" />
           </button>
           <span className="flex-1 min-w-0 text-[15px] font-semibold text-slate-800 truncate">{station.operator}</span>
           <button onClick={() => favorites.toggle(station.id)} aria-pressed={favorite} aria-label={favorite ? 'Убрать из избранного' : 'Добавить в избранное'} className="w-9 h-9 rounded-xl grid place-items-center hover:bg-slate-100">
-            <Heart size={19} className={favorite ? 'fill-red-500 text-red-500' : 'text-slate-600'} />
+            <Heart key={String(favorite)} size={19} className={favorite ? 'fill-red-500 text-red-500 pg-pop' : 'text-slate-600'} />
           </button>
         </div>
       </div>
@@ -221,7 +254,13 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
           </div>
         ) : (
         <div className="grid grid-cols-2 gap-2 mb-2">
-          {free === 0 && !myTurn ? (
+          {working === 0 || closed ? (
+            // Out of order or shut: say why instead of offering a start that would fail.
+            <div className="rounded-2xl py-3 bg-slate-100 text-slate-500 text-sm font-semibold flex flex-col items-center justify-center leading-tight text-center px-2">
+              <span>{working === 0 ? 'Станция не работает' : 'Сейчас закрыто'}</span>
+              <span className="text-[10px] font-normal">{working === 0 ? 'Все разъёмы неисправны' : `Часы работы ${station.hours}`}</span>
+            </div>
+          ) : free === 0 && !myTurn ? (
             <button onClick={toggleQueue} disabled={queueBusy}
               className={`${myIndex >= 0 ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-violet-600 hover:bg-violet-700 text-white'} rounded-2xl py-3 font-semibold text-sm transition-colors flex flex-col items-center justify-center leading-tight disabled:opacity-60`}>
               <span>{myIndex >= 0 ? `Вы №${myIndex + 1} · выйти` : 'Встать в очередь'}</span>
@@ -287,7 +326,7 @@ function useLargeMode() {
 /** What the driver wants from a charge, and when it should start. */
 type ChargeOptions = { goal?: ChargeGoal; startAt?: string };
 
-function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station: Station | null; onBack: () => void; onConfirm: (connectorId: string | null, payer: Payer, faceToken?: string, options?: ChargeOptions) => void; onOpenQR?: () => void }) {
+function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station: Station | null; onBack: () => void; onConfirm: (connectorId: string | null, payer: Payer, faceToken?: string, options?: ChargeOptions) => void | Promise<void>; onOpenQR?: () => void }) {
   const { state, sessions: portalSessions } = useSync();
   const me = portalSessions.driver;
   const balance = (me && state?.wallets[me.id]?.balance) ?? 0;
@@ -299,15 +338,23 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
   // Networks paid directly take only the driver's balance at that network.
   const netWallet = state?.networkWallets?.find(w => w.direct && w.operatorId === (station as (Station & { operatorId?: string }) | null)?.operatorId) ?? null;
   const [netTopUp, setNetTopUp] = useState(false);
-  const [launchMode, setLaunchMode] = useState<'qr' | 'remote'>('qr');
-  const [selectedConnector, setSelectedConnector] = useState(station?.connectors.find(c => c.status === 'available') || station?.connectors[0] || null);
+  // The station is already known (picked on the map or scanned), so the app can start it; QR is the other way.
+  const [launchMode, setLaunchMode] = useState<'qr' | 'remote'>('remote');
+  const [confirming, setConfirming] = useState(false);
+  const driverPromos = useDriverPromos();
+  const promo = station ? promoNow({ id: station.id, operatorId: (station as Station & { operatorId?: string }).operatorId }, driverPromos) : null;
+  // Held by id: the station is live, so the chosen point shows its status as it is now.
+  const [selectedId, setSelectedId] = useState(() => (station?.connectors.find(c => c.status === 'available') ?? station?.connectors[0])?.id ?? null);
+  const selectedConnector = station?.connectors.find(c => c.id === selectedId) ?? null;
   const [scanning, setScanning] = useState(false);
   const [scanned, setScanned] = useState(false);
 
   // The driver's own car when the account has one, otherwise a typical arrival charge.
   const currentBattery = state?.vehicles.find(v => v.driverId === me?.id)?.battery ?? 34;
   const pack = me?.car?.battery ?? 75;
-  const [targetPct, setTargetPct] = useState(() => Math.min(100, Math.max(me?.car?.chargeLimit ?? 80, Math.ceil((currentBattery + 5) / 5) * 5)));
+  // The slider moves in steps of 5 from a round number, so 80% is a stop on it.
+  const minPct = Math.min(100, Math.ceil((currentBattery + 5) / 5) * 5);
+  const [targetPct, setTargetPct] = useState(() => Math.min(100, Math.max(me?.car?.chargeLimit ?? 80, minPct)));
   const [goalKind, setGoalKind] = useState<'percent' | 'sum' | 'km'>('percent');
   const [goalSum, setGoalSum] = useState(30000);
   const [goalKm, setGoalKm] = useState(100);
@@ -321,7 +368,8 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
     if (d.getTime() <= Date.now()) d.setUTCDate(d.getUTCDate() + 1);
     return d.toISOString();
   };
-  const price = selectedConnector?.price ?? 1800;
+  // What the network charges right now, its discount included.
+  const price = discounted(selectedConnector?.price ?? 1800, promo);
   const kwNeeded = !selectedConnector ? 0
     : goalKind === 'percent' ? Math.max(0, ((targetPct - currentBattery) / 100) * pack)
     : goalKind === 'km' ? goalKm * 0.18
@@ -333,6 +381,15 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
   // The server asks for 5 kWh up front before a start.
   const netMinimum = selectedConnector ? selectedConnector.price * 5 : 0;
   const netShort = netWallet ? Math.max(0, netMinimum - netWallet.balance) : 0;
+  const canStart = !!station && selectedConnector?.status === 'available' && netShort === 0 && !confirming && !(launchMode === 'qr' && !scanned);
+  const confirm = async (payerNow: Payer, faceToken?: string, opts: ChargeOptions = options) => {
+    setConfirming(true);
+    try {
+      await onConfirm(selectedConnector?.id ?? null, payerNow, faceToken, opts);
+    } finally {
+      setConfirming(false);
+    }
+  };
 
   const doScan = () => {
     setScanning(true);
@@ -356,7 +413,7 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
           <div className="grid grid-cols-2 gap-2">
             {[
               { mode: 'qr' as const, icon: <Scan size={20} />, label: 'QR-код' },
-              { mode: 'remote' as const, icon: <Zap size={20} />, label: 'Удалённо' },
+              { mode: 'remote' as const, icon: <Zap size={20} />, label: 'Из приложения' },
             ].map(m => (
               <button key={m.mode}
                 onClick={() => {
@@ -412,7 +469,7 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
             <p className="text-xs font-semibold text-slate-500 mb-2">ВЫБОР РАЗЪЁМА</p>
             <div className="space-y-2">
               {station.connectors.map(c => (
-                <button key={c.id} onClick={() => c.status === 'available' && setSelectedConnector(c)}
+                <button key={c.id} onClick={() => c.status === 'available' && setSelectedId(c.id)}
                   disabled={c.status !== 'available'}
                   className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${selectedConnector?.id === c.id ? 'border-sky-500 bg-sky-50' : c.status !== 'available' ? 'border-slate-100 opacity-50' : 'border-slate-200 hover:border-slate-300'}`}>
                   <div className={`w-2 h-2 rounded-full shrink-0 ${c.status === 'available' ? 'bg-green-500' : c.status === 'occupied' ? 'bg-red-500' : 'bg-slate-400'}`} />
@@ -420,7 +477,10 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
                     <p className="text-sm font-semibold text-slate-800">{c.type}</p>
                     <p className="text-xs text-slate-400">{c.id} · {c.power} кВт</p>
                   </div>
-                  <p className="text-sm font-bold mono text-slate-700">{c.price.toLocaleString()} сум/кВт·ч</p>
+                  <span className="text-right">
+                    {promo && <span className="block text-[11px] text-slate-400 line-through tabular-nums">{c.price.toLocaleString('ru-RU')}</span>}
+                    <span className="block text-sm font-bold mono text-slate-700">{`${discounted(c.price, promo).toLocaleString('ru-RU')} сум/кВт·ч`}</span>
+                  </span>
                 </button>
               ))}
             </div>
@@ -443,7 +503,7 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
                   <span className="text-xs text-slate-500">{`Сейчас ≈ ${currentBattery}%`}</span>
                   <span className={`text-sm font-bold mono ${targetPct >= 80 ? 'text-green-600' : 'text-sky-600'}`}>{targetPct}%</span>
                 </div>
-                <input type="range" min={Math.min(100, currentBattery + 5)} max={100} step={5} value={targetPct} aria-label="Зарядить до, %"
+                <input type="range" min={minPct} max={100} step={5} value={targetPct} aria-label="Зарядить до, %"
                   onChange={e => setTargetPct(Number(e.target.value))}
                   className="w-full accent-[#FFB000] mb-3" />
               </>
@@ -464,10 +524,10 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
             <div className="grid grid-cols-3 gap-2 text-center">
               {[
                 { label: 'кВт·ч', value: kwNeeded.toFixed(1) },
-                { label: 'Стоимость', value: `~${Math.round(estCost / 1000)}k сум` },
+                { label: promo ? `сум · −${promo.percent}%` : 'сум', value: `~${(Math.round(estCost / 100) * 100).toLocaleString('ru-RU')}` },
                 { label: 'Время', value: `~${estMinutes} мин` },
               ].map(s => (
-                <div key={s.label} className="bg-sky-50 rounded-xl py-2 px-1">
+                <div key={s.label} className="bg-sky-50 rounded-xl py-2 px-1 transition-all">
                   <p className="text-sm font-bold mono text-sky-700">{s.value}</p>
                   <p className="text-xs text-sky-500">{s.label}</p>
                 </div>
@@ -561,7 +621,7 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
               <button
                 role="radio"
                 aria-checked={payer === 'credit'}
-                onClick={() => setPayer('credit')}
+                onClick={() => { setPayer('credit'); setWhen('now'); }}
                 disabled={credit.available <= 0}
                 className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all disabled:opacity-50 ${payer === 'credit' ? 'border-[#FFB000] bg-amber-50' : 'border-slate-200'}`}
               >
@@ -581,10 +641,15 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
       {netTopUp && netWallet && <NetworkTopUp wallet={netWallet} need={netMinimum} onClose={() => setNetTopUp(false)} />}
 
       <div className="px-4 pb-6 pt-2">
-        <button onClick={() => (netWallet ? onConfirm(selectedConnector?.id ?? null, 'self', undefined, options) : payer === 'credit' ? setFaceCheck(true) : onConfirm(selectedConnector?.id ?? null, payer, undefined, options))}
-          disabled={launchMode === 'qr' && !scanned}
-          className={`w-full rounded-2xl py-4 font-bold text-base transition-colors flex items-center justify-center gap-2 ${launchMode === 'qr' && !scanned ? 'bg-slate-200 text-slate-400' : 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sm'}`}>
-          <Zap size={18} />Подтвердить и начать зарядку
+        {selectedConnector && selectedConnector.status !== 'available' && (
+          <p className="text-xs text-amber-800 bg-amber-50 rounded-xl px-3 py-2 mb-2 pg-reveal">Этот разъём уже занят — выберите свободный</p>
+        )}
+        <button onClick={() => (netWallet ? void confirm('self') : payer === 'credit' ? setFaceCheck(true) : void confirm(payer))}
+          disabled={!canStart}
+          className={`w-full rounded-2xl py-4 font-bold text-base transition-colors flex items-center justify-center gap-2 ${canStart ? 'text-[#111] shadow-[0_8px_22px_rgba(255,176,0,0.35)]' : 'bg-slate-200 text-slate-400'}`}
+          style={canStart ? { background: 'linear-gradient(135deg,#FFD66B,#FFB000)' } : undefined}>
+          {confirming ? <span className="w-[18px] h-[18px] rounded-full border-2 border-[#111]/30 border-t-[#111] animate-spin" /> : <Zap size={18} />}
+          {confirming ? 'Запускаем…' : when === 'night' && !nightNow ? 'Запланировать на 23:00' : 'Подтвердить и начать зарядку'}
         </button>
       </div>
       {faceCheck && (
@@ -592,7 +657,7 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
           onClose={() => setFaceCheck(false)}
           onVerified={token => {
             setFaceCheck(false);
-            onConfirm(selectedConnector?.id ?? null, 'credit', token, { goal });
+            void confirm('credit', token, { goal });
           }}
         />
       )}
@@ -621,18 +686,45 @@ function AppSettingsScreen({ onBack }: { onBack: () => void }) {
     localStorage.setItem('oc-theme', theme);
     window.dispatchEvent(new CustomEvent('oc-theme-change', { detail: { dark: isDark } }));
   }, [theme]);
-  const [notifCharge, setNotifCharge] = useState(true);
-  const [notifPrice, setNotifPrice] = useState(true);
-  const [notifNearby, setNotifNearby] = useState(false);
-  const [notifPromo, setNotifPromo] = useState(true);
-  const [unitKwh, setUnitKwh] = useState(true);
+  // The switches are remembered on this device; before, they reset on every visit.
+  const [notes, setNotes] = useState<Record<'charge' | 'price' | 'nearby' | 'promo', boolean>>(() => {
+    const base = { charge: true, price: true, nearby: false, promo: true };
+    try {
+      return { ...base, ...JSON.parse(localStorage.getItem('oc-note-prefs') ?? '{}') };
+    } catch {
+      return base;
+    }
+  });
+  const flip = (k: keyof typeof notes) => setNotes(n => {
+    const next = { ...n, [k]: !n[k] };
+    try {
+      localStorage.setItem('oc-note-prefs', JSON.stringify(next));
+    } catch {
+      /* private mode */
+    }
+    return next;
+  });
+  const [cacheNote, setCacheNote] = useState<string | null>(null);
+  const clearMapCache = async () => {
+    let n = 0;
+    try {
+      for (const key of await caches.keys()) if (/tile|map/i.test(key)) n += (await caches.delete(key)) ? 1 : 0;
+    } catch {
+      /* no Cache Storage here */
+    }
+    setCacheNote(n ? 'Кэш карт очищен' : 'Кэш карт уже пуст');
+    setTimeout(() => setCacheNote(null), 2500);
+  };
 
-  const Toggle = ({ value, onChange }: { value: boolean; onChange: () => void }) => (
+  const Toggle = ({ value, onChange, label }: { value: boolean; onChange: () => void; label: string }) => (
     <button
+      role="switch"
+      aria-checked={value}
+      aria-label={label}
       onClick={onChange}
-      className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${value ? 'bg-sky-500' : 'bg-slate-200'}`}
+      className={`relative w-11 h-6 rounded-full transition-colors duration-300 shrink-0 ${value ? 'bg-[#FFB000]' : 'bg-slate-200'}`}
     >
-      <span className={`absolute top-1 left-0 w-4 h-4 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-6' : 'translate-x-1'}`} />
+      <span className={`absolute top-1 left-0 w-4 h-4 rounded-full bg-white shadow transition-transform duration-300 ease-[cubic-bezier(.34,1.56,.64,1)] ${value ? 'translate-x-6' : 'translate-x-1'}`} />
     </button>
   );
 
@@ -664,7 +756,8 @@ function AppSettingsScreen({ onBack }: { onBack: () => void }) {
                 <button
                   key={val}
                   onClick={() => setLanguage(val)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${language === val ? 'bg-sky-500 text-white' : 'bg-slate-100 text-slate-600'}`}
+                  aria-pressed={language === val}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${language === val ? 'bg-[#111] text-white' : 'bg-slate-100 text-slate-600'}`}
                 >
                   {label}
                 </button>
@@ -676,10 +769,7 @@ function AppSettingsScreen({ onBack }: { onBack: () => void }) {
               <p className="text-sm text-slate-700">Крупный шрифт и кнопки</p>
               <p className="text-xs text-slate-400">Всё крупнее и проще нажимать — удобно в машине и для зрения</p>
             </div>
-            <button role="switch" aria-checked={large} aria-label="Крупный шрифт и кнопки" onClick={() => setLarge(v => !v)}
-              className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${large ? 'bg-[#FFB000]' : 'bg-slate-200'}`}>
-              <span className={`absolute top-1 left-0 w-4 h-4 rounded-full bg-white shadow transition-transform ${large ? 'translate-x-6' : 'translate-x-1'}`} />
-            </button>
+            <Toggle label="Крупный шрифт и кнопки" value={large} onChange={() => setLarge(v => !v)} />
           </div>
           <div className="px-4 py-3.5">
             <p className="text-sm text-slate-700 mb-2">Тема</p>
@@ -688,7 +778,8 @@ function AppSettingsScreen({ onBack }: { onBack: () => void }) {
                 <button
                   key={val}
                   onClick={() => setTheme(val)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${theme === val ? 'bg-sky-500 text-white' : 'bg-slate-100 text-slate-600'}`}
+                  aria-pressed={theme === val}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${theme === val ? 'bg-[#111] text-white' : 'bg-slate-100 text-slate-600'}`}
                 >
                   {label}
                 </button>
@@ -699,34 +790,21 @@ function AppSettingsScreen({ onBack }: { onBack: () => void }) {
 
         <SectionHeader label="УВЕДОМЛЕНИЯ" />
         <div className="bg-white rounded-2xl border border-slate-100 mx-4 overflow-hidden">
-          <Row label="Зарядка завершена" right={<Toggle value={notifCharge} onChange={() => setNotifCharge(v => !v)} />} />
-          <Row label="Снижение цен" right={<Toggle value={notifPrice} onChange={() => setNotifPrice(v => !v)} />} />
-          <Row label="Новые станции рядом" right={<Toggle value={notifNearby} onChange={() => setNotifNearby(v => !v)} />} />
-          <Row label="Акции и бонусы" right={<Toggle value={notifPromo} onChange={() => setNotifPromo(v => !v)} />} />
+          <Row label="Зарядка завершена" right={<Toggle label="Зарядка завершена" value={notes.charge} onChange={() => flip('charge')} />} />
+          <Row label="Снижение цен" right={<Toggle label="Снижение цен" value={notes.price} onChange={() => flip('price')} />} />
+          <Row label="Новые станции рядом" right={<Toggle label="Новые станции рядом" value={notes.nearby} onChange={() => flip('nearby')} />} />
+          <Row label="Скидки сетей" right={<Toggle label="Скидки сетей" value={notes.promo} onChange={() => flip('promo')} />} />
         </div>
 
         <SectionHeader label="ДАННЫЕ" />
         <div className="bg-white rounded-2xl border border-slate-100 mx-4 overflow-hidden">
           <div className="px-4 py-3.5 flex items-center justify-between border-b border-slate-50">
-            <span className="text-sm text-slate-700">Единицы</span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setUnitKwh(true)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${unitKwh ? 'bg-sky-500 text-white' : 'bg-slate-100 text-slate-600'}`}
-              >кВт·ч</button>
-              <button
-                onClick={() => setUnitKwh(false)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${!unitKwh ? 'bg-sky-500 text-white' : 'bg-slate-100 text-slate-600'}`}
-              >кВт</button>
-            </div>
-          </div>
-          <div className="px-4 py-3.5 flex items-center justify-between border-b border-slate-50">
             <span className="text-sm text-slate-700">Валюта</span>
             <span className="text-sm text-slate-400">Сум (UZS)</span>
           </div>
-          <button className="px-4 py-3.5 flex items-center justify-between w-full">
+          <button onClick={() => void clearMapCache()} className="px-4 py-3.5 flex items-center justify-between w-full hover:bg-slate-50">
             <span className="text-sm text-slate-700">Очистить кэш карт</span>
-            <span className="text-xs text-sky-500 font-medium">Очистить</span>
+            <span key={cacheNote ?? 'idle'} className={`text-xs font-medium ${cacheNote ? 'text-emerald-600 pg-pop' : 'text-sky-600'}`}>{cacheNote ?? 'Очистить'}</span>
           </button>
         </div>
 
@@ -734,17 +812,18 @@ function AppSettingsScreen({ onBack }: { onBack: () => void }) {
         <div className="bg-white rounded-2xl border border-slate-100 mx-4 overflow-hidden mb-6">
           <div className="px-4 py-3.5 flex items-center justify-between border-b border-slate-50">
             <span className="text-sm text-slate-700">Версия</span>
-            <span className="text-sm text-slate-400">1.8.3 (209)</span>
+            <span className="text-sm text-slate-400">{APP_VERSION}</span>
           </div>
           {[
-            { label: 'Условия использования' },
-            { label: 'Политика конфиденциальности' },
-            { label: 'Отправить отзыв' },
+            { label: 'Условия использования', href: '/?doc=terms' },
+            { label: 'Политика конфиденциальности', href: '/?doc=privacy' },
+            { label: 'Публичная оферта', href: '/?doc=offer' },
+            { label: 'Отправить отзыв', href: `mailto:${BRAND.email}?subject=${encodeURIComponent(`Отзыв о ${BRAND.name}`)}` },
           ].map(item => (
-            <button key={item.label} className="px-4 py-3.5 flex items-center justify-between w-full border-b border-slate-50 last:border-none hover:bg-slate-50 transition-colors">
+            <a key={item.label} href={item.href} target={item.href.startsWith('/') ? '_blank' : undefined} rel="noreferrer" className="px-4 py-3.5 flex items-center justify-between w-full border-b border-slate-50 last:border-none hover:bg-slate-50 transition-colors">
               <span className="text-sm text-slate-700">{item.label}</span>
               <ChevronRight size={16} className="text-slate-400" />
-            </button>
+            </a>
           ))}
         </div>
       </div>
@@ -802,7 +881,7 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
    */
   const doTopUp = async () => {
     const amt = selectedAmount || parseInt(customAmount) || 0;
-    if (amt < 5000) return;
+    if (amt < 5000 || amt > 10_000_000 || paying) return;
     setPaying(true);
     setPayError(null);
     try {
@@ -841,7 +920,7 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
         {/* Balance card */}
         <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-5 text-white shadow-xl">
           <p className="text-xs font-semibold tracking-widest text-slate-400 uppercase mb-1">БАЛАНС PowerGo</p>
-          <p className="text-3xl font-bold tracking-tight mb-3">{balance.toLocaleString()} сум</p>
+          <p key={balance} className="text-3xl font-bold tracking-tight mb-3 tabular-nums pg-pop">{balance.toLocaleString('ru-RU')} сум</p>
           <p className="text-xs text-slate-400 mb-4">Пополнение через Payme или Click · списывается за каждую зарядку по счётчику</p>
           <div className="flex gap-2">
             <button onClick={() => setShowTopUp(true)}
@@ -859,7 +938,7 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
           <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
             <p className="text-xs font-semibold text-slate-500">ИСТОРИЯ ОПЕРАЦИЙ</p>
           </div>
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-slate-50 pg-stagger">
             {transactions.length === 0 && <p className="px-4 py-6 text-center text-sm text-slate-400">Операций пока нет</p>}
             {transactions.map(tx => (
               <div key={tx.id} className="px-4 py-3 flex items-center gap-3">
@@ -874,7 +953,7 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
                   <p className="text-xs text-slate-400 mt-0.5">{tx.date}</p>
                 </div>
                 <span className={`text-sm font-semibold font-mono shrink-0 ${tx.type === 'topup' ? 'text-green-600' : 'text-red-500'}`}>
-                  {tx.type === 'topup' ? '+' : ''}{tx.amount.toLocaleString()} сум
+                  {tx.type === 'topup' ? '+' : ''}{tx.amount.toLocaleString('ru-RU')} сум
                 </span>
               </div>
             ))}
@@ -884,14 +963,14 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
 
       {/* Top-up modal */}
       {showTopUp && (
-        <div className="absolute inset-0 bg-black/50 z-50 flex items-end" onClick={e => { if (e.target === e.currentTarget) setShowTopUp(false); }}>
-          <div className="bg-white rounded-t-3xl p-6 space-y-5 w-full" style={{ animation: 'enter-up 0.25s ease both' }}>
+        <div className="absolute inset-0 bg-black/50 z-50 flex items-end pg-fade" onClick={e => { if (e.target === e.currentTarget && !paying) setShowTopUp(false); }}>
+          <div className="bg-white rounded-t-3xl p-6 space-y-5 w-full pg-sheet-in">
             <div className="flex justify-center mb-1">
               <div className="w-10 h-1 bg-slate-200 rounded-full" />
             </div>
             {topUpSuccess ? (
               <div className="flex flex-col items-center py-6 gap-3">
-                <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center text-3xl">✅</div>
+                <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center text-3xl pg-pop">✅</div>
                 <p className="text-lg font-bold text-slate-900">Пополнено успешно!</p>
                 <p className="text-sm text-slate-500">Средства зачислены на кошелёк</p>
               </div>
@@ -912,10 +991,13 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
 
                 {/* Custom amount */}
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  aria-label="Своя сумма"
                   value={customAmount}
-                  onChange={e => { setCustomAmount(e.target.value); setSelectedAmount(null); }}
-                  placeholder="Своя сумма, мин. 5 000 сум"
+                  onChange={e => { setCustomAmount(e.target.value.replace(/\D/g, '').slice(0, 8)); setSelectedAmount(null); }}
+                  onKeyDown={e => e.key === 'Enter' && void doTopUp()}
+                  placeholder="Своя сумма, от 5 000 до 10 000 000 сум"
                   className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-sky-400 placeholder:text-slate-300"
                 />
 
@@ -940,9 +1022,9 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
 
                 <button
                   onClick={doTopUp}
-                  disabled={paying || !(selectedAmount || (parseInt(customAmount) >= 5000))}
+                  disabled={paying || !(selectedAmount || (parseInt(customAmount) >= 5000 && parseInt(customAmount) <= 10_000_000))}
                   className="w-full py-3.5 bg-sky-500 text-white rounded-2xl font-bold text-sm disabled:opacity-40 active:scale-95 transition-all">
-                  {paying ? 'Подтверждаем оплату…' : `Оплатить через ${provider === 'payme' ? 'Payme' : 'Click'}`}{!paying && (selectedAmount ? ` ${selectedAmount.toLocaleString()} сум` : customAmount ? ` ${parseInt(customAmount).toLocaleString()} сум` : '')}
+                  {paying ? 'Подтверждаем оплату…' : `Оплатить через ${provider === 'payme' ? 'Payme' : 'Click'}`}{!paying && (selectedAmount ? ` ${selectedAmount.toLocaleString('ru-RU')} сум` : customAmount ? ` ${parseInt(customAmount).toLocaleString('ru-RU')} сум` : '')}
                 </button>
               </>
             )}
@@ -986,9 +1068,9 @@ function SupportScreen({ onBack, onReport }: { onBack: () => void; onReport: () 
           <div key={faq.q} className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
             <button onClick={() => setOpenFaq(openFaq === i ? null : i)} aria-expanded={openFaq === i} className="w-full px-4 py-3.5 flex items-center justify-between text-left">
               <span className="text-sm font-medium text-slate-800 flex-1 pr-2">{faq.q}</span>
-              <ChevronDown size={16} className={`text-slate-400 shrink-0 transition-transform ${openFaq === i ? 'rotate-180' : ''}`} />
+              <ChevronDown size={16} className={`text-slate-400 shrink-0 transition-transform duration-300 ${openFaq === i ? 'rotate-180' : ''}`} />
             </button>
-            {openFaq === i && <p className="px-4 pb-4 text-sm text-slate-500 leading-relaxed">{faq.a}</p>}
+            {openFaq === i && <p className="px-4 pb-4 text-sm text-slate-500 leading-relaxed pg-reveal">{faq.a}</p>}
           </div>
         ))}
 
@@ -1038,8 +1120,23 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
   const [maxKw, setMaxKw] = useState(saved?.maxKw ?? 150);
   const [chargeLimit, setChargeLimit] = useState(saved?.chargeLimit ?? 80);
   const [step, setStep] = useState<'form' | 'confirm'>('form');
+  const [saving, setSaving] = useState(false);
+  const stations = useLiveStations();
+  // New model years go on sale before the calendar year turns.
+  const maxYear = new Date().getFullYear() + 1;
 
   const selectedPort = portTypes.find(p => p.type === port);
+  // Where this car can actually charge, counted from the live map, not a slogan.
+  const fitting = stations.filter(st => st.connectors.some(c => samePort(c.type, port) || samePort(c.type, 'Type 2'))).length;
+  const fittingFast = stations.filter(st => st.connectors.some(c => samePort(c.type, port) && c.power >= 50)).length;
+  const save = async () => {
+    setSaving(true);
+    try {
+      await onSave({ brand, model, year, battery, port, maxKw, chargeLimit });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (step === 'confirm') {
     return (
@@ -1050,7 +1147,7 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           <div className="flex flex-col items-center py-6">
-            <div className="w-20 h-20 bg-sky-100 rounded-3xl flex items-center justify-center mb-4 text-4xl">🚗</div>
+            <div className="w-20 h-20 bg-sky-100 rounded-3xl flex items-center justify-center mb-4 text-4xl pg-pop">🚗</div>
             <h2 className="text-xl font-bold text-slate-900">{brand} {model}</h2>
             <p className="text-slate-400 text-sm">{year}</p>
           </div>
@@ -1074,23 +1171,21 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
               <Zap size={12} />Совместимость с сетью PowerGo
             </p>
             <div className="space-y-1.5">
-              {portTypes.filter(p => p.type === port || p.type === 'Type2').map(pt => (
-                <div key={pt.type} className="flex items-center gap-2 text-xs">
-                  <CheckCircle size={12} className="text-green-500" />
-                  <span className="text-sky-700">{pt.label} — совместимо ({pt.maxKw} кВт макс)</span>
-                </div>
-              ))}
               <div className="flex items-center gap-2 text-xs">
                 <CheckCircle size={12} className="text-green-500" />
-                <span className="text-sky-700">108 станций в сети PowerGo · 276 EVSE</span>
+                <span className="text-sky-700">{`${fitting} ${plural(fitting, ['станция подходит', 'станции подходят', 'станций подходят'])} на карте`}</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <CheckCircle size={12} className={fittingFast ? 'text-green-500' : 'text-slate-300'} />
+                <span className="text-sky-700">{fittingFast ? `${fittingFast} — с быстрой зарядкой ${selectedPort?.label ?? port}` : `Быстрых станций с ${selectedPort?.label ?? port} пока нет`}</span>
               </div>
             </div>
           </div>
         </div>
         <div className="px-4 pb-8 pt-2">
-          <button onClick={() => onSave({ brand, model, year, battery, port, maxKw, chargeLimit })}
-            className="w-full bg-sky-500 text-white rounded-2xl py-4 font-bold text-base">
-            Добавить автомобиль
+          <button onClick={() => void save()} disabled={saving}
+            className="w-full bg-sky-500 text-white rounded-2xl py-4 font-bold text-base disabled:opacity-60">
+            {saving ? 'Сохраняем…' : saved ? 'Сохранить изменения' : 'Добавить автомобиль'}
           </button>
         </div>
       </div>
@@ -1102,7 +1197,7 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
       <div className="bg-white px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100">
         <button aria-label="Назад" onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
         <div>
-          <h1 className="text-base font-bold text-slate-900">Добавить автомобиль</h1>
+          <h1 className="text-base font-bold text-slate-900">{saved ? 'Мой автомобиль' : 'Добавить автомобиль'}</h1>
           <p className="text-xs text-slate-400">Данные для автоматической совместимости</p>
         </div>
       </div>
@@ -1139,9 +1234,9 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
             <p className="text-xs font-semibold text-slate-500">ГОД ВЫПУСКА</p>
             <span className="text-sm font-bold text-slate-900 mono">{year}</span>
           </div>
-          <input type="range" min="2020" max="2026" value={year} onChange={e => setYear(Number(e.target.value))}
+          <input type="range" min="2015" max={maxYear} value={year} onChange={e => setYear(Number(e.target.value))} aria-label="Год выпуска"
             className="w-full accent-sky-500" />
-          <div className="flex justify-between text-xs text-slate-400 mt-1"><span>2020</span><span>2026</span></div>
+          <div className="flex justify-between text-xs text-slate-400 mt-1"><span>2015</span><span>{maxYear}</span></div>
         </div>
 
         {/* Battery */}
@@ -1150,7 +1245,7 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
             <p className="text-xs font-semibold text-slate-500">ЁМКОСТЬ БАТАРЕИ</p>
             <span className="text-sm font-bold text-slate-900 mono">{battery} кВт·ч</span>
           </div>
-          <input type="range" min="20" max="120" step="5" value={battery} onChange={e => setBattery(Number(e.target.value))}
+          <input type="range" min="20" max="120" step="5" value={battery} onChange={e => setBattery(Number(e.target.value))} aria-label="Ёмкость батареи, кВт·ч"
             className="w-full accent-sky-500" />
           <div className="flex justify-between text-xs text-slate-400 mt-1"><span>20 кВт·ч</span><span>120 кВт·ч</span></div>
         </div>
@@ -1180,7 +1275,7 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
             <p className="text-xs font-semibold text-slate-500">МАКС. МОЩНОСТЬ ЗАРЯДКИ</p>
             <span className="text-sm font-bold text-slate-900 mono">{maxKw} кВт</span>
           </div>
-          <input type="range" min="3" max={selectedPort?.maxKw || 150} step="1" value={maxKw} onChange={e => setMaxKw(Number(e.target.value))}
+          <input type="range" min="3" max={selectedPort?.maxKw || 150} step="1" value={maxKw} onChange={e => setMaxKw(Number(e.target.value))} aria-label="Макс. мощность зарядки, кВт"
             className="w-full accent-sky-500" />
           <div className="flex justify-between text-xs text-slate-400 mt-1"><span>3 кВт</span><span>{selectedPort?.maxKw} кВт</span></div>
         </div>
@@ -1246,8 +1341,14 @@ const reportCategories = [
   { id: 'other', icon: '💬', label: 'Другое', sub: 'Произвольное описание' },
 ];
 
-function ReportScreen({ station, onBack }: { station: Station | null; onBack: () => void }) {
+function ReportScreen({ station: given, onBack }: { station: Station | null; onBack: () => void }) {
   const { actions } = useSync();
+  const stations = useLiveStations();
+  const here = useMyLocation();
+  // Opened from Support there is no station yet: the nearest one is the likely one, and it can be changed.
+  const nearestFirst = here ? [...stations].sort((a, b) => km(here, { lat: a.geoLat, lng: a.geoLng }) - km(here, { lat: b.geoLat, lng: b.geoLng })) : stations;
+  const [pickedId, setPickedId] = useState<string>('');
+  const station = given ?? stations.find(x => x.id === pickedId) ?? null;
   const [category, setCategory] = useState('');
   const [text, setText] = useState('');
   const [sent, setSent] = useState<string | null>(null);
@@ -1276,7 +1377,7 @@ function ReportScreen({ station, onBack }: { station: Station | null; onBack: ()
         <h1 className="text-base font-bold text-slate-900">Сообщить о проблеме</h1>
       </div>
       <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-        <div className="w-20 h-20 bg-green-100 rounded-3xl flex items-center justify-center mb-5 text-4xl">✅</div>
+        <div className="w-20 h-20 bg-green-100 rounded-3xl flex items-center justify-center mb-5 text-4xl pg-pop">✅</div>
         <h2 className="text-xl font-bold text-slate-900 mb-2">Сообщение отправлено</h2>
         <p className="text-sm text-slate-500 mb-6 leading-relaxed">Мы передали информацию оператору станции. Как правило, проблемы устраняются в течение 24 часов.</p>
         <div className="w-full bg-sky-50 border border-sky-100 rounded-2xl p-4 text-left">
@@ -1299,18 +1400,29 @@ function ReportScreen({ station, onBack }: { station: Station | null; onBack: ()
         </div>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        {!given && (
+          <div className="bg-white rounded-2xl border border-slate-100 p-4">
+            <label htmlFor="report-station" className="text-xs font-semibold text-slate-500 mb-2 block">СТАНЦИЯ</label>
+            <select id="report-station" value={pickedId} onChange={e => setPickedId(e.target.value)}
+              className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-sky-400 text-slate-800 bg-white">
+              <option value="">Выберите станцию</option>
+              {nearestFirst.map(x => <option key={x.id} value={x.id}>{`${x.name} · ${x.city}`}</option>)}
+            </select>
+            <p className="text-[11px] text-slate-400 mt-1.5">{here ? 'Сначала ближайшие к вам' : 'Сообщение получит оператор этой станции'}</p>
+          </div>
+        )}
         <div className="bg-white rounded-2xl border border-slate-100 p-4">
           <p className="text-xs font-semibold text-slate-500 mb-3">КАТЕГОРИЯ ПРОБЛЕМЫ</p>
           <div className="space-y-2">
             {reportCategories.map(cat => (
-              <button key={cat.id} onClick={() => setCategory(cat.id)}
+              <button key={cat.id} onClick={() => setCategory(cat.id)} aria-pressed={category === cat.id}
                 className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-colors text-left ${category === cat.id ? 'border-red-400 bg-red-50' : 'border-slate-100 bg-slate-50 hover:border-slate-200'}`}>
                 <span className="text-xl">{cat.icon}</span>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-slate-800">{cat.label}</p>
                   <p className="text-xs text-slate-400">{cat.sub}</p>
                 </div>
-                {category === cat.id && <div className="w-5 h-5 bg-red-400 rounded-full flex items-center justify-center shrink-0">
+                {category === cat.id && <div className="w-5 h-5 bg-red-400 rounded-full flex items-center justify-center shrink-0 pg-pop">
                   <CheckCircle size={12} className="text-white" />
                 </div>}
               </button>
@@ -1320,7 +1432,7 @@ function ReportScreen({ station, onBack }: { station: Station | null; onBack: ()
 
         <div className="bg-white rounded-2xl border border-slate-100 p-4">
           <p className="text-xs font-semibold text-slate-500 mb-2">ОПИСАНИЕ (необязательно)</p>
-          <textarea value={text} onChange={e => setText(e.target.value)}
+          <textarea value={text} onChange={e => setText(e.target.value.slice(0, 500))} aria-label="Описание проблемы"
             placeholder="Укажите подробности — номер разъема, время возникновения..."
             className="w-full text-sm border border-slate-200 rounded-xl p-3 outline-none resize-none focus:border-red-300 text-slate-700 placeholder:text-slate-300"
             rows={4} />
@@ -1334,12 +1446,12 @@ function ReportScreen({ station, onBack }: { station: Station | null; onBack: ()
       </div>
       <div className="px-4 pb-6 pt-2">
         {sendError && (
-          <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-2">{sendError}</p>
+          <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-2 pg-shake">{sendError}</p>
         )}
         <button onClick={submit}
-          disabled={!category || sending}
-          className={`w-full rounded-2xl py-4 font-bold text-base transition-colors flex items-center justify-center gap-2 ${category ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
-          <Send size={16} />Отправить сообщение
+          disabled={!category || !station || sending}
+          className={`w-full rounded-2xl py-4 font-bold text-base transition-colors flex items-center justify-center gap-2 ${category && station ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
+          <Send size={16} />{sending ? 'Отправляем…' : !station ? 'Выберите станцию' : !category ? 'Выберите проблему' : 'Отправить сообщение'}
         </button>
       </div>
     </div>
@@ -1351,14 +1463,16 @@ function FavoritesScreen({ onBack, onSelectStation }: { onBack: () => void; onSe
   const favorites = useFavorites();
   const favs = stations.filter(s => favorites.has(s.id));
   const [query, setQuery] = useState('');
-  const [sort, setSort] = useState<'name' | 'rating' | 'distance'>('rating');
+  const [sort, setSort] = useState<'name' | 'rating' | 'price'>('rating');
+  const cheapest = (s: Station) => Math.min(Infinity, ...s.connectors.map(c => c.price));
 
+  const q = query.trim().toLowerCase();
   const filtered = favs
-    .filter(s => s.name.toLowerCase().includes(query.toLowerCase()))
+    .filter(s => !q || `${s.name} ${s.operator} ${s.city}`.toLowerCase().includes(q))
     .sort((a, b) => {
       if (sort === 'rating') return b.rating - a.rating;
-      if (sort === 'name') return a.name.localeCompare(b.name);
-      return a.connectors[0].price - b.connectors[0].price;
+      if (sort === 'name') return a.name.localeCompare(b.name, 'ru');
+      return cheapest(a) - cheapest(b);
     });
 
   return (
@@ -1366,7 +1480,7 @@ function FavoritesScreen({ onBack, onSelectStation }: { onBack: () => void; onSe
       <div className="bg-white px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100">
         <button aria-label="Назад" onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
         <h1 className="text-base font-bold text-slate-900">Избранные станции</h1>
-        <span className="ml-auto text-xs text-slate-400">{favs.length} станций</span>
+        <span className="ml-auto text-xs text-slate-400">{`${favs.length} ${plural(favs.length, ['станция', 'станции', 'станций'])}`}</span>
       </div>
 
       {favs.length > 0 && (
@@ -1376,6 +1490,7 @@ function FavoritesScreen({ onBack, onSelectStation }: { onBack: () => void; onSe
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
+              aria-label="Поиск по избранному"
               placeholder="Поиск станций..."
               className="flex-1 bg-transparent text-sm text-slate-800 placeholder-slate-400 outline-none"
             />
@@ -1385,20 +1500,22 @@ function FavoritesScreen({ onBack, onSelectStation }: { onBack: () => void; onSe
           </div>
           <select
             value={sort}
-            onChange={e => setSort(e.target.value as 'name' | 'rating' | 'distance')}
+            onChange={e => setSort(e.target.value as 'name' | 'rating' | 'price')}
+            aria-label="Сортировка"
             className="text-xs text-slate-600 bg-slate-100 rounded-xl px-2 py-2 outline-none border-none"
           >
             <option value="rating">Рейтинг</option>
             <option value="name">Название</option>
-            <option value="distance">Цена</option>
+            <option value="price">Сначала дешевле</option>
           </select>
         </div>
       )}
 
       {favs.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
-          <Heart size={48} className="text-slate-200 mb-4" />
-          <p className="text-slate-400 text-sm">Нет избранных станций.<br />Добавьте станцию на её странице.</p>
+          <ChargerFriend size={150} mood="wait" />
+          <p className="text-slate-700 text-sm font-semibold mt-2">Пока пусто</p>
+          <p className="text-slate-400 text-sm mt-0.5">Нажмите <Heart size={13} className="inline -mt-0.5 text-red-400" /> на карточке станции — она появится здесь.</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
@@ -1406,14 +1523,14 @@ function FavoritesScreen({ onBack, onSelectStation }: { onBack: () => void; onSe
           <p className="text-slate-400 text-sm">Нет станций по запросу</p>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 pg-stagger">
           {filtered.map(s => {
             const free = s.connectors.filter(c => c.status === 'available').length;
             const statusColors: Record<string, string> = { available: 'text-green-600', occupied: 'text-red-500', unavailable: 'text-slate-400', reserved: 'text-amber-500' };
             const statusLabels: Record<string, string> = { available: 'Свободно', occupied: 'Занято', unavailable: 'Недоступно', reserved: 'Забронировано' };
             return (
-              <button key={s.id} onClick={() => onSelectStation(s)}
-                className="w-full bg-white rounded-2xl border border-slate-100 p-4 text-left hover:border-sky-200 transition-colors">
+              <div key={s.id} role="button" tabIndex={0} onClick={() => onSelectStation(s)} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onSelectStation(s)}
+                className="w-full bg-white rounded-2xl border border-slate-100 p-4 text-left hover:border-sky-200 transition-colors cursor-pointer active:scale-[0.99]">
                 <div className="flex items-start gap-3">
                   <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-100 shrink-0">
                     <img src={s.image} alt={s.name} className="w-full h-full object-cover" />
@@ -1424,9 +1541,9 @@ function FavoritesScreen({ onBack, onSelectStation }: { onBack: () => void; onSe
                         <p className="text-sm font-bold text-slate-900">{s.name}</p>
                         <p className="text-xs text-slate-400">{s.operator}</p>
                       </div>
-                      <button onClick={e => { e.stopPropagation(); favorites.toggle(s.id); }}
-                        className="p-1.5 rounded-xl bg-slate-50 hover:bg-red-50 transition-colors">
-                        <Trash2 size={13} className="text-slate-400 hover:text-red-400" />
+                      <button onClick={e => { e.stopPropagation(); favorites.toggle(s.id); }} aria-label={`Убрать ${s.name} из избранного`}
+                        className="p-1.5 rounded-xl bg-red-50 hover:bg-red-100 transition-colors">
+                        <Heart size={14} className="fill-red-500 text-red-500" />
                       </button>
                     </div>
                     <div className="flex items-center gap-3 mt-1.5 text-xs">
@@ -1440,12 +1557,12 @@ function FavoritesScreen({ onBack, onSelectStation }: { onBack: () => void; onSe
                       <span className="flex items-center gap-0.5">
                         <Star size={10} className="text-amber-400 fill-amber-400" />{s.rating.toFixed(1)}
                       </span>
-                      <span>{s.connectors[0].price.toLocaleString()} сум/кВт·ч</span>
+                      <span>{`от ${cheapest(s).toLocaleString('ru-RU')} сум/кВт·ч`}</span>
                       <span>{s.city}</span>
                     </div>
                   </div>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
@@ -1476,9 +1593,12 @@ function BookingScreen({ station, onBack, onConfirm }: { station: Station | null
   const [connector, setConnector] = useState(0);
 
   const freeConnectors = station?.connectors.filter(c => c.status === 'available') || [];
+  const startsAt = new Date(`${date}T${time}`);
+  // A slot that has already begun cannot be held.
+  const inPast = !(startsAt.getTime() > Date.now());
   const submit = async () => {
     const chosen = freeConnectors[connector];
-    if (!station || !chosen) return;
+    if (!station || !chosen || inPast) return;
     setSubmitting(true);
     setBookError(null);
     try {
@@ -1514,8 +1634,11 @@ function BookingScreen({ station, onBack, onConfirm }: { station: Station | null
         <div className="bg-white rounded-2xl border border-slate-100 p-4">
           <p className="text-xs font-semibold text-slate-500 mb-3">РАЗЪЕМ</p>
           <div className="space-y-2">
+            {freeConnectors.length === 0 && (
+              <p className="text-sm text-slate-500 bg-slate-50 rounded-xl px-3 py-3">Сейчас все разъёмы заняты — забронировать можно, когда освободится хотя бы один. Встаньте в очередь на карточке станции.</p>
+            )}
             {freeConnectors.map((c, i) => (
-              <button key={c.id} onClick={() => setConnector(i)}
+              <button key={c.id} onClick={() => setConnector(i)} aria-pressed={connector === i}
                 className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-colors ${connector === i ? 'border-sky-500 bg-sky-50' : 'border-slate-100 bg-slate-50'}`}>
                 <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm">
                   <Zap size={14} className="text-sky-500" />
@@ -1524,7 +1647,7 @@ function BookingScreen({ station, onBack, onConfirm }: { station: Station | null
                   <p className="text-sm font-medium text-slate-800">{c.type}</p>
                   <p className="text-xs text-slate-400">{c.power} кВт · {c.price.toLocaleString()} сум/кВт·ч</p>
                 </div>
-                {connector === i && <div className="w-5 h-5 bg-sky-500 rounded-full flex items-center justify-center">
+                {connector === i && <div className="w-5 h-5 bg-sky-500 rounded-full flex items-center justify-center pg-pop">
                   <CheckCircle size={12} className="text-white" />
                 </div>}
               </button>
@@ -1538,7 +1661,7 @@ function BookingScreen({ station, onBack, onConfirm }: { station: Station | null
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-slate-400 mb-1 block">Дата</label>
-              <input type="date" value={date} onChange={e => setDate(e.target.value)}
+              <input type="date" value={date} min={slot.date} onChange={e => setDate(e.target.value)}
                 className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-sky-400 text-slate-800" />
             </div>
             <div>
@@ -1556,15 +1679,15 @@ function BookingScreen({ station, onBack, onConfirm }: { station: Station | null
             <p className="text-sm font-bold text-slate-900 mono">{duration} мин</p>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => setDuration(d => Math.max(15, d - 15))}
-              className="w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-200">
+            <button onClick={() => setDuration(d => Math.max(15, d - 15))} aria-label="Меньше на 15 минут" disabled={duration <= 15}
+              className="w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-200 disabled:opacity-40">
               <Minus size={16} />
             </button>
             <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-              <div className="h-full bg-sky-500 rounded-full transition-all" style={{ width: `${(duration / 240) * 100}%` }} />
+              <div className="h-full bg-sky-500 rounded-full transition-all duration-300 ease-[cubic-bezier(.34,1.56,.64,1)]" style={{ width: `${(duration / 240) * 100}%` }} />
             </div>
-            <button onClick={() => setDuration(d => Math.min(240, d + 15))}
-              className="w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-200">
+            <button onClick={() => setDuration(d => Math.min(240, d + 15))} aria-label="Больше на 15 минут" disabled={duration >= 240}
+              className="w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-200 disabled:opacity-40">
               <Plus size={16} />
             </button>
           </div>
@@ -1579,8 +1702,8 @@ function BookingScreen({ station, onBack, onConfirm }: { station: Station | null
           <div className="space-y-1.5 text-sm">
             {[
               ['Станция', station?.name || '—'],
-              ['Разъем', freeConnectors[connector]?.type + ' · ' + freeConnectors[connector]?.power + ' кВт'],
-              ['Дата', date],
+              ['Разъем', freeConnectors[connector] ? `${freeConnectors[connector].type} · ${freeConnectors[connector].power} кВт` : '—'],
+              ['Дата', startsAt.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })],
               ['Время', time + ' – ' + (() => { const [h, m] = time.split(':').map(Number); const end = h * 60 + m + duration; return `${String(Math.floor(end / 60) % 24).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`; })()],
               ['Стоимость брони', '2 000 сум'],
             ].map(([k, v]) => (
@@ -1600,13 +1723,36 @@ function BookingScreen({ station, onBack, onConfirm }: { station: Station | null
         {bookError && (
           <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-2">{bookError}</p>
         )}
-        <button onClick={submit} disabled={submitting || !freeConnectors[connector]}
-          className="w-full disabled:opacity-60 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl py-4 font-bold text-base transition-colors flex items-center justify-center gap-2">
-          <CalendarCheck size={18} />Подтвердить бронь · 2 000 сум
+        {inPast && <p className="text-xs text-amber-800 bg-amber-50 rounded-xl px-3 py-2 mb-2 pg-reveal">Это время уже прошло — выберите позже</p>}
+        <button onClick={submit} disabled={submitting || !freeConnectors[connector] || inPast}
+          className="w-full disabled:opacity-50 text-[#111] rounded-2xl py-4 font-bold text-base transition-colors flex items-center justify-center gap-2 shadow-[0_8px_22px_rgba(255,176,0,0.3)] disabled:shadow-none"
+          style={{ background: 'linear-gradient(135deg,#FFD66B,#FFB000)' }}>
+          <CalendarCheck size={18} />{submitting ? 'Бронируем…' : 'Подтвердить бронь · 2 000 сум'}
         </button>
       </div>
     </div>
   );
+}
+
+/** The booking as an .ics file: the phone's calendar opens it and reminds before the slot. */
+function addToCalendar(b: Booking) {
+  const stamp = (iso: string) => new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const esc = (t: string) => t.replace(/[\\,;]/g, m => `\\${m}`);
+  const ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', `PRODID:-//${BRAND.name}//Booking//RU`, 'BEGIN:VEVENT',
+    `UID:${b.id}@${BRAND.name.toLowerCase()}`, `DTSTAMP:${stamp(new Date().toISOString())}`,
+    `DTSTART:${stamp(b.startsAt)}`, `DTEND:${stamp(b.endsAt)}`,
+    `SUMMARY:${esc(`Зарядка · ${b.stationName ?? ''}`)}`,
+    `DESCRIPTION:${esc(`Бронь ${b.code ?? ''} · ${b.connectorType} · ${b.power} кВт. Держим 15 минут после начала.`)}`,
+    'BEGIN:VALARM', 'TRIGGER:-PT30M', 'ACTION:DISPLAY', 'DESCRIPTION:Скоро бронь на зарядку', 'END:VALARM',
+    'END:VEVENT', 'END:VCALENDAR',
+  ].join('\r\n');
+  const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `booking-${b.code ?? b.id}.ics`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function BookingDoneScreen({ station, booking, onClose }: { station: Station | null; booking: Booking | null; onClose: () => void }) {
@@ -1615,7 +1761,7 @@ function BookingDoneScreen({ station, booking, onClose }: { station: Station | n
   return (
     <div className="h-full flex flex-col bg-slate-50">
       <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-        <div className="w-20 h-20 bg-amber-100 rounded-3xl flex items-center justify-center mb-5 shadow-lg shadow-amber-100">
+        <div className="w-20 h-20 bg-amber-100 rounded-3xl flex items-center justify-center mb-5 shadow-lg shadow-amber-100 pg-pop">
           <CalendarCheck size={38} className="text-amber-500" />
         </div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Бронь подтверждена!</h2>
@@ -1645,636 +1791,12 @@ function BookingDoneScreen({ station, booking, onClose }: { station: Station | n
         </div>
       </div>
       <div className="px-4 pb-8 grid grid-cols-2 gap-2">
-        <button className="border border-slate-200 text-slate-700 rounded-2xl py-3 font-medium text-sm">Добавить в календарь</button>
+        <button onClick={() => booking && addToCalendar(booking)} disabled={!booking} className="border border-slate-200 text-slate-700 rounded-2xl py-3 font-medium text-sm disabled:opacity-40">Добавить в календарь</button>
         <button onClick={onClose} className="bg-sky-500 text-white rounded-2xl py-3 font-semibold text-sm">Готово</button>
       </div>
     </div>
   );
 }
-
-const NEAREST_STATIONS = [
-  { name: 'Yunusobod Mall DC', dist: '1.2 км', time: '4 мин', free: 3, total: 8, power: '150 кВт', type: 'CCS2', color: '#22C55E' },
-  { name: 'Toshkent Siti Hub', dist: '2.4 км', time: '8 мин', free: 8, total: 12, power: '150 кВт', type: 'CCS2', color: '#22C55E' },
-  { name: 'Mirzo Ulugbek Plaza', dist: '3.8 км', time: '12 мин', free: 1, total: 4, power: '50 кВт', type: 'CCS2/AC', color: '#F59E0B' },
-  { name: 'Chilanzar AC Point', dist: '5.1 км', time: '16 мин', free: 2, total: 2, power: '22 кВт', type: 'Type 2', color: '#22C55E' },
-];
-
-type QRPhase = 'idle' | 'permission' | 'scanning' | 'processing' | 'success' | 'error' | 'manual';
-
-function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStartCharging: (s: Station) => void }) {
-  const stations = useLiveStations();
-  const [phase, setPhase] = useState<QRPhase>('idle');
-  const [torchOn, setTorchOn] = useState(false);
-  const [zoom, setZoom] = useState(1);
-  const [scanPct, setScanPct] = useState(0);
-  const [manualCode, setManualCode] = useState('');
-  const [scannedStation, setScannedStation] = useState<Station | null>(null);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [scanBounce, setScanBounce] = useState(false);
-  const rafRef = useRef<number>(0);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  const recentScans = [
-    { code: 'GCU-TH-01', station: stations[0], time: 'Вчера, 18:34' },
-    { code: 'ECO-YM-03', station: stations[1], time: '3 дня назад' },
-    { code: 'SRB-BX-01', station: stations[4] || stations[0], time: 'Неделю назад' },
-  ];
-
-  // Animate scan line
-  useEffect(() => {
-    if (phase !== 'scanning') { cancelAnimationFrame(rafRef.current); return; }
-    let start = 0;
-    const step = (ts: number) => {
-      if (!start) start = ts;
-      const t = ((ts - start) % 2000) / 2000;
-      setScanPct(t < 0.5 ? t * 2 : 2 - t * 2);
-      rafRef.current = requestAnimationFrame(step);
-    };
-    rafRef.current = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [phase]);
-
-  const startScan = () => {
-    setPhase('permission');
-    timerRef.current = setTimeout(() => {
-      setPhase('scanning');
-      timerRef.current = setTimeout(() => {
-        setPhase('processing');
-        timerRef.current = setTimeout(() => {
-          const s = stations[Math.floor(Math.random() * Math.min(3, stations.length))];
-          setScannedStation(s);
-          setScanBounce(true);
-          setTimeout(() => setScanBounce(false), 600);
-          setPhase('success');
-        }, 700);
-      }, 2800);
-    }, 500);
-  };
-
-  const submitManual = () => {
-    const code = manualCode.trim().toUpperCase();
-    if (!code) return;
-    // The sticker on a charger carries its station ID, e.g. ST-001.
-    const s = stations.find(x => x.id.toUpperCase() === code || x.id.toUpperCase() === code.replace(/^ST(\d)/, 'ST-$1'));
-    if (s) {
-      setScannedStation(s);
-      setPhase('success');
-    } else {
-      setErrorMsg(`Код «${code}» не найден.\nПроверьте правильность ввода.`);
-      setPhase('error');
-    }
-  };
-
-  const reset = () => { setPhase('idle'); setScannedStation(null); setManualCode(''); setErrorMsg(''); };
-
-  useEffect(() => () => { cancelAnimationFrame(rafRef.current); clearTimeout(timerRef.current); }, []);
-  useEffect(() => { if (phase === 'manual') setTimeout(() => inputRef.current?.focus(), 100); }, [phase]);
-
-  // ── IDLE ──
-  if (phase === 'idle') return (
-    <div className="h-full flex flex-col" style={{ background: 'linear-gradient(180deg,#F0F9FF 0%,#F8FAFC 100%)' }}>
-      {/* Header */}
-      <div className="bg-white/80 backdrop-blur px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100/80">
-        <button aria-label="Назад" onClick={onBack} className="p-2 rounded-xl bg-slate-100 active:scale-95 transition-transform">
-          <ArrowLeft size={18} className="text-slate-600" />
-        </button>
-        <div className="flex-1">
-          <h1 className="text-base font-bold text-slate-900">Сканер QR-кода</h1>
-          <p className="text-xs text-slate-400">Подключитесь к зарядной станции</p>
-        </div>
-        <button onClick={() => setPhase('manual')}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 text-slate-500 text-xs font-medium active:scale-95 transition-transform">
-          <span className="text-[11px]">⌨</span> Код
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
-        {/* Main CTA */}
-        <div className="rounded-3xl overflow-hidden relative" style={{ background: 'linear-gradient(145deg,#1F1F1F,#111111)', boxShadow: '0 12px 40px rgba(255, 200, 61,0.25)' }}>
-          {/* Ambient glow */}
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full opacity-20"
-              style={{ background: '#FFC83D', filter: 'blur(40px)' }} />
-          </div>
-          <div className="relative z-10 px-6 py-8 flex flex-col items-center">
-            {/* QR icon */}
-            <div className="relative mb-5">
-              <div className="w-20 h-20 rounded-2xl flex items-center justify-center relative"
-                style={{ background: 'rgba(255, 200, 61,0.15)', border: '1.5px solid rgba(255, 200, 61,0.3)' }}>
-                {/* Corner accents */}
-                {[['top-0 left-0','border-t-2 border-l-2'],['top-0 right-0','border-t-2 border-r-2'],['bottom-0 left-0','border-b-2 border-l-2'],['bottom-0 right-0','border-b-2 border-r-2']].map(([pos,cls],i) => (
-                  <div key={i} className={`absolute ${pos} w-4 h-4 border-sky-400 rounded-sm`} style={{ [pos.includes('top') ? 'top' : 'bottom']: -1, [pos.includes('left') ? 'left' : 'right']: -1, borderTopColor: cls.includes('border-t') ? '#FFC83D' : 'transparent', borderBottomColor: cls.includes('border-b') ? '#FFC83D' : 'transparent', borderLeftColor: cls.includes('border-l') ? '#FFC83D' : 'transparent', borderRightColor: cls.includes('border-r') ? '#FFC83D' : 'transparent', borderWidth: 2 }} />
-                ))}
-                <Scan size={32} className="text-sky-400" style={{ filter: 'drop-shadow(0 0 8px #FFC83D)' }} />
-              </div>
-              {/* Pulse rings */}
-              {[1,2].map(i => (
-                <div key={i} className="absolute inset-0 rounded-2xl border border-sky-400/30" style={{ animation: `pulse-halo ${1.5 + i * 0.5}s ease-out infinite`, animationDelay: `${i * 0.4}s` }} />
-              ))}
-            </div>
-            <h2 className="text-white font-bold text-lg mb-1">Отсканируйте QR</h2>
-            <p className="text-sky-200/60 text-xs text-center mb-6">QR-код расположен на корпусе\nзарядного разъёма или табличке</p>
-            <button onClick={startScan}
-              className="w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 active:scale-95 transition-all"
-              style={{ background: 'linear-gradient(135deg,#FFC83D,#FFB000)', boxShadow: '0 6px 24px rgba(255, 200, 61,0.35)' }}>
-              <Scan size={18} className="text-[#111]" />
-              <span className="text-[#111]">Открыть камеру</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Or divider */}
-        <div className="flex items-center gap-3">
-          <div className="flex-1 h-px bg-slate-200" />
-          <span className="text-xs text-slate-400 font-medium">или</span>
-          <div className="flex-1 h-px bg-slate-200" />
-        </div>
-
-        {/* Manual entry */}
-        <button onClick={() => setPhase('manual')}
-          className="w-full flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-200 active:scale-98 transition-all hover:border-sky-200 hover:bg-sky-50/30"
-          style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-            <span className="text-base">⌨️</span>
-          </div>
-          <div className="flex-1 text-left">
-            <p className="text-sm font-semibold text-slate-800">Ввести код вручную</p>
-            <p className="text-xs text-slate-400">Найдите код на корпусе станции</p>
-          </div>
-          <ChevronRight size={16} className="text-slate-300" />
-        </button>
-
-        {/* Recent scans */}
-        {recentScans.length > 0 && (
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-            <div className="px-4 py-3 border-b border-slate-50 flex items-center justify-between">
-              <p className="text-xs font-bold text-slate-700 uppercase tracking-wide">Недавние станции</p>
-              <button className="text-[11px] text-sky-500 font-semibold">Очистить</button>
-            </div>
-            {recentScans.map((r, i) => (
-              <button key={i} onClick={() => { setScannedStation(r.station); setPhase('success'); }}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-sky-50/40 transition-colors border-b border-slate-50 last:border-b-0">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg,#EFF6FF,#DBEAFE)' }}>
-                  <Zap size={15} className="text-sky-500" />
-                </div>
-                <div className="flex-1 text-left min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 truncate">{r.station.name}</p>
-                  <p className="text-xs text-slate-400 inter">{r.code} · {r.time}</p>
-                </div>
-                <div className="flex flex-col items-end gap-1 shrink-0">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: statusColor[r.station.status] }} />
-                  <span className="text-[10px] text-slate-400">{statusLabel[r.station.status]}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* How it works */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-4" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-          <p className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-3">Где найти QR-код</p>
-          <div className="space-y-2.5">
-            {[
-              { icon: '🔌', text: 'На кабеле или корпусе разъёма' },
-              { icon: '📋', text: 'На информационной табличке станции' },
-              { icon: '📱', text: 'В приложении PowerGo (раздел бронирований)' },
-            ].map((t, i) => (
-              <div key={i} className="flex items-start gap-2.5">
-                <span className="text-base leading-none shrink-0 mt-0.5">{t.icon}</span>
-                <p className="text-[12px] text-slate-600 leading-relaxed">{t.text}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-3 pt-3 border-t border-slate-50">
-            <button className="flex items-center gap-1.5 text-xs text-sky-500 font-semibold">
-              <span>Подробная справка</span>
-              <ChevronRight size={12} />
-            </button>
-          </div>
-        </div>
-
-        {/* NFC hint */}
-        <div className="flex items-start gap-3 px-1">
-          <span className="text-lg shrink-0">📶</span>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Некоторые станции поддерживают <strong className="text-slate-600">NFC</strong> — просто
-            поднесите телефон к метке на корпусе станции.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ── PERMISSION ──
-  if (phase === 'permission') return (
-    <div className="h-full flex flex-col items-center justify-center" style={{ background: '#0A0F1E' }}>
-      <div className="w-16 h-16 rounded-2xl bg-sky-500/20 flex items-center justify-center mb-4" style={{ border: '1px solid rgba(255, 200, 61,0.3)' }}>
-        <Scan size={28} className="text-sky-400" />
-      </div>
-      <p className="text-white font-bold text-base mb-1">Доступ к камере</p>
-      <p className="text-slate-500 text-sm text-center px-8">Запрашиваем разрешение…</p>
-      <div className="mt-6 flex gap-1">
-        {[0,1,2].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-sky-400" style={{ animation: `bounce 0.9s ease-in-out ${i * 0.18}s infinite` }} />)}
-      </div>
-    </div>
-  );
-
-  // ── SCANNING ──
-  if (phase === 'scanning') {
-    const viewSize = 220;
-    const boxY = scanPct * (viewSize - 4);
-    return (
-      <div className="h-full flex flex-col relative overflow-hidden" style={{ background: '#000' }}>
-        {/* Camera simulation */}
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,#050A14 0%,#0A1428 100%)' }}>
-          {/* Fake camera grain */}
-          <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '4px 4px' }} />
-          {/* Vignette */}
-          <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.85) 100%)' }} />
-        </div>
-
-        {/* Top bar */}
-        <div className="relative z-20 flex items-center justify-between px-4 pt-5 pb-3">
-          <button onClick={() => { cancelAnimationFrame(rafRef.current); clearTimeout(timerRef.current); reset(); }} aria-label="Остановить сканирование"
-            className="w-10 h-10 rounded-full bg-white/10 backdrop-blur flex items-center justify-center active:scale-90 transition-transform">
-            <X size={18} className="text-white" />
-          </button>
-          <p className="text-white font-semibold text-sm">Сканер QR</p>
-          <button onClick={() => setTorchOn(t => !t)}
-            className={`w-10 h-10 rounded-full backdrop-blur flex items-center justify-center active:scale-90 transition-all ${torchOn ? 'bg-amber-400' : 'bg-white/10'}`}>
-            <span className="text-base">{torchOn ? '🔦' : '💡'}</span>
-          </button>
-        </div>
-
-        {/* Scan zone */}
-        <div className="flex-1 relative flex flex-col items-center justify-center z-10">
-          {/* Overlay masks */}
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute inset-0 bg-black/55" />
-          </div>
-
-          {/* Clear scan window */}
-          <div className="relative" style={{ width: viewSize, height: viewSize }}>
-            {/* Clear cutout */}
-            <div className="absolute inset-0 rounded-2xl overflow-hidden"
-              style={{ boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)', zIndex: 1 }}>
-              {/* Scanning laser */}
-              <div className="absolute left-0 right-0 h-0.5 pointer-events-none"
-                style={{ top: `${boxY}px`, background: 'linear-gradient(90deg,transparent,#FFC83D,#FFE58A,#FFC83D,transparent)', boxShadow: '0 0 12px #FFC83D, 0 0 24px rgba(255, 200, 61,0.5)', zIndex: 3, transition: 'top 0.016s linear' }} />
-              {/* Fake QR pattern (subtle) */}
-              <div className="absolute inset-4 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(0deg,rgba(255,255,255,0.3) 0px,rgba(255,255,255,0.3) 1px,transparent 1px,transparent 8px),repeating-linear-gradient(90deg,rgba(255,255,255,0.3) 0px,rgba(255,255,255,0.3) 1px,transparent 1px,transparent 8px)' }} />
-            </div>
-
-            {/* Corner brackets — animated */}
-            {(['tl','tr','bl','br'] as const).map(corner => {
-              const top = corner.startsWith('t');
-              const left = corner.endsWith('l');
-              return (
-                <div key={corner} className="absolute z-10"
-                  style={{ [top ? 'top' : 'bottom']: -1, [left ? 'left' : 'right']: -1, width: 28, height: 28 }}>
-                  <div className="absolute" style={{
-                    [top ? 'top' : 'bottom']: 0, [left ? 'left' : 'right']: 0, width: 28, height: 28,
-                    borderTop: top ? '3px solid #FFC83D' : 'none',
-                    borderBottom: !top ? '3px solid #FFC83D' : 'none',
-                    borderLeft: left ? '3px solid #FFC83D' : 'none',
-                    borderRight: !left ? '3px solid #FFC83D' : 'none',
-                    borderRadius: top && left ? '10px 0 0 0' : top && !left ? '0 10px 0 0' : !top && left ? '0 0 0 10px' : '0 0 10px 0',
-                    filter: 'drop-shadow(0 0 6px #FFC83D)',
-                  }} />
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Status text */}
-          <div className="mt-6 text-center">
-            <p className="text-white/90 font-semibold text-sm">Наведите на QR-код</p>
-            <p className="text-white/40 text-xs mt-1">Удерживайте камеру ровно</p>
-          </div>
-
-          {/* Zoom pill */}
-          <div className="mt-4 flex gap-1 bg-black/40 rounded-full p-1 backdrop-blur">
-            {[1, 1.5, 2].map(z => (
-              <button key={z} onClick={() => setZoom(z)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all active:scale-90 ${zoom === z ? 'bg-white text-black' : 'text-white/60'}`}>
-                {z}×
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Bottom controls */}
-        <div className="relative z-20 px-8 pb-8 pt-4 flex items-center justify-between">
-          <button onClick={() => { cancelAnimationFrame(rafRef.current); clearTimeout(timerRef.current); setPhase('manual'); }}
-            className="flex flex-col items-center gap-1.5 active:scale-90 transition-transform">
-            <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur flex items-center justify-center">
-              <span className="text-xl">⌨️</span>
-            </div>
-            <span className="text-white/60 text-[10px]">Ввести код</span>
-          </button>
-
-          <div className="w-16 h-16 rounded-full bg-sky-500/20 flex items-center justify-center" style={{ border: '2px solid rgba(255, 200, 61,0.5)', boxShadow: '0 0 20px rgba(255, 200, 61,0.3)' }}>
-            <Scan size={26} className="text-sky-400" style={{ animation: 'pulse 1.5s ease-in-out infinite', filter: 'drop-shadow(0 0 4px #FFC83D)' }} />
-          </div>
-
-          <button className="flex flex-col items-center gap-1.5 active:scale-90 transition-transform">
-            <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur flex items-center justify-center">
-              <span className="text-xl">🖼️</span>
-            </div>
-            <span className="text-white/60 text-[10px]">Галерея</span>
-          </button>
-        </div>
-
-        {/* Torch overlay glow */}
-        {torchOn && <div className="absolute inset-0 pointer-events-none z-5" style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(251,191,36,0.06) 0%, transparent 70%)' }} />}
-      </div>
-    );
-  }
-
-  // ── PROCESSING ──
-  if (phase === 'processing') return (
-    <div className="h-full flex flex-col items-center justify-center" style={{ background: '#0A0F1E' }}>
-      <div className="relative w-20 h-20 mb-5">
-        <div className="absolute inset-0 rounded-full border-2 border-sky-500/30" style={{ animation: 'spin-cw 1s linear infinite' }} />
-        <div className="absolute inset-2 rounded-full border-2 border-sky-400/50" style={{ animation: 'spin-ccw 0.7s linear infinite' }} />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Scan size={28} className="text-sky-400" style={{ filter: 'drop-shadow(0 0 8px #FFC83D)' }} />
-        </div>
-      </div>
-      <p className="text-white font-bold text-base mb-1">Считываем код…</p>
-      <p className="text-slate-500 text-sm">Проверяем станцию в системе</p>
-    </div>
-  );
-
-  // ── SUCCESS ──
-  if (phase === 'success' && scannedStation) {
-    const avail = scannedStation.connectors.filter(c => c.status === 'available');
-    return (
-      <div className="h-full flex flex-col" style={{ background: 'linear-gradient(180deg,#F0FFF4 0%,#F8FAFC 100%)' }}>
-        <div className="bg-white/80 backdrop-blur px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100/80">
-          <button aria-label="Назад" onClick={reset} className="p-2 rounded-xl bg-slate-100 active:scale-95 transition-transform">
-            <ArrowLeft size={18} className="text-slate-600" />
-          </button>
-          <h1 className="text-base font-bold text-slate-900">Станция найдена</h1>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
-          {/* Success badge */}
-          <div className="flex flex-col items-center py-4">
-            <div className={`relative w-16 h-16 rounded-2xl flex items-center justify-center mb-3 ${scanBounce ? 'scale-110' : 'scale-100'}`}
-              style={{ background: 'linear-gradient(135deg,#22C55E,#16A34A)', boxShadow: '0 8px 24px rgba(34,197,94,0.4)', transition: 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}>
-              <CheckCircle size={32} className="text-white" />
-              <div className="absolute inset-0 rounded-2xl" style={{ border: '2px solid rgba(255,255,255,0.3)', animation: 'pulse-halo 1.8s ease-out 1' }} />
-            </div>
-            <p className="font-bold text-emerald-700 text-base">QR распознан!</p>
-            <p className="text-slate-400 text-xs mt-0.5">Станция подтверждена системой PowerGo</p>
-          </div>
-
-          {/* Station card */}
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden" style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.07)' }}>
-            <div className="px-4 py-4 flex items-start gap-3">
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg,#EFF6FF,#DBEAFE)' }}>
-                <Zap size={22} className="text-sky-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-slate-900 text-base truncate">{scannedStation.name}</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <MapPin size={11} className="text-slate-400 shrink-0" />
-                  <p className="text-xs text-slate-400 truncate">{scannedStation.address}, {scannedStation.city}</p>
-                </div>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold" style={{ background: scannedStation.status === 'available' ? '#DCFCE7' : '#FEF3C7', color: scannedStation.status === 'available' ? '#15803D' : '#D97706' }}>
-                    {statusLabel[scannedStation.status]}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <Star size={11} className="text-amber-400 fill-amber-400" />
-                    <span className="text-[11px] font-semibold text-slate-600">{scannedStation.rating.toFixed(1)}</span>
-                  </div>
-                  <span className="text-[11px] text-slate-400">· {scannedStation.distance} км</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Connector grid */}
-            <div className="border-t border-slate-50 px-4 py-3">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-2">Доступные разъёмы</p>
-              <div className="grid grid-cols-2 gap-2">
-                {scannedStation.connectors.map(c => (
-                  <div key={c.id} className={`flex items-center gap-2 p-2.5 rounded-xl border ${c.status === 'available' ? 'border-emerald-200 bg-emerald-50' : 'border-slate-100 bg-slate-50 opacity-60'}`}>
-                    <div className={`w-2 h-2 rounded-full shrink-0 ${c.status === 'available' ? 'bg-emerald-500' : c.status === 'occupied' ? 'bg-red-500' : 'bg-slate-400'}`} />
-                    <div className="min-w-0">
-                      <p className="text-[12px] font-semibold text-slate-800 truncate">{c.type}</p>
-                      <p className="text-[10px] text-slate-400">{c.power} кВт · {c.price.toLocaleString()} сум</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Amenities row */}
-            {scannedStation.amenities && scannedStation.amenities.length > 0 && (
-              <div className="border-t border-slate-50 px-4 py-2.5 flex gap-2 flex-wrap">
-                {scannedStation.amenities.slice(0, 4).map((a, i) => (
-                  <span key={i} className="text-[11px] px-2 py-1 bg-slate-50 rounded-lg text-slate-500">{a}</span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Availability warning */}
-          {avail.length === 0 && (
-            <div className="flex items-start gap-3 p-4 rounded-2xl border" style={{ background: '#FFFBEB', borderColor: '#FDE68A' }}>
-              <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-amber-800">Разъёмы заняты</p>
-                <p className="text-xs text-amber-600 mt-0.5">Все коннекторы сейчас заняты. Вы можете забронировать место в очереди или прийти позже.</p>
-              </div>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="space-y-2.5 pb-2">
-            <button
-              onClick={() => avail.length > 0 && onStartCharging(scannedStation)}
-              disabled={avail.length === 0}
-              className="w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: avail.length > 0 ? 'linear-gradient(135deg,#FFC83D,#FFB000)' : undefined, backgroundColor: avail.length === 0 ? '#E2E8F0' : undefined, color: avail.length > 0 ? '#111' : '#94A3B8', boxShadow: avail.length > 0 ? '0 6px 20px rgba(255, 200, 61,0.35)' : undefined }}>
-              <Zap size={18} />Начать зарядку
-            </button>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button className="py-3 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 active:scale-95 transition-all hover:bg-slate-50">
-                <CalendarCheck size={15} />Забронировать
-              </button>
-              <button className="py-3 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 active:scale-95 transition-all hover:bg-slate-50">
-                <Navigation size={15} />Маршрут
-              </button>
-            </div>
-
-            <button onClick={reset}
-              className="w-full py-3 rounded-2xl font-medium text-sm text-slate-500 flex items-center justify-center gap-2 active:scale-95 transition-all">
-              <Scan size={14} />Сканировать другой код
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── ERROR ──
-  if (phase === 'error') return (
-    <div className="h-full flex flex-col" style={{ background: 'linear-gradient(180deg,#FFF5F5 0%,#F8FAFC 100%)' }}>
-      <div className="bg-white/80 backdrop-blur px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100/80">
-        <button aria-label="Назад" onClick={reset} className="p-2 rounded-xl bg-slate-100 active:scale-95 transition-transform">
-          <ArrowLeft size={18} className="text-slate-600" />
-        </button>
-        <h1 className="text-base font-bold text-slate-900">Ошибка сканирования</h1>
-      </div>
-      <div className="flex-1 flex flex-col items-center justify-center px-6 space-y-4">
-        <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center" style={{ border: '1px solid #FCA5A5' }}>
-          <AlertTriangle size={28} className="text-red-500" />
-        </div>
-        <div className="text-center">
-          <p className="font-bold text-slate-900 text-base mb-1">Станция не найдена</p>
-          <p className="text-slate-500 text-sm leading-relaxed whitespace-pre-line">{errorMsg}</p>
-        </div>
-        <div className="w-full space-y-2.5 pt-2">
-          <button onClick={startScan}
-            className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 text-[#111] active:scale-95 transition-all"
-            style={{ background: 'linear-gradient(135deg,#FFC83D,#FFB000)', boxShadow: '0 4px 16px rgba(255, 200, 61,0.3)' }}>
-            <Scan size={16} />Сканировать ещё раз
-          </button>
-          <button onClick={() => { setPhase('manual'); setManualCode(''); }}
-            className="w-full py-3.5 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 active:scale-95 transition-all">
-            <span className="text-base">⌨️</span>Ввести другой код
-          </button>
-          <button onClick={reset} className="w-full py-3 text-slate-400 text-sm font-medium active:scale-95 transition-all">
-            Вернуться назад
-          </button>
-        </div>
-        <div className="w-full mt-2 p-4 rounded-2xl bg-white border border-slate-100">
-          <p className="text-xs font-semibold text-slate-700 mb-2">Возможные причины:</p>
-          <div className="space-y-1.5">
-            {['QR-код принадлежит другой сети', 'Станция временно отключена от системы', 'Неверный формат кода — нужен формат XXX-XX-00'].map((r, i) => (
-              <div key={i} className="flex items-start gap-2">
-                <div className="w-1 h-1 rounded-full bg-slate-400 shrink-0 mt-1.5" />
-                <p className="text-xs text-slate-500">{r}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ── MANUAL ENTRY ──
-  return (
-    <div className="h-full flex flex-col bg-white">
-      <div className="bg-white px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100">
-        <button onClick={() => setPhase('idle')} aria-label="Назад" className="p-2 rounded-xl bg-slate-100 active:scale-95 transition-transform">
-          <ArrowLeft size={18} className="text-slate-600" />
-        </button>
-        <div className="flex-1">
-          <h1 className="text-base font-bold text-slate-900">Ввод кода станции</h1>
-          <p className="text-xs text-slate-400">Найдите код на корпусе устройства</p>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
-        {/* Input */}
-        <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200">
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 inter">Код EVSE / станции</p>
-          <input ref={inputRef}
-            value={manualCode}
-            onChange={e => setManualCode(e.target.value.toUpperCase())}
-            onKeyDown={e => e.key === 'Enter' && submitManual()}
-            placeholder="Например: GCU-TH-01"
-            className="w-full bg-transparent text-2xl font-bold mono text-slate-900 tracking-widest outline-none placeholder:text-slate-300"
-          />
-          {manualCode.length > 0 && (
-            <button onClick={() => setManualCode('')} className="mt-2 text-xs text-slate-400 flex items-center gap-1 active:scale-95">
-              <X size={11} /> Очистить
-            </button>
-          )}
-        </div>
-
-        {/* Format hint */}
-        <div className="flex items-start gap-2.5 px-1">
-          <span className="text-sm shrink-0">💡</span>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Формат кода: <span className="font-mono font-bold text-slate-600">XXX-XX-00</span>, например <span className="font-mono text-sky-600">GCU-TH-01</span>. Код нанесён на наклейку или гравировку на корпусе разъёма.
-          </p>
-        </div>
-
-        {/* Recent codes */}
-        <div>
-          <p className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-2 px-1">Недавние коды</p>
-          <div className="space-y-2">
-            {recentScans.map((r, i) => (
-              <button key={i} onClick={() => setManualCode(r.code)}
-                className="w-full flex items-center gap-3 p-3.5 bg-white rounded-2xl border border-slate-200 active:scale-98 transition-all hover:border-sky-200 text-left">
-                <div className="w-8 h-8 rounded-xl bg-sky-50 flex items-center justify-center shrink-0">
-                  <Zap size={14} className="text-sky-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold mono text-slate-800">{r.code}</p>
-                  <p className="text-xs text-slate-400 truncate">{r.station.name}</p>
-                </div>
-                <span className="text-[10px] text-slate-300">{r.time}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Example codes */}
-        <div className="bg-slate-50 rounded-2xl p-4">
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">Тестовые коды (демо)</p>
-          <div className="flex flex-wrap gap-2">
-            {stations.slice(0, 5).map(st => st.id.toUpperCase()).map(c => (
-              <button key={c} onClick={() => setManualCode(c)}
-                className="px-3 py-1.5 bg-white rounded-xl border border-slate-200 text-xs font-bold mono text-sky-600 hover:border-sky-300 active:scale-95 transition-all">
-                {c}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="px-4 pb-6 pt-2 space-y-2">
-        <button onClick={submitManual} disabled={!manualCode.trim()}
-          className="w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40"
-          style={{ background: manualCode.trim() ? 'linear-gradient(135deg,#FFC83D,#FFB000)' : '#E2E8F0', color: manualCode.trim() ? '#111' : '#94A3B8', boxShadow: manualCode.trim() ? '0 6px 20px rgba(255, 200, 61,0.35)' : 'none' }}>
-          <CheckCircle size={18} />Найти станцию
-        </button>
-        <button onClick={startScan}
-          className="w-full py-3 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 bg-slate-100 text-slate-600 active:scale-95 transition-all">
-          <Scan size={15} />Открыть камеру
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── LOYALTY SCREEN ──────────────────────────────────────────────────────────
-
-const loyaltyHistory = [
-  { id: 1, type: 'earned', desc: 'Зарядка на Toshkent City Hub', amount: +120, date: '7 сент', kwh: 38.4 },
-  { id: 2, type: 'earned', desc: 'Первая зарядка после регистрации', amount: +500, date: '5 сент' },
-  { id: 3, type: 'spent', desc: 'Скидка на зарядку', amount: -200, date: '4 сент' },
-  { id: 4, type: 'earned', desc: 'Зарядка на Yunusobod Mall', amount: +95, date: '3 сент', kwh: 24.1 },
-  { id: 5, type: 'earned', desc: 'Реферальный бонус — Bobur M.', amount: +500, date: '20 авг' },
-  { id: 6, type: 'earned', desc: 'Зарядка на Samarkand Plaza', amount: +143, date: '18 авг', kwh: 41.2 },
-  { id: 7, type: 'earned', desc: 'Бонус за оценку приложения', amount: +200, date: '15 авг' },
-  { id: 8, type: 'spent', desc: 'Скидка 5% на сессию', amount: -358, date: '12 авг' },
-];
-
-const levels = [
-  { name: 'Starter', minPts: 0, maxPts: 999, color: '#94A3B8', icon: '⚡', perks: ['1 балл за каждые 10 кВт·ч'] },
-  { name: 'Silver', minPts: 1000, maxPts: 4999, color: '#94A3B8', icon: '🥈', perks: ['1.5× бонусы', 'Бесплатное бронирование×2/мес'] },
-  { name: 'Gold', minPts: 5000, maxPts: 14999, color: '#F59E0B', icon: '🥇', perks: ['2× бонусы', 'Приоритет на пиковых станциях', 'Чат с поддержкой'] },
-  { name: 'Platinum', minPts: 15000, maxPts: Infinity, color: '#4F6BFF', icon: '💎', perks: ['3× бонусы', 'VIP-поддержка 24/7', 'Эксклюзивные тарифы', 'Личный менеджер'] },
-];
 
 function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
   const { actions, updateAccount } = useSync();
@@ -2424,7 +1946,7 @@ const tabs: { id: Tab; label: string; icon: ReactNode }[] = [
  * in an arc — over the QR button when it crosses it — stretching on the way
  * and squashing as it lands, so the eye follows where you went.
  */
-function TabMarker({ slot, hidden }: { slot: number; hidden: boolean }) {
+function TabMarker({ slot }: { slot: number }) {
   const ref = useRef<HTMLSpanElement>(null);
   const last = useRef(slot);
   useEffect(() => {
@@ -2451,7 +1973,7 @@ function TabMarker({ slot, hidden }: { slot: number; hidden: boolean }) {
   }, [slot]);
   return (
     <span ref={ref} aria-hidden="true" className="absolute top-2 bottom-2 left-0 w-1/5 px-1.5 pointer-events-none z-[1]"
-      style={{ transform: `translateX(${slot * 100}%)`, opacity: hidden ? 0 : 1, transition: 'opacity .2s' }}>
+      style={{ transform: `translateX(${slot * 100}%)` }}>
       <span className="block h-full rounded-[20px] shadow-[0_6px_16px_rgba(255,176,0,0.4)]" style={{ background: 'linear-gradient(145deg,#FFD66B,#FFC83D)' }} />
     </span>
   );
@@ -2460,10 +1982,22 @@ function TabMarker({ slot, hidden }: { slot: number; hidden: boolean }) {
 interface Toast { id: string; icon: string; title: string; body: string; color: string; }
 
 function PushToast({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
-  useEffect(() => { const t = setTimeout(onDismiss, 4500); return () => clearTimeout(t); }, []);
+  const [leaving, setLeaving] = useState(false);
+  const startY = useRef<number | null>(null);
+  const leave = () => setLeaving(true);
+  useEffect(() => { const t = setTimeout(leave, 4500); return () => clearTimeout(t); }, []);
+  useEffect(() => {
+    if (!leaving) return;
+    const t = setTimeout(onDismiss, 240);
+    return () => clearTimeout(t);
+    // onDismiss is stable for this toast's id.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leaving]);
   return (
-    <div className="flex items-start gap-3 px-4 py-3 rounded-2xl shadow-2xl cursor-pointer active:scale-98 transition-transform"
-      onClick={onDismiss}
+    <div role="status" className={`flex items-start gap-3 px-4 py-3 rounded-2xl shadow-2xl cursor-pointer active:scale-98 transition-transform ${leaving ? 'pg-toast-out' : ''}`}
+      onClick={leave}
+      onPointerDown={e => { startY.current = e.clientY; }}
+      onPointerUp={e => { if (startY.current !== null && startY.current - e.clientY > 30) leave(); startY.current = null; }}
       style={{ background: 'rgba(15,23,42,0.94)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', animation: 'toast-in 0.4s cubic-bezier(0.16,1,0.3,1) both', minWidth: 280 }}>
       <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-lg"
         style={{ background: toast.color + '22', border: `1px solid ${toast.color}40` }}>
@@ -2473,7 +2007,7 @@ function PushToast({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
         <p className="text-white text-sm font-semibold leading-tight">{toast.title}</p>
         <p className="text-white/55 text-xs mt-0.5 leading-snug">{toast.body}</p>
       </div>
-      <button className="text-white/30 hover:text-white/60 text-lg leading-none mt-0.5 shrink-0">×</button>
+      <button onClick={e => { e.stopPropagation(); leave(); }} aria-label="Закрыть уведомление" className="text-white/30 hover:text-white/60 text-lg leading-none mt-0.5 shrink-0">×</button>
     </div>
   );
 }
@@ -2507,17 +2041,25 @@ export default function DriverApp() {
     }
     setShowOnboarding(false);
   };
+  const liveStations = useLiveStations();
+  const liveStationsById = (id: string) => liveStations.find(s => s.id === id);
   const [activeTab, setActiveTab] = useState<Tab>('map');
   const driverPromoCount = useDriverPromos().length;
   const [screen, setScreen] = useState<Screen>('map');
   // The wallet opens from the profile or from the balance on the map; Back returns there.
   const walletFrom = useRef<Screen>('profile');
   useLargeMode();
-  const [selectedStation, setSelectedStation] = useState<Station | null>(null);
+  const [picked, setSelectedStation] = useState<Station | null>(null);
+  // The card follows the live feed: a connector taken a second ago shows as taken.
+  const selectedStation = picked ? liveStationsById(picked.id) ?? picked : null;
+  // Where Report and Support were opened from, so Back returns there.
+  const reportFrom = useRef<Screen>('station');
   const [toasts, setToasts] = useState<Toast[]>([]);
 
+  // Two toasts can arrive in the same millisecond; each needs its own id.
+  const toastSeq = useRef(0);
   const pushToast = (t: Omit<Toast, 'id'>) =>
-    setToasts(p => [...p, { ...t, id: Date.now().toString() }]);
+    setToasts(p => [...p.slice(-2), { ...t, id: `${Date.now()}-${toastSeq.current++}` }]);
 
   /**
    * Starts a real session on the server so every other portal sees it. Falls
@@ -2525,7 +2067,6 @@ export default function DriverApp() {
    * connector someone else grabbed first.
    */
   // Shortcuts from the app icon: ?go=qr opens the scanner, ?go=nearest the closest free station, ?go=charging the hub.
-  const liveStations = useLiveStations();
   const shortcutDone = useRef(false);
   useEffect(() => {
     if (shortcutDone.current || !driverAccount || !liveStations.length) return;
@@ -2696,7 +2237,7 @@ export default function DriverApp() {
 
   const renderContent = () => {
     if (screen === 'charging-start') return <ChargingStartScreen station={selectedStation} onBack={backToStation} onConfirm={startCharging} onOpenQR={() => setScreen('qr-scan')} />;
-    if (screen === 'charging-active') return <ChargingActiveScreen session={liveSession} startBattery={state?.vehicles.find(v => v.driverId === driverAccount?.id)?.battery ?? null} packKwh={driverAccount?.car?.battery} limit={driverAccount?.car?.chargeLimit} onStop={stopCharging} />;
+    if (screen === 'charging-active') return <ChargingActiveScreen session={liveSession} startBattery={state?.vehicles.find(v => v.driverId === driverAccount?.id)?.battery ?? null} packKwh={driverAccount?.car?.battery} limit={driverAccount?.car?.chargeLimit} onStop={stopCharging} onLeave={() => { setActiveTab('charging'); setScreen('map'); }} />;
     if (screen === 'charging-done') return <ChargingDoneScreen session={lastSession} onClose={handleBack} />;
     if (screen === 'trip') return <TripPlannerScreen onBack={() => setScreen('map')} onSelectStation={handleSelectStation} />;
     if (screen === 'booking') return <BookingScreen station={selectedStation} onBack={backToStation} onConfirm={b => { setLastBooking(b); setScreen('booking-done'); }} />;
@@ -2704,9 +2245,9 @@ export default function DriverApp() {
     if (screen === 'add-car') return <AddCarScreen onBack={() => setScreen('profile')} onSave={saveCar} />;
     if (screen === 'notifications') return <NotificationsScreen onBack={() => setScreen('profile')} />;
     if (screen === 'reviews') return <ReviewsScreen station={selectedStation} onBack={backToStation} />;
-    if (screen === 'report') return <ReportScreen station={selectedStation} onBack={backToStation} />;
+    if (screen === 'report') return <ReportScreen station={reportFrom.current === 'station' ? selectedStation : null} onBack={() => (reportFrom.current === 'station' ? backToStation() : setScreen(reportFrom.current))} />;
     if (screen === 'favorites') return <FavoritesScreen onBack={() => setScreen('map')} onSelectStation={handleSelectStation} />;
-    if (screen === 'qr-scan') return <QRScanScreen onBack={() => (selectedStation && activeTab === 'map' ? setScreen('station') : setScreen('map'))} onStartCharging={s => { setSelectedStation(s); setScreen('charging-start'); }} />;
+    if (screen === 'qr-scan') return <QRScanScreen onBack={() => (selectedStation && activeTab === 'map' ? setScreen('station') : setScreen('map'))} onStartCharging={s => { setActiveTab('map'); setSelectedStation(s); setScreen('charging-start'); }} onBook={s => { setActiveTab('map'); setSelectedStation(s); setScreen('booking'); }} onRoute={s => { setActiveTab('map'); setSelectedStation(s); setScreen('navigate'); }} />;
     if (screen === 'app-settings') return <AppSettingsScreen onBack={() => setScreen('profile')} />;
     if (screen === 'wallet') return <WalletScreen onBack={() => setScreen(walletFrom.current)} />;
     if (screen === 'eco') return <EcoScreen onBack={() => setScreen('profile')} />;
@@ -2717,7 +2258,7 @@ export default function DriverApp() {
     if (screen === 'credit') return <CreditScreen onBack={() => setScreen('profile')} />;
     if (screen === 'navigate' && selectedStation) return <Navigator station={selectedStation} onClose={backToStation} onArrive={() => setScreen('charging-start')} />;
     if (screen === 'host') return <HostScreen onBack={() => setScreen('profile')} />;
-    if (screen === 'support') return <SupportScreen onBack={() => setScreen('profile')} onReport={() => setScreen(selectedStation ? 'report' : 'map')} />;
+    if (screen === 'support') return <SupportScreen onBack={() => setScreen('profile')} onReport={() => { reportFrom.current = 'support'; setScreen('report'); }} />;
 
     if (screen === 'history') return <HistoryScreen onBack={() => { setScreen('map'); setActiveTab('charging'); }} />;
     if (activeTab === 'deals') return <DealsScreen onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} onRoute={st => { setActiveTab('map'); setSelectedStation(st); setScreen('navigate'); }} />;
@@ -2729,13 +2270,13 @@ export default function DriverApp() {
         <DriverMap onSelectStation={handleSelectStation} onOpenWallet={() => { walletFrom.current = 'map'; setScreen('wallet'); }} onSos={() => setSos(true)} hideChrome={screen !== 'map'} />
         {sos && <SosSheet onClose={() => setSos(false)} />}
         {screen === 'station' && selectedStation && (
-          <StationDetailSheet station={selectedStation} onClose={handleBack} onStartCharging={() => setScreen('charging-start')} onBook={() => setScreen('booking')} onReviews={() => setScreen('reviews')} onReport={() => setScreen('report')} onNavigate={() => setScreen('navigate')} />
+          <StationDetailSheet station={selectedStation} onClose={handleBack} onStartCharging={() => setScreen('charging-start')} onBook={() => setScreen('booking')} onReviews={() => setScreen('reviews')} onReport={() => { reportFrom.current = 'station'; setScreen('report'); }} onNavigate={() => setScreen('navigate')} />
         )}
       </div>
     );
   };
 
-  const showTabs = !['history', 'charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host', 'credit', 'navigate'].includes(screen);
+  const showTabs = !['history', 'charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host', 'credit', 'navigate', 'eco'].includes(screen);
 
   return (
     <div className="pg-app h-full flex flex-col bg-white overflow-hidden relative" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -2774,7 +2315,7 @@ export default function DriverApp() {
       {showTabs && (
         <div className="shrink-0 bg-white px-3 pt-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))]">
           <nav aria-label="Разделы" className="relative h-[64px] rounded-[26px] bg-white/90 backdrop-blur-xl border border-slate-100 grid grid-cols-5 items-center shadow-[0_10px_34px_rgba(22,22,26,0.12),0_2px_6px_rgba(22,22,26,0.05)]">
-            <TabMarker slot={[0, 1, 3, 4][tabs.findIndex(t => t.id === activeTab)] ?? 0} hidden={screen === 'station'} />
+            <TabMarker slot={[0, 1, 3, 4][tabs.findIndex(t => t.id === activeTab)] ?? 0} />
             {[tabs[0], tabs[1], null, tabs[2], tabs[3]].map(tab => {
               if (!tab) {
                 return (
@@ -2787,12 +2328,12 @@ export default function DriverApp() {
                   </div>
                 );
               }
-              const isActive = activeTab === tab.id && !['station'].includes(screen);
+              const isActive = activeTab === tab.id;
               // The badge means a charge is running right now, nothing else.
               const isCharging = tab.id === 'charging' && !!liveSession;
               const promoCount = tab.id === 'deals' ? driverPromoCount : 0;
               return (
-                <button key={tab.id} aria-current={isActive ? 'page' : undefined} onClick={() => { setActiveTab(tab.id); setScreen('map'); setSelectedStation(null); }}
+                <button key={tab.id} aria-current={isActive ? 'page' : undefined} onClick={() => { setActiveTab(tab.id); setScreen('map'); setSelectedStation(null); setSos(false); }}
                   className={`relative z-[2] h-full min-w-0 flex flex-col items-center justify-center gap-0.5 duration-300 ${isActive ? 'text-[#111]' : 'text-slate-400 hover:text-slate-700'}`}>
                   <span key={isActive ? 'on' : 'off'} className={`relative grid place-items-center ${isActive ? 'pg-icon-pop' : ''} ${isCharging ? 'pg-icon-charge' : ''}`}>
                     {tab.icon}

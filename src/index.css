@@ -804,8 +804,41 @@ nav::-webkit-scrollbar { display: none; }
 @keyframes pg-float { 50% { translate: 0 -6px; } }
 .pg-spark { animation: pg-spark 1.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes pg-spark { 0%, 100% { opacity: .35; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.1); } }
+/* The brand yellow is light: words on it are black, and yellow words on white get a deeper gold. */
+.pg-app :is(.bg-sky-400, .bg-sky-500, .bg-sky-600, [class*="from-sky-"]).text-white,
+.pg-app :is(.bg-sky-400, .bg-sky-500, .bg-sky-600, [class*="from-sky-"]) .text-white { color: #111; }
+.pg-app :is(.text-sky-500, .text-sky-600) { color: #A87100; }
+/* Something that just opened inside a card: an answer, a receipt, a form. */
+.pg-reveal { animation: pg-reveal .32s cubic-bezier(.32,.72,0,1) both; }
+@keyframes pg-reveal { from { opacity: 0; translate: 0 -6px; clip-path: inset(0 0 100% 0); } to { opacity: 1; translate: none; clip-path: inset(0 0 -20px 0); } }
+/* Bars grow up from the baseline. */
+.pg-grow { transform-origin: bottom; animation: pg-grow .7s cubic-bezier(.34,1.3,.64,1) both; }
+@keyframes pg-grow { from { transform: scaleY(0); } }
+/* A result mark pops in; a refusal shakes its head. */
+.pg-pop { animation: pg-pop .55s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes pg-pop { 0% { transform: scale(.4) rotate(-12deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.pg-shake { animation: pg-shake .42s cubic-bezier(.36,.07,.19,.97) both; }
+@keyframes pg-shake { 20%, 60% { translate: -5px 0; } 40%, 80% { translate: 5px 0; } }
+.pg-fade { animation: pg-fade .25s ease both; }
+@keyframes pg-fade { from { opacity: 0; } }
+/* Sheets and toasts leave the way they came. */
+.pg-sheet-out { animation: pg-sheet-out .24s cubic-bezier(.4,0,1,1) both !important; }
+@keyframes pg-sheet-out { to { transform: translateY(105%); } }
+.pg-toast-out { animation: pg-toast-out .25s ease-in both !important; }
+@keyframes pg-toast-out { to { opacity: 0; transform: translateY(-14px) scale(.96); } }
+/* A live charge: a spark runs round the ring. */
+.pg-orbit { transform-box: view-box; transform-origin: 100px 100px; animation: pg-orbit 2.6s linear infinite; }
+@keyframes pg-orbit { to { transform: rotate(360deg); } }
+/* The camera frame breathes while it looks for a code. */
+.pg-frame { animation: pg-frame 2.2s ease-in-out infinite; }
+@keyframes pg-frame { 50% { transform: scale(1.03); } }
+.pg-laser { animation: pg-laser 2s ease-in-out infinite alternate; }
+@keyframes pg-laser { from { top: 6%; } to { top: 92%; } }
 
 /* People who asked their system for less motion get it. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
+.pg-sheet-in { animation: pg-sheet-in .42s cubic-bezier(.32,.72,0,1) both; }
+@keyframes pg-sheet-in { from { transform: translateY(100%); } }
+@keyframes pg-shine { from { background-position: 200% 0; } to { background-position: -200% 0; } }
