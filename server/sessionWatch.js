@@ -3,6 +3,7 @@ import { db } from './db.js';
 import { api, requireAuth, emit, startCharge, stopCharge, chargeGoal } from './api.js';
 import { demoEnergy } from './history.js';
 import { pushLiveCharge } from './push.js';
+import { setting, feature } from './settings.js';
 
 /**
  * Watches running charges and the clock, so the driver does not have to:
@@ -122,6 +123,8 @@ async function runSchedules() {
  * 5% (or 3 minutes when the percentage is unknown), always quietly.
  */
 async function watchLive() {
+  if (!feature('liveNotice')) return;
+  const stepPct = setting('live.stepPct');
   for (const session of db.data.sessions.filter(s => s.status === 'active' && s.userId && !s.simulated)) {
     const account = db.byId('accounts', session.userId);
     if (!account) continue;
@@ -129,7 +132,7 @@ async function watchLive() {
     const pack = account.car?.battery || 75;
     const from = session.goal?.fromPct ?? session.socStart ?? null;
     const pct = session.socEnd ?? (from !== null ? Math.min(100, Math.round(from + (now.energy / pack) * 100)) : null);
-    const step = pct !== null ? Math.floor(pct / 5) : Math.floor((Date.now() - Date.parse(session.start)) / 180_000);
+    const step = pct !== null ? Math.floor(pct / stepPct) : Math.floor((Date.now() - Date.parse(session.start)) / 180_000);
     if (session.liveStep === step) continue;
     const first = session.liveStep === undefined;
     session.liveStep = step;

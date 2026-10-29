@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { db } from './db.js';
+import { setting } from './settings.js';
 
 /**
  * Driver features beyond charging itself: when a busy connector frees up,
@@ -93,7 +94,7 @@ export function arrivalChance(station, etaMin) {
   // Each driver ahead in the queue takes the likeliest point.
   const open = p.slice(Math.min(f.queue, p.length));
   // Minutes away, nothing is certain: never promise more than 97%.
-  const chance = Math.min(eta <= 2 ? 100 : 97, Math.round((1 - open.reduce((n, x) => n * (1 - x), 1)) * 100));
+  const chance = Math.min(eta <= 2 ? 100 : setting('arrival.maxChance'), Math.round((1 - open.reduce((n, x) => n * (1 - x), 1)) * 100));
   const later = f.connectors.filter(c => c.status === 'occupied' && c.freeInMin !== null && c.freeInMin > eta).map(c => c.freeInMin - eta).sort((a, b) => a - b);
   return {
     stationId: station.id,
@@ -176,7 +177,8 @@ export function stationCommunity(stationId) {
 // Loyalty: points for charging and for helpful reports, redeemed into the wallet
 // ---------------------------------------------------------------------------
 
-export const POINT_VALUE_UZS = 10; // 100 points = 1 000 сум
+/** Sum per point when exchanged for the wallet (the admin sets it; 10 means 100 points = 1 000 сум). */
+const pointValue = () => setting('points.valueUzs');
 const ledger = () => (db.data.points ??= []);
 
 export function addPoints(userId, delta, reason) {
@@ -198,7 +200,7 @@ export function loyaltyFor(userId) {
     next: tier === 'gold' ? null : { tier: tier === 'start' ? 'silver' : 'gold', need: (tier === 'start' ? 300 : 1000) - earned90 },
     trusted: confirmed >= 10,
     confirmedReports: confirmed,
-    valueUzs: balance * POINT_VALUE_UZS,
+    valueUzs: balance * pointValue(),
     history: mine.slice(0, 30),
   };
 }
@@ -211,9 +213,9 @@ export function redeemPoints(userId, points) {
   const wallet = db.data.wallets[userId];
   if (!wallet) return { error: 'Кошелёк не найден', status: 404 };
   addPoints(userId, -n, 'Обмен на баланс кошелька');
-  wallet.balance += n * POINT_VALUE_UZS;
+  wallet.balance += n * pointValue();
   db.save();
-  return { wallet, amount: n * POINT_VALUE_UZS };
+  return { wallet, amount: n * pointValue() };
 }
 
 // ---------------------------------------------------------------------------

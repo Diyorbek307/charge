@@ -38,7 +38,7 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
     return () => clearTimeout(t);
   }, [askStop]);
   const [shared, setShared] = useState<string | null>(null);
-  const { actions } = useSync();
+  const { actions, state } = useSync();
   /** The phone's share sheet where there is one; otherwise the link is copied. */
   const share = async () => {
     if (!session) return;
@@ -158,7 +158,7 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
             <p className="text-white/50 text-[11px] flex items-center gap-1 justify-end">{session.corporate ? <><Building2 size={11} />за счёт компании</> : session.credit ? <><ScanFace size={11} />в долг</> : session.familyOwner ? <><Wallet size={11} />из семейного кошелька</> : session.direct ? <><Wallet size={11} />с баланса сети</> : <><Wallet size={11} />из кошелька</>}</p>
           </div>
         </div>
-        <div className="mt-3 w-full max-h-[34vh] overflow-y-auto no-scrollbar"><WhileCharging stationId={session.stationId} dark minutes={goal?.kind === 'percent' || !goal ? etaMin || undefined : undefined} /></div>
+        {state?.platform?.features.places !== false && <div className="mt-3 w-full max-h-[34vh] overflow-y-auto no-scrollbar"><WhileCharging stationId={session.stationId} dark minutes={goal?.kind === 'percent' || !goal ? etaMin || undefined : undefined} /></div>}
         <p className="mt-2 text-white/30 text-[10px] text-center">{metered ? 'Энергия — по счётчику станции.' : `Процент — оценка для батареи ${pack} кВт·ч; к оплате — по энергии.`}</p>
       </div>
 

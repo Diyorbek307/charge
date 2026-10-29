@@ -95,7 +95,9 @@ describe('PowerGo rewards', () => {
     const cost = stop.data.session.cost;
     const used = Math.min(cost, bonus);
     const next = (await call('/state', { token })).data;
-    assert.equal(next.rewards.bonus.balance, bonus - used);
+    // The charge itself may reach a milestone (a night charge, the tenth): its bonus is new money on top.
+    const fresh = next.rewards.achievements.filter(x => x.grantedAt && !state.rewards.achievements.find(y => y.id === x.id)?.grantedAt).reduce((n, x) => n + x.amount, 0);
+    assert.equal(next.rewards.bonus.balance, bonus - used + fresh);
     assert.equal(next.wallets['acc-driver'].balance, wallet - (cost - used));
     assert.equal(next.transactions.find(t => t.sessionId === start.data.session.id).bonus ?? 0, used);
   });

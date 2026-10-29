@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { setting } from './settings.js';
 import express from 'express';
 import { db } from './db.js';
 import { emit } from './api.js';
@@ -84,8 +85,9 @@ function merchantFor(operatorId) {
 }
 const sameMerchant = (order, operatorId) => (order.operatorId ?? null) === (operatorId ?? null);
 
-const MIN_TOPUP = 1_000;
-const MAX_TOPUP = 10_000_000;
+// Limits and which providers are on: the admin's (server/settings.js).
+const MIN_TOPUP_NOW = () => setting('topup.min');
+const MAX_TOPUP_NOW = () => setting('topup.max');
 const MAX_PENDING_PER_USER = 5;
 const ORDER_TTL_MS = 24 * 60 * 60_000;
 const PAYME_TIMEOUT_MS = 12 * 60 * 60_000;
@@ -195,7 +197,7 @@ paymentsApi.get('/providers', (_req, res) => {
     { id: 'payme', name: 'Payme', configured: Boolean(PAYME.key), live: PAYME.live },
     { id: 'click', name: 'Click', configured: Boolean(CLICK.secret), live: CLICK.live },
     ...Object.entries(ACQUIRERS).map(([id, a]) => ({ id, name: a.name, configured: Boolean(a.secret), live: a.live })),
-  ]);
+  ].map(p => ({ ...p, enabled: setting(`payments.${p.id}`) })));
 });
 
 paymentsApi.post('/topup', (req, res) => {
@@ -205,6 +207,9 @@ paymentsApi.post('/topup', (req, res) => {
 
   const provider = req.body?.provider;
   if (!['payme', 'click', 'uzum', 'humo'].includes(provider)) return res.status(400).json({ error: 'Выберите Payme, Click, Uzum или Humo' });
+  if (!setting(`payments.${provider}`)) return res.status(503).json({ error: `${PROVIDER_NAME[provider]} сейчас отключён — выберите другой способ` });
+  const MIN_TOPUP = MIN_TOPUP_NOW();
+  const MAX_TOPUP = MAX_TOPUP_NOW();
   // A network paid directly: the money goes to its own cashbox.
   const operatorId = req.body?.operatorId ? String(req.body.operatorId) : null;
   if (operatorId && ACQUIRERS[provider]) return res.status(400).json({ error: 'Баланс сети пополняется через Payme или Click' });

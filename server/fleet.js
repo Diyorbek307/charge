@@ -7,14 +7,11 @@
  *   report per driver for any month.
  */
 import { db } from './db.js';
+import { setting } from './settings.js';
 
 const DAY = 86_400_000;
-export const TAXI_TIERS = [
-  { kwh: 0, pct: 3 },
-  { kwh: 500, pct: 5 },
-  { kwh: 2000, pct: 8 },
-  { kwh: 5000, pct: 10 },
-];
+/** The volume tiers, as the admin set them (server/settings.js). */
+const TAXI_TIERS_NOW = () => setting('fleet.tiers');
 const plans = () => (db.data.fleetPlans ??= {});
 
 const kwh30 = () => {
@@ -25,6 +22,7 @@ const kwh30 = () => {
 export function fleetPlanFor(orgId = 'biz-001') {
   const p = plans()[orgId];
   const volume = kwh30();
+  const TAXI_TIERS = TAXI_TIERS_NOW();
   const i = TAXI_TIERS.reduce((best, t, k) => (volume >= t.kwh ? k : best), 0);
   const month = new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 7);
   const saved = db.data.sessions.filter(s => s.corporate && s.fleetCovered && new Date(Date.parse(s.start) + 5 * 3600_000).toISOString().startsWith(month)).reduce((n, s) => n + s.fleetCovered, 0);

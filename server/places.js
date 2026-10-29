@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { db } from './db.js';
 import { api, requireAuth } from './api.js';
+import { setting, feature } from './settings.js';
 
 /**
  * "While you charge": what is a short walk from a station.
@@ -89,9 +90,10 @@ async function fetchOsm(st, hit) {
 }
 
 /** Partners shown at a station: live, paid up, and a real walk away — a contract for a far station does not make it near. */
-const partnersAt = st => partners().filter(p => p.active && Date.parse(p.until) > Date.now() && km({ lat: st.geoLat, lng: st.geoLng }, p) <= 1.2);
+const partnersAt = st => partners().filter(p => p.active && Date.parse(p.until) > Date.now() && km({ lat: st.geoLat, lng: st.geoLng }, p) * 1000 <= setting('places.partnerRadiusM'));
 
 api.get('/stations/:id/places', async (req, res) => {
+  if (!feature('places')) return res.status(403).json({ error: 'Эта функция сейчас выключена', feature: 'places' });
   const st = db.byId('stations', req.params.id);
   if (!st) return res.status(404).json({ error: 'Станция не найдена' });
   const here = { lat: st.geoLat, lng: st.geoLng };
@@ -140,7 +142,7 @@ api.post('/admin/partners', requireAuth('admin'), (req, res) => {
     id: `PP-${crypto.randomBytes(3).toString('hex').toUpperCase()}`,
     name, kind: b.kind, lat, lng, offer,
     stationIds: Array.isArray(b.stationIds) ? b.stationIds.filter(id => db.byId('stations', id)) : [],
-    pricePerShow: Math.max(0, Math.round(Number(b.pricePerShow ?? 50))),
+    pricePerShow: Math.max(0, Math.round(Number(b.pricePerShow ?? setting('places.partnerPrice')))),
     shows: 0, taps: 0, until: new Date(Date.now() + days * DAY).toISOString(), active: true,
   };
   partners().unshift(p);

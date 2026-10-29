@@ -10,8 +10,9 @@
  * charge paid from the driver's wallet, anywhere on OCPP chargers.
  */
 import { db } from './db.js';
+import { setting, feature } from './settings.js';
 
-const WINDOW_MS = 10 * 60_000;
+const WINDOW_MS = () => setting('autocharge.windowMin') * 60_000;
 const links = () => (db.data.autocharge ??= []);
 const windows = () => (db.data.autochargeWindows ??= []);
 
@@ -23,6 +24,8 @@ export function normalizeCarId(raw) {
 
 /** The driver a car ID belongs to, when Autocharge is on for it. */
 export function accountByCarId(raw) {
+  // Switched off by the admin: a car ID is a stranger again.
+  if (!feature('autocharge')) return null;
   const id = normalizeCarId(raw);
   if (!id) return null;
   const link = links().find(l => l.carId === id && l.enabled);
@@ -38,7 +41,7 @@ export function openWindow(account, stationId) {
   const busy = windows().find(w => w.stationId === stationId && w.userId !== account.id && Date.parse(w.until) > Date.now());
   if (busy) return { status: 409, error: 'На этой станции уже привязывают другую машину — попробуйте через несколько минут' };
   for (let i = windows().length - 1; i >= 0; i--) if (windows()[i].userId === account.id || Date.parse(windows()[i].until) <= Date.now()) windows().splice(i, 1);
-  const w = { userId: account.id, stationId, until: new Date(Date.now() + WINDOW_MS).toISOString() };
+  const w = { userId: account.id, stationId, until: new Date(Date.now() + WINDOW_MS()).toISOString() };
   windows().push(w);
   db.save();
   return { window: w };
@@ -49,6 +52,7 @@ export function openWindow(account, stationId) {
  * station, it becomes theirs. Returns the account, or null.
  */
 export function linkFromCharger(stationId, raw) {
+  if (!feature('autocharge')) return null;
   const carId = normalizeCarId(raw);
   if (!carId) return null;
   const i = windows().findIndex(w => w.stationId === stationId && Date.parse(w.until) > Date.now());

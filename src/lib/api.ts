@@ -385,7 +385,20 @@ export interface Promo {
   discount?: number;
 }
 
+/** The admin's switches and numbers every app follows (server/settings.js publicSettings). */
+export interface PlatformSettings {
+  features: { offline: boolean; navigator: boolean; battery: boolean; arrival: boolean; places: boolean; rewards: boolean; plus: boolean; autocharge: boolean; liveNotice: boolean; bookings: boolean; queue: boolean; sos: boolean };
+  booking: { fee: number; graceMin: number };
+  topup: { min: number; max: number; providers: ('payme' | 'click' | 'uzum' | 'humo')[] };
+  queueHoldMin: number;
+  minPrepaidKwh: number;
+}
+/** One setting in the admin's Platform control. */
+export interface SettingItem { key: string; group: string; label: string; hint?: string; type: 'bool' | 'int' | 'money' | 'percent' | 'tiers'; def: unknown; min?: number; max?: number; unit?: string; value: unknown; changed: boolean }
+export interface SettingsView { groups: Record<string, string>; items: SettingItem[]; log: { key: string; label: string; from: unknown; to: unknown; by: string; at: string }[] }
+
 export interface PlatformState {
+  platform?: PlatformSettings;
   promos?: Promo[];
   stations: Station[];
   operators: OperatorRecord[];
@@ -743,6 +756,10 @@ export const apiClient = {
   telegramSignIn: (initData: string) => post<{ token: string; user: Account }>('/auth/telegram', { initData }),
   telegramLink: (initData: string) => post<{ user: Account }>('/auth/telegram/link', { initData }, 'driver'),
   telegramUnlink: () => post<{ user: Account }>('/auth/telegram/unlink', undefined, 'driver'),
+  adminSettings: () => request<SettingsView>('/admin/settings', { portal: 'admin' }),
+  saveSettings: (changes: Record<string, unknown>) => request<SettingsView>('/admin/settings', { method: 'PUT', body: JSON.stringify({ changes }), portal: 'admin' }),
+  adminPrograms: () => request<any>('/admin/programs', { portal: 'admin' }),
+  adminBonus: (phone: string, amount: number, reason: string) => post<BonusGrant>('/admin/bonus', { phone, amount, reason }, 'admin'),
   adminPartners: () => request<PartnerPlace[]>('/admin/partners', { portal: 'admin' }),
   createPartner: (body: { name: string; kind: PlaceKind; offer: string; lat: number; lng: number; pricePerShow: number; days: number }) => post<PartnerPlace>('/admin/partners', body, 'admin'),
   stopPartner: (id: string) => request<PartnerPlace>(`/admin/partners/${id}`, { method: 'DELETE', portal: 'admin' }),

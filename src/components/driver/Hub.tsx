@@ -34,7 +34,7 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
     try {
       const { refunded } = await actions.cancelBooking('driver', id);
       await refresh();
-      setNote(refunded ? 'Бронь отменена — 2 000 сум вернулись на кошелёк' : 'Бронь отменена');
+      setNote(refunded ? 'Бронь отменена — плата вернулась на кошелёк' : 'Бронь отменена');
     } catch (e) {
       setNote(e instanceof Error ? e.message : 'Не удалось отменить бронь');
     } finally {
@@ -151,7 +151,7 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${q.notified ? 'bg-emerald-50 animate-pulse' : 'bg-sky-50'}`}><Users size={17} className={q.notified ? 'text-emerald-600' : 'text-sky-600'} /></div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-800 truncate">{`Очередь · ${st?.name ?? q.stationId}`}</p>
-                <p className="text-xs text-slate-500">{q.notified ? 'Разъём освободился — держим его для вас 5 минут' : 'Сообщим, как только разъём освободится'}</p>
+                <p className="text-xs text-slate-500">{q.notified ? `Разъём освободился — держим его для вас ${state?.platform?.queueHoldMin ?? 5} минут` : 'Сообщим, как только разъём освободится'}</p>
               </div>
               <ChevronRight size={16} className="text-slate-300" />
             </button>
@@ -236,11 +236,11 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
           </div>
         )}
 
-        <div className="grid grid-cols-4 gap-2">
+        <div className={`grid gap-2 ${state?.platform?.features.battery === false ? 'grid-cols-3' : 'grid-cols-4'}`}>
           {[
             { icon: <History size={17} />, label: 'История', go: 'history' },
             { icon: <Route size={17} />, label: 'Поездка', go: 'trip' },
-            { icon: <BatteryMedium size={17} />, label: 'Батарея', go: 'battery' },
+            ...(state?.platform?.features.battery === false ? [] : [{ icon: <BatteryMedium size={17} />, label: 'Батарея', go: 'battery' }]),
             { icon: <Heart size={17} />, label: 'Избранное', go: 'favorites' },
           ].map(b => (
             <button key={b.label} onClick={() => onNavigate(b.go)} className="bg-white rounded-2xl border border-slate-100 py-3 flex flex-col items-center gap-1 text-slate-700 hover:border-sky-300">

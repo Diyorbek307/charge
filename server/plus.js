@@ -9,12 +9,20 @@
  * wallet can pay, and cancelling stops the renewal, not the paid month.
  */
 import { db } from './db.js';
+import { setting, feature } from './settings.js';
 
 const DAY = 86_400_000;
+/** Price, discount and period are the admin's to set (server/settings.js); read when used. */
 export const PLUS = {
-  price: Number(process.env.PLUS_PRICE_UZS ?? 49_000),
-  discount: Number(process.env.PLUS_DISCOUNT_PCT ?? 5),
-  days: 30,
+  get price() {
+    return setting('plus.price');
+  },
+  get discount() {
+    return setting('plus.discount');
+  },
+  get days() {
+    return setting('plus.days');
+  },
 };
 const subs = () => (db.data.subscriptions ??= {});
 const ledger = () => (db.data.plusLedger ??= []);
@@ -25,7 +33,8 @@ function current(userId) {
   if (!s) return null;
   if (Date.parse(s.renewsAt) > Date.now()) return s;
   const wallet = db.data.wallets[userId];
-  if (s.autoRenew && wallet && wallet.balance >= PLUS.price) {
+  // Switched off by the admin: paid months run out, nothing renews.
+  if (s.autoRenew && feature('plus') && wallet && wallet.balance >= PLUS.price) {
     wallet.balance -= PLUS.price;
     s.periodStart = s.renewsAt;
     s.renewsAt = new Date(Date.parse(s.renewsAt) + PLUS.days * DAY).toISOString();
@@ -80,4 +89,17 @@ export function cancelPlus(account) {
   s.autoRenew = false;
   db.save();
   return { plus: plusFor(account.id) };
+}
+
+/** For the admin: who has Plus, what it brought and what PowerGo paid the networks for it. */
+export function plusOverview() {
+  const month = new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 7);
+  const list = Object.entries(subs()).map(([userId, s]) => ({ userId, user: db.byId('accounts', userId)?.name ?? userId, ...s, active: Date.parse(s.renewsAt) > Date.now() }));
+  return {
+    active: list.filter(s => s.active).length,
+    renewing: list.filter(s => s.active && s.autoRenew).length,
+    revenueMonth: ledger().filter(l => l.ts.startsWith(month)).reduce((n, l) => n + l.amount, 0),
+    coveredMonth: db.data.sessions.filter(s => s.plusCovered && s.start.startsWith(month)).reduce((n, s) => n + s.plusCovered, 0),
+    subscribers: list.sort((a, b) => b.renewsAt.localeCompare(a.renewsAt)).slice(0, 50),
+  };
 }

@@ -16,6 +16,7 @@ const CATEGORY: [RegExp, string][] = [
   [/^(session|booking|queue)\./, 'Сессии'],
   [/^webhook\./, 'Интеграции'],
   [/^lead\./, 'Заявки'],
+  [/^settings\./, 'Настройки платформы'],
   [/^(report|system|employee)\./, 'Система'],
 ];
 const categoryOf = (type: string) => CATEGORY.find(([re]) => re.test(type))?.[1] ?? 'Система';

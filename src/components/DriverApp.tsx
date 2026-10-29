@@ -33,6 +33,7 @@ import PlusScreen from './driver/Plus';
 import AutochargeScreen from './driver/Autocharge';
 import WhileCharging from './driver/WhileCharging';
 import { useOfflinePacks, deletePack, packsBytes, savedStations } from '../lib/offline';
+import { usePlatform } from '../lib/platform';
 import { NetworkBadge } from './driver/NetworkBadge';
 import { ChargerFriend } from './driver/Illustration';
 import { promoNow, promosOf, promoHours, discounted, useDriverPromos } from '../lib/promos';
@@ -156,6 +157,8 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
     unavailable: { text: 'Не работает', color: '#64748B', bg: '#F8FAFC' },
   };
   const maxKw = Math.max(0, ...station.connectors.map(c => c.power));
+  // What the admin has switched on.
+  const { features: on } = usePlatform();
   // Nothing to queue for when every point is out of order, and no start while the site is shut.
   const working = station.connectors.filter(c => c.status !== 'unavailable').length;
   const closed = !openNow(station.hours);
@@ -250,7 +253,7 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
           </div>
         )}
 
-        {drive !== null && !mapOnly && <ArrivalBlock station={station} etaMin={drive} onBook={onBook} onOpen={onOpenStation} />}
+        {on.arrival && drive !== null && !mapOnly && <ArrivalBlock station={station} etaMin={drive} onBook={onBook} onOpen={onOpenStation} />}
 
         {/* Photo */}
         <div className="rounded-2xl overflow-hidden mb-3 h-32 bg-slate-100 relative">
@@ -299,7 +302,7 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
         </div>
 
         <StationForecastBlock stationId={station.id} connectors={station.connectors} />
-        <div className="mb-4"><WhileCharging stationId={station.id} /></div>
+        {on.places && <div className="mb-4"><WhileCharging stationId={station.id} /></div>}
         <StationCommunityBlock stationId={station.id} />
 
         {/* Amenities */}
@@ -328,7 +331,7 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
               <span>{working === 0 ? 'Станция не работает' : 'Сейчас закрыто'}</span>
               <span className="text-[10px] font-normal">{working === 0 ? 'Все разъёмы неисправны' : `Часы работы ${station.hours}`}</span>
             </div>
-          ) : free === 0 && !myTurn ? (
+          ) : free === 0 && !myTurn && on.queue ? (
             <button onClick={toggleQueue} disabled={queueBusy}
               className={`${myIndex >= 0 ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-violet-600 hover:bg-violet-700 text-white'} rounded-2xl py-3 font-semibold text-sm transition-colors flex flex-col items-center justify-center leading-tight disabled:opacity-60`}>
               <span>{myIndex >= 0 ? `Вы №${myIndex + 1} · выйти` : 'Встать в очередь'}</span>
@@ -341,10 +344,10 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
               <Scan size={16} />{myTurn ? 'Ваша очередь — начать' : 'Начать зарядку'}
             </button>
           )}
-          <button onClick={onBook}
+          {on.bookings ? <button onClick={onBook}
             className="bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl py-3 font-semibold text-sm transition-colors flex items-center justify-center gap-2">
             <CalendarCheck size={16} />Забронировать
-          </button>
+          </button> : <span />}
         </div>
         )}
         <GreenHourBanner />
@@ -352,9 +355,9 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
           <p role="alert" className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-2">{queueError}</p>
         )}
         {/* Navigation inside the app: route, voice, cameras. */}
-        <button onClick={onNavigate} className="w-full mb-2 bg-[#111] text-white rounded-2xl py-3.5 font-bold text-[15px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+        {on.navigator && <button onClick={onNavigate} className="w-full mb-2 bg-[#111] text-white rounded-2xl py-3.5 font-bold text-[15px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
           <Navigation size={17} className="text-[#FFC83D] fill-[#FFC83D]" />{dist !== null && drive !== null ? `Маршрут · ${road ? '' : '≈ '}${fmtKm(dist)} · ${hm(drive)}` : 'Маршрут'}
-        </button>
+        </button>}
         <div className="grid grid-cols-2 gap-2">
           <button onClick={onReviews} className="bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl py-2.5 font-medium text-sm transition-colors flex items-center justify-center gap-1.5">
             <Star size={14} />{`Отзывы · ${station.reviews}`}
@@ -955,7 +958,13 @@ function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: ()
     { id: 'uzum' as const, name: 'Uzum', letter: 'U', color: '#7000FF' },
     { id: 'humo' as const, name: 'Humo', letter: 'H', color: '#00A651' },
   ];
+  // Only the providers the admin has on.
+  const platform = usePlatform();
+  const shownProviders = providers.filter(p => platform.topup.providers.includes(p.id));
   const providerName = providers.find(p => p.id === provider)?.name ?? 'Payme';
+  useEffect(() => {
+    if (shownProviders.length && !shownProviders.some(p => p.id === provider)) setProvider(shownProviders[0].id);
+  }, [shownProviders, provider]);
 
   // Money in: paid top-ups. Money out: charges paid from the wallet, refunds back in.
   useEffect(() => {
@@ -989,7 +998,7 @@ function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: ()
    */
   const doTopUp = async () => {
     const amt = selectedAmount || parseInt(customAmount) || 0;
-    if (amt < 5000 || amt > 10_000_000 || paying) return;
+    if (amt < platform.topup.min || amt > platform.topup.max || paying) return;
     setPaying(true);
     setPayError(null);
     try {
@@ -1117,7 +1126,7 @@ function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: ()
                   value={customAmount}
                   onChange={e => { setCustomAmount(e.target.value.replace(/\D/g, '').slice(0, 8)); setSelectedAmount(null); }}
                   onKeyDown={e => e.key === 'Enter' && void doTopUp()}
-                  placeholder="Своя сумма, от 5 000 до 10 000 000 сум"
+                  placeholder={`Своя сумма, от ${platform.topup.min.toLocaleString('ru-RU')} до ${platform.topup.max.toLocaleString('ru-RU')} сум`}
                   className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-sky-400 placeholder:text-slate-300"
                 />
 
@@ -1125,7 +1134,7 @@ function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: ()
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-slate-500">СПОСОБ ОПЛАТЫ</p>
                   <div className="grid grid-cols-2 gap-2">
-                    {providers.map(p => (
+                    {shownProviders.map(p => (
                       <button key={p.id} onClick={() => setProvider(p.id)} aria-pressed={provider === p.id}
                         className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-sm font-bold transition-colors ${provider === p.id ? 'border-sky-400 bg-sky-50 text-slate-900' : 'border-slate-100 bg-white text-slate-500'}`}>
                         <span className="w-6 h-6 rounded-lg grid place-items-center text-white text-xs" style={{ background: p.color }}>{p.letter}</span>
@@ -1142,7 +1151,7 @@ function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: ()
 
                 <button
                   onClick={doTopUp}
-                  disabled={paying || !(selectedAmount || (parseInt(customAmount) >= 5000 && parseInt(customAmount) <= 10_000_000))}
+                  disabled={paying || !(selectedAmount || (parseInt(customAmount) >= platform.topup.min && parseInt(customAmount) <= platform.topup.max))}
                   className="w-full py-3.5 bg-sky-500 text-white rounded-2xl font-bold text-sm disabled:opacity-40 active:scale-95 transition-all">
                   {paying ? 'Подтверждаем оплату…' : `Оплатить через ${providerName}`}{!paying && (selectedAmount ? ` ${selectedAmount.toLocaleString('ru-RU')} сум` : customAmount ? ` ${parseInt(customAmount).toLocaleString('ru-RU')} сум` : '')}
                 </button>
@@ -1157,12 +1166,13 @@ function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: ()
 
 function SupportScreen({ onBack, onReport }: { onBack: () => void; onReport: () => void }) {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const platform = usePlatform();
   const faqs = [
     { q: 'Как начать зарядку?', a: 'Найдите станцию на карте или отсканируйте QR-код на ней → «Начать зарядку» → выберите разъём и способ оплаты → подтвердите. Подключите кабель к машине — зарядка начнётся, когда станция её подтвердит.' },
     { q: 'Почему зарядка не началась?', a: 'Частые причины: разъём занят или забронирован, на кошельке меньше чем на 5 кВт·ч, исчерпан лимит компании. Текст ошибки на экране подскажет, что именно. Если станция неисправна — сообщите о проблеме, оператор получит оповещение сразу.' },
     { q: 'Как пополнить кошелёк?', a: 'Профиль → Кошелёк → Пополнить через Payme или Click. Деньги зачисляются, когда платёжная система подтвердит оплату. Данные карт мы не храним — их обрабатывают Payme и Click.' },
     { q: 'Сколько стоит зарядка?', a: 'Цену за кВт·ч задаёт оператор станции, она видна на карточке разъёма. Ночью (23:00–07:00) — ×0.7, днём (10:00–17:00) — ×0.9, вечером в пик (17:00–22:00) — ×1.25. Тариф фиксируется в момент старта, оплата — по фактической энергии.' },
-    { q: 'Как работает бронь?', a: `Бронь держит разъём за вами 15 минут после назначенного времени и стоит ${(2000).toLocaleString('ru-RU')} сум. Если отменить до начала окна — плата возвращается на кошелёк.` },
+    { q: 'Как работает бронь?', a: `Бронь держит разъём за вами ${platform.booking.graceMin} минут после назначенного времени и стоит ${platform.booking.fee.toLocaleString('ru-RU')} сум (с PowerGo Plus — бесплатно). Если отменить до начала окна — плата возвращается на кошелёк.` },
     { q: 'Я сотрудник компании-клиента. Как заряжаться за счёт компании?', a: 'Если ваш номер привязан к автопарку компании, при старте зарядки появится вариант «За счёт компании» и остаток вашего месячного лимита. Лимит меняет менеджер автопарка.' },
   ];
 
@@ -1730,6 +1740,7 @@ function BookingScreen({ station, onBack, onConfirm }: { station: Station | null
 
   const freeConnectors = station?.connectors.filter(c => c.status === 'available') || [];
   const plusFree = !!useSync().state?.plus?.active;
+  const fee = usePlatform().booking.fee;
   const startsAt = new Date(`${date}T${time}`);
   // A slot that has already begun cannot be held.
   const inPast = !(startsAt.getTime() > Date.now());
@@ -1842,7 +1853,7 @@ function BookingScreen({ station, onBack, onConfirm }: { station: Station | null
               ['Разъем', freeConnectors[connector] ? `${freeConnectors[connector].type} · ${freeConnectors[connector].power} кВт` : '—'],
               ['Дата', startsAt.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })],
               ['Время', time + ' – ' + (() => { const [h, m] = time.split(':').map(Number); const end = h * 60 + m + duration; return `${String(Math.floor(end / 60) % 24).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`; })()],
-              ['Стоимость брони', plusFree ? 'Бесплатно с Plus' : '2 000 сум'],
+              ['Стоимость брони', plusFree ? 'Бесплатно с Plus' : `${fee.toLocaleString('ru-RU')} сум`],
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between">
                 <span className="text-sky-700/70">{k}</span>
@@ -1864,7 +1875,7 @@ function BookingScreen({ station, onBack, onConfirm }: { station: Station | null
         <button onClick={submit} disabled={submitting || !freeConnectors[connector] || inPast}
           className="w-full disabled:opacity-50 text-[#111] rounded-2xl py-4 font-bold text-base transition-colors flex items-center justify-center gap-2 shadow-[0_8px_22px_rgba(255,176,0,0.3)] disabled:shadow-none"
           style={{ background: 'linear-gradient(135deg,#FFD66B,#FFB000)' }}>
-          <CalendarCheck size={18} />{submitting ? 'Бронируем…' : plusFree ? 'Подтвердить бронь · бесплатно с Plus' : 'Подтвердить бронь · 2 000 сум'}
+          <CalendarCheck size={18} />{submitting ? 'Бронируем…' : plusFree ? 'Подтвердить бронь · бесплатно с Plus' : `Подтвердить бронь · ${fee.toLocaleString('ru-RU')} сум`}
         </button>
       </div>
     </div>
@@ -1893,6 +1904,7 @@ function addToCalendar(b: Booking) {
 }
 
 function BookingDoneScreen({ station, booking, onClose }: { station: Station | null; booking: Booking | null; onClose: () => void }) {
+  const grace = usePlatform().booking.graceMin;
   const fmtTime = (iso?: string) =>
     iso ? new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '—';
   return (
@@ -1923,7 +1935,7 @@ function BookingDoneScreen({ station, booking, onClose }: { station: Station | n
 
         <div className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-3 text-left">
           <p className="text-xs text-amber-700 flex items-center gap-1.5">
-            <Clock size={12} />Приедьте в течение 15 минут после начала брони, иначе она будет отменена.
+            <Clock size={12} />{`Приедьте в течение ${grace} минут после начала брони, иначе она будет отменена.`}
           </p>
         </div>
       </div>
@@ -2362,7 +2374,7 @@ export default function DriverApp() {
     );
     if (ready && seenQueueEvent.current !== ready.id) {
       seenQueueEvent.current = ready.id;
-      pushToast({ icon: '🔌', title: 'Ваша очередь подошла', body: ready.message + ' · держим 5 минут', color: '#22C55E' });
+      pushToast({ icon: '🔌', title: 'Ваша очередь подошла', body: `${ready.message} · держим ${state?.platform?.queueHoldMin ?? 5} минут`, color: '#22C55E' });
     }
     // pushToast is a stable local helper; re-running on it would be noise.
     // eslint-disable-next-line react-hooks/exhaustive-deps

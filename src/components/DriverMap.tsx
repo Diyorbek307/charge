@@ -364,6 +364,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
   const car = sessions.driver?.car ?? null;
   const balance = (sessions.driver && state?.wallets[sessions.driver.id]?.balance) ?? 0;
   const bonus = state?.rewards?.bonus.balance ?? 0;
+  const sosOn = state?.platform?.features.sos !== false;
   const [onlyFree, setOnlyFree] = useState(false);
   const [onlyMine, setOnlyMine] = useState(false);
   const [onlyPromo, setOnlyPromo] = useState(false);
@@ -526,7 +527,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
           <div className="absolute inset-x-0 bottom-0 z-[1000]">
             <div className="relative">
               <div className="absolute -top-[60px] left-3 right-3 flex items-end justify-between pointer-events-none">
-                {onSos ? (
+                {onSos && sosOn ? (
                   <button onClick={onSos} aria-label="SOS — нужна помощь" className="pointer-events-auto w-12 h-12 rounded-2xl bg-red-600 text-white font-extrabold text-xs shadow-lg active:scale-95">SOS</button>
                 ) : <span />}
                 <button onClick={locate} aria-label="Моё местоположение" className="pointer-events-auto w-12 h-12 rounded-2xl bg-white shadow-[0_4px_20px_rgba(15,23,42,0.15)] grid place-items-center">

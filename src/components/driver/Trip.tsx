@@ -207,14 +207,14 @@ export default function TripPlannerScreen({ onBack, onSelectStation }: { onBack:
                 </li>
               )}
             </ol>
-            <OfflineTrip
+            {state?.platform?.features.offline !== false && <OfflineTrip
               id={[from, to].sort().join('-')}
               name={`${a.name} — ${b.name}`}
               from={a}
               to={b}
               stations={result.stops.map(s => s.station)}
               allStations={stations}
-            />
+            />}
             <p className="text-[11px] text-slate-400 px-1">Оценка: расход 0,18 кВт·ч/км, скорость 80 км/ч, запас 15% у станции и 10% в конце, зарядка до 80% (выше — только если иначе не доехать). Цена — по текущим тарифам станций, к оплате — по фактической энергии и тарифу в момент старта.</p>
           </>
         )}

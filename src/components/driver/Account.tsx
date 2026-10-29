@@ -51,12 +51,13 @@ export function ProfileScreen({ onNavigate }: { onNavigate: (s: string) => void 
   const employer = state?.employer;
   const pendingFamily = (state?.family?.payers ?? []).filter(p => p.status === 'pending').length;
   const car = me.car;
+  const on = state?.platform?.features ?? { plus: true, rewards: true, autocharge: true, battery: true };
 
   const menu: { icon: ReactNode; label: string; badge?: string; screen: string }[] = [
     { icon: <Wallet size={16} className="text-emerald-500" />, label: 'Кошелёк', badge: sum(balance), screen: 'wallet' },
     { icon: <PieChart size={16} className="text-sky-500" />, label: 'Расходы и экономия', screen: 'finance' },
-    { icon: <span className="text-[11px] font-black leading-none px-1 py-0.5 rounded bg-[#FFC83D] text-[#111]" aria-hidden="true">+</span>, label: 'PowerGo Plus', badge: state?.plus?.active ? 'активен' : `−${state?.plus?.discount ?? 5}%`, screen: 'plus' },
-    { icon: <span className="text-[15px] leading-none" aria-hidden="true">🎁</span>, label: 'Награды и бонусы', badge: state?.rewards?.bonus.balance ? sum(state.rewards.bonus.balance) : state?.rewards?.achievements.some(a => !a.grantedAt) ? 'новые' : undefined, screen: 'rewards' },
+    ...(on.plus || state?.plus?.active ? [{ icon: <span className="text-[11px] font-black leading-none px-1 py-0.5 rounded bg-[#FFC83D] text-[#111]" aria-hidden="true">+</span>, label: 'PowerGo Plus', badge: state?.plus?.active ? 'активен' : `−${state?.plus?.discount ?? 5}%`, screen: 'plus' }] : []),
+    ...(on.rewards || (state?.rewards?.bonus.balance ?? 0) > 0 ? [{ icon: <span className="text-[15px] leading-none" aria-hidden="true">🎁</span>, label: 'Награды и бонусы', badge: state?.rewards?.bonus.balance ? sum(state.rewards.bonus.balance) : state?.rewards?.achievements.some(a => !a.grantedAt) ? 'новые' : undefined, screen: 'rewards' }] : []),
     { icon: <Gift size={16} className="text-violet-500" />, label: 'Баллы', screen: 'loyalty' },
     { icon: <ScanFace size={16} className="text-amber-500" />, label: 'Зарядка в долг', badge: state?.credit?.debt ? sum(state.credit.debt) : undefined, screen: 'credit' },
     { icon: <Users size={16} className="text-indigo-500" />, label: 'Семейный кошелёк', badge: pendingFamily ? String(pendingFamily) : undefined, screen: 'family' },
@@ -104,7 +105,7 @@ export function ProfileScreen({ onNavigate }: { onNavigate: (s: string) => void 
               <ChevronRight size={16} className="text-slate-400" />
             </button>
           ) : null}
-          {car ? (
+          {car && on.autocharge ? (
             <button onClick={() => onNavigate('autocharge')} className="w-full px-4 py-3 flex items-center gap-3 text-left border-t border-slate-50 hover:bg-slate-50">
               <span className="w-10 h-10 bg-[#111] rounded-xl flex items-center justify-center text-[#FFC83D] text-lg" aria-hidden="true">⚡</span>
               <span className="flex-1 text-sm font-semibold text-slate-800">Autocharge</span>
@@ -112,14 +113,14 @@ export function ProfileScreen({ onNavigate }: { onNavigate: (s: string) => void 
               <ChevronRight size={16} className="text-slate-400" />
             </button>
           ) : null}
-          {car ? (
+          {car && on.battery ? (
             <button onClick={() => onNavigate('battery')} className="w-full px-4 py-3 flex items-center gap-3 text-left border-t border-slate-50 hover:bg-slate-50">
               <span className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-lg" aria-hidden="true">🔋</span>
               <span className="flex-1 text-sm font-semibold text-slate-800">Здоровье батареи</span>
               <span className="text-xs text-slate-400">отчёт для продажи</span>
               <ChevronRight size={16} className="text-slate-400" />
             </button>
-          ) : companyCar ? (
+          ) : !car && companyCar ? (
             <div className="p-4 flex items-center gap-3">
               <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center"><Car size={20} className="text-indigo-600" /></div>
               <div className="flex-1">

@@ -25,9 +25,10 @@ import {
   directOperatorOf, netBalance, chargeNetwork, refundNetwork, networkWalletsFor, publicPayout, setPayout, directReport,
 } from './direct.js';
 import { promoFor, publicPromos, createPromo, stopPromo, promosOf } from './promos.js';
-import { syncRewards, rewardsFor, bonusFor, spendBonus } from './rewards.js';
+import { syncRewards, rewardsFor, bonusFor, spendBonus, rewardsOverview, grantManual } from './rewards.js';
 import { batteryHealthFor } from './battery.js';
-import { PLUS, plusActive, plusFor, subscribePlus, cancelPlus } from './plus.js';
+import { setting, feature, updateSettings, settingsView, publicSettings } from './settings.js';
+import { PLUS, plusActive, plusFor, subscribePlus, cancelPlus, plusOverview } from './plus.js';
 import { fleetPlanFor, setFleetPlan, fleetDiscount, fleetPriority, fleetDriverReport } from './fleet.js';
 import { openWindow, autochargeFor, unlink as unlinkAutocharge } from './autocharge.js';
 
@@ -291,6 +292,7 @@ function stateFor(viewer) {
     queues: queues.map(anonQueue),
     bookings: activeBookings.map(anonBooking),
     promos: publicPromos(),
+    platform: publicSettings(),
     events: visibleEvents(viewer),
     stats: statsFor(viewer),
     serverTime: new Date().toISOString(),
@@ -949,7 +951,10 @@ api.get('/stations/:id/forecast', (req, res) => {
 });
 
 /** The chance of a free point on arrival, and nearby stations with a better one. */
-api.get('/stations/:id/arrival', (req, res) => {
+/** A feature the admin switched off: the route answers so, and the app hides its button. */
+const featureOn = name => (_req, res, next) => (feature(name) ? next() : res.status(403).json({ error: 'Эта функция сейчас выключена', feature: name }));
+
+api.get('/stations/:id/arrival', featureOn('arrival'), (req, res) => {
   const station = db.byId('stations', req.params.id);
   if (!station) return res.status(404).json({ error: 'Станция не найдена' });
   const eta = Number(req.query.eta);
@@ -1009,7 +1014,7 @@ api.get('/fleet/report', requireAuth('business'), (req, res) => {
 });
 
 // Autocharge: link the car once at a charger, then plug in and it starts.
-api.post('/autocharge/link', requireAuth('driver'), (req, res) => {
+api.post('/autocharge/link', requireAuth('driver'), featureOn('autocharge'), (req, res) => {
   const r = openWindow(req.account, String(req.body?.stationId ?? ''));
   if (r.error) return res.status(r.status).json({ error: r.error });
   res.json(autochargeFor(req.account.id));
@@ -1020,7 +1025,7 @@ api.delete('/autocharge', requireAuth('driver'), (req, res) => {
 });
 
 api.get('/plus', requireAuth('driver'), (req, res) => res.json(plusFor(req.account.id)));
-api.post('/plus', requireAuth('driver'), (req, res) => {
+api.post('/plus', requireAuth('driver'), featureOn('plus'), (req, res) => {
   const r = subscribePlus(req.account);
   if (r.error) return res.status(r.status).json({ error: r.error });
   emit({ type: 'plus.start', portal: 'driver', actor: req.account.name, message: 'PowerGo Plus подключён', entity: req.account.id, payload: { userId: req.account.id } });
@@ -1032,7 +1037,7 @@ api.delete('/plus', requireAuth('driver'), (req, res) => {
   res.json(r.plus);
 });
 
-api.get('/battery', requireAuth('driver'), (req, res) => res.json(batteryHealthFor(db.byId('accounts', req.account.id) ?? req.account)));
+api.get('/battery', requireAuth('driver'), featureOn('battery'), (req, res) => res.json(batteryHealthFor(db.byId('accounts', req.account.id) ?? req.account)));
 
 api.get('/rewards', requireAuth('driver'), (req, res) => {
   syncRewards(req.account);
@@ -1046,7 +1051,7 @@ api.post('/loyalty/redeem', requireAuth('driver'), (req, res) => {
   res.json({ ...r, loyalty: loyaltyFor(req.account.id) });
 });
 
-api.post('/sos', requireAuth('driver'), (req, res) => {
+api.post('/sos', requireAuth('driver'), featureOn('sos'), (req, res) => {
   const r = createSos(req.account, req.body ?? {});
   if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
   emit({ type: 'sos.new', portal: 'driver', actor: req.account.name, message: `SOS · ${req.account.name} · ${req.account.login}`, entity: r.sos.id, payload: { kind: r.sos.kind } });
@@ -1054,6 +1059,45 @@ api.post('/sos', requireAuth('driver'), (req, res) => {
 });
 
 api.get('/sos/mine', requireAuth('driver'), (req, res) => res.json(sosFor(req.account.id)));
+
+// Platform control: every number and switch, changed at run time and logged.
+api.get('/admin/settings', requireAuth('admin'), (_req, res) => res.json(settingsView()));
+api.put('/admin/settings', requireAuth('admin'), (req, res) => {
+  const r = updateSettings(req.body?.changes, req.account);
+  if (r.error) return res.status(400).json({ error: r.error });
+  if (r.changed.length) {
+    const show = v => (typeof v === 'boolean' ? (v ? 'вкл' : 'выкл') : Array.isArray(v) ? v.map(t => `${t.kwh}→${t.pct}%`).join(', ') : Number(v).toLocaleString('ru-RU'));
+    emit({
+      type: 'settings.update',
+      portal: 'admin',
+      actor: req.account.name,
+      message: `Настройки платформы: ${r.changed.map(c => `${c.label} ${show(c.from)} → ${show(c.to)}`).join('; ')}`,
+      entity: 'platform',
+      payload: { keys: r.changed.map(c => c.key) },
+    });
+  }
+  res.json(settingsView());
+});
+
+// What PowerGo's own programmes cost and bring: rewards, Plus, the taxi tariff, Autocharge.
+api.get('/admin/programs', requireAuth('admin'), (_req, res) => {
+  const month = new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 7);
+  res.json({
+    rewards: rewardsOverview(),
+    plus: plusOverview(),
+    fleetCoveredMonth: db.data.sessions.filter(s => s.fleetCovered && s.start.startsWith(month)).reduce((n, s) => n + s.fleetCovered, 0),
+    autochargeCars: (db.data.autocharge ?? []).filter(l => l.enabled).length,
+    autochargeCharges: db.data.sessions.filter(s => s.autocharge && s.start.startsWith(month)).length,
+  });
+});
+api.post('/admin/bonus', requireAuth('admin'), (req, res) => {
+  const login = String(req.body?.phone ?? '').replace(/[^\d+]/g, '');
+  const account = db.find('accounts', a => a.portal === 'driver' && (a.login === login || a.id === req.body?.userId));
+  const r = grantManual(account, req.body?.amount, req.body?.reason);
+  if (r.error) return res.status(r.status).json({ error: r.error });
+  emit({ type: 'reward.granted', portal: 'admin', actor: req.account.name, message: `+${r.grant.amount.toLocaleString('ru-RU')} сум бонусом · ${r.grant.title}`, entity: r.grant.id, payload: { userId: account.id, amount: r.grant.amount, kind: r.grant.kind, title: r.grant.title, manual: true } });
+  res.json(r.grant);
+});
 
 api.get('/admin/sos', requireAuth('admin'), (_req, res) => res.json(allSos()));
 
@@ -1237,13 +1281,14 @@ const portalLabel = p =>
   ({ driver: 'Driver App', operator: 'Operator Portal', admin: 'Admin Center', business: 'Business Portal', api: 'Partner API' }[p] ?? p);
 
 /** How long a freed connector is held for the driver at the head of the queue. */
-const QUEUE_HOLD_MS = 5 * 60_000;
+// Read at use: the admin changes them in Platform control (server/settings.js).
+const QUEUE_HOLD_MS = () => setting('queue.holdMin') * 60_000;
 
 /** Drops holds nobody claimed in time and returns the live queue. */
 function pruneQueues() {
   const now = Date.now();
   const before = db.data.queues.length;
-  db.data.queues = db.data.queues.filter(q => !q.notified || now - q.notifiedAt < QUEUE_HOLD_MS);
+  db.data.queues = db.data.queues.filter(q => !q.notified || now - q.notifiedAt < QUEUE_HOLD_MS());
   if (db.data.queues.length !== before) db.save();
   return db.data.queues;
 }
@@ -1274,7 +1319,7 @@ function promoteQueue(stationId, connectorId) {
 }
 
 /** Minimum prepaid energy a wallet must cover before a session may start. */
-const MIN_PREPAID_KWH = 5;
+const MIN_PREPAID_KWH = () => setting('charge.minPrepaidKwh');
 
 /** Owner, the operator running that station's network, or an admin. */
 function canControlSession(account, session) {
@@ -1367,7 +1412,7 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
   const employee = account.portal === 'driver' ? db.find('employees', e => e.driverId === account.id) : null;
   if (wantsCompany && !employee) return { status: 403, error: 'Зарядка за счёт компании доступна только сотрудникам автопарка' };
   const corporate = account.portal === 'business' || (wantsCompany && !!employee);
-  const minimum = connector.price * MIN_PREPAID_KWH;
+  const minimum = connector.price * MIN_PREPAID_KWH();
   if (corporate && employee) {
     const left = employee.limit - monthSpend(account.id);
     if (left < minimum) {
@@ -1918,7 +1963,7 @@ api.post('/wallet/topup', requireAuth('driver', 'business'), (req, res) => {
 // Station queue — wait for a busy station instead of circling the car park.
 // ---------------------------------------------------------------------------
 
-api.post('/stations/:id/queue', requireAuth('driver', 'business'), (req, res) => {
+api.post('/stations/:id/queue', requireAuth('driver', 'business'), featureOn('queue'), (req, res) => {
   const station = db.byId('stations', req.params.id);
   if (!station) return res.status(404).json({ error: 'Станция не найдена' });
 
@@ -2025,7 +2070,7 @@ api.get('/tariffs/forecast', (_req, res) => {
 // Driver issue reports — land as an alert on the owning operator's console.
 // ---------------------------------------------------------------------------
 
-const ISSUE_COOLDOWN_MS = 10 * 60_000;
+const ISSUE_COOLDOWN_MS = () => setting('issue.cooldownMin') * 60_000;
 
 api.post('/stations/:id/issues', requireAuth('driver', 'business'), (req, res) => {
   const station = db.byId('stations', req.params.id);
@@ -2041,7 +2086,7 @@ api.post('/stations/:id/issues', requireAuth('driver', 'business'), (req, res) =
     a =>
       a.reporterId === req.account.id &&
       a.stationId === station.id &&
-      Date.now() - new Date(a.time).getTime() < ISSUE_COOLDOWN_MS,
+      Date.now() - new Date(a.time).getTime() < ISSUE_COOLDOWN_MS(),
   );
   if (recent) {
     return res.status(429).json({ error: 'Вы уже сообщили об этой станции — оператор разбирается' });
@@ -2149,10 +2194,10 @@ api.get('/eco/leaderboard', (req, res) => {
 // Bookings — reserve a connector for a time window.
 // ---------------------------------------------------------------------------
 
-const BOOKING_FEE = 2000;
-const BOOKING_GRACE_MS = 15 * 60_000;
-const BOOKING_LEAD_MS = 10 * 60_000;
-const BOOKING_HORIZON_MS = 24 * 60 * 60_000;
+const BOOKING_FEE = () => setting('booking.fee');
+const BOOKING_GRACE_MS = () => setting('booking.graceMin') * 60_000;
+const BOOKING_LEAD_MS = () => setting('booking.leadMin') * 60_000;
+const BOOKING_HORIZON_MS = () => setting('booking.horizonHours') * 3_600_000;
 
 const ms = iso => new Date(iso).getTime();
 const bookingEnd = b => Math.max(ms(b.endsAt), ms(b.graceUntil));
@@ -2185,13 +2230,13 @@ function bookingHolding(stationId, connectorId, at = Date.now()) {
         b.status === 'active' &&
         b.stationId === stationId &&
         b.connectorId === connectorId &&
-        ms(b.startsAt) - BOOKING_LEAD_MS <= at &&
+        ms(b.startsAt) - BOOKING_LEAD_MS() <= at &&
         at <= ms(b.graceUntil),
     ) ?? null
   );
 }
 
-api.post('/stations/:id/bookings', requireAuth('driver', 'business'), (req, res) => {
+api.post('/stations/:id/bookings', requireAuth('driver', 'business'), featureOn('bookings'), (req, res) => {
   const station = db.byId('stations', req.params.id);
   if (!station) return res.status(404).json({ error: 'Станция не найдена' });
   const connector = station.connectors.find(c => c.id === req.body?.connectorId);
@@ -2206,8 +2251,8 @@ api.post('/stations/:id/bookings', requireAuth('driver', 'business'), (req, res)
   const now = Date.now();
   if (Number.isNaN(startMs)) return res.status(400).json({ error: 'Некорректное время начала' });
   if (startMs < now - 60_000) return res.status(400).json({ error: 'Время начала уже прошло' });
-  if (startMs > now + BOOKING_HORIZON_MS) {
-    return res.status(400).json({ error: 'Бронировать можно не больше чем на сутки вперёд' });
+  if (startMs > now + BOOKING_HORIZON_MS()) {
+    return res.status(400).json({ error: `Бронировать можно не больше чем на ${setting('booking.horizonHours')} ч вперёд` });
   }
 
   pruneBookings();
@@ -2217,7 +2262,7 @@ api.post('/stations/:id/bookings', requireAuth('driver', 'business'), (req, res)
   }
 
   const endMs = startMs + minutes * 60_000;
-  const graceMs = startMs + BOOKING_GRACE_MS;
+  const graceMs = startMs + BOOKING_GRACE_MS();
   const windowEnd = Math.max(endMs, graceMs);
   const clash = db.data.bookings.some(
     b =>
@@ -2232,7 +2277,7 @@ api.post('/stations/:id/bookings', requireAuth('driver', 'business'), (req, res)
   const walletId = account.portal === 'business' ? 'biz-001' : account.id;
   const wallet = db.data.wallets[walletId];
   // Booking is free with Plus.
-  const fee = account.portal === 'driver' && plusActive(account.id) ? 0 : BOOKING_FEE;
+  const fee = account.portal === 'driver' && plusActive(account.id) ? 0 : BOOKING_FEE();
   if (!wallet || wallet.balance < fee) {
     return res.status(402).json({ error: `Недостаточно средств для брони: ${fee.toLocaleString('ru-RU')} сум` });
   }

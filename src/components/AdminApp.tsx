@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import AdminPartners from './admin/Partners';
+import AdminPlatform from './admin/Platform';
 import LeadsPage from './LeadsPage';
 import AdminOverview from './admin/Overview';
 import AdminOperators from './admin/Operators';
@@ -24,14 +25,14 @@ import { DirectSettlement } from './admin/DirectSettlement';
 import { AdminSupport } from './admin/Support';
 import {
   LayoutDashboard, MapPin, Users, Activity, DollarSign, BarChart2, Settings, LogOut, Zap, Shield,
-  Building2, Brain, ScrollText, ClipboardCheck, Percent, UserCheck, Banknote, Tag, Menu, Inbox, Siren, Home, ScanFace, Landmark, MessageCircle, Coffee
+  Building2, Brain, ScrollText, ClipboardCheck, Percent, UserCheck, Banknote, Tag, Menu, Inbox, Siren, Home, ScanFace, Landmark, MessageCircle, Coffee, SlidersHorizontal
 } from 'lucide-react';
 import { useI18n } from '../lib/i18n';
 import SidebarThemeToggle from './SidebarThemeToggle';
 import AIChat from './AIChat';
 import { LogoMark } from '../landing/Logo';
 
-type Page = 'dashboard' | 'map' | 'sos' | 'hosts' | 'credit' | 'direct' | 'support' | 'operators' | 'leads' | 'users' | 'sessions' | 'payments' | 'settlement' | 'analytics' | 'ai' | 'fraud' | 'cdr' | 'commissions' | 'tariffs_global' | 'partners' | 'audit' | 'roles' | 'settings' | 'system_health';
+type Page = 'dashboard' | 'map' | 'sos' | 'hosts' | 'credit' | 'direct' | 'support' | 'operators' | 'leads' | 'users' | 'sessions' | 'payments' | 'settlement' | 'analytics' | 'ai' | 'fraud' | 'cdr' | 'commissions' | 'tariffs_global' | 'partners' | 'platform' | 'audit' | 'roles' | 'settings' | 'system_health';
 
 function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current: Page; onChange: (p: Page) => void; onBack: () => void; isOpen?: boolean; onClose?: () => void }) {
   const { t } = useI18n();
@@ -40,6 +41,7 @@ function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current:
       label: t('nav.group.overview'),
       items: [
         { id: 'dashboard' as Page, label: 'Обзор', icon: <LayoutDashboard size={14} /> },
+        { id: 'platform' as Page, label: 'Управление платформой', icon: <SlidersHorizontal size={14} /> },
         { id: 'map' as Page, label: 'Карта сети', icon: <MapPin size={14} />, badge: '●' },
       ],
     },
@@ -179,7 +181,7 @@ export default function AdminApp({ onBack }: { onBack: () => void }) {
   const renderPage = () => {
     const pages: Record<string, ReactNode> = {
       map: <AdminNetworkMap />, sos: <AdminSos />, support: <AdminSupport />, hosts: <AdminHosts />, credit: <AdminCredit />, operators: <AdminOperators onNavigate={go} />, leads: <LeadsPage />, users: <AdminUsers />,
-      settlement: <AdminSettlement />, direct: <DirectSettlement portal="admin" />, commissions: <AdminCommissions />, tariffs_global: <AdminTariffs />, partners: <AdminPartners />,
+      settlement: <AdminSettlement />, direct: <DirectSettlement portal="admin" />, commissions: <AdminCommissions />, tariffs_global: <AdminTariffs />, partners: <AdminPartners />, platform: <AdminPlatform />,
       sessions: <AdminSessions />, payments: <AdminPayments />,
       analytics: <AdminAnalytics />, ai: <AdminInsights onNavigate={go} />, fraud: <AdminRisk />,
       cdr: <AdminCdr />, audit: <AdminAudit />, roles: <AdminRoles />,
