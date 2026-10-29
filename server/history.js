@@ -307,12 +307,24 @@ export function sessionsBetween({ stations, customers, from, to, r, growthAt = (
           // demo driver also charges privately about half the time.
           corporate: customer.fleet && (customer.id !== 'acc-driver' || r() < 0.5),
           source: 'app',
+          // The demo driver's fast chargers report the battery's percentage, as real DC chargers do:
+          // an 85 kWh pack that now holds about 92% of it, slowly losing a little over the weeks.
+          ...(customer.id === 'acc-driver' && connector.power >= 50 && !failed && energy > 8 ? socOf(energy, startMs, from) : {}),
         });
       }
     }
   }
 
   return sessions;
+}
+
+/** Start and end percentage for the demo driver's charge, from the energy and the pack's health that day. */
+function socOf(energy, startMs, fromMs) {
+  const weeks = (startMs - fromMs) / (7 * 86400_000);
+  const capacity = 85 * (0.932 - weeks * 0.0015);
+  const gain = Math.min(75, Math.round(((energy * 0.93) / capacity) * 100));
+  const socStart = 12 + (Math.round(startMs / 60_000) % 23);
+  return { socStart, socEnd: Math.min(100, socStart + gain) };
 }
 
 export function buildHistory({ stations, customers, now }) {

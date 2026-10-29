@@ -237,6 +237,21 @@ export interface Rewards {
   bonusDays: number;
   achievements: Achievement[];
 }
+/** Battery health from the driver's charges (server/battery.js). */
+export interface BatteryHealth {
+  car: { brand: string; model: string; year: number; rated: number } | null;
+  /** Share of the rated capacity the pack still holds, %, when it could be measured. */
+  soh: number | null;
+  capacity: number | null;
+  grade: 'excellent' | 'good' | 'attention' | null;
+  /** Change since the first measurements, %. */
+  drift: number | null;
+  measured: { at: string; sessionId: string; station: string; from: number; to: number; energy: number; kwh: number }[];
+  acceptance: { month: string; share: number; charges: number }[];
+  charges: number;
+  tips: string[];
+  reportId: string;
+}
 export interface BonusGrant { id: string; kind: string; title: string; amount: number; left: number; at: string; expiresAt: string }
 
 export interface Alert {
@@ -706,6 +721,7 @@ export const apiClient = {
   telegramSignIn: (initData: string) => post<{ token: string; user: Account }>('/auth/telegram', { initData }),
   telegramLink: (initData: string) => post<{ user: Account }>('/auth/telegram/link', { initData }, 'driver'),
   telegramUnlink: () => post<{ user: Account }>('/auth/telegram/unlink', undefined, 'driver'),
+  batteryHealth: () => request<BatteryHealth>('/battery', { portal: 'driver' }),
   saveCar: (portal: Portal, car: Car) => request<{ user: Account; granted?: BonusGrant[] }>('/me/car', { method: 'PUT', body: JSON.stringify(car), portal }),
   logout: (portal: Portal) => post<{ ok: boolean }>('/auth/logout', undefined, portal),
 

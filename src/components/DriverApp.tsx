@@ -28,6 +28,7 @@ import { useRoadDistance } from '../lib/nav';
 import DealsScreen from './driver/Deals';
 import QRScanScreen from './driver/QRScan';
 import RewardsScreen, { RewardBurst } from './driver/Rewards';
+import BatteryScreen from './driver/Battery';
 import { useOfflinePacks, deletePack, packsBytes, savedStations } from '../lib/offline';
 import { NetworkBadge } from './driver/NetworkBadge';
 import { ChargerFriend } from './driver/Illustration';
@@ -40,7 +41,7 @@ import { inTelegram, telegramInitData } from '../lib/telegram';
 import type { Booking, Session, PaymentOrder } from '../lib/api';
 import AuthFlow from './AuthFlow';
 
-type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate' | 'rewards';
+type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate' | 'rewards' | 'battery';
 type Tab = 'map' | 'charging' | 'deals' | 'profile';
 /** Minutes as "25 мин" or "5 ч 10 мин". */
 const hm = (m: number) => (m < 60 ? `${m} мин` : `${Math.floor(m / 60)} ч${m % 60 ? ` ${m % 60} мин` : ''}`);
@@ -2193,6 +2194,7 @@ export default function DriverApp() {
   const walletFrom = useRef<Screen>('profile');
   // The car form opens from the profile, the charging tab or the rewards; saving returns there.
   const carFrom = useRef<Screen>('profile');
+  const batteryFrom = useRef<Screen>('profile');
   // A reward just reached: shown big, one at a time.
   const [burst, setBurst] = useState<{ amount: number; title: string } | null>(null);
   const seenRewards = useRef(new Set<string>());
@@ -2457,6 +2459,7 @@ export default function DriverApp() {
     if (screen === 'booking') return <BookingScreen station={selectedStation} onBack={backToStation} onConfirm={b => { setLastBooking(b); setScreen('booking-done'); }} />;
     if (screen === 'booking-done') return <BookingDoneScreen station={selectedStation} booking={lastBooking} onClose={handleBack} />;
     if (screen === 'add-car') return <AddCarScreen onBack={() => setScreen(carFrom.current)} onSave={saveCar} />;
+    if (screen === 'battery') return <BatteryScreen onBack={() => setScreen(batteryFrom.current)} onAddCar={() => { carFrom.current = 'battery'; setScreen('add-car'); }} />;
     if (screen === 'rewards') return <RewardsScreen onBack={() => setScreen('profile')} onAddCar={() => { carFrom.current = 'rewards'; setScreen('add-car'); }} />;
     if (screen === 'notifications') return <NotificationsScreen onBack={() => setScreen('profile')} />;
     if (screen === 'reviews') return <ReviewsScreen station={selectedStation} onBack={backToStation} />;
@@ -2477,8 +2480,8 @@ export default function DriverApp() {
 
     if (screen === 'history') return <HistoryScreen onBack={() => { setScreen('map'); setActiveTab('charging'); }} />;
     if (activeTab === 'deals') return <DealsScreen onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} onRoute={st => { setActiveTab('map'); setSelectedStation(st); setScreen('navigate'); }} />;
-    if (activeTab === 'profile') return <ProfileScreen onNavigate={s => { walletFrom.current = 'profile'; carFrom.current = 'profile'; setScreen(s as Screen); }} />;
-    if (activeTab === 'charging') return <ChargingHubScreen onNavigate={(s) => { carFrom.current = 'map'; setScreen(s as Screen); }} onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} onOpenCharge={() => { setActiveTab('map'); setScreen('charging-active'); }} onRepeat={(st, cid, goal) => { setActiveTab('map'); setSelectedStation(st); void startCharging(cid, 'self', undefined, { goal }, st); }} />;
+    if (activeTab === 'profile') return <ProfileScreen onNavigate={s => { walletFrom.current = 'profile'; carFrom.current = 'profile'; batteryFrom.current = 'profile'; setScreen(s as Screen); }} />;
+    if (activeTab === 'charging') return <ChargingHubScreen onNavigate={(s) => { carFrom.current = 'map'; batteryFrom.current = 'map'; setScreen(s as Screen); }} onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} onOpenCharge={() => { setActiveTab('map'); setScreen('charging-active'); }} onRepeat={(st, cid, goal) => { setActiveTab('map'); setSelectedStation(st); void startCharging(cid, 'self', undefined, { goal }, st); }} />;
 
     return (
       <div className="relative w-full h-full">
@@ -2491,7 +2494,7 @@ export default function DriverApp() {
     );
   };
 
-  const showTabs = !['history', 'charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host', 'credit', 'navigate', 'eco', 'rewards'].includes(screen);
+  const showTabs = !['history', 'charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host', 'credit', 'navigate', 'eco', 'rewards', 'battery'].includes(screen);
 
   return (
     <div className="pg-app h-full flex flex-col bg-white overflow-hidden relative" style={{ fontFamily: 'Inter, sans-serif' }}>

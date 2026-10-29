@@ -143,6 +143,18 @@ function call(stationId, action, payload) {
   });
 }
 
+/** The battery's percentage, when the charger reports it (DC chargers usually do). */
+function socPct(meterValue = []) {
+  for (const mv of meterValue) {
+    for (const sv of mv.sampledValue ?? []) {
+      if (sv.measurand !== 'SoC') continue;
+      const value = Number(sv.value);
+      if (Number.isFinite(value) && value >= 0 && value <= 100) return Math.round(value);
+    }
+  }
+  return null;
+}
+
 /** Energy.Active.Import.Register in Wh, from an OCPP meterValue array. */
 function energyWh(meterValue = []) {
   for (const mv of meterValue) {
@@ -271,6 +283,13 @@ const handlers = {
     const session = p.transactionId == null ? null : activeByTransaction(station.id, Number(p.transactionId));
     const wh = energyWh(p.meterValue);
     if (session && wh !== null) meterSession(session, (wh - (session.meterStartWh ?? 0)) / 1000);
+    // The first and the latest percentage: with the energy, they measure the battery (server/battery.js).
+    const soc = socPct(p.meterValue);
+    if (session && soc !== null) {
+      session.socStart ??= soc;
+      session.socEnd = soc;
+      db.save();
+    }
     return {};
   },
 

@@ -26,6 +26,7 @@ import {
 } from './direct.js';
 import { promoFor, publicPromos, createPromo, stopPromo, promosOf } from './promos.js';
 import { syncRewards, rewardsFor, bonusFor, spendBonus } from './rewards.js';
+import { batteryHealthFor } from './battery.js';
 
 export const api = express.Router();
 // Photos (a face for credit, a station, a support message) are larger than an ordinary request.
@@ -961,6 +962,8 @@ api.post('/community/:id/confirm', requireAuth('driver'), (req, res) => {
 });
 
 api.get('/loyalty', requireAuth('driver'), (req, res) => res.json(loyaltyFor(req.account.id)));
+api.get('/battery', requireAuth('driver'), (req, res) => res.json(batteryHealthFor(db.byId('accounts', req.account.id) ?? req.account)));
+
 api.get('/rewards', requireAuth('driver'), (req, res) => {
   syncRewards(req.account);
   res.json(rewardsFor(req.account));
