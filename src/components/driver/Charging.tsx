@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BatteryCharging, Clock, CheckCircle, Download, LoaderCircle, Moon, Building2, Wallet, ScanFace } from 'lucide-react';
+import { BatteryCharging, Clock, CheckCircle, Download, LoaderCircle, Moon, Building2, Wallet, ScanFace, Share2 } from 'lucide-react';
 import type { Session } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 import { exportPdf } from '../../lib/export';
@@ -29,6 +29,24 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
   const TARGET = goal?.kind === 'percent' ? goal.value : limit || DEFAULT_TARGET;
   const [now, setNow] = useState(Date.now());
   const [stopping, setStopping] = useState(false);
+  const [shared, setShared] = useState<string | null>(null);
+  const { actions } = useSync();
+  /** The phone's share sheet where there is one; otherwise the link is copied. */
+  const share = async () => {
+    if (!session) return;
+    try {
+      const { token } = await actions.shareSession(session.id);
+      const url = `${window.location.origin}/?share=${token}`;
+      if (navigator.share) await navigator.share({ title: 'Zaryad24', text: `Машина заряжается · ${session.stationName}`, url });
+      else {
+        await navigator.clipboard.writeText(url);
+        setShared('Ссылка скопирована — отправьте её близким');
+      }
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') setShared('Не удалось поделиться');
+    }
+    setTimeout(() => setShared(null), 3000);
+  };
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
@@ -126,7 +144,11 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
         <p className="mt-2 text-white/30 text-[10px] text-center">{metered ? 'Энергия — по счётчику станции.' : `Процент — оценка для батареи ${pack} кВт·ч; к оплате — по энергии.`}</p>
       </div>
 
-      <div className="relative px-4 pb-6 pt-2 z-10">
+      <div className="relative px-4 pb-6 pt-2 z-10 space-y-2">
+        {shared && <p role="status" className="text-center text-xs text-white/80">{shared}</p>}
+        <button onClick={share} className="w-full text-white/90 rounded-2xl py-3 font-semibold text-sm inline-flex items-center justify-center gap-2 bg-white/5 border border-white/10">
+          <Share2 size={15} />Поделиться — когда будет готово
+        </button>
         <button
           onClick={() => { setStopping(true); onStop(); }}
           disabled={stopping}

@@ -29,8 +29,10 @@ import { FinanceScreen, LoyaltyScreen, FamilyScreen, HostScreen, SosSheet } from
 import { CreditScreen, FaceCheck } from './driver/Credit';
 import { NetworkTopUp, NetworkWalletList } from './driver/NetworkWallets';
 import Navigator from './driver/Navigator';
+import SupportChat from './driver/SupportChat';
+import { useI18n } from '../lib/i18n';
 import type { Payer, ChargeGoal } from '../lib/api';
-import { useMyLocation, km, fmtKm, driveMinutes, locate } from '../lib/geo';
+import { useMyLocation, km, fmtKm, driveMinutes, locate, openNow } from '../lib/geo';
 import { inTelegram, telegramInitData } from '../lib/telegram';
 import type { Booking, Session, PaymentOrder } from '../lib/api';
 import AuthFlow from './AuthFlow';
@@ -110,9 +112,18 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
         </div>
 
         {/* Photo */}
-        <div className="rounded-2xl overflow-hidden mb-3 h-32 bg-slate-100">
-          <img src={station.image} alt={station.name} className="w-full h-full object-cover" />
+        <div className="rounded-2xl overflow-hidden mb-3 h-32 bg-slate-100 relative">
+          <img src={station.photoAt ? `/api/stations/${station.id}/photo?v=${encodeURIComponent(station.photoAt)}` : station.image} alt={station.name} className="w-full h-full object-cover" />
+          {!openNow(station.hours) && <span className="absolute top-2 left-2 px-2 py-1 rounded-lg bg-red-600 text-white text-xs font-semibold">{`Закрыто · ${station.hours}`}</span>}
         </div>
+
+        {/* How to find it on site */}
+        {station.findHint && (
+          <div className="mb-3 flex gap-2 items-start rounded-xl bg-amber-50 border border-amber-100 px-3 py-2">
+            <MapPin size={15} className="text-[#8a5b00] mt-0.5 shrink-0" />
+            <p className="text-sm text-slate-700"><span className="font-semibold">Как найти: </span>{station.findHint}</p>
+          </div>
+        )}
 
         {/* Quick stats */}
         <div className="grid grid-cols-4 gap-2 mb-4">
@@ -222,6 +233,29 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
       </div>
     </div>
   );
+}
+
+/** Large mode: a bigger root size scales every rem-sized text, gap and button in the app. */
+const readLarge = () => {
+  try {
+    return localStorage.getItem('oc-large') === '1';
+  } catch {
+    return false;
+  }
+};
+function useLargeMode() {
+  const [large, setLarge] = useState(readLarge);
+  useEffect(() => {
+    const on = (e: Event) => setLarge(!!(e as CustomEvent<{ large: boolean }>).detail?.large);
+    window.addEventListener('oc-large-change', on);
+    return () => window.removeEventListener('oc-large-change', on);
+  }, []);
+  useEffect(() => {
+    document.documentElement.style.fontSize = large ? '112.5%' : '';
+    return () => {
+      document.documentElement.style.fontSize = '';
+    };
+  }, [large]);
 }
 
 /** What the driver wants from a charge, and when it should start. */
@@ -541,7 +575,17 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
 }
 
 function AppSettingsScreen({ onBack }: { onBack: () => void }) {
-  const [language, setLanguage] = useState<'ru' | 'uz' | 'en'>('ru');
+  // The app's language, not a local copy of it.
+  const { lang: language, setLang: setLanguage } = useI18n();
+  const [large, setLarge] = useState(() => readLarge());
+  useEffect(() => {
+    try {
+      localStorage.setItem('oc-large', large ? '1' : '0');
+    } catch {
+      /* private mode: this session only */
+    }
+    window.dispatchEvent(new CustomEvent('oc-large-change', { detail: { large } }));
+  }, [large]);
   const [theme, setTheme] = useState<'light' | 'dark' | 'auto'>(
     () => (localStorage.getItem('oc-theme') === 'dark' ? 'dark' : localStorage.getItem('oc-theme') === 'auto' ? 'auto' : 'light')
   );
@@ -562,7 +606,7 @@ function AppSettingsScreen({ onBack }: { onBack: () => void }) {
       onClick={onChange}
       className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${value ? 'bg-sky-500' : 'bg-slate-200'}`}
     >
-      <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-6' : 'translate-x-1'}`} />
+      <span className={`absolute top-1 left-0 w-4 h-4 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-6' : 'translate-x-1'}`} />
     </button>
   );
 
@@ -600,6 +644,16 @@ function AppSettingsScreen({ onBack }: { onBack: () => void }) {
                 </button>
               ))}
             </div>
+          </div>
+          <div className="px-4 py-3.5 border-b border-slate-50 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-slate-700">Крупный шрифт и кнопки</p>
+              <p className="text-xs text-slate-400">Всё крупнее и проще нажимать — удобно в машине и для зрения</p>
+            </div>
+            <button role="switch" aria-checked={large} aria-label="Крупный шрифт и кнопки" onClick={() => setLarge(v => !v)}
+              className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${large ? 'bg-[#FFB000]' : 'bg-slate-200'}`}>
+              <span className={`absolute top-1 left-0 w-4 h-4 rounded-full bg-white shadow transition-transform ${large ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
           </div>
           <div className="px-4 py-3.5">
             <p className="text-sm text-slate-700 mb-2">Тема</p>
@@ -891,6 +945,7 @@ function SupportScreen({ onBack, onReport }: { onBack: () => void; onReport: () 
         <h1 className="text-base font-bold text-slate-900">Поддержка</h1>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        <SupportChat />
         <button onClick={onReport} className="w-full bg-amber-50 border border-amber-100 rounded-2xl p-4 flex items-center gap-3 text-left">
           <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center shrink-0"><AlertTriangle size={18} className="text-amber-600" /></div>
           <div className="flex-1">
@@ -2392,6 +2447,7 @@ export default function DriverApp() {
   const [screen, setScreen] = useState<Screen>('map');
   // The wallet opens from the profile or from the balance on the map; Back returns there.
   const walletFrom = useRef<Screen>('profile');
+  useLargeMode();
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
 

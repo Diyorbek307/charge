@@ -101,6 +101,8 @@ export interface OcpiOverview { partners: OcpiPartner[]; version: string; ourVer
 export type ChargeGoal = { kind: 'percent'; value: number; fromPct?: number } | { kind: 'sum'; value: number } | { kind: 'km'; value: number };
 export interface SessionGoal { kind: 'percent' | 'sum' | 'km'; value: number; fromPct?: number; stopKwh?: number; stopCost?: number }
 export interface ScheduledStart { id: string; stationId: string; stationName: string; connectorId: string; connector: string; payer: string; goal: ChargeGoal | null; at: string; status: 'pending' | 'starting' | 'started' | 'failed' | 'cancelled' }
+export interface SupportMessage { id: string; from: 'user' | 'support'; text: string; image: string | null; at: string }
+export interface SupportThread { id: string; userId: string; user: string; phone: string | null; status: 'open' | 'closed' | 'new'; updatedAt: string; unreadAdmin: number; unreadUser: number; messages: SupportMessage[] }
 export type Payer = 'self' | 'company' | 'credit' | `family:${string}`;
 export type HostKind = 'home' | 'hotel' | 'business' | 'parking' | 'cafe';
 export interface HostApplication {
@@ -675,6 +677,14 @@ export const apiClient = {
   startSession: (portal: Portal, stationId: string, connectorId: string, payer: Payer = 'self', faceToken?: string, goal?: ChargeGoal) =>
     post<{ session: Session; stats: Stats }>('/sessions/start', { stationId, connectorId, payer, ...(faceToken ? { faceToken } : {}), ...(goal ? { goal } : {}) }, portal),
   reportCamera: (lat: number, lng: number, maxspeed?: number) => post<{ camera: { id: string } }>('/cameras', { lat, lng, ...(maxspeed ? { maxspeed } : {}) }, 'driver'),
+  /** A link to the running charge for family or colleagues; the page shows no name or money. */
+  supportThread: () => request<SupportThread>('/support/messages', { portal: 'driver' }),
+  sendSupport: (text: string, image: string | null) => post<SupportThread>('/support/messages', { text, ...(image ? { image } : {}) }, 'driver'),
+  adminSupport: () => request<SupportThread[]>('/admin/support', { portal: 'admin' }),
+  answerSupport: (id: string, body: { text?: string; close?: boolean }) => post<SupportThread>(`/admin/support/${id}`, body, 'admin'),
+  setStationInfo: (id: string, body: { findHint?: string; hours?: string; amenities?: string[]; photo?: string | null }) =>
+    request<{ id: string }>(`/stations/${id}/info`, { method: 'PATCH', body: JSON.stringify(body), portal: 'operator' }),
+  shareSession: (id: string) => post<{ token: string }>(`/sessions/${id}/share`, undefined, 'driver'),
   scheduleCharge: (body: { stationId: string; connectorId: string; payer: Payer; goal?: ChargeGoal; at: string }) => post<ScheduledStart>('/sessions/schedule', body, 'driver'),
   cancelSchedule: (id: string) => request<ScheduledStart>(`/sessions/schedule/${id}`, { method: 'DELETE', portal: 'driver' }),
   rateSession: (portal: Portal, id: string, stars: number) =>

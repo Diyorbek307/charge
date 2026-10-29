@@ -52,5 +52,17 @@ export function driveMinutes(distanceKm: number) {
 
 export const fmtKm = (d: number) => (d < 10 ? `${d.toFixed(1).replace('.', ',')} км` : `${Math.round(d)} км`);
 
+/** Open right now by the station's hours ("24/7" or "08:00–22:00"), in Tashkent time. */
+export function openNow(hours: string | undefined, at = Date.now()) {
+  if (!hours || hours === '24/7') return true;
+  const m = hours.match(/^(\d\d):(\d\d)[–-](\d\d):(\d\d)$/);
+  if (!m) return true;
+  const d = new Date(at + 5 * 3600_000);
+  const now = d.getUTCHours() * 60 + d.getUTCMinutes();
+  const from = +m[1] * 60 + +m[2];
+  const to = +m[3] * 60 + +m[4];
+  return from <= to ? now >= from && now < to : now >= from || now < to;
+}
+
 /** Connector names differ in spacing between sources ("Type 2" / "Type2"). */
 export const samePort = (a: string, b: string) => a.replace(/\s+/g, '').toLowerCase() === b.replace(/\s+/g, '').toLowerCase();

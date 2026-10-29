@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
-import { Search, Filter, Navigation, X, Zap, Wallet } from 'lucide-react';
+import { Search, Filter, Navigation, X, Zap, Wallet, List, Clock } from 'lucide-react';
 import type { Station } from '../data/mockData';
 import { useLiveStations } from '../lib/live';
 import { useSync } from '../lib/sync';
-import { locate as askLocation, samePort } from '../lib/geo';
+import { locate as askLocation, samePort, openNow, km, fmtKm } from '../lib/geo';
 import { plural } from '../lib/analytics';
 
 const statusColor: Record<string, string> = {
@@ -144,6 +144,11 @@ export default function DriverMap({ onSelectStation, onOpenWallet }: { onSelectS
   const balance = (sessions.driver && state?.wallets[sessions.driver.id]?.balance) ?? 0;
   const [onlyFree, setOnlyFree] = useState(false);
   const [onlyMine, setOnlyMine] = useState(false);
+  // Comfort filters and the list over the map (the map always stays underneath).
+  const [openOnly, setOpenOnly] = useState(false);
+  const [amen, setAmen] = useState<string[]>([]);
+  const [listOpen, setListOpen] = useState(false);
+  const toggleAmen = (a: string) => setAmen(v => (v.includes(a) ? v.filter(x => x !== a) : [...v, a]));
 
   const powerTest = POWER.find(p => p.id === power)!.test;
   const filtered = stations.filter(s => {
@@ -156,6 +161,8 @@ export default function DriverMap({ onSelectStation, onOpenWallet }: { onSelectS
         (!onlyFree || c.status === 'available'),
     );
     if (!conns.length) return false;
+    if (openOnly && !openNow(s.hours)) return false;
+    if (amen.length && !amen.every(a => (s.amenities ?? []).includes(a))) return false;
     return true;
   });
   const q = search.trim().toLowerCase();
@@ -237,7 +244,11 @@ export default function DriverMap({ onSelectStation, onOpenWallet }: { onSelectS
         </div>
 
         {!q && !showFilters && (
-          <div className="mt-2 flex gap-1.5 overflow-x-auto no-scrollbar" role="group" aria-label="Быстрые фильтры">
+          <div className="mt-2 flex gap-1.5 items-start">
+          <div className="flex-1 min-w-0 flex gap-1.5 overflow-x-auto no-scrollbar" role="group" aria-label="Быстрые фильтры">
+            <button onClick={() => setListOpen(v => !v)} aria-pressed={listOpen} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm border inline-flex items-center gap-1 ${listOpen ? 'bg-[#111] text-white border-[#111]' : 'bg-white text-slate-700 border-slate-100'}`}>
+              <List size={12} />{listOpen ? 'Карта' : 'Список'}
+            </button>
             <button onClick={() => setOnlyFree(v => !v)} aria-pressed={onlyFree} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm border ${onlyFree ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-slate-700 border-slate-100'}`}>
               Свободные
             </button>
@@ -246,7 +257,16 @@ export default function DriverMap({ onSelectStation, onOpenWallet }: { onSelectS
                 {`Для ${car.brand} ${car.model}`}
               </button>
             )}
-            {(onlyFree || onlyMine) && <span className="shrink-0 self-center text-[11px] font-semibold text-slate-600 bg-white/90 rounded-full px-2 py-1 shadow-sm">{`${filtered.length} ${plural(filtered.length, ['станция', 'станции', 'станций'])}`}</span>}
+            <button onClick={() => setOpenOnly(v => !v)} aria-pressed={openOnly} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm border ${openOnly ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-slate-700 border-slate-100'}`}>
+              Открыто сейчас
+            </button>
+            {['Кафе', 'Туалет', 'Wi-Fi', 'Крытая парковка', 'ТЦ'].map(a => (
+              <button key={a} onClick={() => toggleAmen(a)} aria-pressed={amen.includes(a)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm border ${amen.includes(a) ? 'bg-[#FFC83D] text-[#111] border-[#FFC83D]' : 'bg-white text-slate-700 border-slate-100'}`}>
+                {a}
+              </button>
+            ))}
+            {(onlyFree || onlyMine || openOnly || amen.length > 0) && <span className="shrink-0 self-center text-[11px] font-semibold text-slate-600 bg-white/90 rounded-full px-2 py-1 shadow-sm">{`${filtered.length} ${plural(filtered.length, ['станция', 'станции', 'станций'])}`}</span>}
+          </div>
             {/* The wallet is always one glance away, as in every charging app drivers know. */}
             {onOpenWallet && sessions.driver && (
               <button onClick={onOpenWallet} aria-label="Кошелёк" className="ml-auto shrink-0 flex items-center gap-1.5 pl-1.5 pr-3 py-1 rounded-full bg-white border border-slate-100 shadow-sm">
@@ -257,6 +277,32 @@ export default function DriverMap({ onSelectStation, onOpenWallet }: { onSelectS
                 </span>
               </button>
             )}
+          </div>
+        )}
+
+        {/* The same stations as a list, nearest first — easier with one hand in the car. */}
+        {listOpen && !q && (
+          <div className="mt-2 bg-white rounded-2xl shadow-lg border border-slate-100 overflow-y-auto max-h-[calc(100vh-260px)]" role="list" aria-label="Станции списком">
+            {filtered.length === 0 && <p className="px-4 py-4 text-sm text-slate-500">Нет станций под эти фильтры</p>}
+            {[...filtered]
+              .map(s => ({ s, d: me ? km({ lat: me[0], lng: me[1] }, { lat: s.geoLat, lng: s.geoLng }) : null }))
+              .sort((a, b) => (a.d !== null && b.d !== null ? a.d - b.d : b.s.connectors.filter(c => c.status === 'available').length - a.s.connectors.filter(c => c.status === 'available').length))
+              .slice(0, 40)
+              .map(({ s, d }) => {
+                const free = s.connectors.filter(c => c.status === 'available').length;
+                const cheapest = Math.min(...s.connectors.map(c => c.price));
+                return (
+                  <button key={s.id} role="listitem" onClick={() => { setListOpen(false); pick(s); }} className="w-full flex items-center gap-3 px-4 py-3 text-left border-b border-slate-50 last:border-0 hover:bg-slate-50">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: statusColor[s.status] }} />
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm font-semibold text-slate-800 truncate">{s.name}</span>
+                      <span className="block text-xs text-slate-500 truncate">{`${s.operator} · ${free}/${s.connectors.length} свободно · от ${cheapest.toLocaleString('ru-RU')} сум`}</span>
+                      {!openNow(s.hours) && <span className="text-[11px] text-red-600 inline-flex items-center gap-1"><Clock size={10} />{`Закрыто · ${s.hours}`}</span>}
+                    </span>
+                    {d !== null && <span className="text-xs font-semibold text-slate-700 shrink-0">{fmtKm(d)}</span>}
+                  </button>
+                );
+              })}
           </div>
         )}
 

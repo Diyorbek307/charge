@@ -28,6 +28,10 @@ export interface Station {
   hours: string;
   distance?: number;
   amenities: string[];
+  /** How to find the charger on site, from its network. */
+  findHint?: string | null;
+  /** When the network uploaded its own photo (served at /api/stations/:id/photo). */
+  photoAt?: string | null;
 }
 
 export interface ChargingSession {

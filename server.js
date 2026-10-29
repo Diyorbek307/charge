@@ -14,6 +14,7 @@ import { sandboxPayout } from "./server/direct.js";
 import { networkApi } from "./server/networkApi.js";
 import { startSessionWatch } from "./server/sessionWatch.js";
 import "./server/cameras.js";
+import "./server/comfort.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();

@@ -66,6 +66,8 @@ const KINDS = {
   'session.goal': { title: 'Зарядка завершена — освободите место', url: '/?portal=driver' },
   'session.progress': { title: 'Зарядка почти готова', url: '/?portal=driver' },
   'session.failed': { title: 'Зарядка не началась', url: '/?portal=driver' },
+  // The driver hears back from support; support sees new messages in the admin portal.
+  'support.message': { title: 'Ответ поддержки', url: '/?portal=driver', when: e => e.payload?.from === 'support' },
   'schedule.started': { title: 'Отложенная зарядка началась', url: '/?portal=driver' },
   'schedule.failed': { title: 'Отложенная зарядка не началась', url: '/?portal=driver' },
   'alert.new': { title: 'Новое оповещение', url: '/?portal=operator' },

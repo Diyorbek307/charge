@@ -19,6 +19,7 @@ const SplitView = lazy(() => import('./components/SplitView'));
 import { useSync } from './lib/sync';
 import type { Portal as AuthPortal } from './lib/api';
 import { inTelegram, telegramInitData } from './lib/telegram';
+import SharePage from './components/SharePage';
 
 type Portal = 'selector' | 'driver' | 'operator' | 'admin' | 'business' | 'api' | 'architecture';
 
@@ -283,7 +284,21 @@ function initialPortal(): Portal {
   return 'selector';
 }
 
+/** A shared charge (?share=…) opens on its own page, without signing in. */
+const shareToken = () => {
+  try {
+    return new URLSearchParams(window.location.search).get('share');
+  } catch {
+    return null;
+  }
+};
+
 export default function App() {
+  const token = shareToken();
+  return token ? <SharePage token={token} /> : <MainApp />;
+}
+
+function MainApp() {
   const { t: tApp } = useI18n();
   const [portal, setPortal] = useState<Portal>(initialPortal);
   const [splitView, setSplitView] = useState(false);

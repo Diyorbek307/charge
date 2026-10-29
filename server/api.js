@@ -26,8 +26,8 @@ import {
 } from './direct.js';
 
 export const api = express.Router();
-// Face photos for charging on credit are larger than an ordinary request.
-api.use(/^\/credit\//, express.json({ limit: '600kb' }));
+// Photos (a face for credit, a station, a support message) are larger than an ordinary request.
+api.use(/^\/(credit\/|stations\/[^/]+\/info$|support\/messages$|admin\/support\/)/, express.json({ limit: '700kb' }));
 api.use(express.json());
 
 // Carries the current request through synchronous handler code so emit() can
@@ -96,6 +96,7 @@ function scopeOf({ type, entity, payload = {} }) {
     case 'session.progress':
     case 'session.goal':
       return { ...sessionScope(entity), public: false };
+    case 'support.message':
     case 'session.failed':
     case 'schedule.started':
     case 'schedule.failed':
@@ -128,6 +129,7 @@ function scopeOf({ type, entity, payload = {} }) {
     case 'ocpp.command':
     case 'tariff.update':
     case 'station.added':
+    case 'station.info':
     case 'station.rated':
       return { operatorId: stationOperator(entity) };
     case 'ocpp.online':

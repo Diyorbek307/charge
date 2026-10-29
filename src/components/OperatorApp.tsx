@@ -25,6 +25,7 @@ import AccountSettings from './admin/AccountSettings';
 import { BRAND } from '../brand';
 import { LogoMark } from '../landing/Logo';
 import { DirectSettlement } from './admin/DirectSettlement';
+import StationInfo from './operator/StationInfo';
 
 type Page = 'dashboard' | 'stations' | 'sessions' | 'alerts' | 'tariffs' | 'finance' | 'direct' | 'customers' | 'integration' | 'settings' | 'help';
 
@@ -312,6 +313,8 @@ function StationDetailPage({ stationId, onBack }: { stationId: string; onBack: (
           ))}
         </div>
       </div>
+
+      <StationInfo key={s.id} station={s} />
 
       {/* Session history for this station */}
       <div className="bg-white rounded-2xl border border-slate-100">
