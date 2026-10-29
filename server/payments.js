@@ -41,6 +41,34 @@ const CLICK = {
   live: Boolean(process.env.CLICK_SECRET_KEY),
 };
 
+/**
+ * Uzum Bank and Humo: card acquiring with a signed notification of payment.
+ * The checkout link and the callback follow one scheme — HMAC-SHA256 over
+ * "order|amount|status|transaction" with the merchant's secret; once a
+ * contract is signed, the fields are matched to the acquirer's spec here.
+ * Without keys the sandbox drives the same signed callback.
+ */
+const ACQUIRERS = {
+  uzum: {
+    name: 'Uzum',
+    merchantId: process.env.UZUM_MERCHANT_ID || (DEMO_MODE ? 'demo-uzum' : ''),
+    secret: process.env.UZUM_SECRET || (DEMO_MODE ? 'demo-uzum-secret' : ''),
+    checkout: process.env.UZUM_CHECKOUT_URL || 'https://www.uzumbank.uz/open-service',
+    live: Boolean(process.env.UZUM_SECRET),
+  },
+  humo: {
+    name: 'Humo',
+    merchantId: process.env.HUMO_MERCHANT_ID || (DEMO_MODE ? 'demo-humo' : ''),
+    secret: process.env.HUMO_SECRET || (DEMO_MODE ? 'demo-humo-secret' : ''),
+    checkout: process.env.HUMO_CHECKOUT_URL || 'https://pay.humo.uz/checkout',
+    live: Boolean(process.env.HUMO_SECRET),
+  },
+};
+const PROVIDER_NAME = { payme: 'Payme', click: 'Click', uzum: 'Uzum', humo: 'Humo' };
+export function acquirerSign(provider, f) {
+  return crypto.createHmac('sha256', ACQUIRERS[provider].secret).update(`${f.order_id}|${f.amount}|${f.status}|${f.transaction_id}`).digest('hex');
+}
+
 /** Whose cashbox takes the money: ours, or a partner network's. */
 function merchantFor(operatorId) {
   if (!operatorId) return { payme: PAYME, click: CLICK, sandbox: !PAYME.live && !CLICK.live };
@@ -102,8 +130,8 @@ function credit(order, provider) {
     emit({
       type: 'wallet.topup',
       portal: 'system',
-      actor: provider === 'payme' ? 'Payme' : 'Click',
-      message: `Пополнение баланса сети ${name} через ${provider === 'payme' ? 'Payme' : 'Click'} · +${order.amount.toLocaleString('ru-RU')} сум — деньги поступили сети`,
+      actor: PROVIDER_NAME[provider],
+      message: `Пополнение баланса сети ${name} через ${PROVIDER_NAME[provider]} · +${order.amount.toLocaleString('ru-RU')} сум — деньги поступили сети`,
       entity: order.userId,
       payload: { amount: order.amount, balance, provider, orderId: order.id, operatorId: order.operatorId, userId: order.userId },
     });
@@ -118,8 +146,8 @@ function credit(order, provider) {
   emit({
     type: 'wallet.topup',
     portal: 'system',
-    actor: provider === 'payme' ? 'Payme' : 'Click',
-    message: `Пополнение через ${provider === 'payme' ? 'Payme' : 'Click'} · +${order.amount.toLocaleString('ru-RU')} сум`,
+    actor: PROVIDER_NAME[provider],
+    message: `Пополнение через ${PROVIDER_NAME[provider]} · +${order.amount.toLocaleString('ru-RU')} сум`,
     entity: order.walletId,
     payload: { amount: order.amount, balance: wallet.balance, provider, orderId: order.id },
   });
@@ -128,6 +156,12 @@ function credit(order, provider) {
 function checkoutUrl(order) {
   const back = `${PUBLIC_URL}/?portal=driver`;
   const m = merchantFor(order.operatorId);
+  if (ACQUIRERS[order.provider]) {
+    const a = ACQUIRERS[order.provider];
+    const sign = crypto.createHmac('sha256', a.secret).update(`${a.merchantId}|${order.id}|${order.amount}`).digest('hex');
+    const q = new URLSearchParams({ merchant: a.merchantId, order_id: order.id, amount: String(order.amount), return_url: back, sign });
+    return `${a.checkout}?${q}`;
+  }
   if (order.provider === 'payme') {
     const params = `m=${m.payme.merchantId};ac.order_id=${order.id};a=${order.amount * 100};c=${back}`;
     return `${PAYME.checkout}/${Buffer.from(params).toString('base64')}`;
@@ -160,6 +194,7 @@ paymentsApi.get('/providers', (_req, res) => {
   res.json([
     { id: 'payme', name: 'Payme', configured: Boolean(PAYME.key), live: PAYME.live },
     { id: 'click', name: 'Click', configured: Boolean(CLICK.secret), live: CLICK.live },
+    ...Object.entries(ACQUIRERS).map(([id, a]) => ({ id, name: a.name, configured: Boolean(a.secret), live: a.live })),
   ]);
 });
 
@@ -169,13 +204,14 @@ paymentsApi.post('/topup', (req, res) => {
   if (!['driver', 'business'].includes(account.portal)) return res.status(403).json({ error: 'Нет доступа к этому порталу' });
 
   const provider = req.body?.provider;
-  if (!['payme', 'click'].includes(provider)) return res.status(400).json({ error: 'Выберите Payme или Click' });
+  if (!['payme', 'click', 'uzum', 'humo'].includes(provider)) return res.status(400).json({ error: 'Выберите Payme, Click, Uzum или Humo' });
   // A network paid directly: the money goes to its own cashbox.
   const operatorId = req.body?.operatorId ? String(req.body.operatorId) : null;
+  if (operatorId && ACQUIRERS[provider]) return res.status(400).json({ error: 'Баланс сети пополняется через Payme или Click' });
   if (operatorId && account.portal !== 'driver') return res.status(403).json({ error: 'Баланс сети пополняет водитель' });
   const merchant = merchantFor(operatorId);
   if (!merchant) return res.status(404).json({ error: 'Эта сеть не принимает оплату напрямую' });
-  if (!(provider === 'payme' ? merchant.payme.key : merchant.click.secret)) {
+  if (!(ACQUIRERS[provider] ? ACQUIRERS[provider].secret : provider === 'payme' ? merchant.payme.key : merchant.click.secret)) {
     return res.status(503).json({ error: operatorId ? `${merchant.operator.name} не подключила ${provider === 'payme' ? 'Payme' : 'Click'} — выберите другой способ` : 'Платёжный провайдер не настроен' });
   }
   const amount = Number(req.body?.amount);
@@ -207,7 +243,7 @@ paymentsApi.post('/topup', (req, res) => {
   if (orders().length > 3000) orders().length = 3000;
   db.save();
 
-  const live = provider === 'payme' ? merchant.payme.live : merchant.click.live;
+  const live = ACQUIRERS[provider] ? ACQUIRERS[provider].live : provider === 'payme' ? merchant.payme.live : merchant.click.live;
   res.json({ order: publicOrder(order), checkoutUrl: checkoutUrl(order), sandbox: !live });
 });
 
@@ -477,6 +513,33 @@ paymentsApi.post('/click/:operatorId/prepare', (req, res) => res.json(clickPrepa
 paymentsApi.post('/click/:operatorId/complete', (req, res) => res.json(clickComplete(req.body ?? {}, req.params.operatorId)));
 
 // ---------------------------------------------------------------------------
+// Uzum and Humo: the acquirer tells us a payment went through, signed.
+// ---------------------------------------------------------------------------
+
+export function acquirerNotify(provider, f) {
+  const a = ACQUIRERS[provider];
+  if (!a?.secret || !safeEqual(String(f.sign ?? ''), acquirerSign(provider, f))) return { status: 401, body: { ok: false, error: 'SIGN CHECK FAILED' } };
+  const order = findOrder(String(f.order_id ?? ''));
+  if (!order || order.provider !== provider) return { status: 404, body: { ok: false, error: 'ORDER NOT FOUND' } };
+  if (Math.abs(Number(f.amount) - order.amount) > 0.001) return { status: 400, body: { ok: false, error: 'AMOUNT MISMATCH' } };
+  // Notifications repeat: the second "paid" is answered, not credited again.
+  if (order.status === 'paid') return { status: 200, body: { ok: true, already: true } };
+  if (order.status !== 'pending') return { status: 409, body: { ok: false, error: 'ORDER CLOSED' } };
+  order.acquirer = { transactionId: String(f.transaction_id ?? ''), at: new Date().toISOString() };
+  if (f.status !== 'paid') {
+    order.status = 'cancelled';
+    db.save();
+    return { status: 200, body: { ok: true, cancelled: true } };
+  }
+  credit(order, provider);
+  return { status: 200, body: { ok: true } };
+}
+paymentsApi.post('/:provider(uzum|humo)/notify', (req, res) => {
+  const r = acquirerNotify(req.params.provider, req.body ?? {});
+  res.status(r.status).json(r.body);
+});
+
+// ---------------------------------------------------------------------------
 // Sandbox: drives the real callback logic when no merchant account exists.
 // ---------------------------------------------------------------------------
 
@@ -486,12 +549,16 @@ paymentsApi.post('/order/:id/sandbox-confirm', (req, res) => {
   const order = findOrder(req.params.id);
   if (!order || order.userId !== account.id) return res.status(404).json({ error: 'Счёт не найден' });
   const merchant = merchantFor(order.operatorId);
-  const live = !merchant || (order.provider === 'payme' ? merchant.payme.live : merchant.click.live);
+  const live = ACQUIRERS[order.provider] ? ACQUIRERS[order.provider].live : !merchant || (order.provider === 'payme' ? merchant.payme.live : merchant.click.live);
   if (!DEMO_MODE || live) return res.status(404).json({ error: 'Песочница отключена' });
   const op = order.operatorId ?? null;
 
   try {
-    if (order.provider === 'payme') {
+    if (ACQUIRERS[order.provider]) {
+      const f = { order_id: order.id, amount: String(order.amount), status: 'paid', transaction_id: crypto.randomBytes(8).toString('hex') };
+      const r = acquirerNotify(order.provider, { ...f, sign: acquirerSign(order.provider, f) });
+      if (!r.body.ok) throw new Error(r.body.error);
+    } else if (order.provider === 'payme') {
       const txId = crypto.randomBytes(12).toString('hex');
       const base = { amount: order.amount * 100, account: { order_id: order.id } };
       paymeRpc('CheckPerformTransaction', base, op);

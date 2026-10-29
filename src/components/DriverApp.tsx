@@ -941,7 +941,7 @@ function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: ()
   const [showTopUp, setShowTopUp] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState('');
-  const [provider, setProvider] = useState<'payme' | 'click'>('payme');
+  const [provider, setProvider] = useState<'payme' | 'click' | 'uzum' | 'humo'>('payme');
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const [topUpSuccess, setTopUpSuccess] = useState(false);
@@ -951,7 +951,10 @@ function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: ()
   const providers = [
     { id: 'payme' as const, name: 'Payme', letter: 'P', color: '#00B3B3' },
     { id: 'click' as const, name: 'Click', letter: 'C', color: '#0073FF' },
+    { id: 'uzum' as const, name: 'Uzum', letter: 'U', color: '#7000FF' },
+    { id: 'humo' as const, name: 'Humo', letter: 'H', color: '#00A651' },
   ];
+  const providerName = providers.find(p => p.id === provider)?.name ?? 'Payme';
 
   // Money in: paid top-ups. Money out: charges paid from the wallet, refunds back in.
   useEffect(() => {
@@ -961,7 +964,8 @@ function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: ()
   const transactions = [
     ...orders.filter(o => o.status === 'paid').map(o => {
       const network = o.operatorId ? state?.networkWallets?.find(w => w.operatorId === o.operatorId)?.name ?? o.operatorId : null;
-      return { id: o.id, type: 'topup', amount: o.amount, label: network ? `Баланс сети ${network} — ${o.provider === 'payme' ? 'Payme' : 'Click'}` : `Пополнение — ${o.provider === 'payme' ? 'Payme' : 'Click'}`, at: o.paidAt ?? o.created };
+      const via = { payme: 'Payme', click: 'Click', uzum: 'Uzum', humo: 'Humo' }[o.provider];
+      return { id: o.id, type: 'topup', amount: o.amount, label: network ? `Баланс сети ${network} — ${via}` : `Пополнение — ${via}`, at: o.paidAt ?? o.created };
     }),
     ...(state?.transactions ?? [])
       .filter(t => t.userId === driverId && (t.method === 'Кошелёк' || t.method.startsWith('Баланс сети')))
@@ -1128,7 +1132,7 @@ function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: ()
                       </button>
                     ))}
                   </div>
-                  <p className="text-[11px] text-slate-400">Кошелёк пополнится после подтверждения платежа от {provider === 'payme' ? 'Payme' : 'Click'}</p>
+                  <p className="text-[11px] text-slate-400">{`Кошелёк пополнится после подтверждения платежа от ${providerName}`}</p>
                 </div>
 
                 {payError && (
@@ -1139,7 +1143,7 @@ function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: ()
                   onClick={doTopUp}
                   disabled={paying || !(selectedAmount || (parseInt(customAmount) >= 5000 && parseInt(customAmount) <= 10_000_000))}
                   className="w-full py-3.5 bg-sky-500 text-white rounded-2xl font-bold text-sm disabled:opacity-40 active:scale-95 transition-all">
-                  {paying ? 'Подтверждаем оплату…' : `Оплатить через ${provider === 'payme' ? 'Payme' : 'Click'}`}{!paying && (selectedAmount ? ` ${selectedAmount.toLocaleString('ru-RU')} сум` : customAmount ? ` ${parseInt(customAmount).toLocaleString('ru-RU')} сум` : '')}
+                  {paying ? 'Подтверждаем оплату…' : `Оплатить через ${providerName}`}{!paying && (selectedAmount ? ` ${selectedAmount.toLocaleString('ru-RU')} сум` : customAmount ? ` ${parseInt(customAmount).toLocaleString('ru-RU')} сум` : '')}
                 </button>
               </>
             )}

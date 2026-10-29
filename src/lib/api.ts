@@ -485,7 +485,7 @@ export interface Booking {
 }
 
 export interface PaymentProvider {
-  id: 'payme' | 'click';
+  id: 'payme' | 'click' | 'uzum' | 'humo';
   name: string;
   configured: boolean;
   live: boolean;
@@ -493,7 +493,7 @@ export interface PaymentProvider {
 
 export interface PaymentOrder {
   id: string;
-  provider: 'payme' | 'click';
+  provider: 'payme' | 'click' | 'uzum' | 'humo';
   amount: number;
   status: 'pending' | 'paid' | 'cancelled' | 'expired';
   created: string;
@@ -789,7 +789,7 @@ export const apiClient = {
     request<{ booking: Booking; refunded: boolean }>(`/bookings/${id}`, { method: 'DELETE', portal }),
   paymentProviders: () => request<PaymentProvider[]>('/payments/providers'),
   /** With operatorId the money goes straight to that network's cashbox and tops up the balance there. */
-  createTopUpOrder: (portal: Portal, provider: 'payme' | 'click', amount: number, operatorId?: string) =>
+  createTopUpOrder: (portal: Portal, provider: 'payme' | 'click' | 'uzum' | 'humo', amount: number, operatorId?: string) =>
     post<{ order: PaymentOrder; checkoutUrl: string; sandbox: boolean }>('/payments/topup', { provider, amount, ...(operatorId ? { operatorId } : {}) }, portal),
   /** Your own recent top-up orders, newest first. */
   listPayments: (portal: Portal) => request<PaymentOrder[]>('/payments', { portal }),
