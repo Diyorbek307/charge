@@ -2,12 +2,56 @@ import { useEffect, useState } from 'react';
 
 /** Where the driver is, once they have shared it on the map; shared across screens. */
 type Point = { lat: number; lng: number };
-let here: Point | null = null;
-const listeners = new Set<(p: Point | null) => void>();
+/** A fix also says how sure it is (metres) and, when moving, which way (degrees from north). */
+export type Fix = Point & { accuracy?: number; heading?: number | null };
+let here: Fix | null = null;
+const listeners = new Set<(p: Fix | null) => void>();
+const LAST = 'oc-last-pos';
 
-export function setMyLocation(p: Point | null) {
+export function setMyLocation(p: Fix | null) {
   here = p;
   for (const l of listeners) l(p);
+  if (p) {
+    try {
+      localStorage.setItem(LAST, JSON.stringify({ lat: p.lat, lng: p.lng, ts: Date.now() }));
+    } catch {
+      /* private mode */
+    }
+  }
+}
+
+/**
+ * Where the driver was last time, for opening the map there at once instead
+ * of jumping from Tashkent. Not a current position: distances never use it.
+ */
+export function lastKnown(maxAgeDays = 14): Point | null {
+  try {
+    const v = JSON.parse(localStorage.getItem(LAST) ?? 'null') as (Point & { ts: number }) | null;
+    if (v && Date.now() - v.ts < maxAgeDays * 86400_000) return { lat: v.lat, lng: v.lng };
+  } catch {
+    /* nothing saved */
+  }
+  return null;
+}
+
+/** Whether the browser will hand over the position without asking ('granted'), ask ('prompt') or never ('denied'). */
+export async function geoPermission(): Promise<PermissionState | 'unknown'> {
+  try {
+    return (await navigator.permissions.query({ name: 'geolocation' })).state;
+  } catch {
+    return 'unknown';
+  }
+}
+
+/** Keeps the position fresh while a map is open; returns the stop. */
+export function watchLocation(): () => void {
+  if (!navigator.geolocation?.watchPosition) return () => undefined;
+  const id = navigator.geolocation.watchPosition(
+    pos => setMyLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy, heading: Number.isFinite(pos.coords.heading) && (pos.coords.speed ?? 0) > 1 ? pos.coords.heading : null }),
+    () => undefined,
+    { maximumAge: 15_000, timeout: 20_000 },
+  );
+  return () => navigator.geolocation.clearWatch(id);
 }
 
 export function useMyLocation() {
@@ -22,12 +66,12 @@ export function useMyLocation() {
 }
 
 /** Asks the browser once; resolves to null when the driver says no. */
-export function locate(timeout = 8000): Promise<Point | null> {
+export function locate(timeout = 8000): Promise<Fix | null> {
   return new Promise(resolve => {
     if (!navigator.geolocation) return resolve(null);
     navigator.geolocation.getCurrentPosition(
       pos => {
-        const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        const p = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
         setMyLocation(p);
         resolve(p);
       },

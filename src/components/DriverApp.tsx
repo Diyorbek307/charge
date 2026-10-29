@@ -136,7 +136,7 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
   };
 
   return (
-    <div ref={sheet} className={`absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-[28px] shadow-[0_-12px_40px_rgba(15,23,42,0.18)] max-h-[82%] overflow-y-auto overscroll-contain ${leaving ? 'pg-sheet-out' : 'pg-sheet-in'}`}>
+    <div ref={sheet} data-sheet className={`absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-[28px] shadow-[0_-12px_40px_rgba(15,23,42,0.18)] max-h-[82%] overflow-y-auto overscroll-contain ${leaving ? 'pg-sheet-out' : 'pg-sheet-in'}`}>
       {/* Handle and the network it belongs to; pull it down to close */}
       <div className="sticky top-0 z-10 bg-white/95 backdrop-blur pt-2.5 pb-2 px-4 touch-none cursor-grab active:cursor-grabbing" onPointerDown={dragStart} onPointerMove={dragMove} onPointerUp={dragEnd} onPointerCancel={dragEnd}>
         <div className="mx-auto w-10 h-1 bg-slate-200 rounded-full mb-2" />
@@ -2284,7 +2284,7 @@ export default function DriverApp() {
 
     return (
       <div className="relative w-full h-full">
-        <DriverMap onSelectStation={handleSelectStation} onOpenWallet={() => { walletFrom.current = 'map'; setScreen('wallet'); }} onSos={() => setSos(true)} hideChrome={screen !== 'map'} />
+        <DriverMap onSelectStation={handleSelectStation} onOpenWallet={() => { walletFrom.current = 'map'; setScreen('wallet'); }} onSos={() => setSos(true)} hideChrome={screen !== 'map'} selected={screen === 'station' ? selectedStation : null} autoLocate={!showOnboarding} />
         {sos && <SosSheet onClose={() => setSos(false)} />}
         {screen === 'station' && selectedStation && (
           <StationDetailSheet station={selectedStation} onClose={handleBack} onStartCharging={() => setScreen('charging-start')} onBook={() => setScreen('booking')} onReviews={() => setScreen('reviews')} onReport={() => { reportFrom.current = 'station'; setScreen('report'); }} onNavigate={() => setScreen('navigate')} />

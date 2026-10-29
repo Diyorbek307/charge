@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { Search, SlidersHorizontal, Navigation, X, Wallet, List, Map as MapIcon, Clock, Info, Percent } from 'lucide-react';
@@ -6,7 +6,7 @@ import type { Station } from '../data/mockData';
 import type { Promo } from '../lib/api';
 import { useLiveStations } from '../lib/live';
 import { useSync } from '../lib/sync';
-import { locate as askLocation, samePort, openNow, km, fmtKm } from '../lib/geo';
+import { locate as askLocation, samePort, openNow, km, fmtKm, useMyLocation, lastKnown, geoPermission, watchLocation, type Fix } from '../lib/geo';
 import { plural } from '../lib/analytics';
 import BaseMap from './BaseMap';
 import { promoNow, isNight, networkLook, discounted, useDriverPromos } from '../lib/promos';
@@ -43,6 +43,16 @@ const POWER = [
 const TASHKENT: [number, number] = [41.3111, 69.2797];
 /** From this zoom on, each pin carries its network and free count. */
 const LABEL_ZOOM = 12;
+/** From this zoom on, stations in the same spot fan out instead of merging. */
+const FAN_ZOOM = 16;
+
+/**
+ * Kept between visits to the map tab: the view the driver left, whether the
+ * map has already framed them once, and whether the browser already asked.
+ */
+let lastView: { lat: number; lng: number; zoom: number } | null = null;
+let framedOnce = false;
+let askedOnce = false;
 
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
@@ -62,18 +72,24 @@ const TONES = {
  * a bolt (or % for a promo), and close up a free/total badge and a chip with
  * the network and the discount. It drops in with a little bounce.
  */
-function stationIcon(s: Station, promo: Promo | null, labelled: boolean) {
+type PinMotion = { anim: 'enter' | 'split' | 'change' | 'none'; delay?: number; dx?: number; dy?: number; selected?: boolean; fan?: [number, number] };
+const kindOf = (s: Station, promo: Promo | null) => (promo ? 'promo' : s.status === 'unavailable' ? 'off' : freeOf(s) > 0 ? 'free' : 'busy');
+
+function stationIcon(s: Station, promo: Promo | null, labelled: boolean, m: PinMotion = { anim: 'enter' }) {
   const free = freeOf(s);
   const total = s.connectors.length;
   const look = networkLook(s.operator);
-  const kind = promo ? 'promo' : s.status === 'unavailable' ? 'off' : free > 0 ? 'free' : 'busy';
+  const kind = kindOf(s, promo);
   const [a, b] = TONES[kind];
   const tone = kind === 'free' ? '#059669' : kind === 'busy' ? '#DC2626' : '#64748B';
   const chip = labelled
     ? `<span class="pg-chip"><i style="background:${look.color}">${look.initials}</i><span class="pg-chip-name">${esc(s.operator)}</span>${promo ? `<em>${isNight(promo) ? MOON : ''}−${promo.percent}%</em>` : ''}</span>`
     : '';
   const badge = labelled ? `<span class="pg-badge"><b style="color:${promo ? tone : b}">${free}</b>/${total}</span>` : '';
-  const html = `<div class="pg-pin pg-pin-${kind}">${chip}<div class="pg-drop">
+  const [fx, fy] = m.fan ?? [0, 0];
+  const motion = m.anim === 'none' ? '' : `pg-${m.anim}`;
+  const vars = `--d:${m.delay ?? 0}ms;--dx:${m.dx ?? 0}px;--dy:${m.dy ?? 0}px;--fx:${fx}px;--fy:${fy}px`;
+  const html = `<div class="pg-pin pg-pin-${kind} ${motion}${m.selected ? ' pg-selected' : ''}" style="${vars}">${chip}<div class="pg-drop">
     <svg viewBox="0 0 40 50" width="40" height="50"><defs><linearGradient id="pg-g-${kind}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs>
     <path d="M20 48C20 48 4 31 4 19a16 16 0 0 1 32 0c0 12-16 29-16 29z" fill="url(#pg-g-${kind})" stroke="#fff" stroke-width="3"/>
     <ellipse cx="14.5" cy="12" rx="6" ry="3.4" fill="#fff" opacity=".35" transform="rotate(-30 14.5 12)"/></svg>
@@ -99,16 +115,23 @@ const opId = (s: Station) => (s as Station & { operatorId?: string }).operatorId
  * bubble; tapping a bubble zooms in until they separate. Small enough that a
  * clustering library is not worth the dependency.
  */
-function ClusteredMarkers({ stations, promos, onSelect }: { stations: Station[]; promos: Promo[]; onSelect: (s: Station) => void }) {
+function ClusteredMarkers({ stations, promos, onSelect, selectedId }: { stations: Station[]; promos: Promo[]; onSelect: (s: Station) => void; selectedId: string | null }) {
   const map = useMap();
   const [zoom, setZoom] = useState(map.getZoom());
   useMapEvents({ zoomend: () => setZoom(map.getZoom()), moveend: () => setZoom(map.getZoom()) });
   const labelled = zoom >= LABEL_ZOOM;
+  const fanning = zoom >= FAN_ZOOM;
+  // Icons are reused while a pin looks the same: a fresh icon would replay its drop-in on every live update.
+  const pins = useRef(new Map<string, { look: string; icon: L.DivIcon }>());
+  const bubbles = useRef(new Map<string, { look: string; icon: L.DivIcon }>());
+  // The bubble each station sat in last time, so on zoom-in it flies out of it.
+  const wasIn = useRef(new Map<string, L.LatLng>());
+  const born = useRef(Date.now());
 
   const groups = useMemo(() => {
     const out: { stations: Station[]; lat: number; lng: number }[] = [];
-    // Labelled pins are wider, so they need more room before they separate.
-    const radius = labelled ? 58 : 44;
+    // Labelled pins are wider, so they need more room before they separate; fanned ones only need not to touch.
+    const radius = fanning ? 30 : labelled ? 58 : 44;
     for (const s of stations) {
       const p = map.project([s.geoLat, s.geoLng], zoom);
       const g = out.find(c => map.project([c.lat, c.lng], zoom).distanceTo(p) < radius);
@@ -119,48 +142,187 @@ function ClusteredMarkers({ stations, promos, onSelect }: { stations: Station[];
       } else out.push({ stations: [s], lat: s.geoLat, lng: s.geoLng });
     }
     return out;
-  }, [stations, zoom, map, labelled]);
+  }, [stations, zoom, map, labelled, fanning]);
 
-  return (
-    <>
-      {groups.map(g => {
-        if (g.stations.length === 1) {
-          const s = g.stations[0];
-          const promo = promoNow({ id: s.id, operatorId: opId(s) }, promos);
-          return (
-            <Marker
-              key={s.id}
-              position={[s.geoLat, s.geoLng]}
-              icon={stationIcon(s, promo, labelled)}
-              title={`${s.name} · ${s.operator} · ${freeOf(s)}/${s.connectors.length} свободно${promo ? ` · ${promo.title}` : ''}`}
-              eventHandlers={{ click: () => onSelect(s) }}
-            />
-          );
+  const center = map.project(map.getCenter(), zoom);
+  const shown = new Set<string>();
+  const markers = groups.flatMap(g => {
+    if (g.stations.length === 1 || fanning) {
+      return g.stations.map((s, i) => {
+        shown.add(s.id);
+        const promo = promoNow({ id: s.id, operatorId: opId(s) }, promos);
+        const n = g.stations.length;
+        // Stations in one spot stand in a small ring around it, each still pointing near its place.
+        const a = (2 * Math.PI * i) / n - Math.PI / 2;
+        const fan: [number, number] = n > 1 ? [Math.round(Math.cos(a) * (22 + n * 4)), Math.round(Math.sin(a) * (22 + n * 4))] : [0, 0];
+        const selected = s.id === selectedId;
+        const state = `${kindOf(s, promo)}|${freeOf(s)}`;
+        const look = `${state}|${s.connectors.length}|${promo ? `${promo.id}${promo.percent}${isNight(promo)}` : ''}|${labelled}|${selected}|${fan}`;
+        const prev = pins.current.get(s.id);
+        let icon = prev?.icon;
+        if (!prev || prev.look !== look) {
+          const motion: PinMotion = { anim: 'none', selected, fan };
+          if (!prev) {
+            const own = map.project([s.geoLat, s.geoLng], zoom);
+            const from = wasIn.current.get(s.id);
+            const f = from ? map.project(from, zoom) : null;
+            if (f && f.distanceTo(own) > 4) Object.assign(motion, { anim: 'split', dx: Math.round(f.x - own.x), dy: Math.round(f.y - own.y) });
+            // The first pins ripple out from the middle of the map.
+            else Object.assign(motion, { anim: 'enter', delay: Date.now() - born.current < 1500 ? Math.min(520, Math.round(own.distanceTo(center) * 0.9)) : 0 });
+          } else if (prev.look.split('|').slice(0, 2).join('|') !== state) motion.anim = 'change';
+          icon = stationIcon(s, promo, labelled, motion);
+          pins.current.set(s.id, { look, icon });
         }
-        const free = g.stations.reduce((n, s) => n + freeOf(s), 0);
-        const total = g.stations.reduce((n, s) => n + s.connectors.length, 0);
-        const promo = g.stations.some(s => promoNow({ id: s.id, operatorId: opId(s) }, promos));
         return (
           <Marker
-            key={g.stations.map(s => s.id).join('-')}
-            position={[g.lat, g.lng]}
-            icon={clusterIcon(g.stations.length, free, total, promo)}
-            title={`${g.stations.length} ${plural(g.stations.length, ['станция', 'станции', 'станций'])}`}
-            eventHandlers={{
-              click: () => map.fitBounds(L.latLngBounds(g.stations.map(s => [s.geoLat, s.geoLng] as [number, number])), { padding: [60, 60], maxZoom: 15 }),
-            }}
+            key={s.id}
+            position={[s.geoLat, s.geoLng]}
+            icon={icon!}
+            zIndexOffset={selected ? 1000 : 0}
+            title={`${s.name} · ${s.operator} · ${freeOf(s)}/${s.connectors.length} свободно${promo ? ` · ${promo.title}` : ''}`}
+            eventHandlers={{ click: () => onSelect(s) }}
           />
         );
-      })}
-    </>
-  );
+      });
+    }
+    const key = g.stations.map(s => s.id).join('-');
+    const free = g.stations.reduce((n, s) => n + freeOf(s), 0);
+    const total = g.stations.reduce((n, s) => n + s.connectors.length, 0);
+    const promo = g.stations.some(s => promoNow({ id: s.id, operatorId: opId(s) }, promos));
+    const look = `${free}|${total}|${promo}`;
+    let bubble = bubbles.current.get(key);
+    if (!bubble || bubble.look !== look) {
+      bubble = { look, icon: clusterIcon(g.stations.length, free, total, promo) };
+      bubbles.current.set(key, bubble);
+    }
+    return [
+      <Marker
+        key={key}
+        position={[g.lat, g.lng]}
+        icon={bubble.icon}
+        title={`${g.stations.length} ${plural(g.stations.length, ['станция', 'станции', 'станций'])}`}
+        eventHandlers={{
+          click: () => map.flyToBounds(L.latLngBounds(g.stations.map(s => [s.geoLat, s.geoLng] as [number, number])), { padding: [70, 70], maxZoom: FAN_ZOOM, duration: 0.6 }),
+        }}
+      />,
+    ];
+  });
+  // A pin that left the map enters afresh next time; remember which bubble each station is in now.
+  for (const id of [...pins.current.keys()]) if (!shown.has(id)) pins.current.delete(id);
+  for (const g of groups) {
+    for (const s of g.stations) {
+      if (g.stations.length > 1 && !fanning) wasIn.current.set(s.id, L.latLng(g.lat, g.lng));
+      else wasIn.current.delete(s.id);
+    }
+  }
+  if (bubbles.current.size > 200) bubbles.current.clear();
+
+  return <>{markers}</>;
 }
 
-/** Lets the overlay controls move the map. */
-function MapBridge({ target }: { target: { lat: number; lng: number; zoom: number; n: number } | null }) {
+/**
+ * The open station's pin stands in the strip of map above its card, not
+ * under it, and the map comes close enough to see the entrance.
+ */
+function FocusStation({ station }: { station: Station | null }) {
   const map = useMap();
   useEffect(() => {
-    if (target) map.flyTo([target.lat, target.lng], target.zoom, { duration: 0.8 });
+    if (!station) return;
+    const box = map.getContainer();
+    const h = box.clientHeight;
+    const sheet = box.closest('.pg-app')?.querySelector<HTMLElement>('[data-sheet]');
+    // The card grows as its blocks load, so plan for its tallest.
+    const top = Math.min(sheet?.offsetTop ?? h * 0.4, h * 0.2);
+    const wantY = Math.max(70, top * 0.55 + 24);
+    const zoom = Math.max(map.getZoom(), 15);
+    const at = map.project([station.geoLat, station.geoLng], zoom).add([0, h / 2 - wantY]);
+    map.flyTo(map.unproject(at, zoom), zoom, { duration: 0.75, easeLinearity: 0.2 });
+    // Only when another station is opened, not on every live update of this one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [station?.id, map]);
+  return null;
+}
+
+/**
+ * The driver's dot glides to each new fix instead of jumping, and carries
+ * the circle of how sure the fix is.
+ */
+function MeMarker({ fix }: { fix: Fix | null }) {
+  const map = useMap();
+  const dot = useRef<L.Marker | null>(null);
+  const ring = useRef<L.Circle | null>(null);
+  useEffect(() => () => {
+    dot.current?.remove();
+    ring.current?.remove();
+  }, []);
+  useEffect(() => {
+    if (!fix) return;
+    const to = L.latLng(fix.lat, fix.lng);
+    const radius = fix.accuracy && fix.accuracy < 1500 ? fix.accuracy : 0;
+    const icon = meIcon(fix.heading);
+    if (!dot.current || !ring.current) {
+      ring.current = L.circle(to, { radius, interactive: false, color: '#2563EB', weight: 1, opacity: 0.25, fillColor: '#3B82F6', fillOpacity: 0.08 }).addTo(map);
+      dot.current = L.marker(to, { icon, interactive: false, keyboard: false, zIndexOffset: -500 }).addTo(map);
+      return;
+    }
+    const m = dot.current;
+    const c = ring.current;
+    if (m.options.icon !== icon) m.setIcon(icon);
+    c.setRadius(radius);
+    const from = m.getLatLng();
+    const t0 = performance.now();
+    let raf = 0;
+    const step = (t: number) => {
+      const k = Math.min(1, (t - t0) / 800);
+      const e = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
+      const p = L.latLng(from.lat + (to.lat - from.lat) * e, from.lng + (to.lng - from.lng) * e);
+      m.setLatLng(p);
+      c.setLatLng(p);
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [fix, map]);
+  return null;
+}
+
+/** Remembers where the driver left the map, and whether they moved it themselves. */
+function ViewKeeper({ onTouch }: { onTouch: () => void }) {
+  const map = useMap();
+  useMapEvents({
+    moveend: () => {
+      const c = map.getCenter();
+      lastView = { lat: c.lat, lng: c.lng, zoom: map.getZoom() };
+    },
+    dragstart: onTouch,
+  });
+  return null;
+}
+
+/** "You are here": a blue dot that breathes, its accuracy, and a beam the way the car is heading. */
+const meIcons = new Map<string, L.DivIcon>();
+function meIcon(heading: number | null | undefined) {
+  const key = heading == null ? 'still' : String(Math.round(heading / 10) * 10);
+  let icon = meIcons.get(key);
+  if (!icon) {
+    const beam = heading == null ? '' : `<span class="pg-me-beam" style="transform:rotate(${key}deg)"></span>`;
+    icon = L.divIcon({ html: `<div class="pg-me-wrap">${beam}<span class="pg-me-halo"></span><span class="pg-me"></span></div>`, className: 'pg-me-icon', iconSize: [20, 20], iconAnchor: [10, 10] });
+    meIcons.set(key, icon);
+  }
+  return icon;
+}
+
+type Target = { lat: number; lng: number; zoom: number; n: number; around?: [number, number][] };
+
+/** Lets the overlay controls move the map. */
+function MapBridge({ target }: { target: Target | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!target) return;
+    if (target.around?.length) {
+      // Me and the nearest stations, clear of the search sheet at the bottom.
+      map.flyToBounds(L.latLngBounds([[target.lat, target.lng], ...target.around]), { paddingTopLeft: [48, 110], paddingBottomRight: [48, 300], maxZoom: 15, duration: 1.1 });
+    } else map.flyTo([target.lat, target.lng], target.zoom, { duration: 0.8 });
   }, [target, map]);
   return null;
 }
@@ -172,15 +334,23 @@ const chip = (on: boolean, tone: 'dark' | 'green' | 'yellow' = 'dark') =>
       : 'bg-slate-50 text-slate-700 border-slate-100 hover:bg-slate-100'
   }`;
 
-export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideChrome = false }: { onSelectStation: (s: Station) => void; onOpenWallet?: () => void; onSos?: () => void; hideChrome?: boolean }) {
+export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideChrome = false, selected = null, autoLocate = true }: { onSelectStation: (s: Station) => void; onOpenWallet?: () => void; onSos?: () => void; hideChrome?: boolean; selected?: Station | null; autoLocate?: boolean }) {
   const stations = useLiveStations();
   const [status, setStatus] = useState('all');
   const [connector, setConnector] = useState('all');
   const [power, setPower] = useState('all');
   const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [target, setTarget] = useState<{ lat: number; lng: number; zoom: number; n: number } | null>(null);
-  const [me, setMe] = useState<[number, number] | null>(null);
+  const [target, setTarget] = useState<Target | null>(null);
+  const here = useMyLocation();
+  // The map opens where the driver was: the view they left, else their last position, else Tashkent.
+  const [start] = useState(() => {
+    if (lastView) return lastView;
+    const p = here ?? lastKnown();
+    return p ? { lat: p.lat, lng: p.lng, zoom: 13 } : { lat: TASHKENT[0], lng: TASHKENT[1], zoom: 11 };
+  });
+  const touched = useRef(false);
+  const stopWatch = useRef<(() => void) | null>(null);
   const [locating, setLocating] = useState(false);
   const [locateNote, setLocateNote] = useState('');
   const [legend, setLegend] = useState(false);
@@ -238,14 +408,53 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
 
   const pick = (s: Station) => {
     setSearch('');
-    setTarget({ lat: s.geoLat, lng: s.geoLng, zoom: 15, n: Date.now() });
+    // The map moves to it once its card is open (FocusStation), so the pin stays above the card.
     onSelectStation(s);
   };
 
+  /** Me and the two or three closest stations within 25 km, or just me. */
+  const frame = (p: Fix) => {
+    const near = stations
+      .map(s => ({ s, d: km(p, { lat: s.geoLat, lng: s.geoLng }) }))
+      .filter(x => x.d < 25)
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 3)
+      .map(x => [x.s.geoLat, x.s.geoLng] as [number, number]);
+    setTarget({ lat: p.lat, lng: p.lng, zoom: 14, n: Date.now(), around: near });
+  };
+  const follow = () => {
+    if (!stopWatch.current) stopWatch.current = watchLocation();
+  };
+
+  // Opening the map finds the driver: silently when the browser allows it, with one question when it asks.
+  useEffect(() => {
+    if (!autoLocate) return;
+    let cancelled = false;
+    void (async () => {
+      const perm = await geoPermission();
+      if (cancelled || perm === 'denied' || (perm !== 'granted' && askedOnce)) return;
+      askedOnce = true;
+      const pos = here ?? (await askLocation());
+      if (cancelled || !pos) return;
+      follow();
+      if (!framedOnce && !touched.current && !selected) {
+        framedOnce = true;
+        frame(pos);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Once per opening of the map, after the welcome screens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoLocate]);
+  useEffect(() => () => stopWatch.current?.(), []);
+
   const locate = () => {
     setLocateNote('');
-    if (!navigator.geolocation) {
-      setTarget({ lat: TASHKENT[0], lng: TASHKENT[1], zoom: 12, n: Date.now() });
+    if (here) {
+      frame(here);
+      follow();
       return;
     }
     setLocating(true);
@@ -253,11 +462,11 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
     void askLocation().then(pos => {
       setLocating(false);
       if (pos) {
-        setMe([pos.lat, pos.lng]);
-        setTarget({ lat: pos.lat, lng: pos.lng, zoom: 13, n: Date.now() });
+        frame(pos);
+        follow();
       } else {
-        setLocateNote('Геолокация недоступна — показываем Ташкент');
-        setTarget({ lat: TASHKENT[0], lng: TASHKENT[1], zoom: 12, n: Date.now() });
+        setLocateNote('Нет доступа к геопозиции — разрешите его в настройках браузера');
+        setTimeout(() => setLocateNote(''), 4000);
       }
     });
   };
@@ -265,17 +474,14 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
   const panel = q || listOpen || showFilters;
 
   return (
-    <div className="relative isolate w-full h-full" style={{ fontFamily: 'Inter, sans-serif' }}>
-      <MapContainer center={TASHKENT} zoom={11} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+    <div className={`relative isolate w-full h-full ${selected ? 'pg-focus' : ''}`} style={{ fontFamily: 'Inter, sans-serif' }}>
+      <MapContainer center={[start.lat, start.lng]} zoom={start.zoom} style={{ height: '100%', width: '100%' }} zoomControl={false}>
         <BaseMap />
-        <ClusteredMarkers stations={filtered} promos={promos} onSelect={pick} />
-        {me && (
-          <Marker
-            position={me}
-            icon={L.divIcon({ html: '<div class="pg-me"></div>', className: '', iconSize: [20, 20], iconAnchor: [10, 10] })}
-          />
-        )}
+        <MeMarker fix={here} />
+        <ClusteredMarkers stations={filtered} promos={promos} onSelect={pick} selectedId={selected?.id ?? null} />
         <MapBridge target={target} />
+        <FocusStation station={selected} />
+        <ViewKeeper onTouch={() => { touched.current = true; }} />
       </MapContainer>
 
       {!hideChrome && (
@@ -319,11 +525,11 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
                   <button onClick={onSos} aria-label="SOS — нужна помощь" className="pointer-events-auto w-12 h-12 rounded-2xl bg-red-600 text-white font-extrabold text-xs shadow-lg active:scale-95">SOS</button>
                 ) : <span />}
                 <button onClick={locate} aria-label="Моё местоположение" className="pointer-events-auto w-12 h-12 rounded-2xl bg-white shadow-[0_4px_20px_rgba(15,23,42,0.15)] grid place-items-center">
-                  <Navigation size={20} className={`text-[#2563EB] fill-[#2563EB] ${locating ? 'animate-pulse' : ''}`} />
+                  <Navigation size={20} className={`text-[#2563EB] ${here ? 'fill-[#2563EB]' : ''} ${locating ? 'animate-pulse' : ''}`} />
                 </button>
               </div>
               {locateNote && (
-                <p className="absolute -top-[110px] left-3 right-3 text-xs text-center bg-slate-900/85 text-white rounded-xl px-3 py-2">{locateNote}</p>
+                <p role="status" className="absolute -top-[110px] left-3 right-3 text-xs text-center bg-slate-900/85 text-white rounded-xl px-3 py-2 pg-reveal">{locateNote}</p>
               )}
 
               <div className="bg-white rounded-t-[28px] shadow-[0_-8px_30px_rgba(15,23,42,0.12)] pt-2 pb-3">
@@ -360,7 +566,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
                           </div>
                         )}
                         {[...filtered]
-                          .map(s => ({ s, d: me ? km({ lat: me[0], lng: me[1] }, { lat: s.geoLat, lng: s.geoLng }) : null }))
+                          .map(s => ({ s, d: here ? km(here, { lat: s.geoLat, lng: s.geoLng }) : null }))
                           .sort((a, b) => (a.d !== null && b.d !== null ? a.d - b.d : freeOf(b.s) - freeOf(a.s)))
                           .slice(0, 40)
                           .map(({ s, d }) => {

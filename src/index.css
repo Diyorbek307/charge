@@ -722,14 +722,14 @@ nav::-webkit-scrollbar { display: none; }
 /* ------------------------------------------------------------------ */
 .pg-pin-wrap { background: none; border: 0; }
 .pg-tiles { filter: saturate(0.55) contrast(0.92) brightness(1.06); }
-.pg-pin { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; cursor: pointer; padding-bottom: 2px; }
+.pg-pin { position: absolute; left: 0; top: 0; transform: translate(calc(-50% + var(--fx, 0px)), calc(-100% + var(--fy, 0px))); transition: opacity .35s ease, filter .35s ease; display: flex; flex-direction: column; align-items: center; cursor: pointer; padding-bottom: 2px; }
 .pg-drop { position: relative; width: 40px; height: 50px; filter: drop-shadow(0 6px 8px rgba(22,22,26,.28)); transform-origin: 50% 100%;
-  animation: pg-drop-in .55s cubic-bezier(.34,1.56,.64,1) backwards; transition: transform .2s cubic-bezier(.32,.72,0,1); }
+  transition: transform .2s cubic-bezier(.32,.72,0,1); }
 .pg-drop svg { display: block; }
 .pg-drop-ic { position: absolute; left: 0; right: 0; top: 10px; display: grid; place-items: center; filter: drop-shadow(0 1px 1px rgba(0,0,0,.18)); }
 .pg-drop-ic svg { width: 17px; height: 17px; }
 .pg-pin:hover .pg-drop { transform: translateY(-3px) scale(1.08); }
-.pg-ground { position: absolute; bottom: -2px; width: 16px; height: 5px; border-radius: 50%; background: rgba(22,22,26,.28); filter: blur(1.5px); animation: pg-ground-in .55s ease backwards; }
+.pg-ground { position: absolute; bottom: -2px; width: 16px; height: 5px; border-radius: 50%; background: rgba(22,22,26,.28); filter: blur(1.5px); }
 .pg-badge {
   position: absolute; top: -6px; right: -14px; min-width: 26px; height: 19px; padding: 0 6px; border-radius: 999px;
   background: #fff; color: #16161A; font: 700 11px/19px Inter, sans-serif; text-align: center; white-space: nowrap;
@@ -744,14 +744,32 @@ nav::-webkit-scrollbar { display: none; }
 .pg-chip i { width: 17px; height: 17px; border-radius: 6px; display: inline-grid; place-items: center; color: #fff; font: 800 7.5px/1 Inter, sans-serif; font-style: normal; }
 .pg-chip-name { max-width: 96px; overflow: hidden; text-overflow: ellipsis; }
 .pg-chip em { font-style: normal; display: inline-flex; align-items: center; gap: 2px; padding: 2px 6px; margin-right: -4px; border-radius: 999px; background: linear-gradient(135deg,#FFD66B,#FFB000); color: #111; font-weight: 800; }
-.pg-pin-promo .pg-drop { animation: pg-drop-in .55s cubic-bezier(.34,1.56,.64,1) backwards, pg-wiggle 3.2s ease-in-out 1s infinite; }
+.pg-pin-promo .pg-drop { animation: pg-wiggle 3.2s ease-in-out 1s infinite; }
+/* A pin's motion is chosen once, when it is drawn: it drops in (in a wave from the middle), flies out of its bubble, or pops when its state changes. */
+.pg-enter .pg-drop { animation: pg-drop-in .55s cubic-bezier(.34,1.56,.64,1) var(--d, 0ms) backwards; }
+.pg-enter.pg-pin-promo .pg-drop { animation: pg-drop-in .55s cubic-bezier(.34,1.56,.64,1) var(--d, 0ms) backwards, pg-wiggle 3.2s ease-in-out calc(var(--d, 0ms) + 1s) infinite; }
+.pg-enter .pg-ground { animation: pg-ground-in .55s ease var(--d, 0ms) backwards; }
+.pg-enter .pg-chip { animation-delay: calc(var(--d, 0ms) + .12s); }
+.pg-split { animation: pg-split .5s cubic-bezier(.32,.72,0,1) backwards; }
+@keyframes pg-split { from { opacity: .2; transform: translate(calc(-50% + var(--fx, 0px) + var(--dx, 0px)), calc(-100% + var(--fy, 0px) + var(--dy, 0px))) scale(.5); } }
+.pg-change .pg-drop { animation: pg-change .6s cubic-bezier(.34,1.56,.64,1); }
+@keyframes pg-change { 35% { transform: scale(1.3) rotate(-7deg); } 70% { transform: scale(.94) rotate(2deg); } }
+.pg-change .pg-ground::before { content: ''; position: absolute; inset: -8px -14px; border-radius: 50%; border: 2px solid rgba(255,176,0,.75); animation: pg-ripple .9s ease-out both; }
+/* The open station stands up and glows; the rest step back. */
+.pg-selected .pg-drop { animation: pg-sel .65s cubic-bezier(.34,1.56,.64,1) forwards; }
+@keyframes pg-sel { 0% { transform: none; } 45% { transform: translateY(-14px) scale(1.28); } 100% { transform: translateY(-4px) scale(1.16); } }
+/* The bigger drop pushes its name chip up, so the free count never sits on it. */
+.pg-selected .pg-chip { translate: 0 -16px; box-shadow: 0 6px 16px rgba(22,22,26,.22); }
+.pg-selected .pg-ground::before { content: ''; position: absolute; inset: -10px -18px; border-radius: 50%; background: rgba(255,200,61,.45); animation: pg-halo 1.7s ease-out infinite; }
+@keyframes pg-halo { from { transform: scale(.45); opacity: 1; } to { transform: scale(1.7); opacity: 0; } }
+.pg-focus .pg-pin:not(.pg-selected), .pg-focus .pg-cluster { opacity: .42; filter: saturate(.45); }
 .pg-pin-free .pg-ground::after { content: ''; position: absolute; inset: -6px -10px; border-radius: 50%; border: 2px solid rgba(16,185,129,.45); animation: pg-ripple 2.4s ease-out infinite; }
 @keyframes pg-drop-in { from { opacity: 0; transform: translateY(-18px) scale(.7); } to { opacity: 1; transform: none; } }
 @keyframes pg-ground-in { from { opacity: 0; transform: scale(.3); } }
 @keyframes pg-chip-in { from { opacity: 0; transform: translateY(4px) scale(.9); } }
 @keyframes pg-wiggle { 0%, 86%, 100% { transform: none; } 90% { transform: rotate(-7deg); } 94% { transform: rotate(6deg); } 97% { transform: rotate(-3deg); } }
 @keyframes pg-ripple { from { opacity: 1; transform: scale(.4); } to { opacity: 0; transform: scale(1.4); } }
-.pg-cluster { border-radius: 50%; display: grid; place-items: center; position: relative; box-shadow: 0 6px 16px rgba(22,22,26,.22); animation: pg-drop-in .5s cubic-bezier(.34,1.56,.64,1) backwards; transition: transform .2s cubic-bezier(.32,.72,0,1); cursor: pointer; }
+.pg-cluster { border-radius: 50%; display: grid; place-items: center; position: relative; box-shadow: 0 6px 16px rgba(22,22,26,.22); animation: pg-drop-in .5s cubic-bezier(.34,1.56,.64,1) backwards; transition: transform .2s cubic-bezier(.32,.72,0,1), opacity .35s ease, filter .35s ease; cursor: pointer; }
 .pg-cluster:hover { transform: scale(1.08); }
 .pg-cluster-in {
   width: calc(100% - 8px); height: calc(100% - 8px); border-radius: 50%; background: #fff;
@@ -760,7 +778,12 @@ nav::-webkit-scrollbar { display: none; }
 .pg-cluster-in b { font: 800 15px/1 Inter, sans-serif; }
 .pg-cluster-in span { font: 700 8px/1 Inter, sans-serif; color: #059669; margin-top: 2px; }
 .pg-cluster-pct { position: absolute; top: -3px; right: -3px; width: 19px; height: 19px; border-radius: 50%; background: linear-gradient(135deg,#FFD66B,#FFB000); color: #111; font: 900 10px/19px Inter, sans-serif; text-align: center; font-style: normal; border: 2px solid #fff; }
-.pg-me { width: 20px; height: 20px; border-radius: 50%; background: #2563EB; border: 3px solid #fff; box-shadow: 0 0 0 7px rgba(37,99,235,.22); }
+.pg-me-wrap { position: relative; width: 20px; height: 20px; }
+.pg-me { position: absolute; inset: 0; border-radius: 50%; background: #2563EB; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(37,99,235,.45); }
+.pg-me-halo { position: absolute; inset: -16px; border-radius: 50%; background: rgba(37,99,235,.28); animation: pg-me-breathe 2.4s ease-out infinite; }
+@keyframes pg-me-breathe { from { transform: scale(.3); opacity: .9; } to { transform: scale(1.25); opacity: 0; } }
+/* Which way the car is going, while it moves. */
+.pg-me-beam { position: absolute; left: 50%; top: 50%; width: 60px; height: 60px; margin: -60px 0 0 -30px; transform-origin: 50% 100%; clip-path: polygon(50% 100%, 12% 0, 88% 0); background: radial-gradient(circle at 50% 100%, rgba(37,99,235,.42), rgba(37,99,235,0) 75%); transition: transform .6s ease; }
 .pg-legend { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.25); flex-shrink: 0; }
 
 /* ------------------------------------------------------------------ */
