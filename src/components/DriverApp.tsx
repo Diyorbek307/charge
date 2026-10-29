@@ -38,7 +38,7 @@ import { useI18n } from '../lib/i18n';
 import type { Payer, ChargeGoal } from '../lib/api';
 import { useMyLocation, km, fmtKm, driveMinutes, locate, openNow, samePort } from '../lib/geo';
 import { inTelegram, telegramInitData } from '../lib/telegram';
-import type { Booking, Session, PaymentOrder } from '../lib/api';
+import type { Booking, Session, PaymentOrder, ArrivalChance } from '../lib/api';
 import AuthFlow from './AuthFlow';
 
 type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate' | 'rewards' | 'battery';
@@ -54,7 +54,57 @@ const statusColor: Record<string, string> = {
   reserved: '#F59E0B',
 };
 
-function StationDetailSheet({ station, onClose, onStartCharging, onBook, onReviews, onReport, onNavigate }: { station: Station; onClose: () => void; onStartCharging: () => void; onBook: () => void; onReviews: () => void; onReport: () => void; onNavigate: () => void }) {
+/**
+ * "Will it be free when I get there?" — the chance of a free point at the
+ * arrival time, with booking and nearby stations when the chance is low.
+ */
+function ArrivalBlock({ station, etaMin, onBook, onOpen }: { station: Station; etaMin: number; onBook: () => void; onOpen: (id: string) => void }) {
+  const { actions, state } = useSync();
+  const [a, setA] = useState<ArrivalChance | null>(null);
+  // Live statuses change the answer; the request is cheap and cached by the minute.
+  const busyKey = station.connectors.map(c => c.status).join();
+  useEffect(() => {
+    let alive = true;
+    const t = setTimeout(() => void actions.arrival(station.id, etaMin).then(r => alive && setA(r)).catch(() => alive && setA(null)), 250);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [actions, station.id, etaMin, busyKey, state?.queues?.length]);
+  if (!a) return null;
+  const look = a.verdict === 'likely' ? { text: 'Скорее всего свободно', color: '#16A34A', bg: '#F0FDF4' } : a.verdict === 'maybe' ? { text: 'Может быть занято', color: '#B45309', bg: '#FFFBEB' } : { text: 'Скорее всего займут', color: '#DC2626', bg: '#FEF2F2' };
+  const at = new Date(Date.now() + a.etaMin * 60_000).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tashkent' });
+  return (
+    <div className="mb-3 rounded-2xl border p-3.5 pg-reveal" style={{ background: look.bg, borderColor: `${look.color}33` }}>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-slate-600">{`Когда доедете · ~${at}`}</p>
+        <span className="text-xs font-extrabold tabular-nums" style={{ color: look.color }}>{`${a.chance}%`}</span>
+      </div>
+      <p className="text-sm font-bold mt-0.5" style={{ color: look.color }}>{look.text}</p>
+      <div className="h-1.5 rounded-full bg-white/70 mt-2 overflow-hidden">
+        <div className="h-full rounded-full pg-bar" style={{ width: `${a.chance}%`, background: look.color }} />
+      </div>
+      {a.verdict !== 'likely' && (
+        <div className="mt-2.5 space-y-1.5">
+          {a.waitAfterMin !== null && <p className="text-xs text-slate-600">{`Если займут — освободится примерно через ${a.waitAfterMin} мин после приезда`}</p>}
+          <button onClick={onBook} className="w-full py-2 rounded-xl bg-white text-sm font-semibold text-slate-800 border border-slate-200 inline-flex items-center justify-center gap-1.5"><CalendarCheck size={14} />Забронировать на это время</button>
+          {a.alternatives.map(x => (
+            <button key={x.stationId} onClick={() => onOpen(x.stationId)} className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-white/80 text-left">
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-semibold text-slate-800 truncate">{x.name}</span>
+                <span className="block text-[11px] text-slate-500">{`${fmtKm(x.km)} от этой · ${x.operator}`}</span>
+              </span>
+              <span className="text-xs font-extrabold text-emerald-600 tabular-nums">{`${x.chance}%`}</span>
+              <ChevronRight size={14} className="text-slate-300" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StationDetailSheet({ station, onClose, onStartCharging, onBook, onReviews, onReport, onNavigate, onOpenStation }: { station: Station; onClose: () => void; onStartCharging: () => void; onBook: () => void; onReviews: () => void; onReport: () => void; onNavigate: () => void; onOpenStation: (id: string) => void }) {
   const free = station.connectors.filter(c => c.status === 'available').length;
   const { state, actions, sessions: portalSessions, refresh } = useSync();
   const me = portalSessions.driver;
@@ -196,6 +246,8 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
             )}
           </div>
         )}
+
+        {drive !== null && !mapOnly && <ArrivalBlock station={station} etaMin={drive} onBook={onBook} onOpen={onOpenStation} />}
 
         {/* Photo */}
         <div className="rounded-2xl overflow-hidden mb-3 h-32 bg-slate-100 relative">
@@ -2488,7 +2540,7 @@ export default function DriverApp() {
         <DriverMap onSelectStation={handleSelectStation} onOpenWallet={() => { walletFrom.current = 'map'; setScreen('wallet'); }} onSos={() => setSos(true)} hideChrome={screen !== 'map'} selected={screen === 'station' ? selectedStation : null} autoLocate={!showOnboarding} />
         {sos && <SosSheet onClose={() => setSos(false)} />}
         {screen === 'station' && selectedStation && (
-          <StationDetailSheet station={selectedStation} onClose={handleBack} onStartCharging={() => setScreen('charging-start')} onBook={() => setScreen('booking')} onReviews={() => setScreen('reviews')} onReport={() => { reportFrom.current = 'station'; setScreen('report'); }} onNavigate={() => setScreen('navigate')} />
+          <StationDetailSheet station={selectedStation} onClose={handleBack} onStartCharging={() => setScreen('charging-start')} onBook={() => setScreen('booking')} onReviews={() => setScreen('reviews')} onReport={() => { reportFrom.current = 'station'; setScreen('report'); }} onNavigate={() => setScreen('navigate')} onOpenStation={id => { const s = liveStationsById(id); if (s) handleSelectStation(s); }} />
         )}
       </div>
     );

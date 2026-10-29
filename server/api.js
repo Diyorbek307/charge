@@ -12,7 +12,7 @@ import { demoEnergy } from './history.js';
 import { riskReport, reviewFinding, cdrReport, bandFor, tariffBands, setTariffBands } from './admin.js';
 import { verifyInitData, accountByTelegram, telegramConfigured } from './telegram.js';
 import {
-  stationForecast, addReport, confirmReport, stationCommunity, loyaltyFor, redeemPoints, addPoints,
+  stationForecast, arrivalChance, addReport, confirmReport, stationCommunity, loyaltyFor, redeemPoints, addPoints,
   createSos, setSosStatus, sosFor, allSos, inviteFamily, answerFamily, updateFamily, familyFor, familyAllowance,
   applyHost, decideHost, hostApplicationsFor, allHostApplications, hostEarnings, HOST_COMMISSION,
 } from './driverFeatures.js';
@@ -936,6 +936,30 @@ api.get('/stations/:id/forecast', (req, res) => {
   const station = db.byId('stations', req.params.id);
   if (!station) return res.status(404).json({ error: 'Станция не найдена' });
   res.json(stationForecast(station));
+});
+
+/** The chance of a free point on arrival, and nearby stations with a better one. */
+api.get('/stations/:id/arrival', (req, res) => {
+  const station = db.byId('stations', req.params.id);
+  if (!station) return res.status(404).json({ error: 'Станция не найдена' });
+  const eta = Number(req.query.eta);
+  if (!Number.isFinite(eta) || eta < 0) return res.status(400).json({ error: 'Укажите время в пути, мин' });
+  const here = arrivalChance(station, eta);
+  const km = (a, b) => {
+    const r = d => (d * Math.PI) / 180;
+    const h = Math.sin(r(b.geoLat - a.geoLat) / 2) ** 2 + Math.cos(r(a.geoLat)) * Math.cos(r(b.geoLat)) * Math.sin(r(b.geoLng - a.geoLng) / 2) ** 2;
+    return 12742 * Math.asin(Math.sqrt(h));
+  };
+  const alternatives = here.verdict === 'likely' ? [] : db.data.stations
+    .filter(s => s.id !== station.id && !s.private && s.connectors.some(c => c.status !== 'unavailable'))
+    .map(s => ({ s, d: km(station, s) }))
+    .filter(x => x.d <= 8)
+    // A little further means a little later.
+    .map(x => ({ ...arrivalChance(x.s, eta + (x.d * 1.3 / 30) * 60), name: x.s.name, operator: x.s.operator, km: Math.round(x.d * 10) / 10 }))
+    .filter(a => a.chance > here.chance + 15)
+    .sort((a, b) => b.chance - a.chance || a.km - b.km)
+    .slice(0, 2);
+  res.json({ ...here, alternatives });
 });
 
 api.get('/stations/:id/community', (req, res) => {

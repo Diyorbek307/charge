@@ -252,6 +252,8 @@ export interface BatteryHealth {
   tips: string[];
   reportId: string;
 }
+/** The chance of a free point on arrival (server/driverFeatures.js). */
+export interface ArrivalChance { stationId: string; etaMin: number; chance: number; expectedFree: number; verdict: 'likely' | 'maybe' | 'unlikely'; waitAfterMin: number | null; queue: number; alternatives: (Omit<ArrivalChance, 'alternatives'> & { name: string; operator: string; km: number })[] }
 export interface BonusGrant { id: string; kind: string; title: string; amount: number; left: number; at: string; expiresAt: string }
 
 export interface Alert {
@@ -721,6 +723,7 @@ export const apiClient = {
   telegramSignIn: (initData: string) => post<{ token: string; user: Account }>('/auth/telegram', { initData }),
   telegramLink: (initData: string) => post<{ user: Account }>('/auth/telegram/link', { initData }, 'driver'),
   telegramUnlink: () => post<{ user: Account }>('/auth/telegram/unlink', undefined, 'driver'),
+  arrival: (stationId: string, etaMin: number) => request<ArrivalChance>(`/stations/${stationId}/arrival?eta=${Math.round(etaMin)}`),
   batteryHealth: () => request<BatteryHealth>('/battery', { portal: 'driver' }),
   saveCar: (portal: Portal, car: Car) => request<{ user: Account; granted?: BonusGrant[] }>('/me/car', { method: 'PUT', body: JSON.stringify(car), portal }),
   logout: (portal: Portal) => post<{ ok: boolean }>('/auth/logout', undefined, portal),

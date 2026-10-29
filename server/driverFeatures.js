@@ -63,6 +63,49 @@ export function stationForecast(station) {
   };
 }
 
+/**
+ * How often a connector at this station is taken in a given hour of the
+ * day (Tashkent), from six weeks of starts. Starts per connector per hour.
+ */
+function startsPerHour(station, hour) {
+  const since = now() - 42 * DAY;
+  const n = db.data.sessions.filter(s => s.stationId === station.id && Date.parse(s.start) >= since && new Date(Date.parse(s.start) + 5 * 3600_000).getUTCHours() === hour).length;
+  return n / 42 / Math.max(1, station.connectors.length);
+}
+
+/**
+ * "Will it be free when I get there?" For each connector: the chance it is
+ * free at arrival — a free one stays free unless someone takes it on the
+ * way (by how busy that hour usually is), a busy one frees if its charge
+ * ends first. Drivers in the queue take the first ones. Unknown or broken
+ * points count as not free.
+ */
+export function arrivalChance(station, etaMin) {
+  const eta = Math.max(0, Math.min(24 * 60, Math.round(etaMin)));
+  const f = stationForecast(station);
+  const hour = new Date(now() + eta * 60_000 + 5 * 3600_000).getUTCHours();
+  const lambda = startsPerHour(station, hour);
+  const p = f.connectors.map(c => {
+    if (c.status === 'available') return Math.exp(-lambda * (eta / 60));
+    if (c.status === 'occupied' && c.freeInMin !== null) return c.freeInMin <= eta ? 0.85 * Math.exp(-lambda * ((eta - c.freeInMin) / 60)) : 0;
+    return 0;
+  }).sort((a, b) => b - a);
+  // Each driver ahead in the queue takes the likeliest point.
+  const open = p.slice(Math.min(f.queue, p.length));
+  // Minutes away, nothing is certain: never promise more than 97%.
+  const chance = Math.min(eta <= 2 ? 100 : 97, Math.round((1 - open.reduce((n, x) => n * (1 - x), 1)) * 100));
+  const later = f.connectors.filter(c => c.status === 'occupied' && c.freeInMin !== null && c.freeInMin > eta).map(c => c.freeInMin - eta).sort((a, b) => a - b);
+  return {
+    stationId: station.id,
+    etaMin: eta,
+    chance,
+    expectedFree: Math.round(open.reduce((n, x) => n + x, 0) * 10) / 10,
+    verdict: chance >= 70 ? 'likely' : chance >= 35 ? 'maybe' : 'unlikely',
+    waitAfterMin: chance >= 70 ? 0 : later[f.queue] ?? later[0] ?? null,
+    queue: f.queue,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Community reports: drivers tell each other how a station really is
 // ---------------------------------------------------------------------------
