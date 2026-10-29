@@ -105,6 +105,14 @@ export function ProfileScreen({ onNavigate }: { onNavigate: (s: string) => void 
             </button>
           ) : null}
           {car ? (
+            <button onClick={() => onNavigate('autocharge')} className="w-full px-4 py-3 flex items-center gap-3 text-left border-t border-slate-50 hover:bg-slate-50">
+              <span className="w-10 h-10 bg-[#111] rounded-xl flex items-center justify-center text-[#FFC83D] text-lg" aria-hidden="true">⚡</span>
+              <span className="flex-1 text-sm font-semibold text-slate-800">Autocharge</span>
+              <span className="text-xs text-slate-400">{state?.autocharge?.cars.length ? 'включён' : 'без QR и телефона'}</span>
+              <ChevronRight size={16} className="text-slate-400" />
+            </button>
+          ) : null}
+          {car ? (
             <button onClick={() => onNavigate('battery')} className="w-full px-4 py-3 flex items-center gap-3 text-left border-t border-slate-50 hover:bg-slate-50">
               <span className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-lg" aria-hidden="true">🔋</span>
               <span className="flex-1 text-sm font-semibold text-slate-800">Здоровье батареи</span>

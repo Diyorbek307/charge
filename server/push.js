@@ -59,6 +59,8 @@ function removeSub(endpoint) {
 /** Which events notify, and when. */
 const KINDS = {
   'queue.ready': { title: 'Ваша очередь подошла', url: '/?portal=driver' },
+  'autocharge.linked': { title: 'Autocharge включён', url: '/?portal=driver' },
+  'autocharge.start': { title: 'Зарядка началась сама', url: '/?portal=driver&go=charging' },
   'booking.expire': { title: 'Бронь истекла', url: '/?portal=driver' },
   // Only when someone else ended it — a driver who pressed stop already knows.
   // A charge stopped at its goal is announced by session.goal, with the reminder to free the spot.

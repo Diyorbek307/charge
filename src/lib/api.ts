@@ -270,6 +270,7 @@ export interface PartnerPlace { id: string; name: string; kind: PlaceKind; lat: 
 export interface PlusState { active: boolean; since: string | null; renewsAt: string | null; autoRenew: boolean; savedThisMonth: number; price: number; discount: number; days: number }
 export interface FleetPlan { plan: 'standard' | 'taxi'; since: string | null; kwh30: number; discount: number; tierDiscount: number; next: { kwh: number; pct: number } | null; tiers: { kwh: number; pct: number }[]; savedThisMonth: number }
 export interface FleetDriverRow { employeeId: string; name: string; vehicle: string; charges: number; energy: number; cost: number; avgPrice: number; nightShare: number; medianMinutes: number; topStation: string | null; saved: number }
+export interface AutochargeState { cars: { carId: string; car: string | null; since: string }[]; linking: { stationId: string; until: string } | null }
 export interface BonusGrant { id: string; kind: string; title: string; amount: number; left: number; at: string; expiresAt: string }
 
 export interface Alert {
@@ -403,6 +404,7 @@ export interface PlatformState {
   rewards?: Rewards;
   plus?: PlusState;
   fleetPlan?: FleetPlan;
+  autocharge?: AutochargeState;
   /** The driver's balances at networks paid directly. */
   networkWallets?: NetworkWallet[];
   /** Charges the driver asked to start later. */
@@ -749,6 +751,8 @@ export const apiClient = {
   arrival: (stationId: string, etaMin: number) => request<ArrivalChance>(`/stations/${stationId}/arrival?eta=${Math.round(etaMin)}`),
   setFleetPlan: (plan: 'standard' | 'taxi') => request<FleetPlan>('/fleet/plan', { method: 'PUT', body: JSON.stringify({ plan }), portal: 'business' }),
   fleetReport: (month: string) => request<{ month: string; drivers: FleetDriverRow[] }>(`/fleet/report?month=${month}`, { portal: 'business' }),
+  linkAutocharge: (stationId: string) => post<AutochargeState>('/autocharge/link', { stationId }, 'driver'),
+  unlinkAutocharge: () => request<AutochargeState>('/autocharge', { method: 'DELETE', portal: 'driver' }),
   subscribePlus: () => post<PlusState>('/plus', undefined, 'driver'),
   cancelPlus: () => request<PlusState>('/plus', { method: 'DELETE', portal: 'driver' }),
   batteryHealth: () => request<BatteryHealth>('/battery', { portal: 'driver' }),

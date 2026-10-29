@@ -29,6 +29,7 @@ import { syncRewards, rewardsFor, bonusFor, spendBonus } from './rewards.js';
 import { batteryHealthFor } from './battery.js';
 import { PLUS, plusActive, plusFor, subscribePlus, cancelPlus } from './plus.js';
 import { fleetPlanFor, setFleetPlan, fleetDiscount, fleetPriority, fleetDriverReport } from './fleet.js';
+import { openWindow, autochargeFor, unlink as unlinkAutocharge } from './autocharge.js';
 
 export const api = express.Router();
 // Photos (a face for credit, a station, a support message) are larger than an ordinary request.
@@ -107,6 +108,8 @@ function scopeOf({ type, entity, payload = {} }) {
     case 'schedule.failed':
     case 'reward.granted':
     case 'plus.start':
+    case 'autocharge.linked':
+    case 'autocharge.start':
       return { userId: payload.userId };
     case 'evse.status':
       return { operatorId: stationOperator(payload.stationId), public: true };
@@ -351,6 +354,7 @@ function stateFor(viewer) {
     credit: creditFor(viewer.id),
     rewards: (syncRewards(viewer), rewardsFor(viewer)),
     plus: plusFor(viewer.id),
+    autocharge: autochargeFor(viewer.id),
     networkWallets: networkWalletsFor(viewer.id),
     scheduled: (d.scheduledStarts ?? []).filter(x => x.userId === viewer.id && x.status === 'pending'),
     wallets: d.wallets[viewer.id] ? { [viewer.id]: d.wallets[viewer.id] } : {},
@@ -1004,6 +1008,17 @@ api.get('/fleet/report', requireAuth('business'), (req, res) => {
   res.json({ month, drivers: fleetDriverReport(month) });
 });
 
+// Autocharge: link the car once at a charger, then plug in and it starts.
+api.post('/autocharge/link', requireAuth('driver'), (req, res) => {
+  const r = openWindow(req.account, String(req.body?.stationId ?? ''));
+  if (r.error) return res.status(r.status).json({ error: r.error });
+  res.json(autochargeFor(req.account.id));
+});
+api.delete('/autocharge', requireAuth('driver'), (req, res) => {
+  unlinkAutocharge(req.account.id);
+  res.json(autochargeFor(req.account.id));
+});
+
 api.get('/plus', requireAuth('driver'), (req, res) => res.json(plusFor(req.account.id)));
 api.post('/plus', requireAuth('driver'), (req, res) => {
   const r = subscribePlus(req.account);
@@ -1440,6 +1455,8 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     ...(goal ? { goal } : {}),
     source: simulated ? 'demo' : source,
     ocppTransactionId,
+    // Started by the charger recognising the car (Autocharge), not by a tap.
+    ...(opts.autocharge ? { autocharge: true } : {}),
     meterStartWh,
   };
 

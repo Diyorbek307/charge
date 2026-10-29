@@ -30,6 +30,7 @@ import QRScanScreen from './driver/QRScan';
 import RewardsScreen, { RewardBurst } from './driver/Rewards';
 import BatteryScreen from './driver/Battery';
 import PlusScreen from './driver/Plus';
+import AutochargeScreen from './driver/Autocharge';
 import WhileCharging from './driver/WhileCharging';
 import { useOfflinePacks, deletePack, packsBytes, savedStations } from '../lib/offline';
 import { NetworkBadge } from './driver/NetworkBadge';
@@ -43,7 +44,7 @@ import { inTelegram, telegramInitData } from '../lib/telegram';
 import type { Booking, Session, PaymentOrder, ArrivalChance } from '../lib/api';
 import AuthFlow from './AuthFlow';
 
-type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate' | 'rewards' | 'battery' | 'plus';
+type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate' | 'rewards' | 'battery' | 'plus' | 'autocharge';
 type Tab = 'map' | 'charging' | 'deals' | 'profile';
 /** Minutes as "25 мин" or "5 ч 10 мин". */
 const hm = (m: number) => (m < 60 ? `${m} мин` : `${Math.floor(m / 60)} ч${m % 60 ? ` ${m % 60} мин` : ''}`);
@@ -2527,6 +2528,7 @@ export default function DriverApp() {
     if (screen === 'booking') return <BookingScreen station={selectedStation} onBack={backToStation} onConfirm={b => { setLastBooking(b); setScreen('booking-done'); }} />;
     if (screen === 'booking-done') return <BookingDoneScreen station={selectedStation} booking={lastBooking} onClose={handleBack} />;
     if (screen === 'add-car') return <AddCarScreen onBack={() => setScreen(carFrom.current)} onSave={saveCar} />;
+    if (screen === 'autocharge') return <AutochargeScreen onBack={() => setScreen('profile')} />;
     if (screen === 'plus') return <PlusScreen onBack={() => setScreen('profile')} onTopUp={() => { walletFrom.current = 'plus'; setScreen('wallet'); }} />;
     if (screen === 'battery') return <BatteryScreen onBack={() => setScreen(batteryFrom.current)} onAddCar={() => { carFrom.current = 'battery'; setScreen('add-car'); }} />;
     if (screen === 'rewards') return <RewardsScreen onBack={() => setScreen('profile')} onAddCar={() => { carFrom.current = 'rewards'; setScreen('add-car'); }} />;
@@ -2563,7 +2565,7 @@ export default function DriverApp() {
     );
   };
 
-  const showTabs = !['history', 'charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host', 'credit', 'navigate', 'eco', 'rewards', 'battery', 'plus'].includes(screen);
+  const showTabs = !['history', 'charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host', 'credit', 'navigate', 'eco', 'rewards', 'battery', 'plus', 'autocharge'].includes(screen);
 
   return (
     <div className="pg-app h-full flex flex-col bg-white overflow-hidden relative" style={{ fontFamily: 'Inter, sans-serif' }}>

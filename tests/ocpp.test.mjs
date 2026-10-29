@@ -376,3 +376,38 @@ describe('OCPP maintenance', () => {
     await cp.close();
   });
 });
+
+describe('Autocharge', () => {
+  test('a car is linked once at a charger, then plugging in starts a charge by itself', async () => {
+    await reset();
+    const token = await login('driver');
+    // Only a charger on OCPP can see the car: one that has never connected is refused.
+    assert.equal((await call('/autocharge/link', { method: 'POST', token, body: { stationId: 'st-005' } })).status, 409);
+    assert.equal((await call('/autocharge/link', { method: 'POST', token, body: { stationId: 'st-999' } })).status, 404);
+    const st = { id: 'st-003' };
+    const cp = await ChargePoint.connect(st.id);
+    await cp.call('BootNotification', { chargePointVendor: 'Test', chargePointModel: 'DC' });
+    const opened = await call('/autocharge/link', { method: 'POST', token, body: { stationId: st.id } });
+    assert.equal(opened.status, 200, JSON.stringify(opened.data));
+    assert.equal(opened.data.linking.stationId, st.id);
+    // An unknown car elsewhere is refused; the car plugged in during the window is taken.
+    const car = 'VID:0A1B2C3D4E5F';
+    assert.equal((await cp.call('Authorize', { idTag: car })).idTagInfo.status, 'Accepted');
+    const linked = (await call('/state', { token })).data.autocharge;
+    assert.equal(linked.cars.length, 1);
+    assert.equal(linked.linking, null);
+    assert.equal((await cp.call('Authorize', { idTag: 'VID:FFFFFFFFFFFF' })).idTagInfo.status, 'Invalid');
+
+    // Next time: the same car, a different spelling of its ID, starts the charge itself.
+    const r = await cp.call('StartTransaction', { connectorId: 1, idTag: '0a:1b:2c:3d:4e:5f', meterStart: 1000, timestamp: new Date().toISOString() });
+    assert.equal(r.idTagInfo.status, 'Accepted');
+    const ses = await waitFor(async () => (await call('/state', { token })).data.sessions.find(s => s.status === 'active' && s.autocharge), 'the autocharge session');
+    assert.equal(ses.stationId, st.id);
+    await cp.call('StopTransaction', { transactionId: r.transactionId, meterStop: 9000, timestamp: new Date().toISOString() });
+
+    // Switched off, the car is a stranger again.
+    await call('/autocharge', { method: 'DELETE', token });
+    assert.equal((await cp.call('Authorize', { idTag: car })).idTagInfo.status, 'Invalid');
+    await cp.close();
+  });
+});

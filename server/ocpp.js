@@ -2,6 +2,26 @@ import crypto from 'node:crypto';
 import { WebSocketServer } from 'ws';
 import { db } from './db.js';
 import { beginSession, completeSession, meterSession, emit, setGateway } from './api.js';
+import { accountByCarId, linkFromCharger } from './autocharge.js';
+
+/**
+ * Who an idTag is: our own remote starts send the account ID; a charger with
+ * Autocharge sends the car's ID, which is someone's linked car — or, while
+ * that driver is linking at this very station, becomes theirs now.
+ */
+function accountFor(station, idTag) {
+  const tag = String(idTag ?? '');
+  const direct = db.byId('accounts', tag);
+  if (direct) return { account: direct, auto: false };
+  const linked = accountByCarId(tag);
+  if (linked) return { account: linked, auto: true };
+  const fresh = linkFromCharger(station.id, tag);
+  if (fresh) {
+    emit({ type: 'autocharge.linked', portal: 'system', actor: 'PowerGo', message: `Autocharge включён: ${station.name} узнала вашу машину — дальше просто подключайте кабель`, entity: fresh.id, payload: { userId: fresh.id, stationId: station.id } });
+    return { account: fresh, auto: true };
+  }
+  return { account: null, auto: false };
+}
 
 /**
  * OCPP 1.6-J central system.
@@ -233,7 +253,7 @@ const handlers = {
 
   Authorize(station, p) {
     touch(station);
-    const account = db.byId('accounts', String(p.idTag ?? ''));
+    const { account } = accountFor(station, p.idTag);
     return { idTagInfo: { status: account ? 'Accepted' : 'Invalid' } };
   },
 
@@ -264,17 +284,19 @@ const handlers = {
 
     // OCPP requires a transactionId even when the start is refused.
     const transactionId = nextTransactionId();
-    const account = db.byId('accounts', String(p.idTag ?? ''));
+    const { account, auto } = accountFor(station, p.idTag);
     if (!account) return { transactionId, idTagInfo: { status: 'Invalid' } };
 
     const result = beginSession(account, station.id, connector.id, {
       source: 'ocpp',
       ocppTransactionId: transactionId,
       meterStartWh: Number(p.meterStart) || 0,
+      ...(auto ? { autocharge: true } : {}),
     });
     if (result.error) {
       return { transactionId, idTagInfo: { status: result.status === 402 ? 'Blocked' : 'Invalid' } };
     }
+    if (auto) emit({ type: 'autocharge.start', portal: 'system', actor: 'PowerGo', message: `Autocharge: зарядка началась сама · ${station.name}`, entity: result.session?.id ?? null, payload: { userId: account.id, stationId: station.id } });
     return { transactionId, idTagInfo: { status: 'Accepted' } };
   },
 
