@@ -7,7 +7,7 @@ const onboardingSlides = [
   {
     emoji: '🗺️',
     title: 'Единая карта\nУзбекистана',
-    sub: 'Все зарядные станции разных операторов в одном приложении. Zaryad24 работает по всей стране.',
+    sub: 'Все зарядные станции разных операторов в одном приложении. PowerGo работает по всей стране.',
   },
   {
     emoji: '⚡',
@@ -52,7 +52,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
           <Zap size={44} className="text-sky-500" />
         </div>
       </div>
-      <h1 className="text-3xl font-bold text-white tracking-tight">Zaryad24</h1>
+      <h1 className="text-3xl font-bold text-white tracking-tight">PowerGo</h1>
       <p className="text-white/60 text-sm mt-1">Национальная EV-платформа · UZ</p>
 
       {/* Loading bar */}

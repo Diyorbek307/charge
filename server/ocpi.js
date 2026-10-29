@@ -5,9 +5,9 @@ import { api, beginSession, completeSession, meterSession, emit, setRoaming, req
 import { isBlocked } from './analytics.js';
 
 /**
- * OCPI 2.2.1 — how Zaryad24 brings partner networks into one app.
+ * OCPI 2.2.1 — how PowerGo brings partner networks into one app.
  *
- * Zaryad24 owns no chargers. A partner network (a CPO in OCPI terms) keeps
+ * PowerGo owns no chargers. A partner network (a CPO in OCPI terms) keeps
  * its own back office and its own app; we connect as an eMSP:
  *
  *   registration  we call the partner's versions URL with the token A they
@@ -144,7 +144,7 @@ export async function registerPartner({ versionsUrl, token, base }) {
         body: {
           token: partner.tokenB,
           url: ourUrls(base).versions,
-          roles: [{ role: 'EMSP', ...OUR_PARTY, business_details: { name: 'Zaryad24', website: 'https://zaryad24.uz' } }],
+          roles: [{ role: 'EMSP', ...OUR_PARTY, business_details: { name: 'PowerGo', website: 'https://powergo.uz' } }],
         },
       })
     ).data;
@@ -301,7 +301,7 @@ function upsertLocation(partner, loc, tariffs = new Map()) {
   return station;
 }
 
-/** A connector's status from the partner. A running Zaryad24 session keeps its connector busy until the CDR settles it. */
+/** A connector's status from the partner. A running PowerGo session keeps its connector busy until the CDR settles it. */
 function applyEvseStatus(station, connector, ocpiStatus, announce = true) {
   const next = STATUS[ocpiStatus];
   if (!next || connector.status === next) return;
@@ -362,7 +362,7 @@ function tokenFor(account) {
     uid: account.id,
     type: 'APP_USER',
     contract_id: `UZ-Z24-${account.id.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 20)}`,
-    issuer: 'Zaryad24',
+    issuer: 'PowerGo',
     valid: true,
     whitelist: 'NEVER',
     last_updated: now(),
@@ -450,7 +450,7 @@ ocpiApi.get(`/${OCPI_VERSION}`, partnerAuth, (req, res) => {
 });
 
 ocpiApi.get(`/${OCPI_VERSION}/credentials`, partnerAuth, (req, res) =>
-  ok(res, { token: req.partner.tokenB, url: ourUrls(baseOf(req)).versions, roles: [{ role: 'EMSP', ...OUR_PARTY, business_details: { name: 'Zaryad24' } }] }),
+  ok(res, { token: req.partner.tokenB, url: ourUrls(baseOf(req)).versions, roles: [{ role: 'EMSP', ...OUR_PARTY, business_details: { name: 'PowerGo' } }] }),
 );
 
 ocpiApi.delete(`/${OCPI_VERSION}/credentials`, partnerAuth, (req, res) => {

@@ -78,11 +78,11 @@ function ArchitectureDiagram({ onBack }: { onBack: () => void }) {
         { label: 'Driver App', sub: 'iOS / Android', icon: '📱', color: 'bg-sky-500', detail: 'React Native · Auth flow · Map · Booking · History · AI Trip Planner · Push уведомления · Humo/Uzcard оплата' },
         { label: 'Business App', sub: 'Корпорации', icon: '🏢', color: 'bg-sky-600', detail: 'Управление флотом · Лимиты сотрудников · CDR-отчёты · Корпоративный счёт · IBAN-выплаты' },
         { label: 'Operator Dashboard', sub: 'Веб-кабинет', icon: '💻', color: 'bg-sky-700', detail: 'Управление станциями · EVSE real-time · Тарифы · Финансы · OCPI/OCPP настройки' },
-        { label: 'Admin Center', sub: 'Zaryad24 team', icon: '🔐', color: 'bg-sky-800', detail: 'Полный контроль · Fraud ML · CDR validation · Settlements · Роли & права · Аудит лог' },
+        { label: 'Admin Center', sub: 'PowerGo team', icon: '🔐', color: 'bg-sky-800', detail: 'Полный контроль · Fraud ML · CDR validation · Settlements · Роли & права · Аудит лог' },
       ],
     },
     {
-      id: 'core', label: 'Zaryad24 CORE', color: 'border-white/30 bg-white/5',
+      id: 'core', label: 'PowerGo CORE', color: 'border-white/30 bg-white/5',
       desc: 'Микросервисная архитектура на Kubernetes. Каждый сервис независимо масштабируется',
       nodes: [
         { label: 'API Gateway', sub: 'Auth / Rate Limit', icon: '🔀', color: 'bg-slate-600', detail: 'OAuth 2.0 · JWT · 1000 req/min · TLS 1.3 · DDoS protection · Load balancing' },
@@ -141,7 +141,7 @@ function ArchitectureDiagram({ onBack }: { onBack: () => void }) {
           <ArrowRight size={14} className="rotate-180" />Назад
         </button>
         <div>
-          <h1 className="text-white font-bold">Zaryad24 · Архитектура платформы</h1>
+          <h1 className="text-white font-bold">PowerGo · Архитектура платформы</h1>
           <p className="text-slate-400 text-xs">Полная техническая схема национальной eMobility-экосистемы</p>
         </div>
         <div className="ml-auto flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-400/8 border border-emerald-400/15 px-3 py-1.5 rounded-full font-medium">
@@ -399,7 +399,7 @@ function MainApp() {
             <ArrowRight size={14} className="rotate-180" /> Порталы
           </button>
           <div className="absolute bottom-5 left-0 right-0 text-center text-xs text-white/25 inter tracking-wider hidden sm:block">
-            Zaryad24 · Driver App · iOS / Android
+            PowerGo · Driver App · iOS / Android
           </div>
         </div>
       )}

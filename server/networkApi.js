@@ -20,7 +20,7 @@ import { api, beginSession, completeSession, meterSession, emit, setRoaming, req
  *   GET   /api/network/v1/stations                          what we hold
  *   POST  /api/network/v1/sessions/:ref                     { event: started | meter | stopped, … }
  * Commands to the network: POST <webhook> { type: start | stop, … } with
- * X-Zaryad24-Signature: t=<unix>,v1=<hex HMAC-SHA256 of "<t>.<body>">.
+ * X-PowerGo-Signature: t=<unix>,v1=<hex HMAC-SHA256 of "<t>.<body>">.
  */
 
 export const INTEGRATIONS = ['OCPP 1.6-J', 'OCPI 2.2.1', 'Network API', 'Только карта'];
@@ -204,7 +204,7 @@ networkApi.get('/stations', networkAuth, (req, res) => {
 
 /**
  * The network reports a charge: `started` opens ours (after a start command,
- * or a driver who began in front of the charger with their Zaryad24 id),
+ * or a driver who began in front of the charger with their PowerGo id),
  * `meter` updates the energy, `stopped` settles it at the network's price.
  */
 networkApi.post('/sessions/:ref', networkAuth, (req, res) => {
@@ -260,7 +260,7 @@ async function command(op, payload) {
   try {
     const res = await fetch(op.networkApi.webhookUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'User-Agent': 'Zaryad24-Network/1.0', 'X-Zaryad24-Event': `command.${payload.type}`, 'X-Zaryad24-Signature': `t=${t},v1=${sig}` },
+      headers: { 'Content-Type': 'application/json', 'User-Agent': 'PowerGo-Network/1.0', 'X-PowerGo-Event': `command.${payload.type}`, 'X-PowerGo-Signature': `t=${t},v1=${sig}` },
       body,
       signal: AbortSignal.timeout(15_000),
     });

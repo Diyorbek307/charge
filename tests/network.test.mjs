@@ -32,7 +32,7 @@ async function call(path, { method = 'GET', token, body, bearer } = {}) {
   return { status: res.status, data: text ? JSON.parse(text) : null };
 }
 const login = async (portal, l, p) => (await call('/auth/login', { method: 'POST', body: { portal, login: l, password: p } })).data.token;
-const admin = () => login('admin', 'admin@zaryad24.uz', 'Admin2026');
+const admin = () => login('admin', 'admin@powergo.uz', 'Admin2026');
 const driver = () => login('driver', '+998901234567', 'Driver2026');
 const net = (path, method = 'GET', body) => call(`/network/v1${path}`, { method, body, bearer: key });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -49,7 +49,7 @@ before(async () => {
   const app = express();
   app.use(express.text({ type: '*/*' }));
   app.post('/hook', (req, res) => {
-    const [t, v1] = String(req.get('x-zaryad24-signature')).match(/^t=(\d+),v1=([a-f0-9]+)$/).slice(1);
+    const [t, v1] = String(req.get('x-powergo-signature')).match(/^t=(\d+),v1=([a-f0-9]+)$/).slice(1);
     const ok = crypto.createHmac('sha256', secret).update(`${t}.${req.body}`).digest('hex') === v1;
     const cmd = JSON.parse(req.body);
     commands.push({ ...cmd, signed: ok });

@@ -33,7 +33,7 @@ async function call(path, { method = 'GET', token, body } = {}) {
 const login = async (portal, l, p) => (await call('/auth/login', { method: 'POST', body: { portal, login: l, password: p } })).data.token;
 const driver = () => login('driver', '+998901234567', 'Driver2026');
 const operator = () => login('operator', 'operator@greencharge.uz', 'Operator2026');
-const admin = () => login('admin', 'admin@zaryad24.uz', 'Admin2026');
+const admin = () => login('admin', 'admin@powergo.uz', 'Admin2026');
 const jpeg = () => `data:image/jpeg;base64,${crypto.randomBytes(3000).toString('base64')}`;
 
 before(async () => {

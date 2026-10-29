@@ -3,6 +3,7 @@ import { Tag, Moon, Sun, Sunset, Pencil } from 'lucide-react';
 import { useSync } from '../../lib/sync';
 import { num } from '../../lib/analytics';
 import { Page, Card, Kpi, ErrorNote, Pill, Loading } from '../admin/ui';
+import OperatorPromos from './Promos';
 
 const BANDS = [
   { id: 'green', label: 'Ночь', hours: '23:00–07:00', mult: 0.7, icon: <Moon size={14} />, tone: 'green' as const },
@@ -64,6 +65,8 @@ export default function OperatorTariffs() {
           ))}
         </div>
       </Card>
+
+      <OperatorPromos />
 
       {error && <ErrorNote text={error} />}
 

@@ -24,6 +24,7 @@ import {
 import {
   directOperatorOf, netBalance, chargeNetwork, refundNetwork, networkWalletsFor, publicPayout, setPayout, directReport,
 } from './direct.js';
+import { promoFor, publicPromos, createPromo, stopPromo, promosOf } from './promos.js';
 
 export const api = express.Router();
 // Photos (a face for credit, a station, a support message) are larger than an ordinary request.
@@ -184,7 +185,7 @@ function publicView(event) {
     id: event.id,
     type: event.type,
     portal: 'system',
-    actor: 'Zaryad24',
+    actor: 'PowerGo',
     message: PUBLIC_MESSAGE[event.type]?.(event) ?? event.message,
     entity: null,
     payload,
@@ -279,6 +280,7 @@ function stateFor(viewer) {
     wallets: {},
     queues: queues.map(anonQueue),
     bookings: activeBookings.map(anonBooking),
+    promos: publicPromos(),
     events: visibleEvents(viewer),
     stats: statsFor(viewer),
     serverTime: new Date().toISOString(),
@@ -1181,7 +1183,7 @@ function promoteQueue(stationId, connectorId) {
   emit({
     type: 'queue.ready',
     portal: 'system',
-    actor: 'Zaryad24',
+    actor: 'PowerGo',
     message: `Коннектор ${connectorId} освободился — очередь подошла для ${next.user}`,
     entity: next.id,
     payload: { userId: next.userId, stationId, connectorId },
@@ -1331,6 +1333,8 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
   companyIntent.delete(account.id);
 
   const band = station.ocpi ? { multiplier: 1 } : tariffBand(tashkentHour());
+  // A network's own promo, paid by the network: the driver pays less, it earns less.
+  const promo = station.ocpi ? null : promoFor(station, account);
   const session = {
     id: db.nextId('session', 'S-'),
     userId: account.id,
@@ -1349,7 +1353,8 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     // Price is locked at start with the tariff band in effect right now.
     basePrice: connector.price,
     multiplier: band.multiplier,
-    price: Math.round(connector.price * band.multiplier),
+    price: Math.round(connector.price * band.multiplier * (1 - (promo?.percent ?? 0) / 100)),
+    ...(promo ? { promo: { id: promo.id, title: promo.title, percent: promo.percent } } : {}),
     // Platform commission is locked at start too, so a rate change is not retroactive.
     commissionRate: db.byId('operators', station.operatorId)?.commission ?? 3,
     status: 'active',
@@ -2034,7 +2039,7 @@ function pruneBookings() {
     emit({
       type: 'booking.expire',
       portal: 'system',
-      actor: 'Zaryad24',
+      actor: 'PowerGo',
       message: `Бронь ${b.code} истекла — водитель не приехал`,
       entity: b.id,
       payload: { stationId: b.stationId, connectorId: b.connectorId },
@@ -2833,6 +2838,30 @@ api.post('/admin/reset', requireAuth('admin'), (req, res) => {
     message: 'Демо-данные сброшены к исходным',
   });
   res.json({ ok: true, stats: statsFor(req.account) });
+});
+
+// ---------------------------------------------------------------------------
+// Promos: a network runs discounts at its own stations and pays for them
+// ---------------------------------------------------------------------------
+
+api.get('/promos', (_req, res) => res.json(publicPromos()));
+
+api.get('/operator/promos', requireAuth('operator', 'admin'), (req, res) => {
+  res.json(promosOf(req.account.portal === 'admin' ? null : req.account.orgId));
+});
+
+api.post('/operator/promos', requireAuth('operator'), (req, res) => {
+  const r = createPromo(req.account.orgId, req.body ?? {}, req.account.name);
+  if (r.error) return res.status(400).json({ error: r.error });
+  emit({ type: 'promo.update', portal: 'operator', actor: req.account.name, message: `Новая скидка: ${r.promo.title}`, entity: r.promo.id, payload: { operatorId: r.promo.operatorId } });
+  res.status(201).json(r.promo);
+});
+
+api.delete('/operator/promos/:id', requireAuth('operator', 'admin'), (req, res) => {
+  const p = stopPromo(req.account.portal === 'admin' ? null : req.account.orgId, req.params.id);
+  if (!p) return res.status(404).json({ error: 'Скидка не найдена' });
+  emit({ type: 'promo.update', portal: req.account.portal, actor: req.account.name, message: `Скидка остановлена: ${p.title}`, entity: p.id, payload: { operatorId: p.operatorId } });
+  res.json(p);
 });
 
 export { emit, computeStats, requireAuth };

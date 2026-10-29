@@ -45,7 +45,7 @@ async function fetchOsm(key, hit) {
   const q = `[out:json][timeout:20];(node["highway"="speed_camera"](${key}););out body;`;
   for (const url of MIRRORS) {
     try {
-      const res = await fetch(url, { method: 'POST', headers: { 'User-Agent': 'Zaryad24/1.0 (EV charging app)' }, body: new URLSearchParams({ data: q }), signal: AbortSignal.timeout(20_000) });
+      const res = await fetch(url, { method: 'POST', headers: { 'User-Agent': 'PowerGo/1.0 (EV charging app)' }, body: new URLSearchParams({ data: q }), signal: AbortSignal.timeout(20_000) });
       if (!res.ok) continue;
       const json = await res.json();
       const cameras = (json.elements ?? [])

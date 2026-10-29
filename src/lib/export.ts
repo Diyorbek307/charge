@@ -115,7 +115,7 @@ function renderPage(
   ctx.fillStyle = '#0F172A';
   ctx.font = `700 19px ${FONT}`;
   ctx.textBaseline = 'middle';
-  ctx.fillText('Zaryad24', PAD, 26);
+  ctx.fillText('PowerGo', PAD, 26);
 
   ctx.fillStyle = '#64748B';
   ctx.font = `13px ${FONT}`;

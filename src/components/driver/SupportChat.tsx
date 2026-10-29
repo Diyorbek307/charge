@@ -71,7 +71,7 @@ export default function SupportChat() {
         {thread?.messages.map(m => (
           <div key={m.id} className={`flex ${m.from === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[80%] rounded-2xl px-3 py-2 ${m.from === 'user' ? 'bg-[#FFC83D] text-[#111]' : 'bg-white border border-slate-100 text-slate-800'}`}>
-              {m.from === 'support' && <p className="text-[10px] font-semibold text-slate-400 mb-0.5">Поддержка Zaryad24</p>}
+              {m.from === 'support' && <p className="text-[10px] font-semibold text-slate-400 mb-0.5">Поддержка PowerGo</p>}
               {m.image && <img src={m.image} alt="Фото к сообщению" className="rounded-xl mb-1 max-h-48 object-cover" />}
               {m.text && <p className="text-sm whitespace-pre-wrap">{m.text}</p>}
               <p className={`text-[10px] mt-0.5 ${m.from === 'user' ? 'text-black/50' : 'text-slate-400'}`}>{time(m.at)}</p>

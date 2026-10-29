@@ -32,7 +32,7 @@ async function call(path, { method = 'GET', token, body } = {}) {
 }
 
 const partner = async () =>
-  (await call('/auth/login', { method: 'POST', body: { portal: 'api', login: 'partner@zaryad24.uz', password: 'Partner2026' } })).data.token;
+  (await call('/auth/login', { method: 'POST', body: { portal: 'api', login: 'partner@powergo.uz', password: 'Partner2026' } })).data.token;
 
 async function waitFor(fn, what, ms = 8000) {
   const until = Date.now() + ms;
@@ -135,7 +135,7 @@ describe('webhook delivery', () => {
     assert.equal((await call(`/webhooks/${hook.id}/test`, { method: 'POST', token })).status, 200);
 
     const hit = await waitFor(() => hits.find(h => h.path === '/ok'), 'delivery');
-    const [, ts, v1] = hit.headers['x-zaryad24-signature'].match(/t=(\d+),v1=([a-f0-9]+)/);
+    const [, ts, v1] = hit.headers['x-powergo-signature'].match(/t=(\d+),v1=([a-f0-9]+)/);
     assert.equal(v1, crypto.createHmac('sha256', hook.secret).update(`${ts}.${hit.body}`).digest('hex'));
     assert.ok(Math.abs(Date.now() / 1000 - Number(ts)) < 30);
     assert.equal(JSON.parse(hit.body).type, 'session.start');

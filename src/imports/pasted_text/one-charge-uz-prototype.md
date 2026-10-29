@@ -1,9 +1,9 @@
-Создай полноценный профессиональный UI/UX-прототип цифровой платформы **Zaryad24** — единой национальной экосистемы для зарядки электромобилей в Узбекистане.
+Создай полноценный профессиональный UI/UX-прототип цифровой платформы **PowerGo** — единой национальной экосистемы для зарядки электромобилей в Узбекистане.
 
 **Ключевая идея продукта:**
 «ОДНО ПРИЛОЖЕНИЕ. ЛЮБАЯ ЗАРЯДНАЯ СТАНЦИЯ.»
 
-Пользователь один раз регистрируется в Zaryad24, добавляет банковскую карту и автомобиль и получает доступ к зарядным станциям разных операторов через единый интерфейс. Zaryad24 выступает как национальная roaming/eMobility-платформа, объединяющая водителей, операторов зарядных станций, платежную инфраструктуру и государственно-административный уровень.
+Пользователь один раз регистрируется в PowerGo, добавляет банковскую карту и автомобиль и получает доступ к зарядным станциям разных операторов через единый интерфейс. PowerGo выступает как национальная roaming/eMobility-платформа, объединяющая водителей, операторов зарядных станций, платежную инфраструктуру и государственно-административный уровень.
 
 ## 1. ЕДИНАЯ DESIGN SYSTEM
 
@@ -170,14 +170,14 @@ GB/T DC, GB/T AC, CCS1, CCS2, CHAdeMO, Type 1, Type 2, NACS и другие.
 
 ## 4. ПЛАТЕЖИ
 
-Создай единый платежный центр Zaryad24.
+Создай единый платежный центр PowerGo.
 
 Поддержать:
 
 * банковские карты;
 * локальные платежные карты;
 * Apple Pay / Google Pay при доступности;
-* Zaryad24 WALLET как дополнительную функцию.
+* PowerGo WALLET как дополнительную функцию.
 
 Основной сценарий: карта автоматически списывает стоимость после завершения зарядки.
 
@@ -326,7 +326,7 @@ Dashboard показывает:
 Показывай:
 
 * gross revenue;
-* Zaryad24 commission;
+* PowerGo commission;
 * operator revenue;
 * pending settlement;
 * completed settlement;
@@ -334,9 +334,9 @@ Dashboard показывает:
 * payout history.
 
 Модель:
-**Пользователь → Zaryad24 → Оператор.**
+**Пользователь → PowerGo → Оператор.**
 
-Zaryad24 удерживает комиссию, после чего выполняется расчет с оператором.
+PowerGo удерживает комиссию, после чего выполняется расчет с оператором.
 
 ## 9. ИНТЕГРАЦИЯ ОПЕРАТОРОВ
 
@@ -372,7 +372,7 @@ Zaryad24 удерживает комиссию, после чего выполн
 
 ## 10. PARTNER API
 
-Создай документацию Zaryad24 PARTNER API.
+Создай документацию PowerGo PARTNER API.
 
 Разделы:
 
@@ -394,7 +394,7 @@ Zaryad24 удерживает комиссию, после чего выполн
 
 ## 11. ADMIN CONTROL CENTER
 
-Создай отдельную enterprise-панель администратора Zaryad24.
+Создай отдельную enterprise-панель администратора PowerGo.
 
 Sidebar:
 **Overview / Live Map / Operators / Stations / Users / Sessions / Payments / Settlement / Analytics / AI Insights / Fraud / CDR Validation / Integrations / Support / Commissions / Roles / Audit Log / Settings.**
@@ -518,7 +518,7 @@ AI должен формировать рекомендации:
 
 ## 13. БИЗНЕС-ФУНКЦИИ
 
-Создай Zaryad24 BUSINESS для корпоративных клиентов и автопарков.
+Создай PowerGo BUSINESS для корпоративных клиентов и автопарков.
 
 Функции:
 
@@ -552,17 +552,17 @@ booking, reviews, navigation, AI, Plug & Charge, corporate accounts, loyalty, su
 
 Визуально и логически отрази архитектуру:
 
-**DRIVER → Zaryad24 APP → Zaryad24 BACKEND → ROAMING / INTEGRATION LAYER → OCPI / API → OPERATORS → OCPP → CHARGING STATIONS**
+**DRIVER → PowerGo APP → PowerGo BACKEND → ROAMING / INTEGRATION LAYER → OCPI / API → OPERATORS → OCPP → CHARGING STATIONS**
 
 Параллельно:
 
-**Zaryad24 BACKEND → PAYMENT GATEWAY → BANKS**
+**PowerGo BACKEND → PAYMENT GATEWAY → BANKS**
 
 и
 
-**Zaryad24 BACKEND → CLEARING & SETTLEMENT → OPERATORS**
+**PowerGo BACKEND → CLEARING & SETTLEMENT → OPERATORS**
 
-Операторы сохраняют собственные приложения и системы. Zaryad24 является дополнительным единым каналом доступа к их инфраструктуре.
+Операторы сохраняют собственные приложения и системы. PowerGo является дополнительным единым каналом доступа к их инфраструктуре.
 
 ## 16. PROTOTYPE
 
@@ -583,4 +583,4 @@ Admin Login → Dashboard → Operator → Station → Session → Payment → A
 Организуй Figma-файл профессионально:
 **Design System / Mobile App / Operator Portal / Admin Control Center / Components / Prototype.**
 
-Главная цель: получить цельный, масштабируемый, современный UI/UX-дизайн реального национального EV-roaming продукта **Zaryad24**, готового для дальнейшей разработки.
+Главная цель: получить цельный, масштабируемый, современный UI/UX-дизайн реального национального EV-roaming продукта **PowerGo**, готового для дальнейшей разработки.

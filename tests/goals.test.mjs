@@ -66,7 +66,7 @@ before(async () => {
     }
     await sleep(100);
   }
-  const adm = await login('admin', 'admin@zaryad24.uz', 'Admin2026');
+  const adm = await login('admin', 'admin@powergo.uz', 'Admin2026');
   key = (await call('/admin/operators/op-004/integration', { method: 'PUT', token: adm, body: { type: 'Network API', webhookUrl: `http://127.0.0.1:${HOOK_PORT}/hook` } })).data.key;
   await net('/stations/G1', 'PUT', { name: 'Goal Test Station', city: 'Nukus', address: 'Test ko‘chasi, 1', lat: 42.46, lng: 59.6, connectors: [{ ref: 'A', type: 'CCS2', power: 60, price: 1800, status: 'available' }] });
 });

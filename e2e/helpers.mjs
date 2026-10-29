@@ -3,7 +3,7 @@ import { expect } from '@playwright/test';
 export const CREDS = {
   driver: { login: '+998901234567', password: 'Driver2026' },
   operator: { login: 'operator@greencharge.uz', password: 'Operator2026' },
-  admin: { login: 'admin@zaryad24.uz', password: 'Admin2026' },
+  admin: { login: 'admin@powergo.uz', password: 'Admin2026' },
   business: { login: 'fleet@uzauto.uz', password: 'Business2026' },
 };
 

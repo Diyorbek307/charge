@@ -31,7 +31,7 @@ test('the fleet portal fits a phone on every page', async ({ page }) => {
 test('the driver app fills a phone screen and every tab stays in view', async ({ page }) => {
   await signIn(page, 'driver');
   await skipOnboarding(page);
-  for (const tab of ['Поездки', 'Зарядка', 'История', 'Профиль', 'Карта']) {
+  for (const tab of ['Зарядка', 'Скидки', 'Профиль', 'Карта']) {
     await page.getByRole('button', { name: new RegExp(`^${tab}$`) }).click();
     const box = await page.getByRole('button', { name: new RegExp(`^${tab}$`) }).boundingBox();
     const width = page.viewportSize().width;

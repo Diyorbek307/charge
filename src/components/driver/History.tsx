@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clock, Zap, ChevronDown, Download, Moon, Building2, Wallet, ScanFace } from 'lucide-react';
+import { Clock, Zap, ChevronDown, Download, Moon, Building2, Wallet, ScanFace, ChevronLeft } from 'lucide-react';
 import type { Session } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 import { exportPdf, exportCsv } from '../../lib/export';
@@ -15,7 +15,7 @@ const sum = (n: number) => `${Math.round(n).toLocaleString('ru-RU')} сум`;
 const band = (m?: number) => (m === 0.7 ? 'ночь ×0.7' : m === 0.9 ? 'день ×0.9' : m === 1.25 ? 'пик ×1.25' : null);
 
 /** The driver's own charges, as the server recorded and billed them. */
-export default function HistoryScreen() {
+export default function HistoryScreen({ onBack }: { onBack?: () => void } = {}) {
   const { state, sessions: portals, actions, refresh } = useSync();
   const me = portals.driver;
   const [period, setPeriod] = useState<Period>('month');
@@ -67,8 +67,13 @@ export default function HistoryScreen() {
   return (
     <div className="h-full flex flex-col bg-slate-50">
       <div className="bg-white px-4 pt-4 pb-3 border-b border-slate-100">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-2">
+          {onBack && (
+            <button onClick={onBack} aria-label="Назад" className="p-2 -ml-2 rounded-xl hover:bg-slate-100 shrink-0">
+              <ChevronLeft size={20} className="text-slate-700" />
+            </button>
+          )}
+          <div className="flex-1 min-w-0">
             <h1 className="text-lg font-bold text-slate-900">История зарядок</h1>
             <p className="text-xs text-slate-500 mt-0.5">{`${done.length} ${plural(done.length, ['зарядка', 'зарядки', 'зарядок'])} · ${Math.round(energy)} кВт·ч · ${sum(cost)}`}</p>
           </div>

@@ -123,7 +123,7 @@ const inbound = {
   TriggerMessage(p) {
     setTimeout(async () => {
       if (p.requestedMessage === 'Heartbeat') await call('Heartbeat', {}).catch(() => {});
-      else if (p.requestedMessage === 'BootNotification') await call('BootNotification', { chargePointVendor: 'Zaryad24', chargePointModel: 'Simulator' }).catch(() => {});
+      else if (p.requestedMessage === 'BootNotification') await call('BootNotification', { chargePointVendor: 'PowerGo', chargePointModel: 'Simulator' }).catch(() => {});
       else for (let c = 1; c <= CONNECTORS; c++) await status(c, active.has(c) ? 'Charging' : 'Available');
     }, 100);
     return { status: 'Accepted' };
@@ -144,7 +144,7 @@ function connect() {
 
   ws.on('open', async () => {
     log(`connected to ${URL_BASE} as ${STATION}`);
-    const boot = await call('BootNotification', { chargePointVendor: 'Zaryad24', chargePointModel: 'Simulator' });
+    const boot = await call('BootNotification', { chargePointVendor: 'PowerGo', chargePointModel: 'Simulator' });
     log(`boot ${boot.status}, heartbeat every ${boot.interval}s`);
     for (let c = 1; c <= CONNECTORS; c++) await status(c, 'Available');
     heartbeat = setInterval(() => call('Heartbeat', {}).catch(() => {}), (boot.interval ?? 60) * 1000);

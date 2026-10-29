@@ -15,7 +15,7 @@ import { demoEnergy } from './history.js';
  */
 
 const EVERY_MS = Number(process.env.SESSION_WATCH_MS) || 5000;
-const SYSTEM = { portal: 'system', name: 'Zaryad24', id: 'system' };
+const SYSTEM = { portal: 'system', name: 'PowerGo', id: 'system' };
 const schedules = () => (db.data.scheduledStarts ??= []);
 // Tests shorten the minimum lead time; in the app a start is at least a minute ahead.
 const MIN_LEAD_MS = process.env.SCHEDULE_MIN_LEAD_MS === undefined ? 60_000 : Number(process.env.SCHEDULE_MIN_LEAD_MS);
@@ -69,7 +69,7 @@ async function watchGoals() {
       emit({
         type: 'session.goal',
         portal: 'system',
-        actor: 'Zaryad24',
+        actor: 'PowerGo',
         message: `Зарядка ${goalText(session.goal)} завершена · ${session.stationName}. Освободите место для следующего водителя`,
         entity: session.id,
         payload: { goal: session.goal },
@@ -80,7 +80,7 @@ async function watchGoals() {
       emit({
         type: 'session.progress',
         portal: 'system',
-        actor: 'Zaryad24',
+        actor: 'PowerGo',
         message: `Почти готово: осталось около ${minutesLeft(session, now)} мин до цели ${goalText(session.goal)} · ${session.stationName}`,
         entity: session.id,
         payload: { progress: Math.round(p * 100) },
@@ -108,7 +108,7 @@ async function runSchedules() {
     emit({
       type: r.status < 300 ? 'schedule.started' : 'schedule.failed',
       portal: 'system',
-      actor: 'Zaryad24',
+      actor: 'PowerGo',
       message: r.status < 300 ? `Отложенная зарядка началась · ${x.stationName}` : `Отложенная зарядка не началась · ${x.stationName}: ${x.result}`,
       entity: x.id,
       payload: { userId: x.userId, stationId: x.stationId },

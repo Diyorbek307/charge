@@ -8,7 +8,7 @@ import {
   AlertTriangle, Send, ThumbsUp, Flag, Trash2, StarIcon, Download, Phone,
   Gift, Trophy, Share2, Copy, TrendingUp, Award, Sparkles, Wallet, ArrowDownCircle,
   Smartphone, Monitor, Building2, Moon,
-  ScanFace,
+  ScanFace, Percent,
 } from 'lucide-react';
 import { Station } from '../data/mockData';
 import { useLiveStations } from '../lib/live';
@@ -29,6 +29,9 @@ import { FinanceScreen, LoyaltyScreen, FamilyScreen, HostScreen, SosSheet } from
 import { CreditScreen, FaceCheck } from './driver/Credit';
 import { NetworkTopUp, NetworkWalletList } from './driver/NetworkWallets';
 import Navigator from './driver/Navigator';
+import DealsScreen from './driver/Deals';
+import { NetworkBadge } from './driver/NetworkBadge';
+import { promoNow, promosOf, promoHours, discounted, useDriverPromos } from '../lib/promos';
 import SupportChat from './driver/SupportChat';
 import { useI18n } from '../lib/i18n';
 import type { Payer, ChargeGoal } from '../lib/api';
@@ -38,7 +41,7 @@ import type { Booking, Session, PaymentOrder } from '../lib/api';
 import AuthFlow from './AuthFlow';
 
 type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate';
-type Tab = 'map' | 'trips' | 'charging' | 'history' | 'profile';
+type Tab = 'map' | 'charging' | 'deals' | 'profile';
 
 const statusColor: Record<string, string> = {
   available: '#22C55E',
@@ -87,34 +90,78 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
     'ТЦ': <Home size={12} />,
   };
 
+  const opRef = { id: station.id, operatorId: (station as Station & { operatorId?: string }).operatorId };
+  const driverPromos = useDriverPromos();
+  const promo = promoNow(opRef, driverPromos);
+  const later = promo ? null : promosOf(opRef, driverPromos)[0] ?? null;
+  const pointStatus: Record<string, { text: string; color: string; bg: string }> = {
+    available: { text: 'Свободно', color: '#16A34A', bg: '#F0FDF4' },
+    occupied: { text: 'Заряжается', color: '#EA580C', bg: '#FFF7ED' },
+    reserved: { text: 'Забронировано', color: '#D97706', bg: '#FFFBEB' },
+    unavailable: { text: 'Не работает', color: '#64748B', bg: '#F8FAFC' },
+  };
+  const maxKw = Math.max(...station.connectors.map(c => c.power));
+
   return (
-    <div className="absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-3xl shadow-2xl max-h-[75%] overflow-y-auto">
-      {/* Handle */}
-      <div className="flex justify-center pt-3 pb-1">
-        <div className="w-10 h-1 bg-slate-200 rounded-full" />
+    <div className="absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-[28px] shadow-[0_-12px_40px_rgba(15,23,42,0.18)] max-h-[82%] overflow-y-auto" style={{ animation: 'enter-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) both' }}>
+      {/* Handle and the network it belongs to */}
+      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur pt-2.5 pb-2 px-4">
+        <div className="mx-auto w-10 h-1 bg-slate-200 rounded-full mb-2" />
+        <div className="flex items-center gap-2">
+          <button onClick={onClose} aria-label="Закрыть" className="w-9 h-9 -ml-1 rounded-xl grid place-items-center hover:bg-slate-100">
+            <X size={20} className="text-slate-700" />
+          </button>
+          <span className="flex-1 min-w-0 text-[15px] font-semibold text-slate-800 truncate">{station.operator}</span>
+          <button onClick={() => favorites.toggle(station.id)} aria-pressed={favorite} aria-label={favorite ? 'Убрать из избранного' : 'Добавить в избранное'} className="w-9 h-9 rounded-xl grid place-items-center hover:bg-slate-100">
+            <Heart size={19} className={favorite ? 'fill-red-500 text-red-500' : 'text-slate-600'} />
+          </button>
+        </div>
       </div>
       <div className="px-4 pb-6">
         {/* Header */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-0.5">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: statusColor[station.status] }} />
-              <span className="text-xs font-medium" style={{ color: statusColor[station.status] }}>{statusLabel[station.status]}</span>
-              {dist !== null && <span className="text-xs text-slate-400">{`· ${fmtKm(dist)} · ~${driveMinutes(dist)} мин`}</span>}
+        <div className="flex items-start gap-3 mb-3">
+          <NetworkBadge name={station.operator} size={52} promo={!!promo} />
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl font-extrabold text-slate-900 leading-tight tracking-tight">{station.name}</h2>
+            <p className="text-sm text-slate-500 mt-0.5 flex items-start gap-1"><MapPin size={13} className="mt-0.5 shrink-0" />{`${station.address}, ${station.city}`}</p>
+            <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-1.5 text-sm">
+              <span className="inline-flex items-center gap-1 font-semibold text-slate-800"><Star size={14} className="fill-[#FFC83D] text-[#FFC83D]" />{station.rating.toFixed(1)}</span>
+              {dist !== null && <span className="inline-flex items-center gap-1 text-slate-600"><Navigation size={13} />{fmtKm(dist)}</span>}
+              {dist !== null && <span className="inline-flex items-center gap-1 text-slate-600"><Clock size={13} />{`${driveMinutes(dist)} мин`}</span>}
+              <span className="inline-flex items-center gap-1 font-semibold" style={{ color: statusColor[station.status] }}>
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: statusColor[station.status] }} />
+                {`${free}/${station.connectors.length} свободно`}
+              </span>
             </div>
-            <h2 className="text-lg font-bold text-slate-900">{station.name}</h2>
-            <p className="text-sm text-slate-500">{station.operator}</p>
-            <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1"><MapPin size={10} />{station.address}, {station.city}</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl bg-slate-100">
-            <X size={16} className="text-slate-600" />
-          </button>
         </div>
+
+        {/* The network's own discount, now or later today */}
+        {(promo || later) && (
+          <div className="mb-3 rounded-2xl px-3.5 py-3 flex items-center gap-3" style={{ background: promo ? 'linear-gradient(135deg,#FFE08A,#FFC83D)' : '#FFFBEB' }}>
+            <span className="w-10 h-10 rounded-xl bg-[#111] text-[#FFC83D] grid place-items-center shrink-0"><Percent size={19} strokeWidth={2.6} /></span>
+            {promo ? (
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-extrabold text-[#111]">{`−${promo.percent}% · ${promo.title}`}</span>
+                <span className="block text-xs text-[#111]/70">{`${promo.firstOnly ? 'На первую зарядку в сети · ' : ''}${promoHours(promo)} · скидку даёт ${station.operator}`}</span>
+              </span>
+            ) : later && (
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-extrabold text-[#111]">{`−${later.percent}% · ${promoHours(later)}`}</span>
+                <span className="block text-xs text-[#111]/70">{`${later.title} — в эти часы цена ниже`}</span>
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Photo */}
         <div className="rounded-2xl overflow-hidden mb-3 h-32 bg-slate-100 relative">
           <img src={station.photoAt ? `/api/stations/${station.id}/photo?v=${encodeURIComponent(station.photoAt)}` : station.image} alt={station.name} className="w-full h-full object-cover" />
           {!openNow(station.hours) && <span className="absolute top-2 left-2 px-2 py-1 rounded-lg bg-red-600 text-white text-xs font-semibold">{`Закрыто · ${station.hours}`}</span>}
+          <span className="absolute bottom-2 left-2 flex gap-1.5">
+            <span className="px-2 py-1 rounded-lg bg-black/60 backdrop-blur text-white text-xs font-semibold">{station.hours}</span>
+            <span className="px-2 py-1 rounded-lg bg-black/60 backdrop-blur text-white text-xs font-semibold">{`до ${maxKw} кВт`}</span>
+          </span>
         </div>
 
         {/* How to find it on site */}
@@ -125,49 +172,30 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
           </div>
         )}
 
-        {/* Quick stats */}
-        <div className="grid grid-cols-4 gap-2 mb-4">
-          <div className="bg-slate-50 rounded-xl p-2 text-center">
-            <p className="text-xs text-slate-400">Мощность</p>
-            <p className="text-sm font-bold text-slate-800">{station.totalPower}<span className="text-xs font-normal"> кВт</span></p>
-          </div>
-          <div className="bg-slate-50 rounded-xl p-2 text-center">
-            <p className="text-xs text-slate-400">Свободно</p>
-            <p className="text-sm font-bold text-slate-800">{free}<span className="text-xs font-normal">/{station.connectors.length}</span></p>
-          </div>
-          <div className="bg-slate-50 rounded-xl p-2 text-center">
-            <p className="text-xs text-slate-400">Рейтинг</p>
-            <p className="text-sm font-bold text-slate-800">⭐ {station.rating.toFixed(1)}</p>
-          </div>
-          <div className="bg-slate-50 rounded-xl p-2 text-center">
-            <p className="text-xs text-slate-400">Часы</p>
-            <p className="text-xs font-bold text-slate-800">{station.hours}</p>
-          </div>
-        </div>
-
-        {/* Connectors */}
-        <p className="text-xs font-semibold text-slate-500 mb-2">РАЗЪЕМЫ</p>
+        {/* Charge points: each connector as a lettered point, like on the charger itself */}
+        <p className="text-xs font-semibold text-slate-500 mb-2 tracking-wide">ТОЧКИ ЗАРЯДКИ</p>
         <div className="space-y-2 mb-4">
-          {station.connectors.map(c => (
-            <div key={c.id} className="flex items-center justify-between py-2 px-3 rounded-xl border border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center">
-                  <Zap size={14} className="text-sky-500" />
+          {station.connectors.map((c, i) => {
+            const look = pointStatus[c.status] ?? pointStatus.unavailable;
+            return (
+              <div key={c.id} className="relative overflow-hidden flex items-center gap-3 py-3 pl-3 pr-11 rounded-2xl border" style={{ borderColor: c.status === 'occupied' ? '#FDBA74' : '#F1F5F9', background: c.status === 'unavailable' ? '#F8FAFC' : '#fff' }}>
+                <span className="relative z-[1] w-10 h-10 rounded-xl grid place-items-center shrink-0" style={{ background: look.bg, color: look.color }}>
+                  {c.status === 'occupied' ? <BatteryCharging size={19} /> : <Zap size={19} />}
+                </span>
+                <div className="relative z-[1] flex-1 min-w-0">
+                  <p className="text-[15px] font-bold text-slate-900 leading-tight">{c.type} <span className="text-sm font-semibold" style={{ color: look.color }}>{look.text}</span></p>
+                  <p className="text-xs text-slate-500 mt-0.5">{`${c.power} кВт`}</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-800">{c.type}</p>
-                  <p className="text-xs text-slate-400">{c.power} кВт</p>
+                <div className="relative z-[1] text-right">
+                  {promo && <p className="text-[11px] text-slate-400 line-through tabular-nums">{c.price.toLocaleString('ru-RU')}</p>}
+                  <p className={`text-sm font-extrabold tabular-nums ${promo ? 'px-2 py-0.5 rounded-lg bg-[#FFC83D] text-[#111]' : 'text-slate-900'}`}>
+                    {discounted(c.price, promo).toLocaleString('ru-RU')}<span className="text-[10px] font-semibold opacity-70"> сум/кВт·ч</span>
+                  </p>
                 </div>
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[34px] font-black text-slate-200 leading-none select-none pointer-events-none" aria-hidden="true">{String.fromCharCode(65 + i)}</span>
               </div>
-              <div className="text-right">
-                <p className="text-sm font-semibold text-slate-800 mono">{c.price.toLocaleString()} сум/кВт·ч</p>
-                <div className="flex items-center gap-1 justify-end mt-0.5">
-                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: statusColor[c.status] }} />
-                  <span className="text-xs" style={{ color: statusColor[c.status] }}>{statusLabel[c.status]}</span>
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <StationForecastBlock stationId={station.id} connectors={station.connectors} />
@@ -189,24 +217,25 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
           // A network with no integration: we show where and how much; its own app runs the charge.
           <div className="mb-2 rounded-xl bg-slate-50 border border-slate-100 px-3 py-3">
             <p className="text-sm font-semibold text-slate-800">{`Зарядка — в приложении ${station.operator}`}</p>
-            <p className="text-xs text-slate-500 mt-0.5">Эта сеть пока не подключена к запуску из Zaryad24. Здесь — расположение, разъёмы и цены.</p>
+            <p className="text-xs text-slate-500 mt-0.5">Эта сеть пока не подключена к запуску из PowerGo. Здесь — расположение, разъёмы и цены.</p>
           </div>
         ) : (
         <div className="grid grid-cols-2 gap-2 mb-2">
           {free === 0 && !myTurn ? (
             <button onClick={toggleQueue} disabled={queueBusy}
-              className={`${myIndex >= 0 ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-violet-500 hover:bg-violet-600 text-white'} rounded-xl py-3 font-semibold text-sm transition-colors flex flex-col items-center justify-center leading-tight disabled:opacity-60`}>
+              className={`${myIndex >= 0 ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-violet-600 hover:bg-violet-700 text-white'} rounded-2xl py-3 font-semibold text-sm transition-colors flex flex-col items-center justify-center leading-tight disabled:opacity-60`}>
               <span>{myIndex >= 0 ? `Вы №${myIndex + 1} · выйти` : 'Встать в очередь'}</span>
               <span className="text-[10px] font-normal opacity-80">{queue.length} в очереди</span>
             </button>
           ) : (
             <button onClick={onStartCharging}
-              className={`${myTurn ? 'bg-green-500 hover:bg-green-600 animate-pulse' : 'bg-sky-500 hover:bg-sky-600'} text-white rounded-xl py-3 font-semibold text-sm transition-colors flex items-center justify-center gap-2`}>
+              className={`${myTurn ? 'bg-green-500 hover:bg-green-600 animate-pulse text-white' : 'text-[#111]'} rounded-2xl py-3.5 font-bold text-[15px] transition-transform active:scale-[0.98] flex items-center justify-center gap-2`}
+              style={myTurn ? undefined : { background: 'linear-gradient(135deg,#FFD66B,#FFB000)', boxShadow: '0 6px 18px rgba(255,176,0,0.35)' }}>
               <Scan size={16} />{myTurn ? 'Ваша очередь — начать' : 'Начать зарядку'}
             </button>
           )}
           <button onClick={onBook}
-            className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl py-3 font-semibold text-sm transition-colors flex items-center justify-center gap-2">
+            className="bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl py-3 font-semibold text-sm transition-colors flex items-center justify-center gap-2">
             <CalendarCheck size={16} />Забронировать
           </button>
         </div>
@@ -216,18 +245,15 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
           <p role="alert" className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-2">{queueError}</p>
         )}
         {/* Navigation inside the app: route, voice, cameras. */}
-        <button onClick={onNavigate} className="w-full mb-2 bg-[#111] text-white rounded-xl py-3 font-semibold text-sm flex items-center justify-center gap-1.5">
-          <Navigation size={15} className="text-[#FFC83D]" />{dist !== null ? `Поехать · ${fmtKm(dist)}` : 'Поехать'}
+        <button onClick={onNavigate} className="w-full mb-2 bg-[#111] text-white rounded-2xl py-3.5 font-bold text-[15px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+          <Navigation size={17} className="text-[#FFC83D] fill-[#FFC83D]" />{dist !== null ? `Маршрут · ${fmtKm(dist)} · ${driveMinutes(dist)} мин` : 'Маршрут'}
         </button>
-        <div className="grid grid-cols-3 gap-2">
-          <button onClick={() => favorites.toggle(station.id)} aria-pressed={favorite} className={`rounded-xl py-2 font-medium text-sm transition-colors flex items-center justify-center gap-1.5 ${favorite ? 'bg-red-50 text-red-500' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
-            <Heart size={13} className={favorite ? 'fill-red-500' : ''} />{favorite ? 'В избранном' : 'Избранное'}
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={onReviews} className="bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl py-2.5 font-medium text-sm transition-colors flex items-center justify-center gap-1.5">
+            <Star size={14} />{`Отзывы · ${station.reviews}`}
           </button>
-          <button onClick={onReviews} className="bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl py-2 font-medium text-sm transition-colors flex items-center justify-center gap-1.5">
-            <Star size={13} />Отзывы
-          </button>
-          <button onClick={onReport} className="bg-red-50 hover:bg-red-100 text-red-500 rounded-xl py-2 font-medium text-sm transition-colors flex items-center justify-center gap-1.5">
-            <AlertTriangle size={13} />Проблема
+          <button onClick={onReport} className="bg-red-50 hover:bg-red-100 text-red-600 rounded-2xl py-2.5 font-medium text-sm transition-colors flex items-center justify-center gap-1.5">
+            <AlertTriangle size={14} />Проблема
           </button>
         </div>
       </div>
@@ -814,7 +840,7 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         {/* Balance card */}
         <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-5 text-white shadow-xl">
-          <p className="text-xs font-semibold tracking-widest text-slate-400 uppercase mb-1">БАЛАНС Zaryad24</p>
+          <p className="text-xs font-semibold tracking-widest text-slate-400 uppercase mb-1">БАЛАНС PowerGo</p>
           <p className="text-3xl font-bold tracking-tight mb-3">{balance.toLocaleString()} сум</p>
           <p className="text-xs text-slate-400 mb-4">Пополнение через Payme или Click · списывается за каждую зарядку по счётчику</p>
           <div className="flex gap-2">
@@ -1045,7 +1071,7 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
           </div>
           <div className="bg-sky-50 border border-sky-100 rounded-2xl p-4">
             <p className="text-xs font-semibold text-sky-700 mb-2 flex items-center gap-1.5">
-              <Zap size={12} />Совместимость с сетью Zaryad24
+              <Zap size={12} />Совместимость с сетью PowerGo
             </p>
             <div className="space-y-1.5">
               {portTypes.filter(p => p.type === port || p.type === 'Type2').map(pt => (
@@ -1056,7 +1082,7 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
               ))}
               <div className="flex items-center gap-2 text-xs">
                 <CheckCircle size={12} className="text-green-500" />
-                <span className="text-sky-700">108 станций в сети Zaryad24 · 276 EVSE</span>
+                <span className="text-sky-700">108 станций в сети PowerGo · 276 EVSE</span>
               </div>
             </div>
           </div>
@@ -1812,7 +1838,7 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
             {[
               { icon: '🔌', text: 'На кабеле или корпусе разъёма' },
               { icon: '📋', text: 'На информационной табличке станции' },
-              { icon: '📱', text: 'В приложении Zaryad24 (раздел бронирований)' },
+              { icon: '📱', text: 'В приложении PowerGo (раздел бронирований)' },
             ].map((t, i) => (
               <div key={i} className="flex items-start gap-2.5">
                 <span className="text-base leading-none shrink-0 mt-0.5">{t.icon}</span>
@@ -2002,7 +2028,7 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
               <div className="absolute inset-0 rounded-2xl" style={{ border: '2px solid rgba(255,255,255,0.3)', animation: 'pulse-halo 1.8s ease-out 1' }} />
             </div>
             <p className="font-bold text-emerald-700 text-base">QR распознан!</p>
-            <p className="text-slate-400 text-xs mt-0.5">Станция подтверждена системой Zaryad24</p>
+            <p className="text-slate-400 text-xs mt-0.5">Станция подтверждена системой PowerGo</p>
           </div>
 
           {/* Station card */}
@@ -2385,12 +2411,12 @@ function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
   );
 }
 
+// The QR scanner sits in the middle, raised: it is how most charges start.
 const tabs: { id: Tab; label: string; icon: ReactNode }[] = [
-  { id: 'map', label: 'Карта', icon: <MapPin size={20} /> },
-  { id: 'trips', label: 'Поездки', icon: <Route size={20} /> },
-  { id: 'charging', label: 'Зарядка', icon: <Zap size={20} /> },
-  { id: 'history', label: 'История', icon: <History size={20} /> },
-  { id: 'profile', label: 'Профиль', icon: <User size={20} /> },
+  { id: 'map', label: 'Карта', icon: <MapPin size={22} /> },
+  { id: 'charging', label: 'Зарядка', icon: <Zap size={22} /> },
+  { id: 'deals', label: 'Скидки', icon: <Percent size={22} /> },
+  { id: 'profile', label: 'Профиль', icon: <User size={22} /> },
 ];
 
 interface Toast { id: string; icon: string; title: string; body: string; color: string; }
@@ -2444,6 +2470,7 @@ export default function DriverApp() {
     setShowOnboarding(false);
   };
   const [activeTab, setActiveTab] = useState<Tab>('map');
+  const driverPromoCount = useDriverPromos().length;
   const [screen, setScreen] = useState<Screen>('map');
   // The wallet opens from the profile or from the balance on the map; Back returns there.
   const walletFrom = useRef<Screen>('profile');
@@ -2647,26 +2674,14 @@ export default function DriverApp() {
     if (screen === 'host') return <HostScreen onBack={() => setScreen('profile')} />;
     if (screen === 'support') return <SupportScreen onBack={() => setScreen('profile')} onReport={() => setScreen(selectedStation ? 'report' : 'map')} />;
 
-    if (activeTab === 'history') return <HistoryScreen />;
+    if (screen === 'history') return <HistoryScreen onBack={() => { setScreen('map'); setActiveTab('charging'); }} />;
+    if (activeTab === 'deals') return <DealsScreen onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} onRoute={st => { setActiveTab('map'); setSelectedStation(st); setScreen('navigate'); }} />;
     if (activeTab === 'profile') return <ProfileScreen onNavigate={s => { walletFrom.current = 'profile'; setScreen(s as Screen); }} />;
-    if (activeTab === 'trips') return <TripPlannerScreen onBack={() => setActiveTab('map')} onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} />;
     if (activeTab === 'charging') return <ChargingHubScreen onNavigate={(s) => { setScreen(s as Screen); setActiveTab('map'); }} onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} onOpenCharge={() => { setActiveTab('map'); setScreen('charging-active'); }} onRepeat={(st, cid, goal) => { setActiveTab('map'); setSelectedStation(st); void startCharging(cid, 'self', undefined, { goal }, st); }} />;
 
     return (
       <div className="relative w-full h-full">
-        <DriverMap onSelectStation={handleSelectStation} onOpenWallet={() => { walletFrom.current = 'map'; setScreen('wallet'); }} />
-        {/* QR scan FAB */}
-        {screen === 'map' && (
-          <button onClick={() => setScreen('qr-scan')}
-            className="absolute bottom-4 right-4 z-20 flex items-center gap-2 pl-3 pr-4 py-3 rounded-2xl font-semibold text-sm text-[#111] active:scale-95 transition-all"
-            style={{ background: 'linear-gradient(135deg,#FFC83D,#FFB000)', boxShadow: '0 6px 20px rgba(255, 200, 61,0.45)' }}>
-            <Scan size={17} />
-            QR
-          </button>
-        )}
-        {screen === 'map' && (
-          <button onClick={() => setSos(true)} aria-label="SOS — нужна помощь" className="absolute bottom-[136px] left-3 z-20 w-11 h-11 rounded-xl bg-red-600 text-white font-extrabold text-xs shadow-lg active:scale-95">SOS</button>
-        )}
+        <DriverMap onSelectStation={handleSelectStation} onOpenWallet={() => { walletFrom.current = 'map'; setScreen('wallet'); }} onSos={() => setSos(true)} hideChrome={screen !== 'map'} />
         {sos && <SosSheet onClose={() => setSos(false)} />}
         {screen === 'station' && selectedStation && (
           <StationDetailSheet station={selectedStation} onClose={handleBack} onStartCharging={() => setScreen('charging-start')} onBook={() => setScreen('booking')} onReviews={() => setScreen('reviews')} onReport={() => setScreen('report')} onNavigate={() => setScreen('navigate')} />
@@ -2675,7 +2690,7 @@ export default function DriverApp() {
     );
   };
 
-  const showTabs = !['charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host', 'credit', 'navigate'].includes(screen);
+  const showTabs = !['history', 'charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host', 'credit', 'navigate'].includes(screen);
 
   return (
     <div className="h-full flex flex-col bg-white overflow-hidden relative" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -2709,29 +2724,45 @@ export default function DriverApp() {
 
       {/* Tab bar */}
       {showTabs && (
-        <div className="bg-white border-t border-slate-100 px-1 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-around shrink-0">
-          {tabs.map(tab => {
+        <nav aria-label="Разделы" className="relative bg-white/95 backdrop-blur border-t border-slate-100 px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] grid grid-cols-5 items-end shrink-0 shadow-[0_-6px_24px_rgba(15,23,42,0.06)]">
+          {[tabs[0], tabs[1], null, tabs[2], tabs[3]].map(tab => {
+            if (!tab) {
+              return (
+                <div key="qr" className="flex justify-center">
+                  <button onClick={() => setScreen('qr-scan')} aria-label="Сканировать QR на станции"
+                    className="-mt-7 w-[62px] h-[62px] rounded-full grid place-items-center text-[#111] border-4 border-white active:scale-95 transition-transform"
+                    style={{ background: 'linear-gradient(135deg,#FFD66B,#FFB000)', boxShadow: '0 8px 22px rgba(255,176,0,0.5)' }}>
+                    <Scan size={26} strokeWidth={2.4} />
+                  </button>
+                </div>
+              );
+            }
             const isActive = activeTab === tab.id && !['station'].includes(screen);
             // The badge means a charge is running right now, nothing else.
             const isCharging = tab.id === 'charging' && !!liveSession;
+            const promoCount = tab.id === 'deals' ? driverPromoCount : 0;
             return (
               <button key={tab.id} aria-current={isActive ? 'page' : undefined} onClick={() => { setActiveTab(tab.id); setScreen('map'); setSelectedStation(null); }}
-                className={`relative flex-1 min-w-0 flex flex-col items-center gap-0.5 px-1 py-1 rounded-xl transition-colors ${isActive ? 'text-sky-500' : 'text-slate-400'}`}>
-                {isCharging && (
-                  <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 items-center justify-center">
-                      <span className="text-white" style={{ fontSize: 7, fontWeight: 700 }}>⚡</span>
+                className={`relative min-w-0 flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl transition-colors ${isActive ? 'text-[#111]' : 'text-slate-400 hover:text-slate-600'}`}>
+                <span className={`relative grid place-items-center w-11 h-8 rounded-2xl transition-colors ${isActive ? 'bg-[#FFC83D]' : ''}`}>
+                  {tab.icon}
+                  {isCharging && (
+                    <span aria-hidden="true" className="absolute -top-0.5 right-0.5 flex h-3.5 w-3.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 items-center justify-center">
+                        <span className="text-white" style={{ fontSize: 7, fontWeight: 700 }}>⚡</span>
+                      </span>
                     </span>
-                  </span>
-                )}
-                {tab.icon}
-                <span className="text-[11px] sm:text-xs max-w-full truncate">{tab.label}</span>
-                {isActive && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-sky-500 rounded-full" />}
+                  )}
+                  {promoCount > 0 && !isActive && (
+                    <span aria-hidden="true" className="absolute -top-1 right-0 min-w-4 h-4 px-1 rounded-full bg-[#FF3B30] text-white text-[9px] font-bold grid place-items-center">{promoCount}</span>
+                  )}
+                </span>
+                <span className={`text-[11px] sm:text-xs max-w-full truncate ${isActive ? 'font-semibold' : ''}`}>{tab.label}</span>
               </button>
             );
           })}
-        </div>
+        </nav>
       )}
     </div>
   );

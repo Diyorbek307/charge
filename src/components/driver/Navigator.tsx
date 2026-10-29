@@ -8,8 +8,9 @@ import type { Station } from '../../data/mockData';
 import { useI18n } from '../../lib/i18n';
 import { useSync } from '../../lib/sync';
 import {
-  type Camera, type LatLng, type Lang, type Route, type Step, fetchRoute, fetchCameras, project, pointAt, bearing, word, fmtDist, action, say, voiceLang, dist,
+  type Camera, type LatLng, type Lang, type Route, type Step, fetchRoute, fetchCameras, project, pointAt, bearing, word, fmtDist, action, say, voiceLang, dist, spokenDist, spokenTime,
 } from '../../lib/nav';
+import { MAP_TILES, MAP_ATTRIBUTION, MAP_TILE_CLASS } from '../../lib/mapTiles';
 
 const CITY_CENTER: LatLng = { lat: 41.3111, lng: 69.2797 };
 
@@ -192,24 +193,33 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [origin?.lat, origin?.lng]);
 
-  // Voice: the manoeuvre at ~500 m and right before it; each camera once at ~500 m; arrival.
+  // Voice, the way drivers here are used to from big navigators: a turn is
+  // announced at ~1 km on a long stretch, again at ~300 m, and "now" right
+  // before it, with the next turn chained on when it follows close behind.
+  // Each camera once at ~500 m with its limit; speeding is said at once.
   useEffect(() => {
     if (!route || muted) return;
     const vl = voiceLang(lang);
-    const speak = (key: string, text: string) => {
+    const speak = (key: string, text: string, urgent = false) => {
       if (spoken.current.has(key)) return;
       spoken.current.add(key);
-      say(vl, text);
+      say(vl, text, urgent);
     };
-    if (arrived) return speak('arrive', word(vl, 'arrive'));
+    if (arrived) return speak('arrive', word(vl, 'arriveSay', { name: station.name }), true);
+    if (!spoken.current.has('depart') && along < 50) speak('depart', word(vl, 'departSay', { d: spokenDist(vl, route.length), t: spokenTime(vl, route.duration / 60) }));
     if (next) {
       const a = action(vl, next);
       const full = `${a.base}${a.street ? ` ${word(vl, 'onto', { name: a.street })}` : ''}`;
-      if (toNext <= 500 && toNext > 150) speak(`${next.along}-far`, `${word(vl, 'in', { d: fmtDist(vl, toNext) })} ${full.charAt(0).toLowerCase()}${full.slice(1)}`);
-      if (toNext <= 90) speak(`${next.along}-near`, full);
+      const low = `${full.charAt(0).toLowerCase()}${full.slice(1)}`;
+      const after = route.steps.find(x => x.along > next.along + 8 && x.type !== 'arrive');
+      const chained = after && after.along - next.along < 150 ? `, ${word(vl, 'then')} ${action(vl, after).base.toLowerCase()}` : '';
+      if (toNext <= 1100 && toNext > 700) speak(`${next.along}-1k`, `${word(vl, 'in', { d: spokenDist(vl, toNext) })} ${low}`);
+      if (toNext <= 380 && toNext > 160) speak(`${next.along}-300`, `${word(vl, 'in', { d: spokenDist(vl, toNext) })} ${low}${chained}`);
+      if (toNext <= 90) speak(`${next.along}-now`, `${word(vl, 'now')} ${action(vl, next).base.toLowerCase()}${chained}`, true);
     }
-    if (cam && cam.at <= 500) speak(`cam-${cam.c.id}`, `${word(vl, 'camera', { d: fmtDist(vl, cam.at) })}${cam.c.maxspeed ? `, ${word(vl, 'limit', { v: cam.c.maxspeed })}` : ''}`);
-    if (over) speak(`over-${cam?.c.id}`, word(vl, 'over'));
+    if (cam && cam.at <= 550) speak(`cam-${cam.c.id}`, `${word(vl, 'camAhead')}, ${spokenDist(vl, cam.at)}${cam.c.maxspeed ? `. ${word(vl, 'limitSay', { v: cam.c.maxspeed })}` : ''}`);
+    if (over) speak(`over-${cam?.c.id}`, word(vl, 'overSay', { v: cam?.c.maxspeed ?? '' }), true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route, along, next, toNext, cam, over, arrived, muted, lang]);
 
   const reportCamera = async () => {
@@ -232,7 +242,7 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
     <div className="absolute inset-0 z-[9998] flex flex-col bg-[#111]" role="dialog" aria-modal="true" aria-label={`Навигация до ${station.name}`}>
       <div className="relative flex-1">
         <MapContainer center={[dest.lat, dest.lng]} zoom={15} zoomControl={false} attributionControl={false} className="absolute inset-0" style={{ background: '#e5e5e5' }}>
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <TileLayer url={MAP_TILES} attribution={MAP_ATTRIBUTION} className={MAP_TILE_CLASS} />
           {passed.length > 1 && <Polyline positions={passed.map(p => [p.lat, p.lng])} pathOptions={{ color: '#9CA3AF', weight: 7, opacity: 0.8 }} />}
           {ahead.length > 1 && <Polyline positions={ahead.map(p => [p.lat, p.lng])} pathOptions={{ color: '#2563EB', weight: 8, opacity: 0.9 }} />}
           {cameras.map(c => (

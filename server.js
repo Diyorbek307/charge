@@ -60,7 +60,7 @@ app.get("*", (req, res, next) => {
 await db.ready;
 
 const server = app.listen(PORT, () => {
-  console.log(`Zaryad24 running on port ${PORT}`);
+  console.log(`PowerGo running on port ${PORT}`);
   if (demoCpo) connectDemoPartner();
 });
 

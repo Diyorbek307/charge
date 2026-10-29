@@ -2,7 +2,7 @@
  * Cookieless analytics — Plausible or Umami, whichever is configured at build
  * time. With neither set this module does nothing: no script, no requests.
  *
- *   VITE_PLAUSIBLE_DOMAIN=zaryad24.uz          (+ VITE_PLAUSIBLE_SRC for self-hosted)
+ *   VITE_PLAUSIBLE_DOMAIN=powergo.uz          (+ VITE_PLAUSIBLE_SRC for self-hosted)
  *   VITE_UMAMI_WEBSITE_ID=<uuid>               (+ VITE_UMAMI_SRC for self-hosted)
  *
  * Neither tool sets cookies or stores personal data, so no consent banner is

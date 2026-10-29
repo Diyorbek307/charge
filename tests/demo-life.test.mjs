@@ -24,7 +24,7 @@ async function call(path, { method = 'GET', token, body } = {}) {
   const text = await res.text();
   return { status: res.status, data: text ? JSON.parse(text) : null };
 }
-const admin = async () => (await call('/auth/login', { method: 'POST', body: { portal: 'admin', login: 'admin@zaryad24.uz', password: 'Admin2026' } })).data.token;
+const admin = async () => (await call('/auth/login', { method: 'POST', body: { portal: 'admin', login: 'admin@powergo.uz', password: 'Admin2026' } })).data.token;
 
 async function start() {
   server = spawn(process.execPath, ['server.js'], {

@@ -25,7 +25,7 @@ async function call(path, { method = 'GET', token, body } = {}) {
 }
 
 const CREDS = {
-  admin: ['admin@zaryad24.uz', 'Admin2026'],
+  admin: ['admin@powergo.uz', 'Admin2026'],
   operator: ['operator@greencharge.uz', 'Operator2026'],
   business: ['fleet@uzauto.uz', 'Business2026'],
   driver: ['+998901234567', 'Driver2026'],

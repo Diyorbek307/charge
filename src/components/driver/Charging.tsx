@@ -37,7 +37,7 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
     try {
       const { token } = await actions.shareSession(session.id);
       const url = `${window.location.origin}/?share=${token}`;
-      if (navigator.share) await navigator.share({ title: 'Zaryad24', text: `Машина заряжается · ${session.stationName}`, url });
+      if (navigator.share) await navigator.share({ title: 'PowerGo', text: `Машина заряжается · ${session.stationName}`, url });
       else {
         await navigator.clipboard.writeText(url);
         setShared('Ссылка скопирована — отправьте её близким');

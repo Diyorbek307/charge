@@ -5,10 +5,10 @@
  * Intellectual Property Agency (ima.uz).
  */
 export const BRAND = {
-  name: 'Zaryad24',
+  name: 'PowerGo',
   /** Two-part wordmark: the second part is drawn in the accent colour. */
-  wordmark: ['Zaryad', '24'] as const,
+  wordmark: ['Power', 'Go'] as const,
   tagline: 'Одна карта. Все станции.',
-  domain: 'zaryad24.uz',
-  email: 'hello@zaryad24.uz',
+  domain: 'powergo.uz',
+  email: 'hello@powergo.uz',
 };

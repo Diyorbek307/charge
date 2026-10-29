@@ -47,7 +47,7 @@ function Sidebar({ current, onChange, onBack, isOpen, onClose }: { current: Page
         <div className="flex items-center gap-2.5 mb-4">
           <LogoMark size={32} />
           <div>
-            <p className="text-white font-bold text-sm leading-tight">Zaryad<span style={{ color: '#FFC83D' }}>24</span></p>
+            <p className="text-white font-bold text-sm leading-tight">Power<span style={{ color: '#FFC83D' }}>Go</span></p>
             <p className="text-[11px] leading-none mt-0.5" style={{ color: 'rgba(148,163,184,0.6)' }}>Business Portal</p>
           </div>
         </div>

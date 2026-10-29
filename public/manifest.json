@@ -1,6 +1,6 @@
 {
-  "name": "Zaryad24 — зарядка электромобилей",
-  "short_name": "Zaryad24",
+  "name": "PowerGo — зарядка электромобилей",
+  "short_name": "PowerGo",
   "description": "Вся зарядка Узбекистана в одном приложении",
   "start_url": "/",
   "display": "standalone",

@@ -208,6 +208,8 @@ export interface Session {
   /** Tariff band at start: 0.7 at night, 0.9 by day, 1.25 at the evening peak. */
   multiplier?: number;
   basePrice?: number;
+  /** The network's promo this charge ran under. */
+  promo?: { id: string; title: string; percent: number };
   /** The driver's 1–5 rating, once given. */
   rating?: number;
 }
@@ -317,7 +319,26 @@ export interface Stats {
   availability: number;
 }
 
+/** A discount a partner network runs at its stations and pays for itself. */
+export interface Promo {
+  id: string;
+  operatorId: string;
+  title: string;
+  percent: number;
+  /** Tashkent hours it runs, e.g. 23 → 7; null for all day. */
+  fromHour: number | null;
+  toHour: number | null;
+  firstOnly: boolean;
+  /** null: every station of the network. */
+  stationIds: string[] | null;
+  until: string | null;
+  active?: boolean;
+  uses?: number;
+  discount?: number;
+}
+
 export interface PlatformState {
+  promos?: Promo[];
   stations: Station[];
   operators: OperatorRecord[];
   sessions: Session[];
@@ -686,6 +707,10 @@ export const apiClient = {
     request<{ id: string }>(`/stations/${id}/info`, { method: 'PATCH', body: JSON.stringify(body), portal: 'operator' }),
   shareSession: (id: string) => post<{ token: string }>(`/sessions/${id}/share`, undefined, 'driver'),
   scheduleCharge: (body: { stationId: string; connectorId: string; payer: Payer; goal?: ChargeGoal; at: string }) => post<ScheduledStart>('/sessions/schedule', body, 'driver'),
+  networkPromos: () => request<Promo[]>('/operator/promos', { portal: 'operator' }),
+  createPromo: (body: { percent: number; title?: string; fromHour?: number | null; toHour?: number | null; firstOnly?: boolean; stationIds?: string[]; until?: string | null }) =>
+    post<Promo>('/operator/promos', body, 'operator'),
+  stopPromo: (id: string) => request<Promo>(`/operator/promos/${id}`, { method: 'DELETE', portal: 'operator' }),
   cancelSchedule: (id: string) => request<ScheduledStart>(`/sessions/schedule/${id}`, { method: 'DELETE', portal: 'driver' }),
   rateSession: (portal: Portal, id: string, stars: number) =>
     post<{ station: Station; session: Session }>(`/sessions/${id}/rating`, { stars }, portal),

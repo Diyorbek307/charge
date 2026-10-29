@@ -121,18 +121,24 @@ const WORDS: Record<Lang, Record<string, string>> = {
     'sharp right': 'Резко направо', 'sharp left': 'Резко налево', uturn: 'Развернитесь', straight: 'Прямо',
     roundabout: 'На круговом движении — съезд {n}', arrive: 'Вы приехали', depart: 'Поехали', in: 'Через {d}', onto: 'на {name}',
     camera: 'Камера через {d}', limit: 'ограничение {v}', over: 'Снизьте скорость', reroute: 'Перестраиваем маршрут', m: 'м', km: 'км',
+    now: 'Сейчас', then: 'затем', camAhead: 'Впереди камера', limitSay: 'Ограничение скорости {v}', overSay: 'Вы превышаете скорость. Ограничение {v}',
+    arriveSay: 'Вы приехали. Зарядная станция {name}', departSay: 'Маршрут построен. Ехать {d}, примерно {t}',
   },
   uz: {
     right: 'O‘ngga buriling', left: 'Chapga buriling', 'slight right': 'O‘ngroqdan yuring', 'slight left': 'Chaproqdan yuring',
     'sharp right': 'Keskin o‘ngga', 'sharp left': 'Keskin chapga', uturn: 'Orqaga buriling', straight: 'To‘g‘riga',
     roundabout: 'Aylanma yo‘lda — {n}-chiqish', arrive: 'Yetib keldingiz', depart: 'Yo‘lga chiqdik', in: '{d} dan keyin', onto: '{name} ga',
     camera: '{d} dan keyin kamera', limit: 'cheklov {v}', over: 'Tezlikni pasaytiring', reroute: 'Yo‘nalish qayta tuzilmoqda', m: 'm', km: 'km',
+    now: 'Hozir', then: 'keyin', camAhead: 'Oldinda kamera', limitSay: 'Tezlik cheklovi {v}', overSay: 'Tezlikni oshiryapsiz. Cheklov {v}',
+    arriveSay: 'Yetib keldingiz. Quvvatlash stansiyasi {name}', departSay: 'Yo‘nalish tayyor. {d}, taxminan {t}',
   },
   en: {
     right: 'Turn right', left: 'Turn left', 'slight right': 'Keep right', 'slight left': 'Keep left',
     'sharp right': 'Sharp right', 'sharp left': 'Sharp left', uturn: 'Make a U-turn', straight: 'Go straight',
     roundabout: 'At the roundabout take exit {n}', arrive: 'You have arrived', depart: 'Let’s go', in: 'In {d}', onto: 'onto {name}',
     camera: 'Camera in {d}', limit: 'limit {v}', over: 'Slow down', reroute: 'Rerouting', m: 'm', km: 'km',
+    now: 'Now', then: 'then', camAhead: 'Speed camera ahead', limitSay: 'Speed limit {v}', overSay: 'You are speeding. Limit {v}',
+    arriveSay: 'You have arrived at {name}', departSay: 'Route ready. {d}, about {t}',
   },
 };
 export const word = (lang: Lang, k: string, vars: Record<string, string | number> = {}) =>
@@ -141,6 +147,44 @@ export const word = (lang: Lang, k: string, vars: Record<string, string | number
 export function fmtDist(lang: Lang, m: number) {
   if (m >= 1000) return `${(m / 1000).toFixed(m >= 10_000 ? 0 : 1).replace('.', lang === 'en' ? '.' : ',')} ${word(lang, 'km')}`;
   return `${Math.max(10, Math.round(m / 10) * 10)} ${word(lang, 'm')}`;
+}
+
+const ruPlural = (n: number, forms: [string, string, string]) => {
+  const t = Math.abs(n) % 100;
+  const o = t % 10;
+  return forms[t > 10 && t < 20 ? 2 : o === 1 ? 0 : o >= 2 && o <= 4 ? 1 : 2];
+};
+
+/**
+ * A distance as a navigator says it aloud: rounded the way people round
+ * ("через 300 метров", "через полтора километра"), units in full words so the
+ * voice does not read "м" as a letter.
+ */
+export function spokenDist(lang: Lang, m: number) {
+  if (m >= 950) {
+    const km = m >= 10_000 ? Math.round(m / 1000) : Math.round(m / 500) / 2;
+    if (lang === 'ru') {
+      if (km === 1.5) return 'полтора километра';
+      if (!Number.isInteger(km)) return `${String(km).replace('.', ',')} километра`;
+      return `${km} ${ruPlural(km, ['километр', 'километра', 'километров'])}`;
+    }
+    if (lang === 'uz') return `${String(km).replace('.', ',')} kilometr`;
+    return `${km} ${km === 1 ? 'kilometer' : 'kilometers'}`;
+  }
+  const step = m >= 300 ? 100 : 50;
+  const r = Math.max(50, Math.round(m / step) * step);
+  if (lang === 'ru') return `${r} ${ruPlural(r, ['метр', 'метра', 'метров'])}`;
+  if (lang === 'uz') return `${r} metr`;
+  return `${r} meters`;
+}
+
+/** Drive time aloud: "12 минут", "1 час 5 минут". */
+export function spokenTime(lang: Lang, min: number) {
+  const h = Math.floor(min / 60);
+  const mm = Math.max(1, Math.round(min % 60));
+  if (lang === 'ru') return `${h ? `${h} ${ruPlural(h, ['час', 'часа', 'часов'])} ` : ''}${mm} ${ruPlural(mm, ['минута', 'минуты', 'минут'])}`;
+  if (lang === 'uz') return `${h ? `${h} soat ` : ''}${mm} daqiqa`;
+  return `${h ? `${h} h ` : ''}${mm} min`;
 }
 
 /** The manoeuvre as words, without the distance: "Поверните направо на ул. Навои". */
@@ -163,13 +207,30 @@ export function voiceLang(lang: Lang): Lang {
   return lang;
 }
 
-/** Speaks text already written in the given language; quiet if the device has no voice. */
-export function say(lang: Lang, text: string) {
+/**
+ * The most natural voice the device has for the language: the neural ones
+ * ("Natural", "Online", Google's) sound like a person, the old ones like a robot.
+ */
+function bestVoice(code: string) {
+  const all = speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith(code));
+  const score = (v: SpeechSynthesisVoice) => (/natural|neural|online/i.test(v.name) ? 3 : 0) + (/google/i.test(v.name) ? 2 : 0) + (v.localService ? 0 : 1);
+  return all.sort((a, b) => score(b) - score(a))[0] ?? null;
+}
+
+/**
+ * Speaks text already written in the given language; quiet if the device has
+ * no voice. An urgent phrase (the turn right now, speeding) cuts off whatever
+ * is being said; others wait their turn so nothing gets lost.
+ */
+export function say(lang: Lang, text: string, urgent = false) {
   try {
     if (!('speechSynthesis' in window)) return;
     const u = new SpeechSynthesisUtterance(text);
     u.lang = lang === 'uz' ? 'uz-UZ' : lang === 'en' ? 'en-US' : 'ru-RU';
-    speechSynthesis.cancel();
+    const v = bestVoice(lang);
+    if (v) u.voice = v;
+    u.rate = 1.05;
+    if (urgent) speechSynthesis.cancel();
     speechSynthesis.speak(u);
   } catch {
     /* no voice */

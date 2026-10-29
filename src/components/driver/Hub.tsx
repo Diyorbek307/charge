@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MapPin, Scan, Route, Zap, Moon, Sun, Clock, Calendar, Users, Car, ChevronRight, Navigation, Wallet, RotateCcw, X } from 'lucide-react';
+import { MapPin, Scan, Route, Zap, Moon, Sun, Clock, Calendar, Users, Car, ChevronRight, Navigation, Wallet, RotateCcw, X, History, Heart } from 'lucide-react';
 import type { Station } from '../../data/mockData';
 import type { TariffForecast, ChargeGoal } from '../../lib/api';
 import { useSync } from '../../lib/sync';
@@ -206,9 +206,9 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
 
         <div className="grid grid-cols-3 gap-2">
           {[
-            { icon: <MapPin size={17} />, label: 'Карта', go: 'map' },
-            { icon: <Scan size={17} />, label: 'QR-код', go: 'qr-scan' },
-            { icon: <Route size={17} />, label: 'Маршрут', go: 'trip' },
+            { icon: <History size={17} />, label: 'История', go: 'history' },
+            { icon: <Route size={17} />, label: 'Поездка', go: 'trip' },
+            { icon: <Heart size={17} />, label: 'Избранное', go: 'favorites' },
           ].map(b => (
             <button key={b.label} onClick={() => onNavigate(b.go)} className="bg-white rounded-2xl border border-slate-100 py-3 flex flex-col items-center gap-1 text-slate-700 hover:border-sky-300">
               <span className="text-sky-600">{b.icon}</span>
