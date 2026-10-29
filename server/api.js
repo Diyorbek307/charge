@@ -27,6 +27,7 @@ import {
 import { promoFor, publicPromos, createPromo, stopPromo, promosOf } from './promos.js';
 import { syncRewards, rewardsFor, bonusFor, spendBonus } from './rewards.js';
 import { batteryHealthFor } from './battery.js';
+import { PLUS, plusActive, plusFor, subscribePlus, cancelPlus } from './plus.js';
 
 export const api = express.Router();
 // Photos (a face for credit, a station, a support message) are larger than an ordinary request.
@@ -104,6 +105,7 @@ function scopeOf({ type, entity, payload = {} }) {
     case 'schedule.started':
     case 'schedule.failed':
     case 'reward.granted':
+    case 'plus.start':
       return { userId: payload.userId };
     case 'evse.status':
       return { operatorId: stationOperator(payload.stationId), public: true };
@@ -345,6 +347,7 @@ function stateFor(viewer) {
     family: familyFor(viewer.id),
     credit: creditFor(viewer.id),
     rewards: (syncRewards(viewer), rewardsFor(viewer)),
+    plus: plusFor(viewer.id),
     networkWallets: networkWalletsFor(viewer.id),
     scheduled: (d.scheduledStarts ?? []).filter(x => x.userId === viewer.id && x.status === 'pending'),
     wallets: d.wallets[viewer.id] ? { [viewer.id]: d.wallets[viewer.id] } : {},
@@ -986,6 +989,19 @@ api.post('/community/:id/confirm', requireAuth('driver'), (req, res) => {
 });
 
 api.get('/loyalty', requireAuth('driver'), (req, res) => res.json(loyaltyFor(req.account.id)));
+api.get('/plus', requireAuth('driver'), (req, res) => res.json(plusFor(req.account.id)));
+api.post('/plus', requireAuth('driver'), (req, res) => {
+  const r = subscribePlus(req.account);
+  if (r.error) return res.status(r.status).json({ error: r.error });
+  emit({ type: 'plus.start', portal: 'driver', actor: req.account.name, message: 'PowerGo Plus подключён', entity: req.account.id, payload: { userId: req.account.id } });
+  res.json(r.plus);
+});
+api.delete('/plus', requireAuth('driver'), (req, res) => {
+  const r = cancelPlus(req.account);
+  if (r.error) return res.status(r.status).json({ error: r.error });
+  res.json(r.plus);
+});
+
 api.get('/battery', requireAuth('driver'), (req, res) => res.json(batteryHealthFor(db.byId('accounts', req.account.id) ?? req.account)));
 
 api.get('/rewards', requireAuth('driver'), (req, res) => {
@@ -1392,7 +1408,10 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     // Price is locked at start with the tariff band in effect right now.
     basePrice: connector.price,
     multiplier: band.multiplier,
-    price: Math.round(connector.price * band.multiplier * (1 - (promo?.percent ?? 0) / 100)),
+    // The network's own promo first; PowerGo Plus takes its share off what is left, and PowerGo pays it.
+    networkPrice: Math.round(connector.price * band.multiplier * (1 - (promo?.percent ?? 0) / 100)),
+    price: Math.round(connector.price * band.multiplier * (1 - (promo?.percent ?? 0) / 100) * (plusActive(account.id) && !station.ocpi ? 1 - PLUS.discount / 100 : 1)),
+    ...(plusActive(account.id) && !station.ocpi ? { plus: true } : {}),
     ...(promo ? { promo: { id: promo.id, title: promo.title, percent: promo.percent } } : {}),
     // Platform commission is locked at start too, so a rate change is not retroactive.
     commissionRate: db.byId('operators', station.operatorId)?.commission ?? 3,
@@ -1529,6 +1548,9 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
       : round(Math.max(0, energyKwh), 1);
   // A partner network's charge record states the price; otherwise our locked price applies.
   const cost = billed ?? Math.round(energy * (session.price ?? 1800));
+  // What Plus took off this charge: PowerGo owes it to the network.
+  const plusCovered = session.plus && billed === null && session.networkPrice ? Math.max(0, Math.round(energy * session.networkPrice) - cost) : 0;
+  if (plusCovered) session.plusCovered = plusCovered;
 
   session.status = 'completed';
   session.end = new Date().toISOString();
@@ -1580,7 +1602,7 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
 
   const operator = db.byId('operators', session.operatorId);
   if (operator) {
-    operator.revenue += cost;
+    operator.revenue += cost + plusCovered;
     operator.sessions += 1;
   }
 
@@ -1632,7 +1654,8 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
   }
 
   // A point per kWh for the driver; the demo's simulated traffic earns nothing.
-  if (!simulated && energy > 0) addPoints(session.userId, Math.round(energy), `Зарядка · ${session.stationName}`);
+  // Plus earns double.
+  if (!simulated && energy > 0) addPoints(session.userId, Math.round(energy) * (session.plus ? 2 : 1), `Зарядка · ${session.stationName}${session.plus ? ' · ×2 с Plus' : ''}`);
   // A private host gets their share straight into their wallet.
   const host = db.byId('stations', session.stationId)?.private;
   if (host && cost > 0 && db.data.wallets[host.ownerId]) {
@@ -1886,8 +1909,13 @@ api.post('/stations/:id/queue', requireAuth('driver', 'business'), (req, res) =>
     notifiedAt: null,
     connectorId: null,
   };
-  db.data.queues.push(entry);
-  const position = db.data.queues.filter(q => q.stationId === station.id).length;
+  // Plus stands behind other Plus members, ahead of everyone else.
+  const plus = plusActive(account.id);
+  if (plus) entry.plus = true;
+  const behind = plus ? db.data.queues.findIndex(q => q.stationId === station.id && !q.plus) : -1;
+  if (behind >= 0) db.data.queues.splice(behind, 0, entry);
+  else db.data.queues.push(entry);
+  const position = db.data.queues.filter(q => q.stationId === station.id).findIndex(q => q.id === entry.id) + 1;
   db.save();
 
   emit({
@@ -2167,10 +2195,12 @@ api.post('/stations/:id/bookings', requireAuth('driver', 'business'), (req, res)
 
   const walletId = account.portal === 'business' ? 'biz-001' : account.id;
   const wallet = db.data.wallets[walletId];
-  if (!wallet || wallet.balance < BOOKING_FEE) {
-    return res.status(402).json({ error: `Недостаточно средств для брони: ${BOOKING_FEE.toLocaleString('ru-RU')} сум` });
+  // Booking is free with Plus.
+  const fee = account.portal === 'driver' && plusActive(account.id) ? 0 : BOOKING_FEE;
+  if (!wallet || wallet.balance < fee) {
+    return res.status(402).json({ error: `Недостаточно средств для брони: ${fee.toLocaleString('ru-RU')} сум` });
   }
-  wallet.balance -= BOOKING_FEE;
+  wallet.balance -= fee;
 
   const booking = {
     id: db.nextId('booking', 'BK-'),
@@ -2188,7 +2218,7 @@ api.post('/stations/:id/bookings', requireAuth('driver', 'business'), (req, res)
     endsAt: new Date(endMs).toISOString(),
     graceUntil: new Date(graceMs).toISOString(),
     minutes,
-    fee: BOOKING_FEE,
+    fee,
     status: 'active',
     created: new Date(now).toISOString(),
   };

@@ -29,6 +29,7 @@ import DealsScreen from './driver/Deals';
 import QRScanScreen from './driver/QRScan';
 import RewardsScreen, { RewardBurst } from './driver/Rewards';
 import BatteryScreen from './driver/Battery';
+import PlusScreen from './driver/Plus';
 import WhileCharging from './driver/WhileCharging';
 import { useOfflinePacks, deletePack, packsBytes, savedStations } from '../lib/offline';
 import { NetworkBadge } from './driver/NetworkBadge';
@@ -42,7 +43,7 @@ import { inTelegram, telegramInitData } from '../lib/telegram';
 import type { Booking, Session, PaymentOrder, ArrivalChance } from '../lib/api';
 import AuthFlow from './AuthFlow';
 
-type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate' | 'rewards' | 'battery';
+type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate' | 'rewards' | 'battery' | 'plus';
 type Tab = 'map' | 'charging' | 'deals' | 'profile';
 /** Minutes as "25 мин" or "5 ч 10 мин". */
 const hm = (m: number) => (m < 60 ? `${m} мин` : `${Math.floor(m / 60)} ч${m % 60 ? ` ${m % 60} мин` : ''}`);
@@ -436,7 +437,10 @@ function ChargingStartScreen({ station, preferConnector, onBack, onConfirm, onOp
     return d.toISOString();
   };
   // What the network charges right now, its discount included.
-  const price = discounted(selectedConnector?.price ?? 1800, promo);
+  // PowerGo Plus takes its share off what the network charges (not on OCPI partners, who bill themselves).
+  const plusOn = !!state?.plus?.active && !(station as Station & { ocpi?: unknown } | null)?.ocpi;
+  const plusK = plusOn ? 1 - (state?.plus?.discount ?? 5) / 100 : 1;
+  const price = Math.round(discounted(selectedConnector?.price ?? 1800, promo) * plusK);
   const kwNeeded = !selectedConnector ? 0
     : goalKind === 'percent' ? Math.max(0, ((targetPct - currentBattery) / 100) * pack)
     : goalKind === 'km' ? goalKm * 0.18
@@ -545,8 +549,9 @@ function ChargingStartScreen({ station, preferConnector, onBack, onConfirm, onOp
                     <p className="text-xs text-slate-400">{c.id} · {c.power} кВт</p>
                   </div>
                   <span className="text-right">
-                    {promo && <span className="block text-[11px] text-slate-400 line-through tabular-nums">{c.price.toLocaleString('ru-RU')}</span>}
-                    <span className="block text-sm font-bold mono text-slate-700">{`${discounted(c.price, promo).toLocaleString('ru-RU')} сум/кВт·ч`}</span>
+                    {(promo || plusOn) && <span className="block text-[11px] text-slate-400 line-through tabular-nums">{c.price.toLocaleString('ru-RU')}</span>}
+                    <span className="block text-sm font-bold mono text-slate-700">{`${Math.round(discounted(c.price, promo) * plusK).toLocaleString('ru-RU')} сум/кВт·ч`}</span>
+                    {plusOn && <span className="block text-[10px] font-bold text-[#A87100]">{`Plus −${state?.plus?.discount ?? 5}%`}</span>}
                   </span>
                 </button>
               ))}
@@ -1719,6 +1724,7 @@ function BookingScreen({ station, onBack, onConfirm }: { station: Station | null
   const [connector, setConnector] = useState(0);
 
   const freeConnectors = station?.connectors.filter(c => c.status === 'available') || [];
+  const plusFree = !!useSync().state?.plus?.active;
   const startsAt = new Date(`${date}T${time}`);
   // A slot that has already begun cannot be held.
   const inPast = !(startsAt.getTime() > Date.now());
@@ -1831,7 +1837,7 @@ function BookingScreen({ station, onBack, onConfirm }: { station: Station | null
               ['Разъем', freeConnectors[connector] ? `${freeConnectors[connector].type} · ${freeConnectors[connector].power} кВт` : '—'],
               ['Дата', startsAt.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })],
               ['Время', time + ' – ' + (() => { const [h, m] = time.split(':').map(Number); const end = h * 60 + m + duration; return `${String(Math.floor(end / 60) % 24).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`; })()],
-              ['Стоимость брони', '2 000 сум'],
+              ['Стоимость брони', plusFree ? 'Бесплатно с Plus' : '2 000 сум'],
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between">
                 <span className="text-sky-700/70">{k}</span>
@@ -1853,7 +1859,7 @@ function BookingScreen({ station, onBack, onConfirm }: { station: Station | null
         <button onClick={submit} disabled={submitting || !freeConnectors[connector] || inPast}
           className="w-full disabled:opacity-50 text-[#111] rounded-2xl py-4 font-bold text-base transition-colors flex items-center justify-center gap-2 shadow-[0_8px_22px_rgba(255,176,0,0.3)] disabled:shadow-none"
           style={{ background: 'linear-gradient(135deg,#FFD66B,#FFB000)' }}>
-          <CalendarCheck size={18} />{submitting ? 'Бронируем…' : 'Подтвердить бронь · 2 000 сум'}
+          <CalendarCheck size={18} />{submitting ? 'Бронируем…' : plusFree ? 'Подтвердить бронь · бесплатно с Plus' : 'Подтвердить бронь · 2 000 сум'}
         </button>
       </div>
     </div>
@@ -2513,6 +2519,7 @@ export default function DriverApp() {
     if (screen === 'booking') return <BookingScreen station={selectedStation} onBack={backToStation} onConfirm={b => { setLastBooking(b); setScreen('booking-done'); }} />;
     if (screen === 'booking-done') return <BookingDoneScreen station={selectedStation} booking={lastBooking} onClose={handleBack} />;
     if (screen === 'add-car') return <AddCarScreen onBack={() => setScreen(carFrom.current)} onSave={saveCar} />;
+    if (screen === 'plus') return <PlusScreen onBack={() => setScreen('profile')} onTopUp={() => { walletFrom.current = 'plus'; setScreen('wallet'); }} />;
     if (screen === 'battery') return <BatteryScreen onBack={() => setScreen(batteryFrom.current)} onAddCar={() => { carFrom.current = 'battery'; setScreen('add-car'); }} />;
     if (screen === 'rewards') return <RewardsScreen onBack={() => setScreen('profile')} onAddCar={() => { carFrom.current = 'rewards'; setScreen('add-car'); }} />;
     if (screen === 'notifications') return <NotificationsScreen onBack={() => setScreen('profile')} />;
@@ -2548,7 +2555,7 @@ export default function DriverApp() {
     );
   };
 
-  const showTabs = !['history', 'charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host', 'credit', 'navigate', 'eco', 'rewards', 'battery'].includes(screen);
+  const showTabs = !['history', 'charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host', 'credit', 'navigate', 'eco', 'rewards', 'battery', 'plus'].includes(screen);
 
   return (
     <div className="pg-app h-full flex flex-col bg-white overflow-hidden relative" style={{ fontFamily: 'Inter, sans-serif' }}>

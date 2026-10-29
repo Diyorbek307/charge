@@ -210,6 +210,10 @@ export interface Session {
   basePrice?: number;
   /** Paid from PowerGo's bonus, sum. */
   bonusUsed?: number;
+  /** Charged with PowerGo Plus; `plusCovered` is what PowerGo paid the network on top. */
+  plus?: boolean;
+  plusCovered?: number;
+  networkPrice?: number;
   /** The network's promo this charge ran under. */
   promo?: { id: string; title: string; percent: number };
   /** The driver's 1–5 rating, once given. */
@@ -263,6 +267,7 @@ export interface StationPlaces {
   loaded: boolean;
 }
 export interface PartnerPlace { id: string; name: string; kind: PlaceKind; lat: number; lng: number; offer: string; stationIds: string[]; pricePerShow: number; shows: number; taps: number; until: string; active: boolean; bill: number }
+export interface PlusState { active: boolean; since: string | null; renewsAt: string | null; autoRenew: boolean; savedThisMonth: number; price: number; discount: number; days: number }
 export interface BonusGrant { id: string; kind: string; title: string; amount: number; left: number; at: string; expiresAt: string }
 
 export interface Alert {
@@ -394,6 +399,7 @@ export interface PlatformState {
   /** Charging on credit, for a driver. */
   credit?: CreditState;
   rewards?: Rewards;
+  plus?: PlusState;
   /** The driver's balances at networks paid directly. */
   networkWallets?: NetworkWallet[];
   /** Charges the driver asked to start later. */
@@ -738,6 +744,8 @@ export const apiClient = {
   places: (stationId: string) => request<StationPlaces>(`/stations/${stationId}/places`),
   tapPlace: (id: string) => post<{ ok: boolean }>(`/places/${id}/tap`),
   arrival: (stationId: string, etaMin: number) => request<ArrivalChance>(`/stations/${stationId}/arrival?eta=${Math.round(etaMin)}`),
+  subscribePlus: () => post<PlusState>('/plus', undefined, 'driver'),
+  cancelPlus: () => request<PlusState>('/plus', { method: 'DELETE', portal: 'driver' }),
   batteryHealth: () => request<BatteryHealth>('/battery', { portal: 'driver' }),
   saveCar: (portal: Portal, car: Car) => request<{ user: Account; granted?: BonusGrant[] }>('/me/car', { method: 'PUT', body: JSON.stringify(car), portal }),
   logout: (portal: Portal) => post<{ ok: boolean }>('/auth/logout', undefined, portal),
