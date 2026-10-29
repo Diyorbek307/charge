@@ -2413,10 +2413,10 @@ function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
 
 // The QR scanner sits in the middle, raised: it is how most charges start.
 const tabs: { id: Tab; label: string; icon: ReactNode }[] = [
-  { id: 'map', label: 'Карта', icon: <MapPin size={22} /> },
-  { id: 'charging', label: 'Зарядка', icon: <Zap size={22} /> },
-  { id: 'deals', label: 'Скидки', icon: <Percent size={22} /> },
-  { id: 'profile', label: 'Профиль', icon: <User size={22} /> },
+  { id: 'map', label: 'Карта', icon: <MapPin size={21} strokeWidth={2.2} /> },
+  { id: 'charging', label: 'Зарядка', icon: <Zap size={21} strokeWidth={2.2} /> },
+  { id: 'deals', label: 'Скидки', icon: <Percent size={21} strokeWidth={2.4} /> },
+  { id: 'profile', label: 'Профиль', icon: <User size={21} strokeWidth={2.2} /> },
 ];
 
 interface Toast { id: string; icon: string; title: string; body: string; color: string; }
@@ -2693,7 +2693,7 @@ export default function DriverApp() {
   const showTabs = !['history', 'charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host', 'credit', 'navigate'].includes(screen);
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden relative" style={{ fontFamily: 'Inter, sans-serif' }}>
+    <div className="pg-app h-full flex flex-col bg-white overflow-hidden relative" style={{ fontFamily: 'Inter, sans-serif' }}>
       {showOnboarding && <OnboardingScreen onComplete={finishOnboarding} />}
       {/* Status bar of the device mock — a real phone draws its own */}
       <div className="bg-white px-4 pt-2 pb-1 hidden sm:flex items-center justify-between shrink-0 border-b border-slate-100">
@@ -2708,7 +2708,10 @@ export default function DriverApp() {
 
       {/* Main content */}
       <div className="flex-1 overflow-hidden">
-        {renderContent()}
+        {/* A soft hand-over between screens; the map stays mounted under its station card. */}
+        <div key={screen === 'map' || screen === 'station' ? `tab-${activeTab}` : `screen-${screen}`} className="pg-screen h-full">
+          {renderContent()}
+        </div>
       </div>
 
       {/* Push notification toasts */}
@@ -2722,47 +2725,51 @@ export default function DriverApp() {
         </div>
       )}
 
-      {/* Tab bar */}
+      {/* Tab bar: a dark floating pill; the yellow marker glides to the open tab */}
       {showTabs && (
-        <nav aria-label="Разделы" className="relative bg-white/95 backdrop-blur border-t border-slate-100 px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] grid grid-cols-5 items-end shrink-0 shadow-[0_-6px_24px_rgba(15,23,42,0.06)]">
-          {[tabs[0], tabs[1], null, tabs[2], tabs[3]].map(tab => {
-            if (!tab) {
+        <div className="shrink-0 bg-white px-3 pt-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))]">
+          <nav aria-label="Разделы" className="relative h-[64px] rounded-[26px] bg-[#16161A] grid grid-cols-5 items-center shadow-[0_10px_30px_rgba(22,22,26,0.28)]">
+            <span aria-hidden="true" className="absolute top-2 bottom-2 left-0 w-1/5 px-1.5 pointer-events-none"
+              style={{ transform: `translateX(${([0, 1, 3, 4][tabs.findIndex(t => t.id === activeTab)] ?? 0) * 100}%)`, transition: 'transform .45s cubic-bezier(.32,.72,0,1), opacity .2s', opacity: screen === 'station' ? 0 : 1 }}>
+              <span className="block h-full rounded-[20px] bg-[#FFC83D] shadow-[0_4px_14px_rgba(255,200,61,0.45)]" />
+            </span>
+            {[tabs[0], tabs[1], null, tabs[2], tabs[3]].map(tab => {
+              if (!tab) {
+                return (
+                  <div key="qr" className="flex justify-center">
+                    <button onClick={() => setScreen('qr-scan')} aria-label="Сканировать QR на станции"
+                      className="pg-qr -mt-9 w-[64px] h-[64px] rounded-[22px] grid place-items-center text-[#111] border-[5px] border-white"
+                      style={{ background: 'linear-gradient(145deg,#FFE08A,#FFB000)', boxShadow: '0 10px 24px rgba(255,176,0,0.55)' }}>
+                      <Scan size={26} strokeWidth={2.4} />
+                    </button>
+                  </div>
+                );
+              }
+              const isActive = activeTab === tab.id && !['station'].includes(screen);
+              // The badge means a charge is running right now, nothing else.
+              const isCharging = tab.id === 'charging' && !!liveSession;
+              const promoCount = tab.id === 'deals' ? driverPromoCount : 0;
               return (
-                <div key="qr" className="flex justify-center">
-                  <button onClick={() => setScreen('qr-scan')} aria-label="Сканировать QR на станции"
-                    className="-mt-7 w-[62px] h-[62px] rounded-full grid place-items-center text-[#111] border-4 border-white active:scale-95 transition-transform"
-                    style={{ background: 'linear-gradient(135deg,#FFD66B,#FFB000)', boxShadow: '0 8px 22px rgba(255,176,0,0.5)' }}>
-                    <Scan size={26} strokeWidth={2.4} />
-                  </button>
-                </div>
-              );
-            }
-            const isActive = activeTab === tab.id && !['station'].includes(screen);
-            // The badge means a charge is running right now, nothing else.
-            const isCharging = tab.id === 'charging' && !!liveSession;
-            const promoCount = tab.id === 'deals' ? driverPromoCount : 0;
-            return (
-              <button key={tab.id} aria-current={isActive ? 'page' : undefined} onClick={() => { setActiveTab(tab.id); setScreen('map'); setSelectedStation(null); }}
-                className={`relative min-w-0 flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl transition-colors ${isActive ? 'text-[#111]' : 'text-slate-400 hover:text-slate-600'}`}>
-                <span className={`relative grid place-items-center w-11 h-8 rounded-2xl transition-colors ${isActive ? 'bg-[#FFC83D]' : ''}`}>
-                  {tab.icon}
-                  {isCharging && (
-                    <span aria-hidden="true" className="absolute -top-0.5 right-0.5 flex h-3.5 w-3.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 items-center justify-center">
-                        <span className="text-white" style={{ fontSize: 7, fontWeight: 700 }}>⚡</span>
+                <button key={tab.id} aria-current={isActive ? 'page' : undefined} onClick={() => { setActiveTab(tab.id); setScreen('map'); setSelectedStation(null); }}
+                  className={`relative z-[1] h-full min-w-0 flex flex-col items-center justify-center gap-0.5 duration-300 ${isActive ? 'text-[#111]' : 'text-white/55 hover:text-white/85'}`}>
+                  <span key={isActive ? 'on' : 'off'} className={`relative grid place-items-center ${isActive ? 'pg-icon-pop' : ''} ${isCharging ? 'pg-icon-charge' : ''}`}>
+                    {tab.icon}
+                    {isCharging && (
+                      <span aria-hidden="true" className="absolute -top-1 -right-1.5 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-[#16161A]" />
                       </span>
-                    </span>
-                  )}
-                  {promoCount > 0 && !isActive && (
-                    <span aria-hidden="true" className="absolute -top-1 right-0 min-w-4 h-4 px-1 rounded-full bg-[#FF3B30] text-white text-[9px] font-bold grid place-items-center">{promoCount}</span>
-                  )}
-                </span>
-                <span className={`text-[11px] sm:text-xs max-w-full truncate ${isActive ? 'font-semibold' : ''}`}>{tab.label}</span>
-              </button>
-            );
-          })}
-        </nav>
+                    )}
+                    {promoCount > 0 && !isActive && (
+                      <span aria-hidden="true" className="absolute -top-1.5 -right-2.5 min-w-4 h-4 px-1 rounded-full bg-[#FF3B30] text-white text-[9px] font-bold grid place-items-center border-2 border-[#16161A]">{promoCount}</span>
+                    )}
+                  </span>
+                  <span className={`text-[10.5px] max-w-full truncate ${isActive ? 'font-bold' : 'font-medium'}`}>{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
       )}
     </div>
   );

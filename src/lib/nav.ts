@@ -217,12 +217,7 @@ function bestVoice(code: string) {
   return all.sort((a, b) => score(b) - score(a))[0] ?? null;
 }
 
-/**
- * Speaks text already written in the given language; quiet if the device has
- * no voice. An urgent phrase (the turn right now, speeding) cuts off whatever
- * is being said; others wait their turn so nothing gets lost.
- */
-export function say(lang: Lang, text: string, urgent = false) {
+function deviceSay(lang: Lang, text: string, urgent: boolean) {
   try {
     if (!('speechSynthesis' in window)) return;
     const u = new SpeechSynthesisUtterance(text);
@@ -235,4 +230,124 @@ export function say(lang: Lang, text: string, urgent = false) {
   } catch {
     /* no voice */
   }
+}
+
+// ---------------------------------------------------------------------------
+// Neural voice from our server (Azure or Yandex SpeechKit), when connected
+// ---------------------------------------------------------------------------
+
+let neural: Promise<boolean> | null = null;
+const neuralReady = () =>
+  (neural ??= fetch('/api/tts/status')
+    .then(r => (r.ok ? r.json() : null))
+    .then(d => !!d?.provider)
+    .catch(() => false));
+
+const clips = new Map<string, Promise<string | null>>();
+const clipKey = (lang: Lang, text: string) => `${lang}|${text}`;
+
+/** Fetches (once) the spoken clip for a phrase; null when the service cannot. */
+function clip(lang: Lang, text: string) {
+  const key = clipKey(lang, text);
+  let p = clips.get(key);
+  if (!p) {
+    let token: string | null = null;
+    try {
+      token = localStorage.getItem('oc-token-driver');
+    } catch {
+      /* private mode */
+    }
+    p = fetch(`/api/tts?lang=${lang}&text=${encodeURIComponent(text)}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => (r.ok ? r.blob() : null))
+      .then(b => (b ? URL.createObjectURL(b) : null))
+      .catch(() => null);
+    clips.set(key, p);
+    // A failed fetch may succeed later (back online).
+    void p.then(url => { if (!url) clips.delete(key); });
+  }
+  return p;
+}
+
+/** Warms the cache for phrases about to be said, so the voice is never late. */
+export function prefetchSpeech(lang: Lang, texts: string[]) {
+  void neuralReady().then(ok => {
+    if (ok) for (const t of texts) void clip(lang, t);
+  });
+}
+
+/** A short two-note chime before a camera warning, as in big navigators. */
+function chime() {
+  try {
+    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new Ctx();
+    [880, 1318.5].forEach((f, i) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.value = f;
+      const t = ctx.currentTime + i * 0.16;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.22, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+      o.connect(g).connect(ctx.destination);
+      o.start(t);
+      o.stop(t + 0.4);
+    });
+    setTimeout(() => void ctx.close(), 900);
+  } catch {
+    /* no audio */
+  }
+}
+
+type Line = { lang: Lang; text: string; chime: boolean };
+const queue: Line[] = [];
+let playing: HTMLAudioElement | null = null;
+let busy = false;
+
+async function drain() {
+  if (busy) return;
+  busy = true;
+  while (queue.length) {
+    const line = queue.shift()!;
+    if (line.chime) {
+      chime();
+      await new Promise(r => setTimeout(r, 520));
+    }
+    const url = (await neuralReady()) ? await clip(line.lang, line.text) : null;
+    if (!url) {
+      deviceSay(line.lang, line.text, false);
+      continue;
+    }
+    await new Promise<void>(done => {
+      const a = new Audio(url);
+      playing = a;
+      a.onended = a.onerror = () => done();
+      a.play().catch(() => {
+        // Autoplay refused: the phone's voice still gets the message across.
+        deviceSay(line.lang, line.text, false);
+        done();
+      });
+    });
+    playing = null;
+  }
+  busy = false;
+}
+
+/**
+ * Speaks text already written in the given language: our neural voice when
+ * the server has one, otherwise the phone's own. Phrases queue up so nothing
+ * is lost; an urgent one (the turn right now, speeding) cuts in first.
+ */
+export function say(lang: Lang, text: string, urgent = false, opts: { chime?: boolean } = {}) {
+  if (urgent) {
+    queue.length = 0;
+    playing?.pause();
+    try {
+      speechSynthesis.cancel();
+    } catch {
+      /* no voice */
+    }
+  }
+  queue.push({ lang, text, chime: !!opts.chime });
+  void drain();
 }

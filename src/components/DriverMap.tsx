@@ -11,6 +11,7 @@ import { plural } from '../lib/analytics';
 import { MAP_TILES, MAP_ATTRIBUTION, MAP_TILE_CLASS } from '../lib/mapTiles';
 import { promoNow, isNight, networkLook, discounted, useDriverPromos } from '../lib/promos';
 import { NetworkBadge } from './driver/NetworkBadge';
+import { ChargerFriend } from './driver/Illustration';
 
 const statusColor: Record<string, string> = {
   available: '#16A34A',
@@ -45,24 +46,26 @@ const LABEL_ZOOM = 12;
 
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
-const BOLT = '<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M13.2 2 5 13.4h5.6L9.4 22l8.6-11.6h-5.7z"/></svg>';
+const BOLT = '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M13.2 2 5 13.4h5.6L9.4 22l8.6-11.6h-5.7z"/></svg>';
 const PCT = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18"/><circle cx="7" cy="7" r="2.3"/><circle cx="17" cy="17" r="2.3"/></svg>';
-const MOON = '<svg viewBox="0 0 24 24" width="12" height="12" fill="#22D3EE"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>';
+const MOON = '<svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>';
 
 /**
- * A station pin: a round badge (bolt, or % when the network runs a promo
- * here) and, close up, a dark tag with the network, free/total and a moon
- * for a night discount.
+ * A station pin of our own: a white capsule on a little stem. Far away it is
+ * just the status disc; close up it carries the network, free/total with a
+ * charge bar, and a yellow "−20%" when the network runs a promo here.
  */
 function stationIcon(s: Station, promo: Promo | null, labelled: boolean) {
   const free = freeOf(s);
+  const total = s.connectors.length;
   const look = networkLook(s.operator);
   const off = s.status === 'unavailable';
-  const fill = promo ? 'linear-gradient(135deg,#FFC83D,#FF9F0A)' : off ? '#94A3B8' : free > 0 ? '#16A34A' : '#EF4444';
-  const tag = labelled
-    ? `<div class="pg-tag"><span class="pg-tag-logo" style="background:${look.color}">${look.initials}</span><span class="pg-tag-name">${esc(s.operator)}</span><span class="pg-tag-sep">·</span><span>${s.connectors.length}/<b style="color:${free ? '#4ADE80' : '#F87171'}">${free}</b></span>${promo && isNight(promo) ? `<span class="pg-tag-sep">·</span>${MOON}` : ''}</div>`
-    : '';
-  const html = `<div class="pg-pin${promo ? ' pg-pin-promo' : ''}">${tag}<div class="pg-dot" style="background:${fill};color:${promo ? '#111' : '#fff'}">${promo ? PCT : BOLT}</div></div>`;
+  const tone = off ? '#94A3B8' : free > 0 ? '#16A34A' : '#EF4444';
+  const disc = `<span class="pg-disc" style="background:${tone}">${BOLT}</span>`;
+  const body = labelled
+    ? `<span class="pg-net" style="background:${look.color}">${look.initials}</span>${disc}<span class="pg-count"><span><b style="color:${tone}">${free}</b>/${total}</span><i class="pg-bar"><i style="width:${total ? Math.round((free / total) * 100) : 0}%;background:${tone}"></i></i></span>${promo ? `<span class="pg-off">${promo && isNight(promo) ? MOON : ''}−${promo.percent}%</span>` : ''}`
+    : `${disc}${promo ? '<span class="pg-dot-pct">%</span>' : ''}`;
+  const html = `<div class="pg-pin${labelled ? ' pg-pin-full' : ''}${promo ? ' pg-pin-promo' : ''}"><div class="pg-cap">${body}</div><span class="pg-stem"></span></div>`;
   return L.divIcon({ html, className: 'pg-pin-wrap', iconSize: [0, 0], iconAnchor: [0, 0] });
 }
 
@@ -285,9 +288,9 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
                   <p className="flex items-center gap-2"><span className="pg-legend" style={{ background: '#16A34A' }} />Есть свободные</p>
                   <p className="flex items-center gap-2"><span className="pg-legend" style={{ background: '#EF4444' }} />Все заняты</p>
                   <p className="flex items-center gap-2"><span className="pg-legend" style={{ background: '#94A3B8' }} />Не работает</p>
-                  <p className="flex items-center gap-2"><span className="pg-legend grid place-items-center text-[#111] font-black text-[10px]" style={{ background: 'linear-gradient(135deg,#FFC83D,#FF9F0A)' }}>%</span>Скидка от сети</p>
-                  <p className="flex items-center gap-2 pt-2 border-t border-slate-100"><b className="text-slate-900">4/2</b>всего / свободно</p>
-                  <p className="flex items-center gap-2"><span dangerouslySetInnerHTML={{ __html: MOON }} />ночная скидка</p>
+                  <p className="flex items-center gap-2"><span className="px-1.5 py-0.5 rounded-md bg-[#FFC83D] text-[#111] font-black text-[10px]">−20%</span>Скидка от сети</p>
+                  <p className="flex items-center gap-2 pt-2 border-t border-slate-100"><b className="text-slate-900">2/4</b>свободно / всего</p>
+                  <p className="flex items-center gap-2"><span className="text-[#8a5b00]" dangerouslySetInnerHTML={{ __html: MOON }} />ночная скидка</p>
                 </div>
               )}
             </div>
@@ -334,8 +337,13 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
 
                     {/* The same stations as a list, nearest first — easier with one hand in the car. */}
                     {listOpen && !q && (
-                      <div role="list" aria-label="Станции списком" className="space-y-2">
-                        {filtered.length === 0 && <p className="px-1 py-3 text-sm text-slate-500">Нет станций под эти фильтры</p>}
+                      <div role="list" aria-label="Станции списком" className="pg-stagger space-y-2">
+                        {filtered.length === 0 && (
+                          <div className="py-3 text-center">
+                            <span className="flex justify-center"><ChargerFriend size={140} mood="wait" /></span>
+                            <p className="text-sm text-slate-500 mt-1">Нет станций под эти фильтры</p>
+                          </div>
+                        )}
                         {[...filtered]
                           .map(s => ({ s, d: me ? km({ lat: me[0], lng: me[1] }, { lat: s.geoLat, lng: s.geoLng }) : null }))
                           .sort((a, b) => (a.d !== null && b.d !== null ? a.d - b.d : freeOf(b.s) - freeOf(a.s)))

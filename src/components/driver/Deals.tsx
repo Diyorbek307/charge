@@ -8,6 +8,7 @@ import { useMyLocation, km, fmtKm, driveMinutes } from '../../lib/geo';
 import { plural } from '../../lib/analytics';
 import { promosOf, promoNow, promoHours, isNight, discounted, useDriverPromos } from '../../lib/promos';
 import { NetworkBadge } from './NetworkBadge';
+import { ChargerFriend } from './Illustration';
 
 const opId = (s: Station) => (s as Station & { operatorId?: string }).operatorId;
 const untilText = (iso: string | null) => (iso ? `до ${new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}` : 'без срока');
@@ -50,7 +51,7 @@ export default function DealsScreen({ onSelectStation, onRoute }: { onSelectStat
 
       {promos.length > 0 && (
         <div className="bg-white pb-4">
-          <div className="px-4 scroll-px-4 flex gap-3 overflow-x-auto no-scrollbar snap-x" role="group" aria-label="Акции">
+          <div className="pg-stagger px-4 scroll-px-4 flex gap-3 overflow-x-auto no-scrollbar snap-x" role="group" aria-label="Акции">
             {promos.map(p => {
               const on = only === p.id;
               return (
@@ -80,14 +81,14 @@ export default function DealsScreen({ onSelectStation, onRoute }: { onSelectStat
         </div>
       )}
 
-      <div className="px-4 pt-4 pb-6 space-y-3" role="list" aria-label="Станции со скидкой">
+      <div className="pg-stagger px-4 pt-4 pb-6 space-y-3" role="list" aria-label="Станции со скидкой">
         <p className="text-xs font-semibold text-slate-500">
           {rows.length ? `${rows.length} ${plural(rows.length, ['станция', 'станции', 'станций'])} со скидкой${here ? ' · ближние сверху' : ''}` : ''}
         </p>
         {rows.length === 0 && (
           <div className="rounded-3xl bg-white border border-slate-100 p-6 text-center">
-            <span className="mx-auto w-12 h-12 rounded-2xl bg-[#FFC83D]/30 grid place-items-center"><Percent size={22} className="text-[#8a5b00]" /></span>
-            <p className="mt-3 font-semibold text-slate-800">Сейчас акций нет</p>
+            <span className="flex justify-center"><ChargerFriend mood="wait" /></span>
+            <p className="mt-2 font-semibold text-slate-800">Сейчас акций нет</p>
             <p className="text-sm text-slate-500 mt-1">Когда сеть запустит скидку, она появится здесь и значком «%» на карте</p>
           </div>
         )}

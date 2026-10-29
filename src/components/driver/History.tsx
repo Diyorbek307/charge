@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ChargerFriend } from './Illustration';
 import { Clock, Zap, ChevronDown, Download, Moon, Building2, Wallet, ScanFace, ChevronLeft } from 'lucide-react';
 import type { Session } from '../../lib/api';
 import { useSync } from '../../lib/sync';
@@ -123,7 +124,12 @@ export default function HistoryScreen({ onBack }: { onBack?: () => void } = {}) 
           </div>
         </div>
 
-        {list.length === 0 && <p className="text-center text-sm text-slate-400 py-8">За этот период зарядок не было</p>}
+        {list.length === 0 && (
+          <div className="text-center py-6">
+            <span className="flex justify-center"><ChargerFriend size={150} /></span>
+            <p className="text-sm text-slate-500 mt-1">За этот период зарядок не было</p>
+          </div>
+        )}
 
         {list.map(s => {
           const isOpen = open === s.id;

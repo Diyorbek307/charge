@@ -8,7 +8,7 @@ import type { Station } from '../../data/mockData';
 import { useI18n } from '../../lib/i18n';
 import { useSync } from '../../lib/sync';
 import {
-  type Camera, type LatLng, type Lang, type Route, type Step, fetchRoute, fetchCameras, project, pointAt, bearing, word, fmtDist, action, say, voiceLang, dist, spokenDist, spokenTime,
+  type Camera, type LatLng, type Lang, type Route, type Step, fetchRoute, fetchCameras, project, pointAt, bearing, word, fmtDist, action, say, voiceLang, dist, spokenDist, spokenTime, prefetchSpeech,
 } from '../../lib/nav';
 import { MAP_TILES, MAP_ATTRIBUTION, MAP_TILE_CLASS } from '../../lib/mapTiles';
 
@@ -193,32 +193,51 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [origin?.lat, origin?.lng]);
 
-  // Voice, the way drivers here are used to from big navigators: a turn is
-  // announced at ~1 km on a long stretch, again at ~300 m, and "now" right
-  // before it, with the next turn chained on when it follows close behind.
-  // Each camera once at ~500 m with its limit; speeding is said at once.
+  // What is said about a turn: at ~1 km, at ~300 m and "now", with the next
+  // turn chained on when it follows close behind.
+  const turnPhrases = (vl: Lang, step: Step, distFar: number, distNear: number) => {
+    if (!route) return null;
+    const a = action(vl, step);
+    const full = `${a.base}${a.street ? ` ${word(vl, 'onto', { name: a.street })}` : ''}`;
+    const low = `${full.charAt(0).toLowerCase()}${full.slice(1)}`;
+    const after = route.steps.find(x => x.along > step.along + 8 && x.type !== 'arrive');
+    const chained = after && after.along - step.along < 150 ? `, ${word(vl, 'then')} ${action(vl, after).base.toLowerCase()}` : '';
+    return {
+      far: `${word(vl, 'in', { d: spokenDist(vl, distFar) })} ${low}`,
+      near: `${word(vl, 'in', { d: spokenDist(vl, distNear) })} ${low}${chained}`,
+      now: `${word(vl, 'now')} ${action(vl, step).base.toLowerCase()}${chained}`,
+    };
+  };
+
+  // The voice is fetched ahead: the phrases of the next turn are ready before it comes.
+  useEffect(() => {
+    if (!route || !next || muted) return;
+    const vl = voiceLang(lang);
+    const p = turnPhrases(vl, next, 1000, 300);
+    if (p) prefetchSpeech(vl, [p.far, p.near, p.now]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route, next?.along, muted, lang]);
+
+  // Voice, the way drivers here are used to from big navigators. Each camera
+  // once at ~500 m with a chime and its limit; speeding is said at once.
   useEffect(() => {
     if (!route || muted) return;
     const vl = voiceLang(lang);
-    const speak = (key: string, text: string, urgent = false) => {
+    const speak = (key: string, text: string, urgent = false, chimeFirst = false) => {
       if (spoken.current.has(key)) return;
       spoken.current.add(key);
-      say(vl, text, urgent);
+      say(vl, text, urgent, { chime: chimeFirst });
     };
     if (arrived) return speak('arrive', word(vl, 'arriveSay', { name: station.name }), true);
     if (!spoken.current.has('depart') && along < 50) speak('depart', word(vl, 'departSay', { d: spokenDist(vl, route.length), t: spokenTime(vl, route.duration / 60) }));
     if (next) {
-      const a = action(vl, next);
-      const full = `${a.base}${a.street ? ` ${word(vl, 'onto', { name: a.street })}` : ''}`;
-      const low = `${full.charAt(0).toLowerCase()}${full.slice(1)}`;
-      const after = route.steps.find(x => x.along > next.along + 8 && x.type !== 'arrive');
-      const chained = after && after.along - next.along < 150 ? `, ${word(vl, 'then')} ${action(vl, after).base.toLowerCase()}` : '';
-      if (toNext <= 1100 && toNext > 700) speak(`${next.along}-1k`, `${word(vl, 'in', { d: spokenDist(vl, toNext) })} ${low}`);
-      if (toNext <= 380 && toNext > 160) speak(`${next.along}-300`, `${word(vl, 'in', { d: spokenDist(vl, toNext) })} ${low}${chained}`);
-      if (toNext <= 90) speak(`${next.along}-now`, `${word(vl, 'now')} ${action(vl, next).base.toLowerCase()}${chained}`, true);
+      const p = turnPhrases(vl, next, toNext, toNext)!;
+      if (toNext <= 1100 && toNext > 700) speak(`${next.along}-1k`, p.far);
+      if (toNext <= 380 && toNext > 160) speak(`${next.along}-300`, p.near);
+      if (toNext <= 90) speak(`${next.along}-now`, p.now, true);
     }
-    if (cam && cam.at <= 550) speak(`cam-${cam.c.id}`, `${word(vl, 'camAhead')}, ${spokenDist(vl, cam.at)}${cam.c.maxspeed ? `. ${word(vl, 'limitSay', { v: cam.c.maxspeed })}` : ''}`);
-    if (over) speak(`over-${cam?.c.id}`, word(vl, 'overSay', { v: cam?.c.maxspeed ?? '' }), true);
+    if (cam && cam.at <= 550) speak(`cam-${cam.c.id}`, `${word(vl, 'camAhead')}, ${spokenDist(vl, cam.at)}${cam.c.maxspeed ? `. ${word(vl, 'limitSay', { v: cam.c.maxspeed })}` : ''}`, false, true);
+    if (over) speak(`over-${cam?.c.id}`, word(vl, 'overSay', { v: cam?.c.maxspeed ?? '' }), true, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route, along, next, toNext, cam, over, arrived, muted, lang]);
 
