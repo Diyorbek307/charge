@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { offlineRoute, offlineCameras } from '../../lib/offline';
 import { MapContainer, Polyline, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import {
@@ -72,6 +73,22 @@ const flagIcon = L.divIcon({
  * rerouting when the car leaves the route, and the charge one tap away on
  * arrival. Without GPS (a desktop), a demo drive plays the route.
  */
+
+/** Cameras on the route from the server, or the ones saved with an offline pack when there is no signal. */
+async function camerasFor(r: Route): Promise<Camera[]> {
+  const saved = () => {
+    const lats = r.line.map(p => p.lat);
+    const lngs = r.line.map(p => p.lng);
+    return offlineCameras({ s: Math.min(...lats), n: Math.max(...lats), w: Math.min(...lngs), e: Math.max(...lngs) }).filter(c => project(r, c).off < 35);
+  };
+  try {
+    const live = await fetchCameras(r);
+    return live.length || navigator.onLine ? live : saved();
+  } catch {
+    return saved();
+  }
+}
+
 export default function Navigator({ station, onClose, onArrive }: { station: Station; onClose: () => void; onArrive: () => void }) {
   const { lang: uiLang } = useI18n();
   const lang = uiLang as Lang;
@@ -123,10 +140,19 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
     routing.current = true;
     setError(null);
     try {
-      const r = await fetchRoute(from, dest);
+      let r: Route;
+      try {
+        r = await fetchRoute(from, dest);
+      } catch (e) {
+        // No signal: follow a road saved for offline, when both ends lie on it.
+        const saved = offlineRoute(from, dest);
+        if (!saved) throw new Error(navigator.onLine ? (e as Error).message : 'Нет связи, а эта дорога не сохранена. Сохраните трассу в «Поездке» перед выездом.');
+        r = saved;
+        setNote('Без связи — ведём по сохранённой трассе, без подсказок поворотов');
+      }
       setRoute(r);
       spoken.current.clear();
-      setCameras(await fetchCameras(r).catch(() => []));
+      setCameras(await camerasFor(r));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -141,7 +167,7 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
   // Cameras reported meanwhile, or just fetched from OpenStreetMap, appear within a minute.
   useEffect(() => {
     if (!route) return;
-    const t = setInterval(() => void fetchCameras(route).then(setCameras).catch(() => {}), 60_000);
+    const t = setInterval(() => void camerasFor(route).then(setCameras), 60_000);
     return () => clearInterval(t);
   }, [route]);
 
@@ -246,7 +272,7 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
     try {
       await actions.reportCamera(origin.lat, origin.lng);
       setNote('Спасибо — камера отмечена, другие водители её увидят');
-      if (route) setCameras(await fetchCameras(route).catch(() => cameras));
+      if (route) setCameras(await camerasFor(route));
     } catch (e) {
       setNote((e as Error).message);
     }

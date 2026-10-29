@@ -4,6 +4,8 @@
  * where the car is on it, what to do next, and the cameras ahead.
  */
 
+import { useEffect, useState } from 'react';
+
 export type LatLng = { lat: number; lng: number };
 export type Lang = 'ru' | 'uz' | 'en';
 
@@ -350,4 +352,51 @@ export function say(lang: Lang, text: string, urgent = false, opts: { chime?: bo
   }
   queue.push({ lang, text, chime: !!opts.chime });
   void drain();
+}
+
+/**
+ * The real way to a station: kilometres and minutes by road, not as the crow
+ * flies. Asked once per station and ~100 m of the driver's position; null
+ * until it is known or when the road service cannot be reached.
+ */
+/**
+ * The routing service times empty roads. In town the traffic adds to that,
+ * most at the morning and evening peaks (Tashkent time); out on the highway
+ * hardly at all.
+ */
+export function trafficFactor(km: number, at = Date.now()) {
+  const h = new Date(at + 5 * 3600_000).getUTCHours() + new Date(at).getUTCMinutes() / 60;
+  const peak = (h >= 7.5 && h < 10) || (h >= 17 && h < 20);
+  const town = peak ? 1.45 : h >= 10 && h < 17 ? 1.2 : h >= 20 && h < 23 ? 1.1 : 1;
+  // Long trips are mostly highway: the town share fades out over 60 km.
+  const share = Math.max(0, Math.min(1, (60 - km) / 60));
+  return 1 + (town - 1) * Math.max(share, 0.08);
+}
+
+const roadCache = new Map<string, { km: number; min: number } | null>();
+export function useRoadDistance(from: LatLng | null, to: LatLng | null) {
+  const key = from && to ? `${from.lat.toFixed(3)},${from.lng.toFixed(3)}>${to.lat.toFixed(5)},${to.lng.toFixed(5)}` : null;
+  const [road, setRoad] = useState(() => (key ? roadCache.get(key) ?? null : null));
+  useEffect(() => {
+    if (!key || !from || !to) return setRoad(null);
+    if (roadCache.has(key)) return setRoad(roadCache.get(key) ?? null);
+    setRoad(null);
+    let alive = true;
+    const url = `${ROUTER}/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=false`;
+    void fetch(url, { signal: AbortSignal.timeout(8000) })
+      .then(r => (r.ok ? r.json() : null))
+      .then((j: { code?: string; routes?: { distance: number; duration: number }[] } | null) => {
+        const r = j?.code === 'Ok' ? j.routes?.[0] : undefined;
+        const v = r ? { km: r.distance / 1000, min: Math.max(1, Math.round((r.duration / 60) * trafficFactor(r.distance / 1000))) } : null;
+        roadCache.set(key, v);
+        if (alive) setRoad(v);
+      })
+      .catch(() => alive && setRoad(null));
+    return () => {
+      alive = false;
+    };
+    // The key holds both ends.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return road;
 }

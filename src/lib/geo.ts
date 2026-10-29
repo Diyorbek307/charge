@@ -94,7 +94,7 @@ export function driveMinutes(distanceKm: number) {
   return Math.max(1, Math.round((road / (road < 20 ? 30 : 70)) * 60));
 }
 
-export const fmtKm = (d: number) => (d < 10 ? `${d.toFixed(1).replace('.', ',')} км` : `${Math.round(d)} км`);
+export const fmtKm = (d: number) => (d < 1 ? `${Math.max(10, Math.round((d * 1000) / 10) * 10)} м` : d < 10 ? `${d.toFixed(1).replace('.', ',')} км` : `${Math.round(d)} км`);
 
 /** Open right now by the station's hours ("24/7" or "08:00–22:00"), in Tashkent time. */
 export function openNow(hours: string | undefined, at = Date.now()) {

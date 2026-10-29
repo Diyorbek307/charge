@@ -16,7 +16,17 @@ export default defineConfig({
     sourcemap: false,
     minify: true,
   },
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    // The list of built files, so an offline pack can keep every screen's code, not only the visited ones.
+    {
+      name: 'asset-list',
+      generateBundle(_, bundle) {
+        this.emitFile({ type: 'asset', fileName: 'asset-list.json', source: JSON.stringify(Object.keys(bundle).filter(f => f.startsWith('assets/'))) })
+      },
+    },
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

@@ -4,6 +4,7 @@ import type { Station } from '../../data/mockData';
 import { useSync } from '../../lib/sync';
 import { useLiveStations } from '../../lib/live';
 import NearbyStop from './Nearby';
+import OfflineTrip from './OfflineTrip';
 
 const CITIES: { id: string; name: string; lat: number; lng: number }[] = [
   { id: 'tashkent', name: 'Ташкент', lat: 41.311, lng: 69.24 },
@@ -206,6 +207,14 @@ export default function TripPlannerScreen({ onBack, onSelectStation }: { onBack:
                 </li>
               )}
             </ol>
+            <OfflineTrip
+              id={[from, to].sort().join('-')}
+              name={`${a.name} — ${b.name}`}
+              from={a}
+              to={b}
+              stations={result.stops.map(s => s.station)}
+              allStations={stations}
+            />
             <p className="text-[11px] text-slate-400 px-1">Оценка: расход 0,18 кВт·ч/км, скорость 80 км/ч, запас 15% у станции и 10% в конце, зарядка до 80% (выше — только если иначе не доехать). Цена — по текущим тарифам станций, к оплате — по фактической энергии и тарифу в момент старта.</p>
           </>
         )}

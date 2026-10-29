@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { savedStations } from './offline';
 import { useSync } from './sync';
 import {
   stations as staticStations,
@@ -36,7 +37,8 @@ function deriveStatus(station: LiveStation): StationStatus {
 export function useLiveStations(): LegacyStation[] {
   const { state } = useSync();
   return useMemo(() => {
-    if (!state) return staticStations;
+    // No signal and nothing loaded yet: the stations saved with an offline pack, else the bundled list.
+    if (!state) return (savedStations()?.stations as LegacyStation[] | undefined) ?? staticStations;
     return state.stations.map(st => {
       const fallback = staticStations.find(s => s.id === st.id);
       return {

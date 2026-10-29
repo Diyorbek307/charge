@@ -233,7 +233,10 @@ function FocusStation({ station }: { station: Station | null }) {
     const sheet = box.closest('.pg-app')?.querySelector<HTMLElement>('[data-sheet]');
     // The card grows as its blocks load, so plan for its tallest.
     const top = Math.min(sheet?.offsetTop ?? h * 0.4, h * 0.2);
-    const wantY = Math.max(70, top * 0.55 + 24);
+    // Below the "no signal" banner when it is up.
+    const banner = box.closest('.pg-app')?.querySelector<HTMLElement>('[data-offline-banner]');
+    const below = banner ? banner.offsetTop + banner.offsetHeight + 72 : 0;
+    const wantY = Math.max(70, below, top * 0.55 + 24);
     const zoom = Math.max(map.getZoom(), 15);
     const at = map.project([station.geoLat, station.geoLng], zoom).add([0, h / 2 - wantY]);
     map.flyTo(map.unproject(at, zoom), zoom, { duration: 0.75, easeLinearity: 0.2 });

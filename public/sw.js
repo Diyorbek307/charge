@@ -4,7 +4,9 @@
  * and stay entirely out of the way of the live-sync channel.
  */
 
-const VERSION = 'oc-v5';
+const VERSION = 'oc-v6';
+/** Offline packs (map of a road, the app's code) outlive builds: only the driver deletes them. */
+const KEEP = 'pg-offline';
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const DATA_CACHE = `${VERSION}-data`;
@@ -25,7 +27,7 @@ self.addEventListener('activate', event => {
   event.waitUntil(
     caches
       .keys()
-      .then(keys => Promise.all(keys.filter(k => !k.startsWith(VERSION)).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => !k.startsWith(VERSION) && !k.startsWith(KEEP)).map(k => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });
@@ -33,6 +35,26 @@ self.addEventListener('activate', event => {
 self.addEventListener('message', event => {
   if (event.data === 'skip-waiting') self.skipWaiting();
 });
+
+/** The network, unless it hangs: on a weak highway signal a request can stall for a minute. */
+function fetchWithin(request, ms) {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('timeout')), ms);
+    fetch(request).then(
+      res => {
+        clearTimeout(t);
+        resolve(res);
+      },
+      err => {
+        clearTimeout(t);
+        reject(err);
+      },
+    );
+  });
+}
+
+/** Map files: the vector style, its tiles, icons and fonts. */
+const MAP_HOSTS = ['tiles.openfreemap.org'];
 
 function isAsset(url) {
   return url.pathname.startsWith('/assets/') || /\.(png|svg|woff2?|ico)$/.test(url.pathname);
@@ -42,8 +64,22 @@ self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Only ever handle same-origin GETs.
-  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (request.method !== 'GET') return;
+
+  // The map: a saved road's tiles come from the pack at once (no waiting on a dead network);
+  // the style and tile manifest try the network briefly so a new map version is picked up.
+  if (MAP_HOSTS.includes(url.hostname)) {
+    const manifest = !/\.(pbf|png|jpg|webp)$/.test(url.pathname);
+    event.respondWith(
+      manifest
+        ? fetchWithin(request, 4000).catch(() => caches.match(request.url).then(hit => hit || Response.error()))
+        : caches.match(request.url).then(hit => hit || fetch(request)),
+    );
+    return;
+  }
+
+  // Otherwise only same-origin GETs.
+  if (url.origin !== self.location.origin) return;
 
   // The SSE channel must stream — caching or proxying it would break sync.
   if (url.pathname === '/api/stream') return;
@@ -70,7 +106,7 @@ self.addEventListener('fetch', event => {
   // an offline portal still renders something truthful.
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
-      fetch(request)
+      fetchWithin(request, 8000)
         .then(res => {
           if (res.ok) {
             const copy = res.clone();
@@ -96,7 +132,7 @@ self.addEventListener('fetch', event => {
   // with the cached shell as the offline fallback.
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
+      fetchWithin(request, 5000)
         .then(res => {
           const copy = res.clone();
           caches.open(SHELL_CACHE).then(c => c.put('/', copy));

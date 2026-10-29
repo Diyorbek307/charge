@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, useCal
 import type { ReactNode } from 'react';
 import {
   apiClient,
+  ApiError,
   tokenStore,
   type Account,
   type DemoCredential,
@@ -135,10 +136,28 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       if (!tokenStore.get(portal)) return;
       apiClient
         .me(portal)
-        .then(({ user }) => setSessions(s => ({ ...s, [portal]: user })))
-        .catch(() => {
-          tokenStore.clear(portal);
-          setSessions(s => ({ ...s, [portal]: null }));
+        .then(({ user }) => {
+          setSessions(s => ({ ...s, [portal]: user }));
+          try {
+            localStorage.setItem(`oc-account-${portal}`, JSON.stringify(user));
+          } catch {
+            /* private mode */
+          }
+        })
+        .catch(err => {
+          // Only the server saying no ends a session. No signal on the road is not a sign-out:
+          // the driver stays in, with the account as it was last seen.
+          if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+            tokenStore.clear(portal);
+            setSessions(s => ({ ...s, [portal]: null }));
+            return;
+          }
+          try {
+            const saved = JSON.parse(localStorage.getItem(`oc-account-${portal}`) ?? 'null') as Account | null;
+            setSessions(s => ({ ...s, [portal]: saved }));
+          } catch {
+            setSessions(s => ({ ...s, [portal]: null }));
+          }
         });
     });
   }, [refresh]);
@@ -269,6 +288,13 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     }
     tokenStore.clear(portal);
     setSessions(s => ({ ...s, [portal]: null }));
+    // What was kept for offline use belongs to this account; the next one must not see it.
+    try {
+      localStorage.removeItem(`oc-account-${portal}`);
+    } catch {
+      /* private mode */
+    }
+    void caches?.keys().then(keys => Promise.all(keys.filter(k => k.endsWith('-data')).map(k => caches.delete(k)))).catch(() => undefined);
   }, []);
 
   const adoptSession = useCallback((portal: Portal, token: string, user: Account) => {

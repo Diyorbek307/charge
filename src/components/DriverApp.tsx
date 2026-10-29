@@ -24,8 +24,10 @@ import { FinanceScreen, LoyaltyScreen, FamilyScreen, HostScreen, SosSheet } from
 import { CreditScreen, FaceCheck } from './driver/Credit';
 import { NetworkTopUp, NetworkWalletList } from './driver/NetworkWallets';
 import Navigator from './driver/Navigator';
+import { useRoadDistance } from '../lib/nav';
 import DealsScreen from './driver/Deals';
 import QRScanScreen from './driver/QRScan';
+import { useOfflinePacks, deletePack, packsBytes, savedStations } from '../lib/offline';
 import { NetworkBadge } from './driver/NetworkBadge';
 import { ChargerFriend } from './driver/Illustration';
 import { promoNow, promosOf, promoHours, discounted, useDriverPromos } from '../lib/promos';
@@ -39,6 +41,8 @@ import AuthFlow from './AuthFlow';
 
 type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate';
 type Tab = 'map' | 'charging' | 'deals' | 'profile';
+/** Minutes as "25 мин" or "5 ч 10 мин". */
+const hm = (m: number) => (m < 60 ? `${m} мин` : `${Math.floor(m / 60)} ч${m % 60 ? ` ${m % 60} мин` : ''}`);
 const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '—';
 
 const statusColor: Record<string, string> = {
@@ -55,7 +59,11 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
   const favorites = useFavorites();
   const favorite = favorites.has(station.id);
   const here = useMyLocation();
-  const dist = here ? km(here, { lat: station.geoLat, lng: station.geoLng }) : null;
+  const crow = here ? km(here, { lat: station.geoLat, lng: station.geoLng }) : null;
+  // By road when the routing service answers; as the crow flies (marked ≈) until then.
+  const road = useRoadDistance(here, { lat: station.geoLat, lng: station.geoLng });
+  const dist = road?.km ?? crow;
+  const drive = road ? road.min : crow !== null ? driveMinutes(crow) : null;
   const queue = (state?.queues ?? []).filter(q => q.stationId === station.id);
   const myIndex = queue.findIndex(q => q.userId === me?.id);
   const myTurn = myIndex >= 0 && queue[myIndex].notified;
@@ -159,8 +167,8 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
             <p className="text-sm text-slate-500 mt-0.5 flex items-start gap-1"><MapPin size={13} className="mt-0.5 shrink-0" />{`${station.address}, ${station.city}`}</p>
             <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-1.5 text-sm">
               <span className="inline-flex items-center gap-1 font-semibold text-slate-800"><Star size={14} className="fill-[#FFC83D] text-[#FFC83D]" />{station.rating.toFixed(1)}</span>
-              {dist !== null && <span className="inline-flex items-center gap-1 text-slate-600"><Navigation size={13} />{fmtKm(dist)}</span>}
-              {dist !== null && <span className="inline-flex items-center gap-1 text-slate-600"><Clock size={13} />{`${driveMinutes(dist)} мин`}</span>}
+              {dist !== null && <span key={road ? 'road' : 'crow'} className={`inline-flex items-center gap-1 text-slate-600 ${road ? 'pg-pop' : ''}`} title={road ? 'По дороге' : 'По прямой — уточняем по дорогам'}><Navigation size={13} />{`${road ? '' : '≈ '}${fmtKm(dist)}`}{road && <span className="text-[11px] text-slate-400">по дороге</span>}</span>}
+              {drive !== null && <span className="inline-flex items-center gap-1 text-slate-600"><Clock size={13} />{hm(drive)}</span>}
               <span className="inline-flex items-center gap-1 font-semibold" style={{ color: statusColor[station.status] }}>
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: statusColor[station.status] }} />
                 {`${free}/${station.connectors.length} свободно`}
@@ -189,7 +197,9 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
 
         {/* Photo */}
         <div className="rounded-2xl overflow-hidden mb-3 h-32 bg-slate-100 relative">
-          <img src={station.photoAt ? `/api/stations/${station.id}/photo?v=${encodeURIComponent(station.photoAt)}` : station.image} alt={station.name} className="w-full h-full object-cover" />
+          {/* With no signal the photo may not load: the card keeps a calm tile instead of a broken image. */}
+          <span className="absolute inset-0 grid place-items-center text-slate-300" aria-hidden="true"><Zap size={34} /></span>
+          <img src={station.photoAt ? `/api/stations/${station.id}/photo?v=${encodeURIComponent(station.photoAt)}` : station.image} alt={station.name} className="relative w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; }} />
           {!openNow(station.hours) && <span className="absolute top-2 left-2 px-2 py-1 rounded-lg bg-red-600 text-white text-xs font-semibold">{`Закрыто · ${station.hours}`}</span>}
           <span className="absolute bottom-2 left-2 flex gap-1.5">
             <span className="px-2 py-1 rounded-lg bg-black/60 backdrop-blur text-white text-xs font-semibold">{station.hours}</span>
@@ -285,7 +295,7 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
         )}
         {/* Navigation inside the app: route, voice, cameras. */}
         <button onClick={onNavigate} className="w-full mb-2 bg-[#111] text-white rounded-2xl py-3.5 font-bold text-[15px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-          <Navigation size={17} className="text-[#FFC83D] fill-[#FFC83D]" />{dist !== null ? `Маршрут · ${fmtKm(dist)} · ${driveMinutes(dist)} мин` : 'Маршрут'}
+          <Navigation size={17} className="text-[#FFC83D] fill-[#FFC83D]" />{dist !== null && drive !== null ? `Маршрут · ${road ? '' : '≈ '}${fmtKm(dist)} · ${hm(drive)}` : 'Маршрут'}
         </button>
         <div className="grid grid-cols-2 gap-2">
           <button onClick={onReviews} className="bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl py-2.5 font-medium text-sm transition-colors flex items-center justify-center gap-1.5">
@@ -808,6 +818,8 @@ function AppSettingsScreen({ onBack }: { onBack: () => void }) {
           </button>
         </div>
 
+        <OfflineSection />
+
         <SectionHeader label="О ПРИЛОЖЕНИИ" />
         <div className="bg-white rounded-2xl border border-slate-100 mx-4 overflow-hidden mb-6">
           <div className="px-4 py-3.5 flex items-center justify-between border-b border-slate-50">
@@ -828,6 +840,34 @@ function AppSettingsScreen({ onBack }: { onBack: () => void }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/** Saved roads for driving without signal, and the room they take. */
+function OfflineSection() {
+  const packs = useOfflinePacks();
+  return (
+    <>
+      <p className="text-xs font-semibold text-slate-400 tracking-widest px-4 pt-5 pb-2">ОФЛАЙН-КАРТЫ</p>
+      <div className="bg-white rounded-2xl border border-slate-100 mx-4 overflow-hidden">
+        {packs.length === 0 ? (
+          <p className="px-4 py-3.5 text-sm text-slate-500">Пока нет. В «Поездке» выберите маршрут и нажмите «Сохранить для офлайна» — карта трассы, станции и коды будут работать без связи.</p>
+        ) : (
+          <>
+            {packs.map(p => (
+              <div key={p.id} className="px-4 py-3 flex items-center gap-3 border-b border-slate-50">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 truncate">{p.name}</p>
+                  <p className="text-xs text-slate-400">{`${Math.max(1, Math.round(p.bytes / 1048576))} МБ · ${p.stations.length} станций · ${new Date(p.at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`}</p>
+                </div>
+                <button onClick={() => void deletePack(p.id)} aria-label={`Удалить ${p.name}`} className="p-2 rounded-xl bg-red-50 text-red-600"><X size={14} /></button>
+              </div>
+            ))}
+            <p className="px-4 py-2.5 text-xs text-slate-400">{`Всего ${Math.max(1, Math.round(packsBytes(packs) / 1048576))} МБ на этом телефоне`}</p>
+          </>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -1533,7 +1573,7 @@ function FavoritesScreen({ onBack, onSelectStation }: { onBack: () => void; onSe
                 className="w-full bg-white rounded-2xl border border-slate-100 p-4 text-left hover:border-sky-200 transition-colors cursor-pointer active:scale-[0.99]">
                 <div className="flex items-start gap-3">
                   <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-100 shrink-0">
-                    <img src={s.image} alt={s.name} className="w-full h-full object-cover" />
+                    <img src={s.image} alt={s.name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.visibility = 'hidden'; }} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
@@ -1981,6 +2021,10 @@ function TabMarker({ slot }: { slot: number }) {
 
 interface Toast { id: string; icon: string; title: string; body: string; color: string; }
 
+function LoaderCircleIcon() {
+  return <span className="w-4 h-4 rounded-full border-2 border-amber-300 border-t-[#FFB000] animate-spin shrink-0" aria-hidden="true" />;
+}
+
 function PushToast({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
   const [leaving, setLeaving] = useState(false);
   const startY = useRef<number | null>(null);
@@ -2012,8 +2056,75 @@ function PushToast({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
   );
 }
 
+/** A start asked for with no signal: sent by itself once the phone is back online. */
+type PendingStart = { stationId: string; stationName: string; connectorId: string; payer: Payer; goal?: ChargeGoal; at: number };
+const PENDING = 'oc-pending-start';
+const readPending = (): PendingStart | null => {
+  try {
+    const p = JSON.parse(localStorage.getItem(PENDING) ?? 'null') as PendingStart | null;
+    // A start older than half an hour is no longer what the driver wants.
+    return p && Date.now() - p.at < 30 * 60_000 ? p : null;
+  } catch {
+    return null;
+  }
+};
+
+/** Whether the phone has a connection: the browser's word, and the live channel not answering. */
+function useOnline() {
+  const { connection } = useSync();
+  const [browser, setBrowser] = useState(() => navigator.onLine);
+  const [stalled, setStalled] = useState(false);
+  useEffect(() => {
+    const on = () => setBrowser(true);
+    const off = () => setBrowser(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => {
+      window.removeEventListener('online', on);
+      window.removeEventListener('offline', off);
+    };
+  }, []);
+  // A dropped stream for a few seconds is a weak signal, not a blip.
+  useEffect(() => {
+    if (connection !== 'offline') return setStalled(false);
+    const t = setTimeout(() => setStalled(true), 6000);
+    return () => clearTimeout(t);
+  }, [connection]);
+  return browser && !stalled;
+}
+
 export default function DriverApp() {
-  const { actions, sessions: portalSessions, state, refresh, events, updateAccount } = useSync();
+  const { actions, sessions: portalSessions, state, refresh, events, updateAccount, connection } = useSync();
+  const online = useOnline();
+  const [pending, setPending] = useState<PendingStart | null>(readPending);
+  const keepPending = (p: PendingStart | null) => {
+    setPending(p);
+    try {
+      if (p) localStorage.setItem(PENDING, JSON.stringify(p));
+      else localStorage.removeItem(PENDING);
+    } catch {
+      /* private mode: this visit only */
+    }
+  };
+  // When the stations were last seen live, for "data as of 14:32" with no signal.
+  const [liveAt, setLiveAt] = useState<number | null>(() => {
+    try {
+      return Number(localStorage.getItem('oc-live-at')) || savedStations()?.at || null;
+    } catch {
+      return null;
+    }
+  });
+  useEffect(() => {
+    if (connection !== 'live' || !state) return;
+    const now = Date.now();
+    setLiveAt(now);
+    try {
+      localStorage.setItem('oc-live-at', String(now));
+    } catch {
+      /* private mode */
+    }
+  }, [connection, state]);
+  const packs = useOfflinePacks();
   const driverAccount = portalSessions.driver;
   // The session this driver currently has running, as the server sees it.
   const liveSession = state?.sessions.find(
@@ -2162,6 +2273,17 @@ export default function DriverApp() {
     }
 
     if (station && connector && driverAccount) {
+      // No signal at the charger: keep the start and send it the moment the phone is back online.
+      if (!online || !navigator.onLine) {
+        if (payer === 'credit') {
+          pushToast({ icon: '📡', title: 'Нужна связь', body: 'Зарядка в долг подтверждается лицом — это возможно только онлайн', color: '#F59E0B' });
+          return;
+        }
+        keepPending({ stationId: station.id, stationName: station.name, connectorId: connector.id, payer, goal: options.goal, at: Date.now() });
+        pushToast({ icon: '📡', title: 'Запустим, как только появится связь', body: `${station.name} · подключите кабель к машине`, color: '#FFB000' });
+        setScreen('map');
+        return;
+      }
       try {
         await actions.startSession('driver', station.id, connector.id, payer, faceToken, options.goal);
         await refresh();
@@ -2178,6 +2300,29 @@ export default function DriverApp() {
     }
     setScreen('charging-active');
   };
+
+  const sendingPending = useRef(false);
+  useEffect(() => {
+    if (!pending || !online || connection !== 'live' || !driverAccount || sendingPending.current) return;
+    sendingPending.current = true;
+    void actions.startSession('driver', pending.stationId, pending.connectorId, pending.payer, undefined, pending.goal)
+      .then(async () => {
+        await refresh();
+        pushToast({ icon: '⚡', title: 'Связь появилась — зарядка запущена', body: pending.stationName, color: '#22C55E' });
+        keepPending(null);
+        setActiveTab('map');
+        setScreen('charging-active');
+      })
+      .catch(err => {
+        pushToast({ icon: '⚠️', title: 'Зарядка не запустилась', body: err instanceof Error ? err.message : 'Попробуйте ещё раз', color: '#F59E0B' });
+        keepPending(null);
+      })
+      .finally(() => {
+        sendingPending.current = false;
+      });
+    // pushToast and keepPending are local helpers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pending, online, connection, driverAccount]);
 
   useEffect(() => {
     if (liveSession) {
@@ -2316,6 +2461,28 @@ export default function DriverApp() {
           {renderContent()}
         </div>
       </div>
+
+      {/* No signal: what is shown is the last data seen, and the saved roads still work */}
+      {!online && !showOnboarding && (
+        <div data-offline-banner className="absolute top-2 inset-x-3 z-40 flex justify-center pointer-events-none">
+          <div role="status" className="pointer-events-auto max-w-full flex items-center gap-2 pl-2.5 pr-3.5 py-2 rounded-2xl bg-[#111]/92 backdrop-blur text-white shadow-lg pg-reveal">
+            <span className="w-7 h-7 rounded-xl bg-white/10 grid place-items-center shrink-0 animate-pulse">📡</span>
+            <span className="text-xs leading-tight min-w-0">
+              <span className="block font-semibold">{liveAt ? `Нет связи · данные на ${new Date(liveAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tashkent' })}` : 'Нет связи'}</span>
+              <span className="block text-white/60 truncate">{packs.length ? `Сохранены трассы: ${packs.map(p => p.name).join(', ')}` : 'Перед дорогой сохраните трассу в «Поездке»'}</span>
+            </span>
+          </div>
+        </div>
+      )}
+      {pending && showTabs && (
+        <div className="absolute inset-x-3 bottom-[92px] z-40 flex justify-center pointer-events-none">
+          <div className="pointer-events-auto flex items-center gap-2 pl-3 pr-1.5 py-1.5 rounded-2xl bg-white border border-amber-200 shadow-lg pg-sheet-in">
+            <LoaderCircleIcon />
+            <span className="text-xs text-slate-700 min-w-0 truncate">{`Ждём связь · старт на ${pending.stationName}`}</span>
+            <button onClick={() => keepPending(null)} className="px-2.5 py-1.5 rounded-xl bg-slate-100 text-xs font-semibold text-slate-600">Отменить</button>
+          </div>
+        </div>
+      )}
 
       {/* Push notification toasts */}
       {toasts.length > 0 && (
