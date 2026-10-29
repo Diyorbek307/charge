@@ -50,9 +50,17 @@ export default function BaseMap() {
     let layer: L.Layer | null = null;
     let cancelled = false;
     // Loaded on demand: the vector engine is large and only maps need it.
-    void Promise.all([import('maplibre-gl'), import('@maplibre/maplibre-gl-leaflet'), import('maplibre-gl/dist/maplibre-gl.css')])
-      .then(() => {
+    void Promise.all([
+      import('maplibre-gl'),
+      import('@maplibre/maplibre-gl-leaflet'),
+      import('maplibre-gl/dist/maplibre-gl.css'),
+      // MapLibre 6 runs its worker from a separate file that the bundle does
+      // not inline; point the engine at the copy Vite emits next to it.
+      import('maplibre-gl/dist/maplibre-gl-worker.mjs?url'),
+    ])
+      .then(([ml, , , worker]) => {
         if (cancelled) return;
+        ml.setWorkerUrl(worker.default);
         const gl = (L as unknown as { maplibreGL: (o: object) => L.Layer & { getMaplibreMap: () => import('maplibre-gl').Map } }).maplibreGL({
           style: MAP_STYLE,
           attributionControl: false,
