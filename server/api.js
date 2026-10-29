@@ -28,6 +28,7 @@ import { promoFor, publicPromos, createPromo, stopPromo, promosOf } from './prom
 import { syncRewards, rewardsFor, bonusFor, spendBonus } from './rewards.js';
 import { batteryHealthFor } from './battery.js';
 import { PLUS, plusActive, plusFor, subscribePlus, cancelPlus } from './plus.js';
+import { fleetPlanFor, setFleetPlan, fleetDiscount, fleetPriority, fleetDriverReport } from './fleet.js';
 
 export const api = express.Router();
 // Photos (a face for credit, a station, a support message) are larger than an ordinary request.
@@ -152,6 +153,7 @@ function scopeOf({ type, entity, payload = {} }) {
     case 'employee.limit':
     case 'fleet.limit':
     case 'fleet.balance':
+    case 'fleet.plan':
       return { fleet: true };
     case 'operator.status':
     case 'commission.update':
@@ -330,6 +332,7 @@ function stateFor(viewer) {
       transactions: txFor(sessions),
       vehicles: d.vehicles,
       employees: employeesNow(),
+      fleetPlan: fleetPlanFor(viewer.orgId),
       wallets: d.wallets[viewer.orgId] ? { [viewer.orgId]: d.wallets[viewer.orgId] } : {},
       queues: queues.map(ownQueue),
       bookings: bookingsFor(viewer),
@@ -989,6 +992,18 @@ api.post('/community/:id/confirm', requireAuth('driver'), (req, res) => {
 });
 
 api.get('/loyalty', requireAuth('driver'), (req, res) => res.json(loyaltyFor(req.account.id)));
+api.put('/fleet/plan', requireAuth('business'), (req, res) => {
+  const r = setFleetPlan(req.account.orgId, req.body?.plan);
+  if (r.error) return res.status(r.status).json({ error: r.error });
+  emit({ type: 'fleet.plan', portal: 'business', actor: req.account.name, message: r.plan.plan === 'taxi' ? `Тариф для такси подключён · скидка ${r.plan.discount}%` : 'Обычный тариф автопарка', entity: req.account.orgId });
+  res.json(r.plan);
+});
+api.get('/fleet/report', requireAuth('business'), (req, res) => {
+  const month = String(req.query.month ?? new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 7));
+  if (!/^\d{4}-\d{2}$/.test(month)) return res.status(400).json({ error: 'Месяц в виде ГГГГ-ММ' });
+  res.json({ month, drivers: fleetDriverReport(month) });
+});
+
 api.get('/plus', requireAuth('driver'), (req, res) => res.json(plusFor(req.account.id)));
 api.post('/plus', requireAuth('driver'), (req, res) => {
   const r = subscribePlus(req.account);
@@ -1410,8 +1425,10 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     multiplier: band.multiplier,
     // The network's own promo first; PowerGo Plus takes its share off what is left, and PowerGo pays it.
     networkPrice: Math.round(connector.price * band.multiplier * (1 - (promo?.percent ?? 0) / 100)),
-    price: Math.round(connector.price * band.multiplier * (1 - (promo?.percent ?? 0) / 100) * (plusActive(account.id) && !station.ocpi ? 1 - PLUS.discount / 100 : 1)),
-    ...(plusActive(account.id) && !station.ocpi ? { plus: true } : {}),
+    // A company charge on the taxi tariff takes the park's volume discount; a private one, Plus.
+    price: Math.round(connector.price * band.multiplier * (1 - (promo?.percent ?? 0) / 100) * (station.ocpi ? 1 : 1 - (corporate ? fleetDiscount() : plusActive(account.id) ? PLUS.discount : 0) / 100)),
+    ...(!station.ocpi && !corporate && plusActive(account.id) ? { plus: true } : {}),
+    ...(!station.ocpi && corporate && fleetDiscount() ? { fleetDiscount: fleetDiscount() } : {}),
     ...(promo ? { promo: { id: promo.id, title: promo.title, percent: promo.percent } } : {}),
     // Platform commission is locked at start too, so a rate change is not retroactive.
     commissionRate: db.byId('operators', station.operatorId)?.commission ?? 3,
@@ -1549,8 +1566,9 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
   // A partner network's charge record states the price; otherwise our locked price applies.
   const cost = billed ?? Math.round(energy * (session.price ?? 1800));
   // What Plus took off this charge: PowerGo owes it to the network.
-  const plusCovered = session.plus && billed === null && session.networkPrice ? Math.max(0, Math.round(energy * session.networkPrice) - cost) : 0;
-  if (plusCovered) session.plusCovered = plusCovered;
+  // What Plus or the taxi tariff took off this charge: PowerGo owes it to the network.
+  const plusCovered = (session.plus || session.fleetDiscount) && billed === null && session.networkPrice ? Math.max(0, Math.round(energy * session.networkPrice) - cost) : 0;
+  if (plusCovered) session[session.plus ? 'plusCovered' : 'fleetCovered'] = plusCovered;
 
   session.status = 'completed';
   session.end = new Date().toISOString();
@@ -1910,7 +1928,8 @@ api.post('/stations/:id/queue', requireAuth('driver', 'business'), (req, res) =>
     connectorId: null,
   };
   // Plus stands behind other Plus members, ahead of everyone else.
-  const plus = plusActive(account.id);
+  // Plus members and taxi-tariff drivers stand behind each other, ahead of everyone else.
+  const plus = plusActive(account.id) || fleetPriority(account.id);
   if (plus) entry.plus = true;
   const behind = plus ? db.data.queues.findIndex(q => q.stationId === station.id && !q.plus) : -1;
   if (behind >= 0) db.data.queues.splice(behind, 0, entry);

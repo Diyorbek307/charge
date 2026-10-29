@@ -5,6 +5,7 @@ import type { PaymentOrder } from '../../lib/api';
 import { useAnalytics, money, num, monthLong, dateTime } from '../../lib/analytics';
 import { Page, Card, Kpi, Loading, ErrorNote, Pill, Empty, STATUS_PILL } from '../admin/ui';
 import ExportButton from '../ExportButton';
+import TaxiPlan from './TaxiPlan';
 
 const PRESETS = [2_000_000, 5_000_000, 10_000_000];
 const thisMonth = () => new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 7);
@@ -58,6 +59,8 @@ export default function BusinessBilling() {
         <Kpi label="Порог уведомления" value={money(acc?.threshold ?? 0, false)} sub="сум — предупредим, когда баланс ниже" icon={<Landmark size={14} />} tone="amber" />
         <Kpi label="Расходы месяца" value={money(acc?.spentMonth ?? 0, false)} sub={`сум из бюджета ${money(acc?.budget ?? 0)}`} icon={<Wallet size={14} />} tone="emerald" />
       </div>
+
+      <TaxiPlan />
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <Card title="Пополнить счёт">
