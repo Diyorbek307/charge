@@ -217,6 +217,7 @@ export function ChargingDoneScreen({ session, onClose }: { session: Session | nu
     ['Энергия', `${session.energy} кВт·ч`],
     ['Цена', `${(session.price ?? 0).toLocaleString('ru-RU')} сум/кВт·ч${band ? ` (${band})` : ''}`],
     ...(session.promo ? [['Скидка сети', `−${session.promo.percent}% · ${session.promo.title}`] as [string, string]] : []),
+    ...(session.bonusUsed ? [['Бонусом PowerGo', `−${sum(session.bonusUsed)}`] as [string, string], ['С кошелька', sum(session.cost - session.bonusUsed)] as [string, string]] : []),
     ['Оплата', payer],
   ];
 

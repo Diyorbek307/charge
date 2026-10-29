@@ -27,6 +27,7 @@ import Navigator from './driver/Navigator';
 import { useRoadDistance } from '../lib/nav';
 import DealsScreen from './driver/Deals';
 import QRScanScreen from './driver/QRScan';
+import RewardsScreen, { RewardBurst } from './driver/Rewards';
 import { useOfflinePacks, deletePack, packsBytes, savedStations } from '../lib/offline';
 import { NetworkBadge } from './driver/NetworkBadge';
 import { ChargerFriend } from './driver/Illustration';
@@ -39,7 +40,7 @@ import { inTelegram, telegramInitData } from '../lib/telegram';
 import type { Booking, Session, PaymentOrder } from '../lib/api';
 import AuthFlow from './AuthFlow';
 
-type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate';
+type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate' | 'rewards';
 type Tab = 'map' | 'charging' | 'deals' | 'profile';
 /** Minutes as "25 мин" or "5 ч 10 мин". */
 const hm = (m: number) => (m < 60 ? `${m} мин` : `${Math.floor(m / 60)} ч${m % 60 ? ` ${m % 60} мин` : ''}`);
@@ -340,6 +341,7 @@ function ChargingStartScreen({ station, preferConnector, onBack, onConfirm, onOp
   const { state, sessions: portalSessions } = useSync();
   const me = portalSessions.driver;
   const balance = (me && state?.wallets[me.id]?.balance) ?? 0;
+  const bonus = state?.rewards?.bonus.balance ?? 0;
   const employer = state?.employer ?? null;
   const familyWallets = (state?.family?.payers ?? []).filter(p => p.status === 'active');
   const credit = state?.credit?.enrolled ? state.credit : null;
@@ -593,7 +595,7 @@ function ChargingStartScreen({ station, preferConnector, onBack, onConfirm, onOp
               <div className="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center"><Wallet size={16} /></div>
               <div className="flex-1">
                 <p className="text-sm font-medium text-slate-800">Мой кошелёк</p>
-                <p className="text-xs text-slate-400">{`Баланс ${balance.toLocaleString('ru-RU')} сум · пополнение через Payme или Click`}</p>
+                <p className="text-xs text-slate-400">{bonus > 0 ? `Баланс ${balance.toLocaleString('ru-RU')} сум · сначала спишется бонус ${bonus.toLocaleString('ru-RU')} сум` : `Баланс ${balance.toLocaleString('ru-RU')} сум · пополнение через Payme или Click`}</p>
               </div>
             </button>
             {employer && (
@@ -871,7 +873,7 @@ function OfflineSection() {
   );
 }
 
-function WalletScreen({ onBack }: { onBack: () => void }) {
+function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: () => void }) {
   const { actions, refresh, state, sessions: portalSessions } = useSync();
   const driverId = portalSessions.driver?.id;
   // Balance is owned by the server so a top-up shows up in every portal.
@@ -907,7 +909,8 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
         const ses = state?.sessions.find(x => x.id === t.sessionId);
         const refunded = t.status === 'refunded';
         const viaNetwork = t.method.startsWith('Баланс сети');
-        return { id: t.id, type: refunded ? 'topup' : 'charge', amount: refunded ? t.amount : -t.amount, label: `${refunded ? 'Возврат' : 'Зарядка'} — ${ses?.stationName ?? t.sessionId}${viaNetwork ? ' · баланс сети' : ''}`, at: t.time };
+        const fromWallet = t.amount - (t.bonus ?? 0);
+        return { id: t.id, type: refunded ? 'topup' : 'charge', amount: refunded ? t.amount : -fromWallet, label: `${refunded ? 'Возврат' : 'Зарядка'} — ${ses?.stationName ?? t.sessionId}${viaNetwork ? ' · баланс сети' : ''}${t.bonus ? ` · ${t.bonus.toLocaleString('ru-RU')} бонусом` : ''}`, at: t.time };
       }),
   ]
     .sort((a, b) => b.at.localeCompare(a.at))
@@ -970,6 +973,18 @@ function WalletScreen({ onBack }: { onBack: () => void }) {
 
           </div>
         </div>
+
+        {(state?.rewards?.bonus.balance ?? 0) > 0 && (
+          <button onClick={onRewards} className="w-full rounded-2xl p-4 flex items-center gap-3 text-left text-[#111]" style={{ background: 'linear-gradient(135deg,#FFF3C4,#FFE08A)' }}>
+            <span className="text-2xl" aria-hidden="true">🎁</span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-xs font-semibold opacity-70">БОНУС POWERGO</span>
+              <span className="block text-lg font-black tabular-nums">{`${state!.rewards!.bonus.balance.toLocaleString('ru-RU')} сум`}</span>
+              {state!.rewards!.bonus.nextExpiry && <span className="block text-[11px] opacity-70">{`Тратится первым · до ${new Date(state!.rewards!.bonus.nextExpiry).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}`}</span>}
+            </span>
+            <ChevronRight size={16} className="opacity-50" />
+          </button>
+        )}
 
         <NetworkWalletList />
 
@@ -1149,6 +1164,21 @@ const portTypes: { type: string; label: string; maxKw: number }[] = [
   { type: 'NACS', label: 'NACS (Tesla)', maxKw: 250 },
 ];
 
+/** "+100 000 sum for your car's details", while that reward is still to get. */
+function CarBonusBanner() {
+  const reward = useSync().state?.rewards?.achievements.find(a => a.id === 'car');
+  if (!reward || reward.grantedAt) return null;
+  return (
+    <div className="relative overflow-hidden rounded-2xl px-4 py-3 flex items-center gap-3 text-[#111] pg-reveal" style={{ background: 'linear-gradient(135deg,#FFE08A,#FFC83D)' }}>
+      <span className="text-2xl pg-float" aria-hidden="true">🎁</span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-sm font-extrabold">{`+${reward.amount.toLocaleString('ru-RU')} сум на зарядку`}</span>
+        <span className="block text-xs opacity-75">PowerGo дарит бонус за данные вашего автомобиля</span>
+      </span>
+    </div>
+  );
+}
+
 function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { brand: string; model: string; year: number; battery: number; port: string; maxKw: number; chargeLimit: number }) => void }) {
   // Editing starts from the car already saved, if there is one.
   const saved = useSync().sessions.driver?.car;
@@ -1242,6 +1272,7 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
         </div>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <CarBonusBanner />
         {/* Brand */}
         <div className="bg-white rounded-2xl border border-slate-100 p-4">
           <p className="text-xs font-semibold text-slate-500 mb-3">МАРКА</p>
@@ -1896,6 +1927,7 @@ function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
         <h2 className="text-lg font-bold text-slate-900">Ваш автомобиль</h2>
         <p className="text-sm text-slate-400">Чтобы показывать подходящие разъёмы, время и стоимость зарядки</p>
       </div>
+      <CarBonusBanner />
       <div className="bg-white rounded-2xl border border-slate-100 p-4">
         <p className="text-xs font-semibold text-slate-500 mb-3">МАРКА</p>
         <div className="grid grid-cols-4 gap-2">
@@ -2159,6 +2191,11 @@ export default function DriverApp() {
   const [screen, setScreen] = useState<Screen>('map');
   // The wallet opens from the profile or from the balance on the map; Back returns there.
   const walletFrom = useRef<Screen>('profile');
+  // The car form opens from the profile, the charging tab or the rewards; saving returns there.
+  const carFrom = useRef<Screen>('profile');
+  // A reward just reached: shown big, one at a time.
+  const [burst, setBurst] = useState<{ amount: number; title: string } | null>(null);
+  const seenRewards = useRef(new Set<string>());
   useLargeMode();
   const [picked, setSelectedStation] = useState<Station | null>(null);
   // The card follows the live feed: a connector taken a second ago shows as taken.
@@ -2237,6 +2274,15 @@ export default function DriverApp() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events]);
+
+  useEffect(() => {
+    const fresh = events.find(e => e.type === 'reward.granted' && !seenRewards.current.has(e.entity ?? e.id) && Date.now() - Date.parse(e.ts) < 60_000);
+    // Not under the welcome screens: it waits until they close.
+    if (!fresh || burst || showOnboarding) return;
+    seenRewards.current.add(fresh.entity ?? fresh.id);
+    const p = fresh.payload as { amount?: number; title?: string };
+    if (p.amount) setBurst({ amount: p.amount, title: p.title ?? 'Награда' });
+  }, [events, burst, showOnboarding]);
 
   const seenQueueEvent = useRef<string | null>(null);
   useEffect(() => {
@@ -2349,9 +2395,15 @@ export default function DriverApp() {
 
   const saveCar = async (car: { brand: string; model: string; year: number; battery: number; port: string; maxKw: number; chargeLimit: number }) => {
     try {
-      const { user } = await actions.saveCar('driver', { ...car, port: car.port.replace(/^Type(\d)$/, 'Type $1') });
+      const { user, granted } = await actions.saveCar('driver', { ...car, port: car.port.replace(/^Type(\d)$/, 'Type $1') });
       updateAccount('driver', user);
-      setScreen('profile');
+      const g = granted?.[0];
+      if (g) {
+        seenRewards.current.add(g.id);
+        setBurst({ amount: g.amount, title: g.title });
+      }
+      await refresh();
+      setScreen(carFrom.current);
     } catch (err) {
       pushToast({ icon: '⚠️', title: 'Не удалось сохранить автомобиль', body: err instanceof Error ? err.message : 'Попробуйте ещё раз', color: '#F59E0B' });
     }
@@ -2404,14 +2456,15 @@ export default function DriverApp() {
     if (screen === 'trip') return <TripPlannerScreen onBack={() => setScreen('map')} onSelectStation={handleSelectStation} />;
     if (screen === 'booking') return <BookingScreen station={selectedStation} onBack={backToStation} onConfirm={b => { setLastBooking(b); setScreen('booking-done'); }} />;
     if (screen === 'booking-done') return <BookingDoneScreen station={selectedStation} booking={lastBooking} onClose={handleBack} />;
-    if (screen === 'add-car') return <AddCarScreen onBack={() => setScreen('profile')} onSave={saveCar} />;
+    if (screen === 'add-car') return <AddCarScreen onBack={() => setScreen(carFrom.current)} onSave={saveCar} />;
+    if (screen === 'rewards') return <RewardsScreen onBack={() => setScreen('profile')} onAddCar={() => { carFrom.current = 'rewards'; setScreen('add-car'); }} />;
     if (screen === 'notifications') return <NotificationsScreen onBack={() => setScreen('profile')} />;
     if (screen === 'reviews') return <ReviewsScreen station={selectedStation} onBack={backToStation} />;
     if (screen === 'report') return <ReportScreen station={reportFrom.current === 'station' ? selectedStation : null} onBack={() => (reportFrom.current === 'station' ? backToStation() : setScreen(reportFrom.current))} />;
     if (screen === 'favorites') return <FavoritesScreen onBack={() => setScreen('map')} onSelectStation={handleSelectStation} />;
     if (screen === 'qr-scan') return <QRScanScreen onBack={() => (selectedStation && activeTab === 'map' ? setScreen('station') : setScreen('map'))} onStartCharging={(s, point) => { preferPoint.current = point ?? null; setActiveTab('map'); setSelectedStation(s); setScreen('charging-start'); }} onBook={s => { setActiveTab('map'); setSelectedStation(s); setScreen('booking'); }} onRoute={s => { setActiveTab('map'); setSelectedStation(s); setScreen('navigate'); }} />;
     if (screen === 'app-settings') return <AppSettingsScreen onBack={() => setScreen('profile')} />;
-    if (screen === 'wallet') return <WalletScreen onBack={() => setScreen(walletFrom.current)} />;
+    if (screen === 'wallet') return <WalletScreen onBack={() => setScreen(walletFrom.current)} onRewards={() => setScreen('rewards')} />;
     if (screen === 'eco') return <EcoScreen onBack={() => setScreen('profile')} />;
     if (screen === 'security') return <SecurityScreen onBack={() => setScreen('profile')} />;
     if (screen === 'finance') return <FinanceScreen onBack={() => setScreen('profile')} />;
@@ -2424,8 +2477,8 @@ export default function DriverApp() {
 
     if (screen === 'history') return <HistoryScreen onBack={() => { setScreen('map'); setActiveTab('charging'); }} />;
     if (activeTab === 'deals') return <DealsScreen onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} onRoute={st => { setActiveTab('map'); setSelectedStation(st); setScreen('navigate'); }} />;
-    if (activeTab === 'profile') return <ProfileScreen onNavigate={s => { walletFrom.current = 'profile'; setScreen(s as Screen); }} />;
-    if (activeTab === 'charging') return <ChargingHubScreen onNavigate={(s) => setScreen(s as Screen)} onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} onOpenCharge={() => { setActiveTab('map'); setScreen('charging-active'); }} onRepeat={(st, cid, goal) => { setActiveTab('map'); setSelectedStation(st); void startCharging(cid, 'self', undefined, { goal }, st); }} />;
+    if (activeTab === 'profile') return <ProfileScreen onNavigate={s => { walletFrom.current = 'profile'; carFrom.current = 'profile'; setScreen(s as Screen); }} />;
+    if (activeTab === 'charging') return <ChargingHubScreen onNavigate={(s) => { carFrom.current = 'map'; setScreen(s as Screen); }} onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} onOpenCharge={() => { setActiveTab('map'); setScreen('charging-active'); }} onRepeat={(st, cid, goal) => { setActiveTab('map'); setSelectedStation(st); void startCharging(cid, 'self', undefined, { goal }, st); }} />;
 
     return (
       <div className="relative w-full h-full">
@@ -2438,7 +2491,7 @@ export default function DriverApp() {
     );
   };
 
-  const showTabs = !['history', 'charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host', 'credit', 'navigate', 'eco'].includes(screen);
+  const showTabs = !['history', 'charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host', 'credit', 'navigate', 'eco', 'rewards'].includes(screen);
 
   return (
     <div className="pg-app h-full flex flex-col bg-white overflow-hidden relative" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -2483,6 +2536,8 @@ export default function DriverApp() {
           </div>
         </div>
       )}
+
+      {burst && <RewardBurst amount={burst.amount} title={burst.title} onDone={() => setBurst(null)} />}
 
       {/* Push notification toasts */}
       {toasts.length > 0 && (

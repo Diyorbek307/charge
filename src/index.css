@@ -865,3 +865,8 @@ nav::-webkit-scrollbar { display: none; }
 .pg-sheet-in { animation: pg-sheet-in .42s cubic-bezier(.32,.72,0,1) both; }
 @keyframes pg-sheet-in { from { transform: translateY(100%); } }
 @keyframes pg-shine { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+/* Rewards: confetti flies out from the middle and falls; progress bars fill in. */
+.pg-confetti { animation: pg-confetti 1.4s cubic-bezier(.15,.7,.3,1) both; }
+@keyframes pg-confetti { 0% { transform: translate(0, 0) rotate(0) scale(.4); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(var(--dx), calc(var(--dy) + 160px)) rotate(calc(var(--rot) + 540deg)) scale(1); opacity: 0; } }
+.pg-bar { transform-origin: left; animation: pg-bar .9s cubic-bezier(.32,.72,0,1) .15s both; }
+@keyframes pg-bar { from { transform: scaleX(0); } }

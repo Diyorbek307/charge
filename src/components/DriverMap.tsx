@@ -363,6 +363,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
   const promos = useDriverPromos();
   const car = sessions.driver?.car ?? null;
   const balance = (sessions.driver && state?.wallets[sessions.driver.id]?.balance) ?? 0;
+  const bonus = state?.rewards?.bonus.balance ?? 0;
   const [onlyFree, setOnlyFree] = useState(false);
   const [onlyMine, setOnlyMine] = useState(false);
   const [onlyPromo, setOnlyPromo] = useState(false);
@@ -497,6 +498,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
                 <span className="text-left leading-tight">
                   <span className="block text-[11px] text-slate-500">Баланс</span>
                   <span className="block text-[15px] font-bold text-slate-900 tabular-nums">{`${balance.toLocaleString('ru-RU')} сум`}</span>
+                  {bonus > 0 && <span className="block text-[11px] font-bold text-[#A87100] tabular-nums">{`+${bonus.toLocaleString('ru-RU')} бонус`}</span>}
                 </span>
               </button>
             ) : <span />}

@@ -141,7 +141,8 @@ describe('OCPI partner networks', () => {
     assert.ok(done.energy > 0);
     assert.equal(done.cost, Math.round(done.energy * 2200), 'the bill is not the partner’s');
     const after = (await call('/state', { token })).data;
-    assert.equal(Object.values(after.wallets)[0].balance, walletBefore - done.cost);
+    // PowerGo's bonus pays first; the wallet covers the rest.
+    assert.equal(Object.values(after.wallets)[0].balance, walletBefore - (done.cost - (done.bonusUsed ?? 0)));
     assert.equal(after.stations.find(s => s.id === st.id).connectors[0].status, 'available');
   });
 

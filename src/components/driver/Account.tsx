@@ -55,6 +55,7 @@ export function ProfileScreen({ onNavigate }: { onNavigate: (s: string) => void 
   const menu: { icon: ReactNode; label: string; badge?: string; screen: string }[] = [
     { icon: <Wallet size={16} className="text-emerald-500" />, label: 'Кошелёк', badge: sum(balance), screen: 'wallet' },
     { icon: <PieChart size={16} className="text-sky-500" />, label: 'Расходы и экономия', screen: 'finance' },
+    { icon: <span className="text-[15px] leading-none" aria-hidden="true">🎁</span>, label: 'Награды и бонусы', badge: state?.rewards?.bonus.balance ? sum(state.rewards.bonus.balance) : state?.rewards?.achievements.some(a => !a.grantedAt) ? 'новые' : undefined, screen: 'rewards' },
     { icon: <Gift size={16} className="text-violet-500" />, label: 'Баллы', screen: 'loyalty' },
     { icon: <ScanFace size={16} className="text-amber-500" />, label: 'Зарядка в долг', badge: state?.credit?.debt ? sum(state.credit.debt) : undefined, screen: 'credit' },
     { icon: <Users size={16} className="text-indigo-500" />, label: 'Семейный кошелёк', badge: pendingFamily ? String(pendingFamily) : undefined, screen: 'family' },

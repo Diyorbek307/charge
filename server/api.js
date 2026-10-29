@@ -25,6 +25,7 @@ import {
   directOperatorOf, netBalance, chargeNetwork, refundNetwork, networkWalletsFor, publicPayout, setPayout, directReport,
 } from './direct.js';
 import { promoFor, publicPromos, createPromo, stopPromo, promosOf } from './promos.js';
+import { syncRewards, rewardsFor, bonusFor, spendBonus } from './rewards.js';
 
 export const api = express.Router();
 // Photos (a face for credit, a station, a support message) are larger than an ordinary request.
@@ -101,6 +102,7 @@ function scopeOf({ type, entity, payload = {} }) {
     case 'session.failed':
     case 'schedule.started':
     case 'schedule.failed':
+    case 'reward.granted':
       return { userId: payload.userId };
     case 'evse.status':
       return { operatorId: stationOperator(payload.stationId), public: true };
@@ -341,6 +343,7 @@ function stateFor(viewer) {
     employer: employerOf(viewer.id),
     family: familyFor(viewer.id),
     credit: creditFor(viewer.id),
+    rewards: (syncRewards(viewer), rewardsFor(viewer)),
     networkWallets: networkWalletsFor(viewer.id),
     scheduled: (d.scheduledStarts ?? []).filter(x => x.userId === viewer.id && x.status === 'pending'),
     wallets: d.wallets[viewer.id] ? { [viewer.id]: d.wallets[viewer.id] } : {},
@@ -885,7 +888,10 @@ api.put('/me/car', requireAuth('driver'), (req, res) => {
   if (!Number.isInteger(chargeLimit) || chargeLimit < 50 || chargeLimit > 100) return res.status(400).json({ error: 'Лимит заряда — от 50 до 100%' });
   const car = { brand, model, year, battery: Math.round(battery), port: b.port, maxKw: Math.round(maxKw), chargeLimit };
   db.update('accounts', req.account.id, { car });
-  res.json({ user: publicAccount(db.byId('accounts', req.account.id)) });
+  const account = db.byId('accounts', req.account.id);
+  const granted = syncRewards(account);
+  announceRewards(account, granted);
+  res.json({ user: publicAccount(account), granted });
 });
 
 // ---------------------------------------------------------------------------
@@ -955,6 +961,10 @@ api.post('/community/:id/confirm', requireAuth('driver'), (req, res) => {
 });
 
 api.get('/loyalty', requireAuth('driver'), (req, res) => res.json(loyaltyFor(req.account.id)));
+api.get('/rewards', requireAuth('driver'), (req, res) => {
+  syncRewards(req.account);
+  res.json(rewardsFor(req.account));
+});
 
 api.post('/loyalty/redeem', requireAuth('driver'), (req, res) => {
   const r = redeemPoints(req.account.id, req.body?.points);
@@ -1323,7 +1333,9 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
   // the balance at zero and the charge is effectively free.
   const walletId = corporate ? 'biz-001' : familyOwner ?? account.id;
   const wallet = db.data.wallets[walletId];
-  if (!onCredit && !directOp && wallet && wallet.balance < minimum) {
+  // The driver's own bonus pays for charging too, so it counts towards the minimum.
+  const bonus = walletId === account.id ? bonusFor(account.id).balance : 0;
+  if (!onCredit && !directOp && wallet && wallet.balance + bonus < minimum) {
     return {
       status: 402,
       error: corporate && employee ? 'На счёте компании недостаточно средств — сообщите менеджеру автопарка' : `Недостаточно средств: нужно минимум ${minimum.toLocaleString('ru-RU')} сум`,
@@ -1529,7 +1541,15 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
   if (session.credit) recordDebt(session);
   // Paid from the driver's balance at the network; the money is already the network's.
   else if (session.direct) chargeNetwork(session);
-  else if (wallet) wallet.balance = Math.max(0, wallet.balance - cost);
+  else if (wallet) {
+    // PowerGo's bonus pays first; the network is paid its full price either way.
+    const fromBonus = walletId === session.userId ? spendBonus(session.userId, cost, session.id) : 0;
+    if (fromBonus) {
+      session.bonusUsed = fromBonus;
+      transaction.bonus = fromBonus;
+    }
+    wallet.balance = Math.max(0, wallet.balance - (cost - fromBonus));
+  }
 
   const operator = db.byId('operators', session.operatorId);
   if (operator) {
@@ -1595,7 +1615,23 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
   }
 
   promoteQueue(session.stationId, session.connectorId);
+  const driver = db.byId('accounts', session.userId);
+  if (driver && !simulated) announceRewards(driver, syncRewards(driver));
   return { session, transaction };
+}
+
+/** Tells the driver about each reward just reached. */
+function announceRewards(account, grants) {
+  for (const g of grants) {
+    emit({
+      type: 'reward.granted',
+      portal: 'system',
+      actor: 'PowerGo',
+      message: `+${g.amount.toLocaleString('ru-RU')} сум бонусом · ${g.title}`,
+      entity: g.id,
+      payload: { userId: account.id, amount: g.amount, kind: g.kind, title: g.title, expiresAt: g.expiresAt },
+    });
+  }
 }
 
 /** One rating per completed charge, from the driver who charged; the station's average follows. */
@@ -1625,6 +1661,7 @@ api.post('/sessions/:id/rating', requireAuth('driver', 'business'), (req, res) =
     entity: session.stationId,
     payload: { stars, sessionId: session.id },
   });
+  announceRewards(req.account, syncRewards(db.byId('accounts', req.account.id)));
   res.json({ station, session });
 });
 

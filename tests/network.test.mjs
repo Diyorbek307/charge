@@ -144,7 +144,8 @@ describe('Network API and map-only networks', () => {
     assert.equal(commands[1].session, 'N-1');
     assert.equal(done.energy, 7.5);
     assert.equal(done.cost, 13500, 'not the network’s price');
-    assert.equal(Object.values((await call('/state', { token })).data.wallets)[0].balance, walletBefore - 13500);
+    // PowerGo's bonus pays first; the wallet covers the rest.
+    assert.equal(Object.values((await call('/state', { token })).data.wallets)[0].balance, walletBefore - (13500 - (done.bonusUsed ?? 0)));
   });
 
   test('a new key retires the old one at once', async () => {

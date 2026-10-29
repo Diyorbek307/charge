@@ -208,6 +208,8 @@ export interface Session {
   /** Tariff band at start: 0.7 at night, 0.9 by day, 1.25 at the evening peak. */
   multiplier?: number;
   basePrice?: number;
+  /** Paid from PowerGo's bonus, sum. */
+  bonusUsed?: number;
   /** The network's promo this charge ran under. */
   promo?: { id: string; title: string; percent: number };
   /** The driver's 1–5 rating, once given. */
@@ -223,7 +225,19 @@ export interface Transaction {
   method: string;
   status: string;
   time: string;
+  /** Paid from PowerGo's bonus, sum; the rest came from the wallet. */
+  bonus?: number;
 }
+
+/** A milestone PowerGo pays a bonus for. */
+export interface Achievement { id: string; icon: string; title: string; desc: string; amount: number; goal: number; progress: number; grantedAt: string | null }
+export interface Rewards {
+  /** Bonus money for charging only; it burns after `bonusDays`. */
+  bonus: { balance: number; nextExpiry: string | null; nextExpiryAmount: number };
+  bonusDays: number;
+  achievements: Achievement[];
+}
+export interface BonusGrant { id: string; kind: string; title: string; amount: number; left: number; at: string; expiresAt: string }
 
 export interface Alert {
   id: string;
@@ -353,6 +367,7 @@ export interface PlatformState {
   family?: FamilyState;
   /** Charging on credit, for a driver. */
   credit?: CreditState;
+  rewards?: Rewards;
   /** The driver's balances at networks paid directly. */
   networkWallets?: NetworkWallet[];
   /** Charges the driver asked to start later. */
@@ -691,7 +706,7 @@ export const apiClient = {
   telegramSignIn: (initData: string) => post<{ token: string; user: Account }>('/auth/telegram', { initData }),
   telegramLink: (initData: string) => post<{ user: Account }>('/auth/telegram/link', { initData }, 'driver'),
   telegramUnlink: () => post<{ user: Account }>('/auth/telegram/unlink', undefined, 'driver'),
-  saveCar: (portal: Portal, car: Car) => request<{ user: Account }>('/me/car', { method: 'PUT', body: JSON.stringify(car), portal }),
+  saveCar: (portal: Portal, car: Car) => request<{ user: Account; granted?: BonusGrant[] }>('/me/car', { method: 'PUT', body: JSON.stringify(car), portal }),
   logout: (portal: Portal) => post<{ ok: boolean }>('/auth/logout', undefined, portal),
 
   /** payer 'company' charges a fleet employee's session to their employer, within the monthly limit. */
