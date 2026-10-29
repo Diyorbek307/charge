@@ -326,7 +326,7 @@ function useLargeMode() {
 /** What the driver wants from a charge, and when it should start. */
 type ChargeOptions = { goal?: ChargeGoal; startAt?: string };
 
-function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station: Station | null; onBack: () => void; onConfirm: (connectorId: string | null, payer: Payer, faceToken?: string, options?: ChargeOptions) => void | Promise<void>; onOpenQR?: () => void }) {
+function ChargingStartScreen({ station, preferConnector, onBack, onConfirm, onOpenQR }: { station: Station | null; preferConnector?: string | null; onBack: () => void; onConfirm: (connectorId: string | null, payer: Payer, faceToken?: string, options?: ChargeOptions) => void | Promise<void>; onOpenQR?: () => void }) {
   const { state, sessions: portalSessions } = useSync();
   const me = portalSessions.driver;
   const balance = (me && state?.wallets[me.id]?.balance) ?? 0;
@@ -344,7 +344,7 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
   const driverPromos = useDriverPromos();
   const promo = station ? promoNow({ id: station.id, operatorId: (station as Station & { operatorId?: string }).operatorId }, driverPromos) : null;
   // Held by id: the station is live, so the chosen point shows its status as it is now.
-  const [selectedId, setSelectedId] = useState(() => (station?.connectors.find(c => c.status === 'available') ?? station?.connectors[0])?.id ?? null);
+  const [selectedId, setSelectedId] = useState(() => (station?.connectors.find(c => c.id === preferConnector && c.status === 'available') ?? station?.connectors.find(c => c.status === 'available') ?? station?.connectors[0])?.id ?? null);
   const selectedConnector = station?.connectors.find(c => c.id === selectedId) ?? null;
   const [scanning, setScanning] = useState(false);
   const [scanned, setScanned] = useState(false);
@@ -2068,14 +2068,31 @@ export default function DriverApp() {
    */
   // Shortcuts from the app icon: ?go=qr opens the scanner, ?go=nearest the closest free station, ?go=charging the hub.
   const shortcutDone = useRef(false);
+  // The charge point a sticker named: offered first when the charge starts.
+  const preferPoint = useRef<string | null>(null);
   useEffect(() => {
     if (shortcutDone.current || !driverAccount || !liveStations.length) return;
-    const go = new URLSearchParams(window.location.search).get('go');
-    if (!go) return;
+    const params = new URLSearchParams(window.location.search);
+    const go = params.get('go');
+    const fromSticker = params.get('station');
+    if (!go && !fromSticker) return;
     shortcutDone.current = true;
     const url = new URL(window.location.href);
-    url.searchParams.delete('go');
+    for (const k of ['go', 'station', 'point']) url.searchParams.delete(k);
     window.history.replaceState(null, '', url.toString());
+    // A QR sticker scanned with the phone's own camera lands here.
+    if (fromSticker) {
+      const s = liveStations.find(x => x.id.toLowerCase() === fromSticker.toLowerCase());
+      if (s) {
+        preferPoint.current = params.get('point');
+        setActiveTab('map');
+        setSelectedStation(s);
+        setScreen('station');
+      } else {
+        pushToast({ icon: '⚠️', title: 'Станция не найдена', body: 'Этой станции больше нет на карте — сообщите в поддержку', color: '#F59E0B' });
+      }
+      return;
+    }
     if (go === 'qr') setScreen('qr-scan');
     if (go === 'charging') setActiveTab('charging');
     if (go === 'nearest') {
@@ -2236,7 +2253,7 @@ export default function DriverApp() {
   };
 
   const renderContent = () => {
-    if (screen === 'charging-start') return <ChargingStartScreen station={selectedStation} onBack={backToStation} onConfirm={startCharging} onOpenQR={() => setScreen('qr-scan')} />;
+    if (screen === 'charging-start') return <ChargingStartScreen station={selectedStation} preferConnector={preferPoint.current} onBack={backToStation} onConfirm={startCharging} onOpenQR={() => setScreen('qr-scan')} />;
     if (screen === 'charging-active') return <ChargingActiveScreen session={liveSession} startBattery={state?.vehicles.find(v => v.driverId === driverAccount?.id)?.battery ?? null} packKwh={driverAccount?.car?.battery} limit={driverAccount?.car?.chargeLimit} onStop={stopCharging} onLeave={() => { setActiveTab('charging'); setScreen('map'); }} />;
     if (screen === 'charging-done') return <ChargingDoneScreen session={lastSession} onClose={handleBack} />;
     if (screen === 'trip') return <TripPlannerScreen onBack={() => setScreen('map')} onSelectStation={handleSelectStation} />;
@@ -2247,7 +2264,7 @@ export default function DriverApp() {
     if (screen === 'reviews') return <ReviewsScreen station={selectedStation} onBack={backToStation} />;
     if (screen === 'report') return <ReportScreen station={reportFrom.current === 'station' ? selectedStation : null} onBack={() => (reportFrom.current === 'station' ? backToStation() : setScreen(reportFrom.current))} />;
     if (screen === 'favorites') return <FavoritesScreen onBack={() => setScreen('map')} onSelectStation={handleSelectStation} />;
-    if (screen === 'qr-scan') return <QRScanScreen onBack={() => (selectedStation && activeTab === 'map' ? setScreen('station') : setScreen('map'))} onStartCharging={s => { setActiveTab('map'); setSelectedStation(s); setScreen('charging-start'); }} onBook={s => { setActiveTab('map'); setSelectedStation(s); setScreen('booking'); }} onRoute={s => { setActiveTab('map'); setSelectedStation(s); setScreen('navigate'); }} />;
+    if (screen === 'qr-scan') return <QRScanScreen onBack={() => (selectedStation && activeTab === 'map' ? setScreen('station') : setScreen('map'))} onStartCharging={(s, point) => { preferPoint.current = point ?? null; setActiveTab('map'); setSelectedStation(s); setScreen('charging-start'); }} onBook={s => { setActiveTab('map'); setSelectedStation(s); setScreen('booking'); }} onRoute={s => { setActiveTab('map'); setSelectedStation(s); setScreen('navigate'); }} />;
     if (screen === 'app-settings') return <AppSettingsScreen onBack={() => setScreen('profile')} />;
     if (screen === 'wallet') return <WalletScreen onBack={() => setScreen(walletFrom.current)} />;
     if (screen === 'eco') return <EcoScreen onBack={() => setScreen('profile')} />;

@@ -132,3 +132,31 @@ test('a new driver signs up with an SMS code and lands in the app', async ({ pag
   const me = await request.get('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
   expect((await me.json()).user.name).toBe('Madina Karimova');
 });
+
+test("a network prints a QR sticker and the driver's scanner reads it", async ({ page, browser }) => {
+  // The network draws the sticker for its first station.
+  await signIn(page, 'operator');
+  await page.getByRole('button', { name: /^Станции/ }).first().click();
+  await page.locator('tbody tr').first().click();
+  await page.getByRole('button', { name: 'Наклейка QR' }).click();
+  const sticker = page.getByRole('img', { name: 'Наклейка точки A' });
+  await expect(sticker).toBeVisible();
+  const png = Buffer.from((await sticker.getAttribute('src')).split(',')[1], 'base64');
+  const stationName = (await page.getByRole('heading', { level: 1 }).textContent()).trim();
+
+  // A driver picks a photo of it in the scanner: the station and its point A come up.
+  const driver = await browser.newPage();
+  await signIn(driver, 'driver');
+  await skipOnboarding(driver);
+  await driver.getByRole('button', { name: 'Сканировать QR на станции' }).click();
+  await driver.locator('input[type="file"]').setInputFiles({ name: 'sticker.png', mimeType: 'image/png', buffer: png });
+  await expect(driver.getByText('QR распознан')).toBeVisible();
+  await expect(driver.getByText(/· точка A$/)).toBeVisible();
+  await expect(driver.getByText(stationName).first()).toBeVisible();
+
+  // The same link opened by the phone's own camera lands on the station card.
+  await driver.goto('/?portal=driver&station=st-001&point=c1');
+  await expect(driver.getByText('ТОЧКИ ЗАРЯДКИ')).toBeVisible();
+  expect(new URL(driver.url()).searchParams.get('station')).toBeNull();
+  await driver.close();
+});

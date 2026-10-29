@@ -4,6 +4,7 @@ import type { Station } from '../../data/mockData';
 import { useLiveStations } from '../../lib/live';
 import { useSync } from '../../lib/sync';
 import { useMyLocation, km, fmtKm } from '../../lib/geo';
+import { readStickerLink } from '../../lib/stickers';
 
 type Phase = 'idle' | 'camera' | 'success' | 'error' | 'manual';
 
@@ -79,7 +80,7 @@ const ago = (iso: string) => {
  * gallery, or the code typed in. Whatever the code, it has to name a station
  * on the map before anything starts.
  */
-export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute }: { onBack: () => void; onStartCharging: (s: Station) => void; onBook: (s: Station) => void; onRoute: (s: Station) => void }) {
+export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute }: { onBack: () => void; onStartCharging: (s: Station, point?: string | null) => void; onBook: (s: Station) => void; onRoute: (s: Station) => void }) {
   const stations = useLiveStations();
   const { state, sessions } = useSync();
   const me = sessions.driver;
@@ -89,6 +90,8 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
   const [foundId, setFoundId] = useState<string | null>(null);
   // Picked from the recent list, nothing was scanned — the screen should not claim it was.
   const [fromRecent, setFromRecent] = useState(false);
+  // A sticker names its charge point too (A, B…); that one is offered first.
+  const [point, setPoint] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [errorKind, setErrorKind] = useState<'code' | 'camera'>('code');
   const [torch, setTorch] = useState<boolean | null>(null);
@@ -132,6 +135,7 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
     if (s) {
       navigator.vibrate?.(35);
       setFromRecent(false);
+      setPoint(readStickerLink(text)?.point ?? null);
       setFoundId(s.id);
       setPhase('success');
     } else {
@@ -293,7 +297,7 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
               <button onClick={clearRecent} className="text-[11px] text-sky-600 font-semibold">Очистить</button>
             </div>
             {recent.map(r => (
-              <button key={r.station.id} onClick={() => { setFromRecent(true); setFoundId(r.station.id); setPhase('success'); }}
+              <button key={r.station.id} onClick={() => { setFromRecent(true); setPoint(null); setFoundId(r.station.id); setPhase('success'); }}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 border-b border-slate-50 last:border-b-0">
                 <div className="w-9 h-9 rounded-xl bg-sky-50 grid place-items-center shrink-0"><Zap size={15} className="text-sky-600" /></div>
                 <div className="flex-1 text-left min-w-0">
@@ -371,6 +375,8 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
   // ── FOUND ──
   if (phase === 'success' && found) {
     const avail = found.connectors.filter(c => c.status === 'available');
+    const pointIndex = point ? found.connectors.findIndex(c => c.id === point) : -1;
+    const pointLetter = pointIndex >= 0 ? String.fromCharCode(65 + pointIndex) : null;
     const dist = here ? km(here, { lat: found.geoLat, lng: found.geoLng }) : null;
     return (
       <div className="h-full flex flex-col bg-slate-50">
@@ -381,7 +387,7 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
               <CheckCircle size={32} className="text-white" />
             </div>
             <p className="font-bold text-emerald-700 text-base">{fromRecent ? 'Вы заряжались здесь' : 'QR распознан'}</p>
-            <p className="text-slate-400 text-xs mt-0.5">{`Код ${found.id.toUpperCase()}`}</p>
+            <p className="text-slate-400 text-xs mt-0.5">{`Код ${found.id.toUpperCase()}${pointLetter ? ` · точка ${pointLetter}` : ''}`}</p>
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden pg-reveal" style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
@@ -399,7 +405,7 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
             </div>
             <div className="border-t border-slate-50 px-4 py-3 grid grid-cols-2 gap-2">
               {found.connectors.map(c => (
-                <div key={c.id} className={`flex items-center gap-2 p-2.5 rounded-xl border ${c.status === 'available' ? 'border-emerald-200 bg-emerald-50' : 'border-slate-100 bg-slate-50 opacity-60'}`}>
+                <div key={c.id} className={`flex items-center gap-2 p-2.5 rounded-xl border ${c.status === 'available' ? 'border-emerald-200 bg-emerald-50' : 'border-slate-100 bg-slate-50 opacity-60'} ${c.id === point ? 'ring-2 ring-[#FFB000]' : ''}`}>
                   <span className="w-2 h-2 rounded-full shrink-0" style={{ background: STATUS[c.status]?.color }} />
                   <div className="min-w-0">
                     <p className="text-[12px] font-semibold text-slate-800 truncate">{c.type}</p>
@@ -421,7 +427,7 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
           )}
 
           <div className="space-y-2.5 pb-2">
-            <button onClick={() => onStartCharging(found)} disabled={avail.length === 0}
+            <button onClick={() => onStartCharging(found, point)} disabled={avail.length === 0}
               className="w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 disabled:bg-slate-200 disabled:text-slate-400 text-[#111] shadow-[0_6px_20px_rgba(255,200,61,0.35)] disabled:shadow-none"
               style={avail.length ? { background: 'linear-gradient(135deg,#FFD66B,#FFB000)' } : undefined}>
               <Zap size={18} />Начать зарядку

@@ -26,6 +26,7 @@ import { BRAND } from '../brand';
 import { LogoMark } from '../landing/Logo';
 import { DirectSettlement } from './admin/DirectSettlement';
 import StationInfo from './operator/StationInfo';
+import { StickerPreview } from './operator/Stickers';
 
 type Page = 'dashboard' | 'stations' | 'sessions' | 'alerts' | 'tariffs' | 'finance' | 'direct' | 'customers' | 'integration' | 'settings' | 'help';
 
@@ -218,6 +219,7 @@ function StationDetailPage({ stationId, onBack }: { stationId: string; onBack: (
           <p className="text-sm text-slate-500">{s.address}, {s.city}</p>
         </div>
         <span className={`ml-auto text-xs px-3 py-1 rounded-full ${statusBgs[s.status]}`}>{statusLabels[s.status]}</span>
+        <StickerPreview station={s} />
       </div>
 
       {/* Photo + stats */}
@@ -260,8 +262,8 @@ function StationDetailPage({ stationId, onBack }: { stationId: string; onBack: (
         <div className="divide-y divide-slate-50">
           {s.connectors.map((c, i) => (
             <div key={c.id} className="px-5 py-4 flex items-center gap-5">
-              <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-sm font-bold text-slate-500 border border-slate-100">
-                {i + 1}
+              <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-sm font-bold text-slate-500 border border-slate-100" title="Буква точки — как на наклейке и в приложении">
+                {String.fromCharCode(65 + i)}
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-800">{c.type}</p>

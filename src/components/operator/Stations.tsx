@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { MapPin, Zap, PlugZap, AlertTriangle, Plus, X, Trash2, Copy, Check } from 'lucide-react';
+import { MapPin, Zap, PlugZap, AlertTriangle, Plus, X, Trash2, Copy, Check, QrCode } from 'lucide-react';
+import { StickerButton } from './Stickers';
 import { useSync } from '../../lib/sync';
 import { useAnalytics, money, num, plural } from '../../lib/analytics';
 import { Page, Card, Kpi, Loading, ErrorNote, Pill, SearchBox, Segmented, Empty } from '../admin/ui';
@@ -125,7 +126,12 @@ export default function OperatorStations({ onOpen }: { onOpen: (stationId: strin
     <Page
       title="Станции"
       subtitle={`${own.length} ${plural(own.length, ['станция', 'станции', 'станций'])} вашей сети · выручка и загрузка за 30 дней`}
-      actions={<button onClick={() => setAdding(true)} className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sky-500 text-white text-sm font-semibold hover:bg-sky-600"><Plus size={15} />Добавить станцию</button>}
+      actions={
+        <span className="flex flex-wrap gap-2">
+          <StickerButton stations={shown} fileName="powergo-qr-stickers.pdf" label={shown.length === own.length ? 'Все наклейки QR' : `Наклейки QR · ${shown.length}`} />
+          <button onClick={() => setAdding(true)} className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sky-500 text-white text-sm font-semibold hover:bg-sky-600"><Plus size={15} />Добавить станцию</button>
+        </span>
+      }
     >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Kpi label="Станции" value={own.length} sub={`${new Set(own.map(s => s.city)).size} ${plural(new Set(own.map(s => s.city)).size, ['город', 'города', 'городов'])}`} icon={<MapPin size={14} />} tone="sky" />
@@ -153,6 +159,7 @@ export default function OperatorStations({ onOpen }: { onOpen: (stationId: strin
                   <th className="px-5 py-2.5 font-semibold text-right">Выручка</th>
                   <th className="px-5 py-2.5 font-semibold text-right">Загрузка</th>
                   <th className="px-5 py-2.5 font-semibold text-right">Рейтинг</th>
+                  <th className="px-3 py-2.5"><span className="sr-only">Наклейка QR</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -179,6 +186,9 @@ export default function OperatorStations({ onOpen }: { onOpen: (stationId: strin
                       <td className="px-5 py-3 text-right tabular-nums font-semibold text-slate-800 whitespace-nowrap">{st ? money(st.revenue) : '—'}</td>
                       <td className="px-5 py-3 text-right tabular-nums text-slate-700">{st ? `${num(st.utilization, 1)}%` : '—'}</td>
                       <td className="px-5 py-3 text-right tabular-nums text-slate-600">{s.reviews ? `★ ${num(s.rating, 1)}` : 'нет отзывов'}</td>
+                      <td className="px-3 py-3 text-right" onClick={e => e.stopPropagation()}>
+                        <StickerButton stations={[s]} fileName={`qr-${s.id}.pdf`} compact icon={<QrCode size={15} />} label={`Наклейка QR · ${s.name}`} />
+                      </td>
                     </tr>
                   );
                 })}
