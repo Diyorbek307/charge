@@ -28,6 +28,13 @@ import { promoFor, publicPromos, createPromo, stopPromo, promosOf } from './prom
 import { syncRewards, rewardsFor, bonusFor, spendBonus, rewardsOverview, grantManual } from './rewards.js';
 import { batteryHealthFor } from './battery.js';
 import { setting, feature, updateSettings, settingsView, publicSettings } from './settings.js';
+import { attempt, blocked, forgive, hashPasswordAsync, verifyPasswordAsync } from './guard.js';
+
+/** Answers a refused try with when to try again. */
+const tooMany = (res, r, text = 'Слишком много попыток — попробуйте позже') => {
+  res.set('Retry-After', String(r.retryAfter));
+  return res.status(429).json({ error: `${text} (через ${Math.max(1, Math.ceil(r.retryAfter / 60))} мин)` });
+};
 import { PLUS, plusActive, plusFor, subscribePlus, cancelPlus, plusOverview } from './plus.js';
 import { fleetPlanFor, setFleetPlan, fleetDiscount, fleetPriority, fleetDriverReport } from './fleet.js';
 import { openWindow, autochargeFor, unlink as unlinkAutocharge } from './autocharge.js';
@@ -439,6 +446,8 @@ function recordDeliveries(event) {
     db.data.deliveries.unshift({
       id: db.nextId('delivery', 'DLV-'),
       webhookId: hook.id,
+      // Kept on the delivery so its history stays the partner's after the webhook is deleted.
+      owner: hook.owner,
       event: event.type,
       url: hook.url,
       body,
@@ -545,18 +554,27 @@ api.get('/auth/demo-credentials', (_req, res) => {
   );
 });
 
-api.post('/auth/login', (req, res) => {
+api.post('/auth/login', async (req, res) => {
   const { portal, login, password } = req.body ?? {};
-  if (!portal || !login || !password) {
+  if (!portal || !login || !password || typeof password !== 'string' || password.length > 200) {
     return res.status(400).json({ error: 'Укажите портал, логин и пароль' });
   }
 
   // Drivers sign in by phone, typed any which way.
   const loginKey = portal === 'driver' ? (normalizePhone(login) ?? String(login).trim()) : String(login).trim().toLowerCase();
+  // Guessing is slowed by counting wrong passwords: 8 on one login in 15 minutes, 100 from one
+  // address in 10 (many drivers share a mobile operator's address, so right ones are never counted).
+  const failKey = `login-fail:${portal}:${loginKey}`;
+  const ipKey = `login-fail-ip:${clientKey(req)}`;
+  const stop = blocked(failKey, 8, 15 * 60_000) ?? blocked(ipKey, 100, 10 * 60_000);
+  if (stop) return tooMany(res, stop, 'Слишком много неверных попыток входа');
   const account = db.find('accounts', a => a.portal === portal && a.login === loginKey);
-  if (!account || !db.verifyPassword(account, String(password))) {
+  if (!(await verifyPasswordAsync(account, password))) {
+    attempt(failKey, 8, 15 * 60_000);
+    attempt(ipKey, 100, 10 * 60_000);
     return res.status(401).json({ error: 'Неверный логин или пароль' });
   }
+  forgive(failKey);
   if (isBlocked(account.id)) return res.status(403).json({ error: 'Аккаунт заблокирован — обратитесь в поддержку' });
 
   // With 2FA on, the password only earns a short-lived challenge.
@@ -593,6 +611,13 @@ api.post('/auth/2fa/verify', (req, res) => {
   const { challenge, code } = req.body ?? {};
   const idx = db.data.challenges.findIndex(c => c.challenge === challenge);
   if (idx < 0) return res.status(401).json({ error: 'Сессия входа истекла' });
+  // A six-digit code is a million guesses: five per sign-in, then the password again.
+  const tries = attempt(`2fa:${challenge}`, 5, 10 * 60_000);
+  if (!tries.ok) {
+    db.data.challenges.splice(idx, 1);
+    db.save();
+    return res.status(429).json({ error: 'Слишком много неверных кодов — войдите заново' });
+  }
 
   const entry = db.data.challenges[idx];
   if (entry.expires < Date.now()) {
@@ -713,7 +738,7 @@ api.post('/auth/sms/request', async (req, res) => {
   res.json({ sent: true, phone, ...(result.demoCode ? { demoCode: result.demoCode } : {}) });
 });
 
-api.post('/auth/register', (req, res) => {
+api.post('/auth/register', async (req, res) => {
   const phone = normalizePhone(req.body?.phone);
   const name = String(req.body?.name ?? '').trim().replace(/\s+/g, ' ');
   const password = req.body?.password;
@@ -726,7 +751,9 @@ api.post('/auth/register', (req, res) => {
   const check = consumeCode(phone, 'register', req.body?.code);
   if (!check.ok) return res.status(401).json({ error: check.error });
 
-  const { salt, hash } = hashPassword(String(password));
+  const { salt, hash } = await hashPasswordAsync(String(password));
+  // Another request may have taken the number while the hash was computed.
+  if (findDriver(phone)) return res.status(409).json({ error: 'Номер уже зарегистрирован' });
   const initials = name.split(' ').slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('') || 'EV';
   const account = {
     id: `acc-${crypto.randomBytes(6).toString('hex')}`,
@@ -757,7 +784,7 @@ api.post('/auth/register', (req, res) => {
   res.status(201).json({ token, user: publicAccount(account) });
 });
 
-api.post('/auth/password/reset', (req, res) => {
+api.post('/auth/password/reset', async (req, res) => {
   const phone = normalizePhone(req.body?.phone);
   const password = req.body?.password;
   if (!phone) return res.status(400).json({ error: 'Введите номер в формате +998 XX XXX XX XX' });
@@ -769,7 +796,7 @@ api.post('/auth/password/reset', (req, res) => {
   const check = consumeCode(phone, 'reset', req.body?.code);
   if (!check.ok) return res.status(401).json({ error: check.error });
 
-  Object.assign(account, hashPassword(String(password)));
+  Object.assign(account, await hashPasswordAsync(String(password)));
   // Whoever held the old password is signed out everywhere.
   db.data.tokens = db.data.tokens.filter(t => t.accountId !== account.id);
   db.save();
@@ -801,8 +828,10 @@ api.post('/auth/otp/verify', (req, res) => {
   if (!DEMO_MODE) return res.status(404).json({ error: 'Not found' });
   const phone = String(req.body?.phone ?? '').replace(/[^\d+]/g, '');
   const code = String(req.body?.code ?? '');
+  const tries = attempt(`otp:${phone}`, 5, 15 * 60_000);
+  if (!tries.ok) return tooMany(res, tries);
   const account = db.find('accounts', a => a.portal === 'driver' && a.login === phone.toLowerCase());
-  if (!account || account.otp !== code) return res.status(401).json({ error: 'Неверный код' });
+  if (!account || !account.otp || account.otp !== code) return res.status(401).json({ error: 'Неверный код' });
   if (isBlocked(account.id)) return res.status(403).json({ error: 'Аккаунт заблокирован — обратитесь в поддержку' });
 
   const token = db.issueToken(account, req);
@@ -854,13 +883,15 @@ api.post('/auth/sessions/revoke-others', requireAuth(), (req, res) => {
   res.json({ revoked: before - db.data.tokens.length });
 });
 
-api.post('/auth/password', requireAuth(), (req, res) => {
+api.post('/auth/password', requireAuth(), async (req, res) => {
   const { current, next } = req.body ?? {};
-  if (!db.verifyPassword(req.account, String(current ?? ''))) return res.status(401).json({ error: 'Текущий пароль указан неверно' });
+  const tries = attempt(`pw-change:${req.account.id}`, 5, 15 * 60_000);
+  if (!tries.ok) return tooMany(res, tries);
+  if (!(await verifyPasswordAsync(req.account, String(current ?? '')))) return res.status(401).json({ error: 'Текущий пароль указан неверно' });
   const weak = passwordProblem(next);
   if (weak) return res.status(400).json({ error: weak });
   if (String(next) === String(current)) return res.status(400).json({ error: 'Новый пароль совпадает с текущим' });
-  const { salt, hash } = hashPassword(String(next));
+  const { salt, hash } = await hashPasswordAsync(String(next));
   db.update('accounts', req.account.id, { salt, hash });
   // Everyone else signed in as this account is signed out.
   db.data.tokens = db.data.tokens.filter(t => t.accountId !== req.account.id || t.token === req.tokenEntry.token);
@@ -1832,6 +1863,10 @@ api.post('/sessions/:id/stop', requireAuth('driver', 'business', 'admin', 'opera
 api.post('/sessions/:id/tick', requireAuth(), (req, res) => {
   const session = db.byId('sessions', req.params.id);
   if (!session || session.status !== 'active') return res.status(404).json({ error: 'Нет активной сессии' });
+  // The driver, their fleet, the station's network or the platform — nobody else moves this meter.
+  const a = req.account;
+  const mayTick = a.portal === 'admin' || session.userId === a.id || (a.portal === 'business' && session.corporate) || (a.portal === 'operator' && session.operatorId === a.orgId);
+  if (!mayTick) return res.status(404).json({ error: 'Нет активной сессии' });
   // A charge point connected over OCPP owns the meter for its sessions.
   if (['ocpp', 'ocpi', 'network'].includes(session.source)) return res.json({ session });
 
@@ -1890,7 +1925,8 @@ api.post('/stations/:id/connectors/:cid', requireAuth('operator', 'admin'), (req
 
 api.post('/alerts/:id/ack', requireAuth('operator', 'admin'), (req, res) => {
   const alert = db.byId('alerts', req.params.id);
-  if (!alert) return res.status(404).json({ error: 'Оповещение не найдено' });
+  // Another network's alert is as good as missing.
+  if (!alert || (req.account.portal === 'operator' && alert.operatorId !== req.account.orgId)) return res.status(404).json({ error: 'Оповещение не найдено' });
 
   alert.ack = true;
   alert.ackBy = req.account.name;
@@ -2661,9 +2697,14 @@ api.get('/partner/stations/:id', requireAuth('api', 'admin'), (req, res) => {
   res.json(partnerStation(st));
 });
 
-api.get('/webhooks', requireAuth('api', 'admin'), (_req, res) => {
+/** A partner's own webhook, or any for the platform. */
+const ownHook = (req, hook) => !!hook && (req.account.portal === 'admin' || hook.owner === req.account.id);
+/** A delivery is the partner's whose webhook made it, even once that webhook is gone. */
+const ownDelivery = (req, d) => req.account.portal === 'admin' || (d.owner ?? db.byId('webhooks', d.webhookId)?.owner) === req.account.id;
+
+api.get('/webhooks', requireAuth('api', 'admin'), (req, res) => {
   res.json(
-    (db.data.webhooks ?? []).map(w => ({
+    (db.data.webhooks ?? []).filter(w => ownHook(req, w)).map(w => ({
       ...w,
       // Show only a prefix; the full secret is returned once, at creation.
       secret: `${w.secret.slice(0, 11)}…${w.secret.slice(-4)}`,
@@ -2709,14 +2750,14 @@ api.post('/webhooks', requireAuth('api', 'admin'), (req, res) => {
 
 api.post('/webhooks/:id/toggle', requireAuth('api', 'admin'), (req, res) => {
   const hook = db.byId('webhooks', req.params.id);
-  if (!hook) return res.status(404).json({ error: 'Webhook не найден' });
+  if (!ownHook(req, hook)) return res.status(404).json({ error: 'Webhook не найден' });
   hook.active = !hook.active;
   db.save();
   res.json({ webhook: { ...hook, secret: `${hook.secret.slice(0, 11)}…${hook.secret.slice(-4)}` } });
 });
 
 api.delete('/webhooks/:id', requireAuth('api', 'admin'), (req, res) => {
-  const i = (db.data.webhooks ?? []).findIndex(w => w.id === req.params.id);
+  const i = (db.data.webhooks ?? []).findIndex(w => w.id === req.params.id && ownHook(req, w));
   if (i < 0) return res.status(404).json({ error: 'Webhook не найден' });
   db.data.webhooks.splice(i, 1);
   db.save();
@@ -2727,7 +2768,7 @@ const lastTestAt = new Map();
 
 api.post('/webhooks/:id/test', requireAuth('api', 'admin'), (req, res) => {
   const hook = db.byId('webhooks', req.params.id);
-  if (!hook) return res.status(404).json({ error: 'Webhook не найден' });
+  if (!ownHook(req, hook)) return res.status(404).json({ error: 'Webhook не найден' });
   // Test sends hit a real server now; do not let the button become a flood.
   if (Date.now() - (lastTestAt.get(hook.id) ?? 0) < 5000) {
     return res.status(429).json({ error: 'Не чаще одного теста в 5 секунд' });
@@ -2746,12 +2787,13 @@ api.post('/webhooks/:id/test', requireAuth('api', 'admin'), (req, res) => {
 
 api.get('/webhooks/deliveries', requireAuth('api', 'admin'), (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 30, 200);
-  res.json((db.data.deliveries ?? []).slice(0, limit));
+  // Deliveries carry the events' payloads: a partner sees those of its own webhooks.
+  res.json((db.data.deliveries ?? []).filter(d => ownDelivery(req, d)).slice(0, limit));
 });
 
 api.post('/webhooks/deliveries/:id/retry', requireAuth('api', 'admin'), (req, res) => {
   const delivery = (db.data.deliveries ?? []).find(d => d.id === req.params.id);
-  if (!delivery) return res.status(404).json({ error: 'Доставка не найдена' });
+  if (!delivery || !ownDelivery(req, delivery)) return res.status(404).json({ error: 'Доставка не найдена' });
   if (!['failed', 'cancelled'].includes(delivery.status)) {
     return res.status(409).json({ error: 'Доставка ещё в очереди' });
   }
@@ -3005,6 +3047,8 @@ api.post('/admin/users/:id/status', requireAuth('admin'), (req, res) => {
 });
 
 api.post('/admin/reset', requireAuth('admin'), (req, res) => {
+  // Wiping every account and charge is a demo tool, never a production button.
+  if (!DEMO_MODE) return res.status(404).json({ error: 'Not found' });
   db.reset();
   emit({
     type: 'system.reset',

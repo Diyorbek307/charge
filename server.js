@@ -27,6 +27,51 @@ app.disable("x-powered-by");
 // Render terminates TLS in front of us; trust one hop so req.ip is the client.
 app.set("trust proxy", 1);
 
+// Security headers on every response. The policy lists every outside host
+// the app really uses: the map, the router, places and cameras, Telegram's
+// mini-app script, cookieless analytics and Google Fonts. CSP_EXTRA_CONNECT
+// adds hosts a deployment points at (its own router or tile server).
+const connect = [
+  "'self'",
+  "https://tiles.openfreemap.org",
+  "https://router.project-osrm.org",
+  "https://overpass-api.de",
+  "https://plausible.io",
+  "https://cloud.umami.is",
+  ...(process.env.CSP_EXTRA_CONNECT ?? "").split(/[\s,]+/).filter(Boolean),
+];
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' https://telegram.org https://plausible.io https://cloud.umami.is",
+  // React and Leaflet set inline style attributes.
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com data:",
+  "img-src 'self' data: blob: https:",
+  "media-src 'self' blob: data:",
+  `connect-src ${connect.join(" ")}`,
+  "worker-src 'self' blob:",
+  "frame-src 'self'",
+  "frame-ancestors 'self'",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join("; ");
+app.use((req, res, next) => {
+  res.set({
+    "Content-Security-Policy": CSP,
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "SAMEORIGIN",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    // The camera is for the QR scanner and the location for the map — on our own pages only.
+    "Permissions-Policy": "camera=(self), geolocation=(self), microphone=(), payment=(), usb=(), interest-cohort=()",
+  });
+  // Browsers that came over HTTPS stay on it for a year.
+  if (req.secure) res.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  next();
+});
+
 // Health-check для Render
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", time: new Date().toISOString() });
