@@ -238,7 +238,7 @@ const ru = {
     errors: { phone: 'Введите номер в формате +998 XX XXX XX XX', name: 'Укажите имя', company: 'Укажите компанию', consent: 'Нужно согласие на обработку данных', rate: 'Слишком много заявок — попробуйте через несколько минут', generic: 'Не получилось отправить — проверьте соединение и попробуйте ещё раз' },
   },
   legal: {
-    privacy: 'Политика конфиденциальности', terms: 'Условия использования', offer: 'Публичная оферта',
+    privacy: 'Политика конфиденциальности', terms: 'Условия использования', offer: 'Публичная оферта', consent: 'Пользовательское соглашение',
     title: 'Документы', back: 'На главную', updated: 'Редакция от',
     draft: 'Черновик. Документ готовится к публикации и проверяется юристом — до этого он не является действующей редакцией.',
     ruOnly: '',
@@ -511,7 +511,7 @@ const uz: LandingCopy = {
     errors: { phone: 'Raqamni +998 XX XXX XX XX formatida kiriting', name: 'Ismingizni kiriting', company: 'Kompaniyani kiriting', consent: 'Ma’lumotlarni qayta ishlashga rozilik kerak', rate: 'Arizalar juda ko‘p — bir necha daqiqadan keyin urinib ko‘ring', generic: 'Yuborib bo‘lmadi — internetni tekshirib, qayta urinib ko‘ring' },
   },
   legal: {
-    privacy: 'Maxfiylik siyosati', terms: 'Foydalanish shartlari', offer: 'Ommaviy oferta',
+    privacy: 'Maxfiylik siyosati', terms: 'Foydalanish shartlari', offer: 'Ommaviy oferta', consent: 'Foydalanuvchi kelishuvi',
     title: 'Hujjatlar', back: 'Bosh sahifaga', updated: 'Tahrir sanasi',
     draft: 'Qoralama. Hujjat nashrga tayyorlanmoqda va yurist tomonidan tekshirilmoqda — shu paytgacha u amaldagi tahrir hisoblanmaydi.',
     ruOnly: 'Hujjat hozircha rus tilida. O‘zbek tilidagi tarjimasi nashrdan oldin qo‘shiladi.',
@@ -782,7 +782,7 @@ const en: LandingCopy = {
     errors: { phone: 'Enter the number as +998 XX XXX XX XX', name: 'Enter your name', company: 'Enter your company', consent: 'Consent to data processing is required', rate: 'Too many requests — try again in a few minutes', generic: 'Couldn’t send — check your connection and try again' },
   },
   legal: {
-    privacy: 'Privacy policy', terms: 'Terms of use', offer: 'Public offer',
+    privacy: 'Privacy policy', terms: 'Terms of use', offer: 'Public offer', consent: 'User agreement',
     title: 'Documents', back: 'Back to home', updated: 'Version of',
     draft: 'Draft. This document is being prepared for publication and reviewed by a lawyer — until then it is not in force.',
     ruOnly: 'This document is currently in Russian. An English version will be added before publication.',

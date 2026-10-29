@@ -20,8 +20,16 @@ export async function resetDemo(request) {
   expect(res.ok()).toBeTruthy();
 }
 
+/** This device has been through the first-run screens (they have a test of their own). */
+export async function pastFirstRun(page) {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('pg-first-run')) localStorage.setItem('pg-first-run', JSON.stringify({ version: 1, marketing: false, push: false, at: new Date().toISOString() }));
+  });
+}
+
 /** Signs into a portal through its real login form. */
 export async function signIn(page, portal) {
+  await pastFirstRun(page);
   await page.goto(`/?portal=${portal}`);
   await page.locator(`#${portal}-login`).fill(CREDS[portal].login);
   await page.locator(`#${portal}-password`).fill(CREDS[portal].password);
@@ -29,16 +37,16 @@ export async function signIn(page, portal) {
   await expect(page.locator(`#${portal}-login`)).toHaveCount(0);
 }
 
-/** The Driver App shows a three-step first-run carousel; walk past it if it is there. */
+/** After the first sign-in the Driver App asks about the car, then walks over the map; go past both. */
 export async function skipOnboarding(page) {
-  const welcome = page.getByRole('heading', { name: /^Добро пожаловать в / });
-  if (!(await welcome.isVisible({ timeout: 3000 }).catch(() => false))) return;
-  for (let i = 0; i < 4; i++) {
-    const next = page.getByRole('button', { name: /^(Далее|Готово — к карте)/ });
-    if (!(await next.isVisible().catch(() => false))) break;
-    await next.click();
+  const appears = loc => loc.waitFor({ state: 'visible', timeout: 4000 }).then(() => true, () => false);
+  if (await appears(page.getByRole('heading', { name: 'Ваш автомобиль' }))) {
+    await page.getByRole('button', { name: 'Добавить позже' }).click();
+    await page.getByRole('button', { name: /^Готово — к карте/ }).click();
   }
-  await expect(page.getByRole('button', { name: /^Далее/ })).toHaveCount(0);
+  const skipTour = page.getByRole('button', { name: 'Пропустить обучение' });
+  if (await appears(skipTour)) await skipTour.click();
+  await expect(page.getByRole('dialog', { name: 'Обучение' })).toHaveCount(0);
 }
 
 /** Opens a station's sheet the way a driver would: search, then tap the result. */

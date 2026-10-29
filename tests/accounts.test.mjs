@@ -70,16 +70,24 @@ describe('driver sign-up', () => {
     const again = await requestCode('931112233', 'register');
     assert.equal(again.status, 429);
 
-    const base = { phone: '931112233', name: 'Madina Karimova', password: 'Zaryad2026' };
+    const base = { phone: '931112233', name: 'Madina Karimova', password: 'Zaryad2026', consent: { version: 1 } };
     assert.equal((await call('/auth/register', { method: 'POST', body: { ...base, password: 'short1' } })).status, 400);
     assert.equal((await call('/auth/register', { method: 'POST', body: { ...base, password: 'onlyletters' } })).status, 400);
     const wrong = sent.data.demoCode === '000000' ? '111111' : '000000';
     assert.equal((await call('/auth/register', { method: 'POST', body: { ...base, code: wrong } })).status, 401);
+    // No account without the agreement, and not on a version older than the one in force.
+    assert.equal((await call('/auth/register', { method: 'POST', body: { ...base, consent: undefined, code: sent.data.demoCode } })).status, 400);
+    assert.equal((await call('/auth/register', { method: 'POST', body: { ...base, consent: { version: 0 }, code: sent.data.demoCode } })).status, 400);
 
     const created = await call('/auth/register', { method: 'POST', body: { ...base, code: sent.data.demoCode } });
     assert.equal(created.status, 201);
     assert.equal(created.data.user.name, 'Madina Karimova');
     assert.equal(created.data.user.avatar, 'MK');
+    assert.equal(created.data.user.consent.version, 1);
+    assert.equal(created.data.user.consent.marketing, false);
+    const again2 = await call('/me/consent', { method: 'POST', token: created.data.token, body: { version: 1, marketing: true } });
+    assert.equal(again2.data.user.consent.marketing, true);
+    assert.equal(again2.data.user.consent.at, created.data.user.consent.at);
     for (const field of ['hash', 'salt', 'otp']) assert.equal(created.data.user[field], undefined, field);
 
     // The code was single-use, and the number is now taken.
@@ -101,7 +109,7 @@ describe('driver sign-up', () => {
     const sent = await requestCode('+998944445566', 'register');
     const other = await call('/auth/register', {
       method: 'POST',
-      body: { phone: '+998944445567', name: 'Test', password: 'Zaryad2026', code: sent.data.demoCode },
+      body: { phone: '+998944445567', name: 'Test', password: 'Zaryad2026', code: sent.data.demoCode, consent: { version: 1 } },
     });
     assert.equal(other.status, 401);
   });
@@ -118,7 +126,7 @@ describe('password recovery', () => {
     const reg = await requestCode('+998955556677', 'register');
     const created = await call('/auth/register', {
       method: 'POST',
-      body: { phone: '+998955556677', name: 'Old Session', password: 'OldPass2026', code: reg.data.demoCode },
+      body: { phone: '+998955556677', name: 'Old Session', password: 'OldPass2026', code: reg.data.demoCode, consent: { version: 1 } },
     });
     const oldToken = created.data.token;
     assert.equal((await call('/auth/me', { token: oldToken })).status, 200);
@@ -143,7 +151,7 @@ describe('password recovery', () => {
     const reg = await requestCode('+998977778899', 'register');
     await call('/auth/register', {
       method: 'POST',
-      body: { phone: '+998977778899', name: 'Guess Target', password: 'Target2026', code: reg.data.demoCode },
+      body: { phone: '+998977778899', name: 'Guess Target', password: 'Target2026', code: reg.data.demoCode, consent: { version: 1 } },
     });
     const sent = await requestCode('+998977778899', 'reset');
     assert.equal(sent.status, 200);

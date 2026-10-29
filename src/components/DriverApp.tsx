@@ -43,7 +43,10 @@ import type { Payer, ChargeGoal } from '../lib/api';
 import { useMyLocation, km, fmtKm, driveMinutes, locate, openNow, samePort } from '../lib/geo';
 import { inTelegram, telegramInitData } from '../lib/telegram';
 import type { Booking, Session, PaymentOrder, ArrivalChance } from '../lib/api';
-import AuthFlow from './AuthFlow';
+import FirstRun from './driver/FirstRun';
+import Tour from './driver/Tour';
+import { readFirstRun, tourSeen, markTour } from '../lib/firstRun';
+import { subscribePush } from './PushToggle';
 
 type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate' | 'rewards' | 'battery' | 'plus' | 'autocharge';
 type Tab = 'map' | 'charging' | 'deals' | 'profile';
@@ -741,9 +744,26 @@ function ChargingStartScreen({ station, preferConnector, onBack, onConfirm, onOp
   );
 }
 
-function AppSettingsScreen({ onBack }: { onBack: () => void }) {
+function AppSettingsScreen({ onBack, onReplayTour }: { onBack: () => void; onReplayTour: () => void }) {
   // The app's language, not a local copy of it.
   const { lang: language, setLang: setLanguage } = useI18n();
+  const { sessions, actions, updateAccount } = useSync();
+  const consent = sessions.driver?.consent ?? null;
+  const consentVersion = usePlatform().onboarding.consentVersion;
+  // Promotions are what the driver agreed to in the agreement, so the switch lives on the account.
+  const [marketingBusy, setMarketingBusy] = useState(false);
+  const flipMarketing = async () => {
+    if (marketingBusy) return;
+    setMarketingBusy(true);
+    try {
+      const { user } = await actions.acceptConsent({ version: consent?.version ?? consentVersion, marketing: !consent?.marketing });
+      updateAccount('driver', user);
+    } catch {
+      /* the switch stays where it was */
+    } finally {
+      setMarketingBusy(false);
+    }
+  };
   const [large, setLarge] = useState(() => readLarge());
   useEffect(() => {
     try {
@@ -870,6 +890,21 @@ function AppSettingsScreen({ onBack }: { onBack: () => void }) {
           <Row label="Снижение цен" right={<Toggle label="Снижение цен" value={notes.price} onChange={() => flip('price')} />} />
           <Row label="Новые станции рядом" right={<Toggle label="Новые станции рядом" value={notes.nearby} onChange={() => flip('nearby')} />} />
           <Row label="Скидки сетей" right={<Toggle label="Скидки сетей" value={notes.promo} onChange={() => flip('promo')} />} />
+          <div className="px-4 py-3.5 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-slate-700">Акции и новости PowerGo</p>
+              <p className="text-xs text-slate-400">Рассылка по вашему согласию — без неё сервис работает так же</p>
+            </div>
+            <Toggle label="Акции и новости PowerGo" value={!!consent?.marketing} onChange={() => void flipMarketing()} />
+          </div>
+        </div>
+
+        <SectionHeader label="ОБУЧЕНИЕ" />
+        <div className="bg-white rounded-2xl border border-slate-100 mx-4 overflow-hidden">
+          <button onClick={onReplayTour} className="px-4 py-3.5 flex items-center justify-between w-full hover:bg-slate-50">
+            <span className="text-sm text-slate-700">Пройти обучение заново</span>
+            <ChevronRight size={16} className="text-slate-400" />
+          </button>
         </div>
 
         <SectionHeader label="ДАННЫЕ" />
@@ -892,7 +927,14 @@ function AppSettingsScreen({ onBack }: { onBack: () => void }) {
             <span className="text-sm text-slate-700">Версия</span>
             <span className="text-sm text-slate-400">{APP_VERSION}</span>
           </div>
+          {consent && (
+            <div className="px-4 py-3.5 flex items-center justify-between border-b border-slate-50 gap-3">
+              <span className="text-sm text-slate-700">Соглашение принято</span>
+              <span className="text-xs text-slate-400 text-right">{`редакция ${consent.version} · ${new Date(consent.at).toLocaleDateString(language === 'en' ? 'en-GB' : language === 'uz' ? 'uz-Latn-UZ' : 'ru-RU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Tashkent' })}`}</span>
+            </div>
+          )}
           {[
+            { label: 'Пользовательское соглашение', href: '/?doc=consent' },
             { label: 'Условия использования', href: '/?doc=terms' },
             { label: 'Политика конфиденциальности', href: '/?doc=privacy' },
             { label: 'Публичная оферта', href: '/?doc=offer' },
@@ -1949,7 +1991,6 @@ function BookingDoneScreen({ station, booking, onClose }: { station: Station | n
 
 function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
   const { actions, updateAccount } = useSync();
-  const stations = useLiveStations();
   const [step, setStep] = useState(0);
   const [carBrand, setCarBrand] = useState('BYD');
   const [carModel, setCarModel] = useState('');
@@ -1961,17 +2002,16 @@ function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
   const onboardBrands = ['BYD', 'Hyundai', 'Kia', 'Tesla', 'Chevrolet', 'Geely', 'Zeekr', 'Другая'];
   const batteryOptions = [40, 60, 77, 82, 100];
   const connectorOptions = ['CCS2', 'GB/T DC', 'Type 2', 'CHAdeMO'];
-  const cities = new Set(stations.map(s => s.city)).size;
 
   const saveCar = async () => {
-    if (!carModel.trim()) return setStep(2);
+    if (!carModel.trim()) return setStep(1);
     setSaving(true);
     setCarError('');
     try {
       const maxKw = connector === 'Type 2' ? 11 : connector === 'CHAdeMO' ? 50 : 150;
       const { user } = await actions.saveCar('driver', { brand: carBrand === 'Другая' ? 'Другая марка' : carBrand, model: carModel.trim(), year: new Date().getFullYear(), battery, port: connector, maxKw });
       updateAccount('driver', user);
-      setStep(2);
+      setStep(1);
     } catch (e) {
       setCarError((e as Error).message);
     } finally {
@@ -1980,26 +2020,6 @@ function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
   };
 
   const steps = [
-    <div key="welcome" className="flex-1 flex flex-col items-center justify-center px-6 text-center" style={{ animation: 'enter-up 0.4s ease both' }}>
-      <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-sky-500 to-sky-700 flex items-center justify-center mb-6 shadow-xl shadow-sky-200">
-        <Zap size={44} className="text-white" />
-      </div>
-      <h1 className="text-2xl font-bold text-slate-900 mb-2 leading-tight">{`Добро пожаловать в ${BRAND.name}`}</h1>
-      <p className="text-slate-500 text-sm mb-8 leading-relaxed">Все зарядные станции разных операторов — в одном приложении</p>
-      <div className="w-full space-y-3 text-left">
-        {[
-          { icon: <MapPin size={18} className="text-sky-500" />, text: `${stations.length} ${plural(stations.length, ['станция', 'станции', 'станций'])} в ${cities} ${plural(cities, ['городе', 'городах', 'городах'])} — свободные разъёмы в реальном времени` },
-          { icon: <Wallet size={18} className="text-emerald-500" />, text: 'Один кошелёк для всех сетей, пополнение через Payme и Click' },
-          { icon: <Route size={18} className="text-violet-500" />, text: 'Планировщик поездок между городами по станциям сети' },
-        ].map((item, i) => (
-          <div key={i} className="flex items-center gap-3 bg-slate-50 rounded-2xl px-4 py-3">
-            <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">{item.icon}</div>
-            <span className="text-sm font-medium text-slate-700">{item.text}</span>
-          </div>
-        ))}
-      </div>
-    </div>,
-
     <div key="car" className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ animation: 'enter-up 0.35s ease both' }}>
       <div className="text-center pb-2">
         <h2 className="text-lg font-bold text-slate-900">Ваш автомобиль</h2>
@@ -2064,20 +2084,20 @@ function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
         <button onClick={() => onComplete()} className="text-xs text-slate-400 font-medium px-3 py-1.5 rounded-xl hover:bg-slate-100">Пропустить</button>
       </div>
       <div className="flex items-center justify-center gap-2 py-3 shrink-0">
-        {[0, 1, 2].map(i => (
+        {[0, 1].map(i => (
           <div key={i} className={`rounded-full transition-all ${i === step ? 'w-5 h-2.5 bg-sky-500' : i < step ? 'w-2.5 h-2.5 bg-sky-300' : 'w-2.5 h-2.5 bg-slate-200'}`} />
         ))}
       </div>
       {steps[step]}
       <div className="px-4 pb-8 pt-3 shrink-0 space-y-2">
         <button
-          onClick={() => { if (step === 0) setStep(1); else if (step === 1) void saveCar(); else onComplete(); }}
+          onClick={() => (step === 0 ? void saveCar() : onComplete())}
           disabled={saving}
           className="w-full bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-2xl py-4 font-bold text-base shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
         >
-          {step === 2 ? <><CheckCircle size={18} />Готово — к карте</> : step === 1 && carModel.trim() ? 'Сохранить и далее →' : 'Далее →'}
+          {step === 1 ? <><CheckCircle size={18} />Готово — к карте</> : carModel.trim() ? 'Сохранить и далее →' : 'Далее →'}
         </button>
-        {step === 1 && <button onClick={() => setStep(2)} className="w-full text-slate-400 text-sm font-medium py-2">Добавить позже</button>}
+        {step === 0 && <button onClick={() => setStep(1)} className="w-full text-slate-400 text-sm font-medium py-2">Добавить позже</button>}
       </div>
     </div>
   );
@@ -2262,6 +2282,9 @@ export default function DriverApp() {
     }
     setShowOnboarding(false);
   };
+  const { onboarding } = usePlatform();
+  const appRef = useRef<HTMLDivElement>(null);
+  const [touring, setTouring] = useState(false);
   const liveStations = useLiveStations();
   const liveStationsById = (id: string) => liveStations.find(s => s.id === id);
   const [activeTab, setActiveTab] = useState<Tab>('map');
@@ -2366,6 +2389,45 @@ export default function DriverApp() {
     const p = fresh.payload as { amount?: number; title?: string };
     if (p.amount) setBurst({ amount: p.amount, title: p.title ?? 'Награда' });
   }, [events, burst, showOnboarding]);
+
+  // The tour once per account, after the car screens, when the map is in front.
+  useEffect(() => {
+    if (!driverAccount || showOnboarding || touring || !onboarding.tour || tourSeen(driverAccount.id)) return;
+    if (screen === 'map' && activeTab === 'map') setTouring(true);
+  }, [driverAccount, showOnboarding, touring, onboarding.tour, screen, activeTab]);
+  const endTour = () => {
+    if (driverAccount) markTour(driverAccount.id);
+    setTouring(false);
+  };
+
+  // The agreement accepted on this device's first screens becomes the account's record.
+  useEffect(() => {
+    const local = readFirstRun();
+    if (!driverAccount || !local || (driverAccount.consent?.version ?? 0) >= local.version) return;
+    actions.acceptConsent({ version: local.version, marketing: local.marketing }).then(r => updateAccount('driver', r.user)).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [driverAccount?.id, driverAccount?.consent?.version]);
+
+  // Notifications allowed on the first screens: subscribe the account once it exists.
+  useEffect(() => {
+    if (!driverAccount || !readFirstRun()?.push || !('Notification' in window) || Notification.permission !== 'granted') return;
+    const key = `pg-push-${driverAccount.id}`;
+    try {
+      if (localStorage.getItem(key)) return;
+    } catch {
+      return;
+    }
+    subscribePush('driver')
+      .then(() => {
+        try {
+          localStorage.setItem(key, '1');
+        } catch {
+          /* private mode */
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [driverAccount?.id]);
 
   const seenQueueEvent = useRef<string | null>(null);
   useEffect(() => {
@@ -2549,7 +2611,7 @@ export default function DriverApp() {
     if (screen === 'report') return <ReportScreen station={reportFrom.current === 'station' ? selectedStation : null} onBack={() => (reportFrom.current === 'station' ? backToStation() : setScreen(reportFrom.current))} />;
     if (screen === 'favorites') return <FavoritesScreen onBack={() => setScreen('map')} onSelectStation={handleSelectStation} />;
     if (screen === 'qr-scan') return <QRScanScreen onBack={() => (selectedStation && activeTab === 'map' ? setScreen('station') : setScreen('map'))} onStartCharging={(s, point) => { preferPoint.current = point ?? null; setActiveTab('map'); setSelectedStation(s); setScreen('charging-start'); }} onBook={s => { setActiveTab('map'); setSelectedStation(s); setScreen('booking'); }} onRoute={s => { setActiveTab('map'); setSelectedStation(s); setScreen('navigate'); }} />;
-    if (screen === 'app-settings') return <AppSettingsScreen onBack={() => setScreen('profile')} />;
+    if (screen === 'app-settings') return <AppSettingsScreen onBack={() => setScreen('profile')} onReplayTour={() => { if (driverAccount) markTour(driverAccount.id, false); setActiveTab('map'); setScreen('map'); }} />;
     if (screen === 'wallet') return <WalletScreen onBack={() => setScreen(walletFrom.current)} onRewards={() => setScreen('rewards')} />;
     if (screen === 'eco') return <EcoScreen onBack={() => setScreen('profile')} />;
     if (screen === 'security') return <SecurityScreen onBack={() => setScreen('profile')} />;
@@ -2580,8 +2642,9 @@ export default function DriverApp() {
   const showTabs = !['history', 'charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host', 'credit', 'navigate', 'eco', 'rewards', 'battery', 'plus', 'autocharge'].includes(screen);
 
   return (
-    <div className="pg-app h-full flex flex-col bg-white overflow-hidden relative" style={{ fontFamily: 'Inter, sans-serif' }}>
+    <div ref={appRef} className="pg-app h-full flex flex-col bg-white overflow-hidden relative" style={{ fontFamily: 'Inter, sans-serif' }}>
       {showOnboarding && <OnboardingScreen onComplete={finishOnboarding} />}
+      {touring && <Tour root={appRef} onDone={endTour} />}
       {/* Status bar of the device mock — a real phone draws its own */}
       <div className="bg-white px-4 pt-2 pb-1 hidden sm:flex items-center justify-between shrink-0 border-b border-slate-100">
         <span className="text-xs font-semibold text-slate-800 mono">09:41</span>
@@ -2645,7 +2708,7 @@ export default function DriverApp() {
               if (!tab) {
                 return (
                   <div key="qr" className="relative z-[3] flex justify-center">
-                    <button onClick={() => setScreen('qr-scan')} aria-label="Сканировать QR на станции"
+                    <button onClick={() => setScreen('qr-scan')} aria-label="Сканировать QR на станции" data-tour="qr"
                       className="pg-qr -mt-9 w-[64px] h-[64px] rounded-[22px] grid place-items-center text-[#111] border-[5px] border-white"
                       style={{ background: 'linear-gradient(145deg,#FFE08A,#FFB000)', boxShadow: '0 10px 24px rgba(255,176,0,0.55)' }}>
                       <Scan size={26} strokeWidth={2.4} />
@@ -2658,7 +2721,7 @@ export default function DriverApp() {
               const isCharging = tab.id === 'charging' && !!liveSession;
               const promoCount = tab.id === 'deals' ? driverPromoCount : 0;
               return (
-                <button key={tab.id} aria-current={isActive ? 'page' : undefined} onClick={() => { setActiveTab(tab.id); setScreen('map'); setSelectedStation(null); setSos(false); }}
+                <button key={tab.id} data-tour={`tab-${tab.id}`} aria-current={isActive ? 'page' : undefined} onClick={() => { setActiveTab(tab.id); setScreen('map'); setSelectedStation(null); setSos(false); }}
                   className={`relative z-[2] h-full min-w-0 flex flex-col items-center justify-center gap-0.5 duration-300 ${isActive ? 'text-[#111]' : 'text-slate-400 hover:text-slate-700'}`}>
                   <span key={isActive ? 'on' : 'off'} className={`relative grid place-items-center ${isActive ? 'pg-icon-pop' : ''} ${isCharging ? 'pg-icon-charge' : ''}`}>
                     {tab.icon}

@@ -26,7 +26,7 @@ async function call(path, { method = 'GET', token, body } = {}) {
 const driver = async () => (await call('/auth/login', { method: 'POST', body: { portal: 'driver', login: '+998901234567', password: 'Driver2026' } })).data.token;
 async function newDriver(phone) {
   const code = (await call('/auth/sms/request', { method: 'POST', body: { phone, purpose: 'register' } })).data.demoCode;
-  return (await call('/auth/register', { method: 'POST', body: { phone, code, name: 'Test Driver', password: 'Camera2026' } })).data.token;
+  return (await call('/auth/register', { method: 'POST', body: { phone, code, name: 'Test Driver', password: 'Camera2026', consent: { version: 1 } } })).data.token;
 }
 
 before(async () => {

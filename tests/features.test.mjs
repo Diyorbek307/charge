@@ -30,7 +30,7 @@ const admin = () => login('admin', 'admin@powergo.uz', 'Admin2026');
 /** A second driver, registered the way a real one would be. */
 async function newDriver(phone, name) {
   const code = (await call('/auth/sms/request', { method: 'POST', body: { phone, purpose: 'register' } })).data.demoCode;
-  const r = await call('/auth/register', { method: 'POST', body: { phone, code, name, password: 'Second2026' } });
+  const r = await call('/auth/register', { method: 'POST', body: { phone, code, name, password: 'Second2026', consent: { version: 1 } } });
   return { token: r.data.token, id: r.data.user.id };
 }
 

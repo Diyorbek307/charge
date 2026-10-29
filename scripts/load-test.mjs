@@ -73,7 +73,7 @@ await pool(drivers, async d => {
   const code = await call('/auth/sms/request', { method: 'POST', ip: d.ip, body: { phone: d.phone, purpose: 'register' } });
   record('sms code', code);
   if (!code.data?.demoCode) return;
-  const reg = await call('/auth/register', { method: 'POST', ip: d.ip, body: { phone: d.phone, name: `Водитель ${d.phone.slice(-4)}`, password: 'Driver2026!x', code: code.data.demoCode } });
+  const reg = await call('/auth/register', { method: 'POST', ip: d.ip, body: { phone: d.phone, name: `Водитель ${d.phone.slice(-4)}`, password: 'Driver2026!x', code: code.data.demoCode, consent: { version: 1 } } });
   record('register', reg, reg.status === 201);
 });
 // 2. Sign in again, as a returning driver would.

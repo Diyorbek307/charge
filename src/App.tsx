@@ -16,7 +16,9 @@ const AdminApp = lazy(() => import('./components/AdminApp'));
 const BusinessApp = lazy(() => import('./components/BusinessApp'));
 const ApiDocsApp = lazy(() => import('./components/ApiDocsApp'));
 const SplitView = lazy(() => import('./components/SplitView'));
+const FirstRun = lazy(() => import('./components/driver/FirstRun'));
 import { useSync } from './lib/sync';
+import { useFirstRunNeeded } from './lib/firstRun';
 import type { Portal as AuthPortal } from './lib/api';
 import { inTelegram, telegramInitData } from './lib/telegram';
 import SharePage from './components/SharePage';
@@ -306,6 +308,7 @@ function MainApp() {
   const embedded = typeof window !== 'undefined' && window.self !== window.top;
   const { sessions, actions, adoptSession } = useSync();
   const driverSession = sessions.driver;
+  const firstRun = useFirstRunNeeded();
 
   // Inside Telegram a linked driver is signed in straight away.
   useEffect(() => {
@@ -368,7 +371,8 @@ function MainApp() {
             {/* Device body — only drawn around the app on wider screens */}
             <div className="absolute inset-0 sm:rounded-[42px] sm:shadow-[0_32px_80px_rgba(0,0,0,0.6),0_0_0_2px_rgba(255,255,255,0.08)] overflow-hidden" style={{ background: 'linear-gradient(135deg, #2a2a2e 0%, #1a1a1e 100%)' }}>
               <div className="absolute inset-0 sm:inset-[2px] bg-black sm:rounded-[40px] overflow-hidden">
-                <div className="w-full h-full bg-white sm:rounded-[40px] overflow-hidden safe-top">
+                <div className="relative w-full h-full bg-white sm:rounded-[40px] overflow-hidden safe-top">
+                  {firstRun && <FirstRun only={firstRun === 'consent' ? 'consent' : undefined} />}
                   {driverSession ? (
                     <DriverApp />
                   ) : (

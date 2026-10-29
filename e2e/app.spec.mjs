@@ -110,8 +110,25 @@ test('an operator never sees a competitor network in the browser', async ({ page
   expect(Object.keys(state.wallets)).toHaveLength(0);
 });
 
-test('a new driver signs up with an SMS code and lands in the app', async ({ page, request }) => {
+test('a new driver goes through the first screens, signs up with an SMS code and lands in the app', async ({ page, request }) => {
   await page.goto('/?portal=driver');
+  // What the app does, the language (the device's is chosen), permissions, the agreement.
+  await expect(page.getByRole('heading', { name: 'Все станции — в одном приложении' })).toBeVisible();
+  await page.getByRole('button', { name: 'Пропустить' }).click();
+  await expect(page.getByRole('radio', { name: /Русский/ })).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('button', { name: /^Продолжить/ }).click();
+  for (const title of ['Станции рядом с вами', 'Не пропустите главное']) {
+    if (await page.getByRole('heading', { name: title }).isVisible({ timeout: 1500 }).catch(() => false)) await page.getByRole('button', { name: 'Не сейчас' }).click();
+  }
+  const accept = page.getByRole('button', { name: /^Принимаю и продолжаю/ });
+  await expect(accept).toBeDisabled();
+  await page.getByRole('button', { name: 'Читать соглашение полностью' }).click();
+  await expect(page.getByRole('heading', { name: 'Пользовательское соглашение и согласие на обработку данных' })).toBeVisible();
+  await page.getByRole('button', { name: 'Понятно' }).click();
+  await page.getByRole('checkbox', { name: /Мне есть 18 лет/ }).click();
+  await page.getByRole('checkbox', { name: /обработку моих персональных данных/ }).click();
+  await accept.click();
+
   await page.getByRole('button', { name: 'Создать аккаунт' }).click();
   await page.locator('#driver-signup-name').fill('Madina Karimova');
   await page.locator('#driver-signup-phone').fill('+998 93 555 44 33');
@@ -130,7 +147,15 @@ test('a new driver signs up with an SMS code and lands in the app', async ({ pag
 
   const token = await page.evaluate(() => localStorage.getItem('oc-token-driver'));
   const me = await request.get('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
-  expect((await me.json()).user.name).toBe('Madina Karimova');
+  const user = (await me.json()).user;
+  expect(user.name).toBe('Madina Karimova');
+  expect(user.consent).toMatchObject({ version: 1, marketing: false });
+
+  // The car question, then the tour over the map, once.
+  await skipOnboarding(page);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Ваш автомобиль' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Пропустить обучение' })).toHaveCount(0);
 });
 
 test("a network prints a QR sticker and the driver's scanner reads it", async ({ page, browser }) => {

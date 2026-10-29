@@ -25,6 +25,15 @@ async function pushCall<T>(path: string, portal: Portal, body?: unknown): Promis
   return data as T;
 }
 
+/** Subscribes this device to Web Push for an account whose browser already allowed notifications. */
+export async function subscribePush(portal: Portal) {
+  const reg = (await navigator.serviceWorker.getRegistration()) ?? (await navigator.serviceWorker.register('/sw.js'));
+  await navigator.serviceWorker.ready;
+  const { publicKey } = await pushCall<{ publicKey: string }>('/vapid-key', portal);
+  const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
+  await pushCall('/subscribe', portal, sub.toJSON());
+}
+
 const COPY: Record<PushState, string> = {
   unsupported: 'Этот браузер не поддерживает push-уведомления',
   denied: 'Уведомления запрещены в настройках браузера',
@@ -63,11 +72,7 @@ export default function PushToggle({ portal, compact = false }: { portal: Portal
         setState(permission === 'denied' ? 'denied' : 'off');
         return;
       }
-      const reg = (await navigator.serviceWorker.getRegistration()) ?? (await navigator.serviceWorker.register('/sw.js'));
-      await navigator.serviceWorker.ready;
-      const { publicKey } = await pushCall<{ publicKey: string }>('/vapid-key', portal);
-      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
-      await pushCall('/subscribe', portal, sub.toJSON());
+      await subscribePush(portal);
       setState('on');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не удалось включить уведомления');

@@ -14,6 +14,7 @@ const DEFAULTS: PlatformSettings = {
   topup: { min: 1000, max: 10_000_000, providers: ['payme', 'click', 'uzum', 'humo'] },
   queueHoldMin: 5,
   minPrepaidKwh: 5,
+  onboarding: { intro: true, askLocation: true, askPush: true, tour: true, consentVersion: 1 },
 };
 
 /** The platform's switches and numbers; the defaults until the state arrives. */

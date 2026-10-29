@@ -746,6 +746,8 @@ api.post('/auth/register', async (req, res) => {
   if (name.length < 2 || name.length > 60) return res.status(400).json({ error: 'Укажите имя (2–60 символов)' });
   const weak = passwordProblem(password);
   if (weak) return res.status(400).json({ error: weak });
+  const consent = consentFrom(req.body?.consent);
+  if (!consent) return res.status(400).json({ error: 'Примите пользовательское соглашение' });
   if (findDriver(phone)) return res.status(409).json({ error: 'Номер уже зарегистрирован' });
 
   const check = consumeCode(phone, 'register', req.body?.code);
@@ -770,6 +772,7 @@ api.post('/auth/register', async (req, res) => {
     lastLogin: new Date().toISOString(),
     created: new Date().toISOString(),
     twoFactor: { enabled: false, secret: null, pending: null },
+    consent,
   };
   db.data.accounts.push(account);
   db.data.wallets[account.id] = { balance: 0, currency: 'UZS', autoTopUp: false, threshold: 0, card: null };
@@ -910,6 +913,26 @@ api.post('/auth/password', requireAuth(), async (req, res) => {
 api.get('/notifications', requireAuth(), (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 50, 100);
   res.json(db.data.events.filter(e => entitled(req.account, e) && e.scope?.userId === req.account.id).slice(0, limit).map(e => viewFor(req.account, e)));
+});
+
+/**
+ * What the driver agreed to, as the record a regulator or a court would ask
+ * for: which version, when, and whether promotions are welcome. Only the
+ * version in force counts — an older one means the document changed since.
+ */
+function consentFrom(body) {
+  const version = Number(body?.version);
+  if (!Number.isInteger(version) || version < setting('legal.consentVersion')) return null;
+  return { version, marketing: body?.marketing === true, at: new Date().toISOString() };
+}
+
+api.post('/me/consent', requireAuth('driver'), (req, res) => {
+  const consent = consentFrom(req.body);
+  if (!consent) return res.status(400).json({ error: 'Это не действующая версия соглашения' });
+  // The first acceptance is kept: it is when the person became a user on these terms.
+  const prev = req.account.consent;
+  db.update('accounts', req.account.id, { consent: prev?.version === consent.version ? { ...prev, marketing: consent.marketing } : consent });
+  res.json({ user: publicAccount(db.byId('accounts', req.account.id)) });
 });
 
 const CAR_PORTS = ['CCS2', 'CCS1', 'CHAdeMO', 'Type 2', 'Type 1', 'GB/T DC', 'GB/T AC', 'NACS'];

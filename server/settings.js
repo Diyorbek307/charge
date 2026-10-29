@@ -28,6 +28,13 @@ export const SCHEMA = [
   { key: 'feature.queue', group: 'features', label: 'Очередь на станции', type: 'bool', def: true },
   { key: 'feature.sos', group: 'features', label: 'SOS водителю', hint: 'Кнопка помощи на карте', type: 'bool', def: true },
 
+  // First launch: what a new driver goes through before and after signing in
+  { key: 'onboarding.intro', group: 'onboarding', label: 'Знакомство при первом запуске', hint: 'Три экрана о том, что умеет приложение', type: 'bool', def: true },
+  { key: 'onboarding.askLocation', group: 'onboarding', label: 'Просить доступ к геолокации', hint: 'Отдельный экран с объяснением, зачем она нужна', type: 'bool', def: true },
+  { key: 'onboarding.askPush', group: 'onboarding', label: 'Просить разрешение на уведомления', type: 'bool', def: true },
+  { key: 'onboarding.tour', group: 'onboarding', label: 'Обучение после первого входа', hint: 'Подсказки поверх карты: баланс, поиск, QR, разделы', type: 'bool', def: true },
+  { key: 'legal.consentVersion', group: 'onboarding', label: 'Версия пользовательского согласия', hint: 'Увеличьте после изменения документа — каждый водитель примет его заново при следующем открытии', type: 'int', def: 1, min: 1, max: 1000 },
+
   // Bonuses and rewards (PowerGo pays them)
   { key: 'rewards.carBonus', group: 'rewards', label: 'Бонус за данные автомобиля', type: 'money', def: n('CAR_BONUS_UZS', 100_000), min: 0, max: 1_000_000, unit: 'сум' },
   { key: 'rewards.bonusDays', group: 'rewards', label: 'Срок жизни бонуса', type: 'int', def: n('BONUS_DAYS', 60), min: 1, max: 365, unit: 'дней' },
@@ -87,6 +94,7 @@ export const GROUPS = {
   charging: 'Зарядка, бронь, очередь',
   payments: 'Пополнение кошелька',
   partners: 'Партнёры у станций',
+  onboarding: 'Первый запуск и согласие',
 };
 
 const byKey = new Map(SCHEMA.map(s => [s.key, s]));
@@ -171,5 +179,12 @@ export function publicSettings() {
     topup: { min: setting('topup.min'), max: setting('topup.max'), providers: ['payme', 'click', 'uzum', 'humo'].filter(p => setting(`payments.${p}`)) },
     queueHoldMin: setting('queue.holdMin'),
     minPrepaidKwh: setting('charge.minPrepaidKwh'),
+    onboarding: {
+      intro: setting('onboarding.intro'),
+      askLocation: setting('onboarding.askLocation'),
+      askPush: setting('onboarding.askPush'),
+      tour: setting('onboarding.tour'),
+      consentVersion: setting('legal.consentVersion'),
+    },
   };
 }

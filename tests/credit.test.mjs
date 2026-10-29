@@ -31,7 +31,7 @@ const photo = () => `data:image/jpeg;base64,${crypto.randomBytes(6000).toString(
 
 async function newDriver(phone, name) {
   const code = (await call('/auth/sms/request', { method: 'POST', body: { phone, purpose: 'register' } })).data.demoCode;
-  const r = await call('/auth/register', { method: 'POST', body: { phone, code, name, password: 'Credit2026' } });
+  const r = await call('/auth/register', { method: 'POST', body: { phone, code, name, password: 'Credit2026', consent: { version: 1 } } });
   return { token: r.data.token, id: r.data.user.id };
 }
 async function freeConnector(token) {

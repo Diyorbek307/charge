@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { LoaderCircle, MessageSquareText, ShieldCheck, TriangleAlert, UserPlus, KeyRound } from 'lucide-react';
 import { useSync } from '../lib/sync';
+import { readFirstRun } from '../lib/firstRun';
 
 interface Props {
   mode: 'register' | 'reset';
@@ -61,7 +62,9 @@ export default function DriverAccountForm({ mode, ring, grad, onCancel, onNeedsL
     setError(null);
     try {
       if (mode === 'register') {
-        const { token, user } = await actions.register(phone, code.trim(), name, password);
+        // The first-run screens come before this form, so the agreement is already accepted here.
+        const accepted = readFirstRun();
+        const { token, user } = await actions.register(phone, code.trim(), name, password, { version: accepted?.version ?? 0, marketing: !!accepted?.marketing });
         adoptSession('driver', token, user);
       } else {
         const result = await actions.resetPassword(phone, code.trim(), password);

@@ -2,7 +2,7 @@ import { ArrowLeft, FileText, TriangleAlert } from 'lucide-react';
 import { LEGAL, type LegalDocId } from './legal';
 import type { LandingCopy } from './content';
 
-export const LEGAL_IDS: LegalDocId[] = ['offer', 'privacy', 'terms'];
+export const LEGAL_IDS: LegalDocId[] = ['consent', 'offer', 'privacy', 'terms'];
 
 export const legalHref = (id: LegalDocId) => `/?doc=${id}`;
 

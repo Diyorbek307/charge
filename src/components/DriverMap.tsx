@@ -494,7 +494,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
           {/* Top: the balance one glance away, and the map tools */}
           <div className="absolute top-3 left-3 right-3 z-[1000] flex items-start justify-between gap-2 pointer-events-none">
             {onOpenWallet && sessions.driver ? (
-              <button onClick={onOpenWallet} aria-label="Кошелёк" className="pointer-events-auto flex items-center gap-2.5 pl-2 pr-4 py-2 rounded-2xl bg-white/95 backdrop-blur shadow-[0_4px_20px_rgba(15,23,42,0.12)]">
+              <button onClick={onOpenWallet} aria-label="Кошелёк" data-tour="wallet" className="pointer-events-auto flex items-center gap-2.5 pl-2 pr-4 py-2 rounded-2xl bg-white/95 backdrop-blur shadow-[0_4px_20px_rgba(15,23,42,0.12)]">
                 <span className="w-9 h-9 rounded-xl bg-[#FFC83D] text-[#111] grid place-items-center"><Wallet size={18} /></span>
                 <span className="text-left leading-tight">
                   <span className="block text-[11px] text-slate-500">Баланс</span>
@@ -507,7 +507,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
               <button onClick={() => { setListOpen(v => !v); setShowFilters(false); }} aria-pressed={listOpen} aria-label={listOpen ? 'Показать карту' : 'Станции списком'} className="w-12 h-12 rounded-2xl bg-white/95 backdrop-blur shadow-[0_4px_20px_rgba(15,23,42,0.12)] grid place-items-center text-slate-800">
                 {listOpen ? <MapIcon size={20} /> : <List size={20} />}
               </button>
-              <button onClick={() => setLegend(v => !v)} aria-expanded={legend} aria-label="Что значат значки" className="w-12 h-12 rounded-2xl bg-white/95 backdrop-blur shadow-[0_4px_20px_rgba(15,23,42,0.12)] grid place-items-center text-slate-800">
+              <button onClick={() => setLegend(v => !v)} aria-expanded={legend} aria-label="Что значат значки" data-tour="legend" className="w-12 h-12 rounded-2xl bg-white/95 backdrop-blur shadow-[0_4px_20px_rgba(15,23,42,0.12)] grid place-items-center text-slate-800">
                 <Info size={20} />
               </button>
               {legend && (
@@ -530,7 +530,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
                 {onSos && sosOn ? (
                   <button onClick={onSos} aria-label="SOS — нужна помощь" className="pointer-events-auto w-12 h-12 rounded-2xl bg-red-600 text-white font-extrabold text-xs shadow-lg active:scale-95">SOS</button>
                 ) : <span />}
-                <button onClick={locate} aria-label="Моё местоположение" className="pointer-events-auto w-12 h-12 rounded-2xl bg-white shadow-[0_4px_20px_rgba(15,23,42,0.15)] grid place-items-center">
+                <button onClick={locate} aria-label="Моё местоположение" data-tour="locate" className="pointer-events-auto w-12 h-12 rounded-2xl bg-white shadow-[0_4px_20px_rgba(15,23,42,0.15)] grid place-items-center">
                   <Navigation size={20} className={`text-[#2563EB] ${here ? 'fill-[#2563EB]' : ''} ${locating ? 'animate-pulse' : ''}`} />
                 </button>
               </div>
@@ -654,7 +654,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
                 )}
 
                 <div className="px-3 flex items-center gap-2">
-                  <div className="flex-1 h-12 bg-slate-50 rounded-2xl flex items-center gap-2 px-3.5 border border-slate-100 focus-within:border-slate-300">
+                  <div data-tour="search" className="flex-1 h-12 bg-slate-50 rounded-2xl flex items-center gap-2 px-3.5 border border-slate-100 focus-within:border-slate-300">
                     <Search size={18} className="text-slate-400 shrink-0" />
                     <input
                       value={search}
@@ -672,6 +672,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
                   <button
                     onClick={() => { setShowFilters(!showFilters); setListOpen(false); }}
                     aria-label="Фильтры"
+                    data-tour="filters"
                     aria-expanded={showFilters}
                     className={`relative w-12 h-12 rounded-2xl grid place-items-center border transition-colors ${showFilters ? 'bg-[#111] text-white border-[#111]' : 'bg-slate-50 text-slate-700 border-slate-100'}`}
                   >
@@ -683,7 +684,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
                 </div>
 
                 {/* Networks: every partner on the map, one tap to see only theirs */}
-                <div className="mt-2.5 px-3 flex gap-2 overflow-x-auto no-scrollbar" role="group" aria-label="Сети">
+                <div data-tour="networks" className="mt-2.5 px-3 flex gap-2 overflow-x-auto no-scrollbar" role="group" aria-label="Сети">
                   <button onClick={() => setNetwork('all')} aria-pressed={network === 'all'} className={`shrink-0 h-10 px-4 rounded-2xl text-sm font-semibold border-2 ${network === 'all' ? 'border-[#111] bg-white text-[#111]' : 'border-transparent bg-slate-50 text-slate-700'}`}>Все</button>
                   {networks.map(n => (
                     <button key={n.id} onClick={() => setNetwork(v => (v === n.id ? 'all' : n.id))} aria-pressed={network === n.id} className={`shrink-0 h-10 pl-1.5 pr-3.5 rounded-2xl text-sm font-semibold border-2 inline-flex items-center gap-2 ${network === n.id ? 'border-[#111] bg-white text-[#111]' : 'border-transparent bg-slate-50 text-slate-700'}`}>

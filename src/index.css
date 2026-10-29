@@ -871,3 +871,29 @@ nav::-webkit-scrollbar { display: none; }
 .pg-bar { transform-origin: left; animation: pg-bar .9s cubic-bezier(.32,.72,0,1) .15s both; }
 @keyframes pg-bar { from { transform: scaleX(0); } }
 @keyframes pg-gauge { from { stroke-dashoffset: 440; } }
+
+/* First launch and the tour */
+.pg-fr-step { animation: pg-screen-in .45s cubic-bezier(.32,.72,0,1) both; }
+.pg-fr-pop { animation: pg-fr-pop .55s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes pg-fr-pop { from { opacity: 0; transform: scale(.6) rotate(-8deg); } }
+.pg-fr-scene { animation: pg-fr-pop .6s cubic-bezier(.34,1.56,.64,1) both; }
+.pg-fr-scene .pg-fr-pin { animation: pg-drop-in .55s cubic-bezier(.34,1.56,.64,1) both; transform-box: view-box; }
+.pg-fr-me-halo { transform-box: fill-box; transform-origin: center; animation: pg-me-breathe 1.8s ease-out infinite; }
+.pg-fr-phone { animation: pg-fr-hover 3.2s ease-in-out infinite; }
+@keyframes pg-fr-hover { 50% { transform: translate(-6px, -4px) rotate(-2deg); } }
+.pg-fr-scan { animation: pg-fr-scan 1.6s ease-in-out infinite alternate; }
+@keyframes pg-fr-scan { to { transform: translateY(36px); } }
+.pg-fr-ring { stroke-dashoffset: 100; animation: pg-fr-ring 2.6s ease-in-out infinite; }
+@keyframes pg-fr-ring { 60%, 100% { stroke-dashoffset: 0; } }
+.pg-fr-coin { animation: pg-fr-coin 2.4s cubic-bezier(.45,0,.55,1) infinite; }
+@keyframes pg-fr-coin { 0% { transform: translateY(-26px); opacity: 0; } 25% { opacity: 1; } 60%, 100% { transform: translateY(34px); opacity: 0; } }
+.pg-fr-moon { animation: pg-float 4s ease-in-out infinite; }
+.pg-fr-wave { animation: pg-fr-wave 2.2s ease-out infinite; }
+@keyframes pg-fr-wave { from { transform: scale(.55); opacity: 1; } to { transform: scale(1.25); opacity: 0; } }
+.pg-fr-bell { transform-origin: 50% 10%; animation: pg-wiggle 2.4s ease-in-out infinite; }
+.pg-fr-tick { animation: pg-fr-pop .3s cubic-bezier(.34,1.56,.64,1) both; }
+.pg-tour-cut { transition: x .45s cubic-bezier(.32,.72,0,1), y .45s cubic-bezier(.32,.72,0,1), width .45s cubic-bezier(.32,.72,0,1), height .45s cubic-bezier(.32,.72,0,1), rx .45s; }
+.pg-tour-hole { transition: top .45s cubic-bezier(.32,.72,0,1), left .45s cubic-bezier(.32,.72,0,1), width .45s cubic-bezier(.32,.72,0,1), height .45s cubic-bezier(.32,.72,0,1), border-radius .45s; }
+.pg-tour-hole::after { content: ''; position: absolute; inset: -6px; border-radius: inherit; border: 2px solid #FFC83D; animation: pg-tour-ring 1.6s ease-out infinite; }
+@keyframes pg-tour-ring { from { opacity: 1; transform: scale(.96); } to { opacity: 0; transform: scale(1.12); } }
+.pg-tour-card { transition: top .45s cubic-bezier(.32,.72,0,1), bottom .45s cubic-bezier(.32,.72,0,1); }

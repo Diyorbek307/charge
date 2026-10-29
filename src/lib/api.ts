@@ -20,6 +20,14 @@ export interface Account {
   car?: Car | null;
   /** Linked Telegram account: one-tap sign-in in the Mini App and bot notifications. */
   telegram?: { id: string; username: string | null; firstName: string; linkedAt: string; notify?: boolean } | null;
+  /** The user agreement this driver accepted: its version, when, and whether promotions are welcome. */
+  consent?: Consent | null;
+}
+
+export interface Consent {
+  version: number;
+  marketing: boolean;
+  at: string;
 }
 
 export interface Car {
@@ -392,6 +400,7 @@ export interface PlatformSettings {
   topup: { min: number; max: number; providers: ('payme' | 'click' | 'uzum' | 'humo')[] };
   queueHoldMin: number;
   minPrepaidKwh: number;
+  onboarding: { intro: boolean; askLocation: boolean; askPush: boolean; tour: boolean; consentVersion: number };
 }
 /** One setting in the admin's Platform control. */
 export interface SettingItem { key: string; group: string; label: string; hint?: string; type: 'bool' | 'int' | 'money' | 'percent' | 'tiers'; def: unknown; min?: number; max?: number; unit?: string; value: unknown; changed: boolean }
@@ -693,8 +702,9 @@ export const apiClient = {
   smsStatus: () => request<{ configured: boolean; demo: boolean }>('/auth/sms/status'),
   requestSmsCode: (phone: string, purpose: 'register' | 'reset') =>
     post<{ sent: boolean; phone: string; demoCode?: string }>('/auth/sms/request', { phone, purpose }),
-  register: (phone: string, code: string, name: string, password: string) =>
-    post<{ token: string; user: Account }>('/auth/register', { phone, code, name, password }),
+  register: (phone: string, code: string, name: string, password: string, consent: { version: number; marketing: boolean }) =>
+    post<{ token: string; user: Account }>('/auth/register', { phone, code, name, password, consent }),
+  acceptConsent: (consent: { version: number; marketing: boolean }) => post<{ user: Account }>('/me/consent', consent, 'driver'),
   resetPassword: (phone: string, code: string, password: string) =>
     post<{ reset: true; requires2fa?: boolean; token?: string; user?: Account }>('/auth/password/reset', { phone, code, password }),
 
