@@ -29,6 +29,7 @@ import DealsScreen from './driver/Deals';
 import QRScanScreen from './driver/QRScan';
 import RewardsScreen, { RewardBurst } from './driver/Rewards';
 import BatteryScreen from './driver/Battery';
+import WhileCharging from './driver/WhileCharging';
 import { useOfflinePacks, deletePack, packsBytes, savedStations } from '../lib/offline';
 import { NetworkBadge } from './driver/NetworkBadge';
 import { ChargerFriend } from './driver/Illustration';
@@ -296,6 +297,7 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
         </div>
 
         <StationForecastBlock stationId={station.id} connectors={station.connectors} />
+        <div className="mb-4"><WhileCharging stationId={station.id} /></div>
         <StationCommunityBlock stationId={station.id} />
 
         {/* Amenities */}

@@ -254,6 +254,15 @@ export interface BatteryHealth {
 }
 /** The chance of a free point on arrival (server/driverFeatures.js). */
 export interface ArrivalChance { stationId: string; etaMin: number; chance: number; expectedFree: number; verdict: 'likely' | 'maybe' | 'unlikely'; waitAfterMin: number | null; queue: number; alternatives: (Omit<ArrivalChance, 'alternatives'> & { name: string; operator: string; km: number })[] }
+export type PlaceKind = 'food' | 'prayer' | 'toilets' | 'shop' | 'hotel';
+/** What is a short walk from a station: partners with an offer, and places from OpenStreetMap. */
+export interface StationPlaces {
+  partners: { id: string; name: string; kind: PlaceKind; lat: number; lng: number; offer: string; km: number; walkMin: number }[];
+  places: { id: string; name: string; kind: PlaceKind; lat: number; lng: number; hours: string | null; km: number; walkMin: number }[];
+  counts: Record<PlaceKind, number>;
+  loaded: boolean;
+}
+export interface PartnerPlace { id: string; name: string; kind: PlaceKind; lat: number; lng: number; offer: string; stationIds: string[]; pricePerShow: number; shows: number; taps: number; until: string; active: boolean; bill: number }
 export interface BonusGrant { id: string; kind: string; title: string; amount: number; left: number; at: string; expiresAt: string }
 
 export interface Alert {
@@ -723,6 +732,11 @@ export const apiClient = {
   telegramSignIn: (initData: string) => post<{ token: string; user: Account }>('/auth/telegram', { initData }),
   telegramLink: (initData: string) => post<{ user: Account }>('/auth/telegram/link', { initData }, 'driver'),
   telegramUnlink: () => post<{ user: Account }>('/auth/telegram/unlink', undefined, 'driver'),
+  adminPartners: () => request<PartnerPlace[]>('/admin/partners', { portal: 'admin' }),
+  createPartner: (body: { name: string; kind: PlaceKind; offer: string; lat: number; lng: number; pricePerShow: number; days: number }) => post<PartnerPlace>('/admin/partners', body, 'admin'),
+  stopPartner: (id: string) => request<PartnerPlace>(`/admin/partners/${id}`, { method: 'DELETE', portal: 'admin' }),
+  places: (stationId: string) => request<StationPlaces>(`/stations/${stationId}/places`),
+  tapPlace: (id: string) => post<{ ok: boolean }>(`/places/${id}/tap`),
   arrival: (stationId: string, etaMin: number) => request<ArrivalChance>(`/stations/${stationId}/arrival?eta=${Math.round(etaMin)}`),
   batteryHealth: () => request<BatteryHealth>('/battery', { portal: 'driver' }),
   saveCar: (portal: Portal, car: Car) => request<{ user: Account; granted?: BonusGrant[] }>('/me/car', { method: 'PUT', body: JSON.stringify(car), portal }),

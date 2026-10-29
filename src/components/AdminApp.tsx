@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import AdminPartners from './admin/Partners';
 import LeadsPage from './LeadsPage';
 import AdminOverview from './admin/Overview';
 import AdminOperators from './admin/Operators';
@@ -23,14 +24,14 @@ import { DirectSettlement } from './admin/DirectSettlement';
 import { AdminSupport } from './admin/Support';
 import {
   LayoutDashboard, MapPin, Users, Activity, DollarSign, BarChart2, Settings, LogOut, Zap, Shield,
-  Building2, Brain, ScrollText, ClipboardCheck, Percent, UserCheck, Banknote, Tag, Menu, Inbox, Siren, Home, ScanFace, Landmark, MessageCircle,
+  Building2, Brain, ScrollText, ClipboardCheck, Percent, UserCheck, Banknote, Tag, Menu, Inbox, Siren, Home, ScanFace, Landmark, MessageCircle, Coffee
 } from 'lucide-react';
 import { useI18n } from '../lib/i18n';
 import SidebarThemeToggle from './SidebarThemeToggle';
 import AIChat from './AIChat';
 import { LogoMark } from '../landing/Logo';
 
-type Page = 'dashboard' | 'map' | 'sos' | 'hosts' | 'credit' | 'direct' | 'support' | 'operators' | 'leads' | 'users' | 'sessions' | 'payments' | 'settlement' | 'analytics' | 'ai' | 'fraud' | 'cdr' | 'commissions' | 'tariffs_global' | 'audit' | 'roles' | 'settings' | 'system_health';
+type Page = 'dashboard' | 'map' | 'sos' | 'hosts' | 'credit' | 'direct' | 'support' | 'operators' | 'leads' | 'users' | 'sessions' | 'payments' | 'settlement' | 'analytics' | 'ai' | 'fraud' | 'cdr' | 'commissions' | 'tariffs_global' | 'partners' | 'audit' | 'roles' | 'settings' | 'system_health';
 
 function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current: Page; onChange: (p: Page) => void; onBack: () => void; isOpen?: boolean; onClose?: () => void }) {
   const { t } = useI18n();
@@ -63,6 +64,7 @@ function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current:
         { id: 'direct' as Page, label: 'Расчёты с сетями', icon: <Landmark size={14} /> },
         { id: 'commissions' as Page, label: t('nav.commissions'), icon: <Percent size={14} /> },
         { id: 'tariffs_global' as Page, label: t('nav.networkTariffs'), icon: <Tag size={14} /> },
+        { id: 'partners' as Page, label: 'Партнёры у станций', icon: <Coffee size={14} /> },
       ],
     },
     {
@@ -177,7 +179,7 @@ export default function AdminApp({ onBack }: { onBack: () => void }) {
   const renderPage = () => {
     const pages: Record<string, ReactNode> = {
       map: <AdminNetworkMap />, sos: <AdminSos />, support: <AdminSupport />, hosts: <AdminHosts />, credit: <AdminCredit />, operators: <AdminOperators onNavigate={go} />, leads: <LeadsPage />, users: <AdminUsers />,
-      settlement: <AdminSettlement />, direct: <DirectSettlement portal="admin" />, commissions: <AdminCommissions />, tariffs_global: <AdminTariffs />,
+      settlement: <AdminSettlement />, direct: <DirectSettlement portal="admin" />, commissions: <AdminCommissions />, tariffs_global: <AdminTariffs />, partners: <AdminPartners />,
       sessions: <AdminSessions />, payments: <AdminPayments />,
       analytics: <AdminAnalytics />, ai: <AdminInsights onNavigate={go} />, fraud: <AdminRisk />,
       cdr: <AdminCdr />, audit: <AdminAudit />, roles: <AdminRoles />,

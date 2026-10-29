@@ -3,6 +3,7 @@ import { BatteryCharging, Clock, CheckCircle, Download, LoaderCircle, Moon, Buil
 import type { Session } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 import { exportPdf } from '../../lib/export';
+import WhileCharging from './WhileCharging';
 
 /** Mirrors server/history.js: what a car really draws — DC tapers, AC is capped by the onboard charger. */
 const effectiveKw = (power: number) => (power >= 50 ? power * 0.6 : Math.min(power, 11) * 0.95);
@@ -157,6 +158,7 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
             <p className="text-white/50 text-[11px] flex items-center gap-1 justify-end">{session.corporate ? <><Building2 size={11} />за счёт компании</> : session.credit ? <><ScanFace size={11} />в долг</> : session.familyOwner ? <><Wallet size={11} />из семейного кошелька</> : session.direct ? <><Wallet size={11} />с баланса сети</> : <><Wallet size={11} />из кошелька</>}</p>
           </div>
         </div>
+        <div className="mt-3 w-full max-h-[34vh] overflow-y-auto no-scrollbar"><WhileCharging stationId={session.stationId} dark minutes={goal?.kind === 'percent' || !goal ? etaMin || undefined : undefined} /></div>
         <p className="mt-2 text-white/30 text-[10px] text-center">{metered ? 'Энергия — по счётчику станции.' : `Процент — оценка для батареи ${pack} кВт·ч; к оплате — по энергии.`}</p>
       </div>
 

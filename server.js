@@ -16,6 +16,7 @@ import { startSessionWatch } from "./server/sessionWatch.js";
 import "./server/cameras.js";
 import "./server/comfort.js";
 import "./server/tts.js";
+import "./server/places.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
