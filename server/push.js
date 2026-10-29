@@ -149,7 +149,21 @@ async function deliver(event) {
   void notifyTelegram(ids, kind.title, event.message);
   const targets = subs().filter(s => ids.has(s.accountId));
   if (targets.length === 0) return;
-  await sendTo(targets, { title: kind.title, body: event.message, tag: event.type, url: kind.url });
+  // The end of a charge replaces its live notification on the lock screen.
+  const charge = ['session.stop', 'session.goal', 'session.progress'].includes(event.type) && event.entity ? `charge-${event.entity}` : null;
+  await sendTo(targets, { title: kind.title, body: event.message, tag: charge ?? event.type, url: charge ? '/?portal=driver&go=charging' : kind.url, ...(charge ? { renotify: true } : {}) });
+}
+
+/**
+ * The charge on the lock screen: one notification per charge, updated in
+ * place (same tag, silent) with the percentage, time left, energy and cost.
+ * Sent straight to the driver's devices, not through events or Telegram.
+ */
+export async function pushLiveCharge(session, { title, body, first, final = false }) {
+  const targets = subs().filter(s => s.accountId === session.userId);
+  if (!targets.length) return 0;
+  // The closing notice no longer sticks: the driver can swipe it away.
+  return sendTo(targets, { title, body, tag: `charge-${session.id}`, url: final ? '/?portal=driver' : '/?portal=driver&go=charging', silent: !first, renotify: false, sticky: !final, actions: final ? [] : [{ action: 'open', title: 'Открыть зарядку' }] });
 }
 
 function viewerOf(req) {

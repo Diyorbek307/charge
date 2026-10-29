@@ -2308,7 +2308,11 @@ export default function DriverApp() {
       return;
     }
     if (go === 'qr') setScreen('qr-scan');
-    if (go === 'charging') setActiveTab('charging');
+    // From the lock-screen notice: straight to the running charge when there is one.
+    if (go === 'charging') {
+      if (state?.sessions.some(s => s.status === 'active' && s.userId === driverAccount.id)) setScreen('charging-active');
+      else setActiveTab('charging');
+    }
     if (go === 'nearest') {
       void locate().then(here => {
         const free = liveStations.filter(s => s.connectors.some(c => c.status === 'available'));

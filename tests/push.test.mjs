@@ -165,3 +165,22 @@ describe('event notifications', () => {
     await waitFor(() => received.some(x => x.path === '/push/operator-alerts'), 'operator push');
   });
 });
+
+describe('the charge on the lock screen', () => {
+  test('a running charge sends its live notice to the driver, and a closing one replaces it', async () => {
+    const admin = await login('admin');
+    await call('/admin/reset', { method: 'POST', token: admin });
+    const token = await login('driver');
+    assert.equal((await call('/push/subscribe', { method: 'POST', token, body: subscription('live') })).status, 200);
+    const st = (await call('/state', { token })).data.stations.find(s => !s.ocpi && s.connectors.some(c => c.status === 'available'));
+    const c = st.connectors.find(x => x.status === 'available');
+    const start = await call('/sessions/start', { method: 'POST', token, body: { stationId: st.id, connectorId: c.id } });
+    assert.equal(start.status, 200, JSON.stringify(start.data));
+    // The session watch runs every few seconds.
+    await waitFor(() => received.some(x => x.path === '/push/live'), 'the live notice', 9000);
+    const before = received.filter(x => x.path === '/push/live').length;
+    await call(`/sessions/${start.data.session.id}/stop`, { method: 'POST', token });
+    // However it ends, a closing notice replaces the live one.
+    await waitFor(() => received.filter(x => x.path === '/push/live').length > before, 'the closing notice', 9000);
+  });
+});

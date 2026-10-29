@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { db } from './db.js';
 import { api, requireAuth, emit, startCharge, stopCharge, chargeGoal } from './api.js';
 import { demoEnergy } from './history.js';
+import { pushLiveCharge } from './push.js';
 
 /**
  * Watches running charges and the clock, so the driver does not have to:
@@ -116,6 +117,43 @@ async function runSchedules() {
   }
 }
 
+/**
+ * The lock-screen notice of a running charge: at the start, then at every
+ * 5% (or 3 minutes when the percentage is unknown), always quietly.
+ */
+async function watchLive() {
+  for (const session of db.data.sessions.filter(s => s.status === 'active' && s.userId && !s.simulated)) {
+    const account = db.byId('accounts', session.userId);
+    if (!account) continue;
+    const now = current(session);
+    const pack = account.car?.battery || 75;
+    const from = session.goal?.fromPct ?? session.socStart ?? null;
+    const pct = session.socEnd ?? (from !== null ? Math.min(100, Math.round(from + (now.energy / pack) * 100)) : null);
+    const step = pct !== null ? Math.floor(pct / 5) : Math.floor((Date.now() - Date.parse(session.start)) / 180_000);
+    if (session.liveStep === step) continue;
+    const first = session.liveStep === undefined;
+    session.liveStep = step;
+    db.save();
+    const left = session.goal && (session.goal.stopKwh || session.goal.stopCost) ? minutesLeft(session, now) : null;
+    const title = pct !== null ? `⚡ ${pct}%${left ? ` · ещё ~${left} мин` : ''}` : `⚡ Идёт зарядка${left ? ` · ещё ~${left} мин` : ''}`;
+    const body = `${session.stationName} · ${now.energy.toFixed(1)} кВт·ч · ${sum(now.cost)}`;
+    await pushLiveCharge(session, { title, body, first }).catch(() => 0);
+  }
+  // A charge that ended, however it ended, leaves a closing notice in place of the live one —
+  // never a stale "62%" stuck on the lock screen.
+  for (const session of db.data.sessions.filter(s => s.status !== 'active' && s.liveStep !== undefined && !s.liveClosed)) {
+    session.liveClosed = true;
+    db.save();
+    const done = session.status === 'completed';
+    await pushLiveCharge(session, {
+      title: done ? '✅ Зарядка завершена' : 'Зарядка остановлена',
+      body: done ? `${session.stationName} · ${(session.energy ?? 0).toFixed(1)} кВт·ч · ${sum(session.cost ?? 0)}` : session.stationName,
+      first: false,
+      final: true,
+    }).catch(() => 0);
+  }
+}
+
 let busy = false;
 export function startSessionWatch() {
   const timer = setInterval(async () => {
@@ -124,6 +162,7 @@ export function startSessionWatch() {
     try {
       await watchGoals();
       await runSchedules();
+      await watchLive();
     } catch (e) {
       console.error('[watch]', e);
     } finally {

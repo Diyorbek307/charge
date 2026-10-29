@@ -4,7 +4,7 @@
  * and stay entirely out of the way of the live-sync channel.
  */
 
-const VERSION = 'oc-v6';
+const VERSION = 'oc-v7';
 /** Offline packs (map of a road, the app's code) outlive builds: only the driver deletes them. */
 const KEEP = 'pg-offline';
 const SHELL_CACHE = `${VERSION}-shell`;
@@ -160,6 +160,11 @@ self.addEventListener('push', event => {
       tag: data.tag,
       icon: '/icon-192.png',
       badge: '/icon-192.png',
+      // A live charge updates its own notice in place: quietly, and it stays until the charge ends.
+      silent: !!data.silent,
+      renotify: !!data.renotify && !!data.tag,
+      requireInteraction: !!data.sticky,
+      actions: Array.isArray(data.actions) ? data.actions.slice(0, 2) : [],
       data: { url: data.url || '/' },
     }),
   );
