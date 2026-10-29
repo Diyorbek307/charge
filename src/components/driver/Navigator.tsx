@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Polyline, Marker, useMap } from 'react-leaflet';
+import { MapContainer, Polyline, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import {
   ArrowLeft, ArrowRight, ArrowUp, CornerUpLeft, CornerUpRight, RotateCcw, RefreshCw, Flag, X, Volume2, VolumeX, Camera as CameraIcon, LoaderCircle, Play, Zap,
@@ -10,7 +10,7 @@ import { useSync } from '../../lib/sync';
 import {
   type Camera, type LatLng, type Lang, type Route, type Step, fetchRoute, fetchCameras, project, pointAt, bearing, word, fmtDist, action, say, voiceLang, dist, spokenDist, spokenTime, prefetchSpeech,
 } from '../../lib/nav';
-import { MAP_TILES, MAP_ATTRIBUTION, MAP_TILE_CLASS } from '../../lib/mapTiles';
+import BaseMap from '../BaseMap';
 
 const CITY_CENTER: LatLng = { lat: 41.3111, lng: 69.2797 };
 
@@ -261,7 +261,7 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
     <div className="absolute inset-0 z-[9998] flex flex-col bg-[#111]" role="dialog" aria-modal="true" aria-label={`Навигация до ${station.name}`}>
       <div className="relative flex-1">
         <MapContainer center={[dest.lat, dest.lng]} zoom={15} zoomControl={false} attributionControl={false} className="absolute inset-0" style={{ background: '#e5e5e5' }}>
-          <TileLayer url={MAP_TILES} attribution={MAP_ATTRIBUTION} className={MAP_TILE_CLASS} />
+          <BaseMap />
           {passed.length > 1 && <Polyline positions={passed.map(p => [p.lat, p.lng])} pathOptions={{ color: '#9CA3AF', weight: 7, opacity: 0.8 }} />}
           {ahead.length > 1 && <Polyline positions={ahead.map(p => [p.lat, p.lng])} pathOptions={{ color: '#2563EB', weight: 8, opacity: 0.9 }} />}
           {cameras.map(c => (

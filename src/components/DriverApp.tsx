@@ -342,7 +342,7 @@ function ChargingStartScreen({ station, onBack, onConfirm, onOpenQR }: { station
   return (
     <div className="h-full flex flex-col bg-slate-50 relative">
       <div className="bg-white px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100">
-        <button onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
+        <button aria-label="Назад" onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
         <div>
           <h1 className="text-base font-bold text-slate-900">Начало зарядки</h1>
           <p className="text-xs text-slate-500">{station?.name}</p>
@@ -650,7 +650,7 @@ function AppSettingsScreen({ onBack }: { onBack: () => void }) {
   return (
     <div className="h-full flex flex-col bg-slate-50">
       <div className="bg-white px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100 shrink-0">
-        <button onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
+        <button aria-label="Назад" onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
         <h1 className="text-base font-bold text-slate-900">Настройки приложения</h1>
       </div>
 
@@ -1045,7 +1045,7 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
     return (
       <div className="h-full flex flex-col bg-slate-50">
         <div className="bg-white px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100">
-          <button onClick={() => setStep('form')} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
+          <button onClick={() => setStep('form')} aria-label="Назад" className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
           <h1 className="text-base font-bold text-slate-900">Подтверждение</h1>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
@@ -1100,7 +1100,7 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
   return (
     <div className="h-full flex flex-col bg-slate-50">
       <div className="bg-white px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100">
-        <button onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
+        <button aria-label="Назад" onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
         <div>
           <h1 className="text-base font-bold text-slate-900">Добавить автомобиль</h1>
           <p className="text-xs text-slate-400">Данные для автоматической совместимости</p>
@@ -1272,7 +1272,7 @@ function ReportScreen({ station, onBack }: { station: Station | null; onBack: ()
   if (sent) return (
     <div className="h-full flex flex-col bg-slate-50">
       <div className="bg-white px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100">
-        <button onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} /></button>
+        <button aria-label="Назад" onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} /></button>
         <h1 className="text-base font-bold text-slate-900">Сообщить о проблеме</h1>
       </div>
       <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
@@ -1292,7 +1292,7 @@ function ReportScreen({ station, onBack }: { station: Station | null; onBack: ()
   return (
     <div className="h-full flex flex-col bg-slate-50">
       <div className="bg-white px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100">
-        <button onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
+        <button aria-label="Назад" onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
         <div>
           <h1 className="text-base font-bold text-slate-900">Сообщить о проблеме</h1>
           <p className="text-xs text-slate-500">{station?.name}</p>
@@ -1364,7 +1364,7 @@ function FavoritesScreen({ onBack, onSelectStation }: { onBack: () => void; onSe
   return (
     <div className="h-full flex flex-col bg-slate-50">
       <div className="bg-white px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100">
-        <button onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
+        <button aria-label="Назад" onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
         <h1 className="text-base font-bold text-slate-900">Избранные станции</h1>
         <span className="ml-auto text-xs text-slate-400">{favs.length} станций</span>
       </div>
@@ -1503,7 +1503,7 @@ function BookingScreen({ station, onBack, onConfirm }: { station: Station | null
   return (
     <div className="h-full flex flex-col bg-slate-50">
       <div className="bg-white px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100">
-        <button onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
+        <button aria-label="Назад" onClick={onBack} className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
         <div>
           <h1 className="text-base font-bold text-slate-900">Бронирование</h1>
           <p className="text-xs text-slate-500">{station?.name}</p>
@@ -1736,7 +1736,7 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
     <div className="h-full flex flex-col" style={{ background: 'linear-gradient(180deg,#F0F9FF 0%,#F8FAFC 100%)' }}>
       {/* Header */}
       <div className="bg-white/80 backdrop-blur px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100/80">
-        <button onClick={onBack} className="p-2 rounded-xl bg-slate-100 active:scale-95 transition-transform">
+        <button aria-label="Назад" onClick={onBack} className="p-2 rounded-xl bg-slate-100 active:scale-95 transition-transform">
           <ArrowLeft size={18} className="text-slate-600" />
         </button>
         <div className="flex-1">
@@ -1896,7 +1896,7 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
 
         {/* Top bar */}
         <div className="relative z-20 flex items-center justify-between px-4 pt-5 pb-3">
-          <button onClick={() => { cancelAnimationFrame(rafRef.current); clearTimeout(timerRef.current); reset(); }}
+          <button onClick={() => { cancelAnimationFrame(rafRef.current); clearTimeout(timerRef.current); reset(); }} aria-label="Остановить сканирование"
             className="w-10 h-10 rounded-full bg-white/10 backdrop-blur flex items-center justify-center active:scale-90 transition-transform">
             <X size={18} className="text-white" />
           </button>
@@ -2013,7 +2013,7 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
     return (
       <div className="h-full flex flex-col" style={{ background: 'linear-gradient(180deg,#F0FFF4 0%,#F8FAFC 100%)' }}>
         <div className="bg-white/80 backdrop-blur px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100/80">
-          <button onClick={reset} className="p-2 rounded-xl bg-slate-100 active:scale-95 transition-transform">
+          <button aria-label="Назад" onClick={reset} className="p-2 rounded-xl bg-slate-100 active:scale-95 transition-transform">
             <ArrowLeft size={18} className="text-slate-600" />
           </button>
           <h1 className="text-base font-bold text-slate-900">Станция найдена</h1>
@@ -2126,7 +2126,7 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
   if (phase === 'error') return (
     <div className="h-full flex flex-col" style={{ background: 'linear-gradient(180deg,#FFF5F5 0%,#F8FAFC 100%)' }}>
       <div className="bg-white/80 backdrop-blur px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100/80">
-        <button onClick={reset} className="p-2 rounded-xl bg-slate-100 active:scale-95 transition-transform">
+        <button aria-label="Назад" onClick={reset} className="p-2 rounded-xl bg-slate-100 active:scale-95 transition-transform">
           <ArrowLeft size={18} className="text-slate-600" />
         </button>
         <h1 className="text-base font-bold text-slate-900">Ошибка сканирования</h1>
@@ -2172,7 +2172,7 @@ function QRScanScreen({ onBack, onStartCharging }: { onBack: () => void; onStart
   return (
     <div className="h-full flex flex-col bg-white">
       <div className="bg-white px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100">
-        <button onClick={() => setPhase('idle')} className="p-2 rounded-xl bg-slate-100 active:scale-95 transition-transform">
+        <button onClick={() => setPhase('idle')} aria-label="Назад" className="p-2 rounded-xl bg-slate-100 active:scale-95 transition-transform">
           <ArrowLeft size={18} className="text-slate-600" />
         </button>
         <div className="flex-1">
@@ -2419,6 +2419,44 @@ const tabs: { id: Tab; label: string; icon: ReactNode }[] = [
   { id: 'profile', label: 'Профиль', icon: <User size={21} strokeWidth={2.2} /> },
 ];
 
+/**
+ * The yellow marker under the open tab. Moving to another tab it hops there
+ * in an arc — over the QR button when it crosses it — stretching on the way
+ * and squashing as it lands, so the eye follows where you went.
+ */
+function TabMarker({ slot, hidden }: { slot: number; hidden: boolean }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const last = useRef(slot);
+  useEffect(() => {
+    const el = ref.current;
+    const from = last.current;
+    last.current = slot;
+    if (!el || from === slot) return;
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || !el.animate) return;
+    const crossesQr = (from < 2) !== (slot < 2);
+    const lift = crossesQr ? -30 : -14 - Math.abs(slot - from) * 4;
+    const x = (n: number) => `${n * 100}%`;
+    const mid = (from + slot) / 2;
+    el.animate(
+      [
+        { transform: `translateX(${x(from)}) translateY(0) scale(1, 1)` },
+        { transform: `translateX(${x(from + (slot - from) * 0.15)}) translateY(2px) scale(1.12, 0.86)`, offset: 0.12 },
+        { transform: `translateX(${x(mid)}) translateY(${lift}px) scale(0.8, 1.12)`, offset: 0.5 },
+        { transform: `translateX(${x(slot)}) translateY(3px) scale(1.14, 0.84)`, offset: 0.82 },
+        { transform: `translateX(${x(slot)}) translateY(0) scale(1, 1)` },
+      ],
+      { duration: 560, easing: 'cubic-bezier(.33,0,.25,1)' },
+    );
+  }, [slot]);
+  return (
+    <span ref={ref} aria-hidden="true" className="absolute top-2 bottom-2 left-0 w-1/5 px-1.5 pointer-events-none z-[1]"
+      style={{ transform: `translateX(${slot * 100}%)`, opacity: hidden ? 0 : 1, transition: 'opacity .2s' }}>
+      <span className="block h-full rounded-[20px] shadow-[0_6px_16px_rgba(255,176,0,0.4)]" style={{ background: 'linear-gradient(145deg,#FFD66B,#FFC83D)' }} />
+    </span>
+  );
+}
+
 interface Toast { id: string; icon: string; title: string; body: string; color: string; }
 
 function PushToast({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
@@ -2639,8 +2677,15 @@ export default function DriverApp() {
     setToasts(p => p.filter(t => t.id !== id));
 
 
+  // The station card lives on the map, so opening one from any tab goes there.
   const handleSelectStation = (s: Station) => {
+    setActiveTab('map');
     setSelectedStation(s);
+    setScreen('station');
+  };
+
+  const backToStation = () => {
+    setActiveTab('map');
     setScreen('station');
   };
 
@@ -2650,18 +2695,18 @@ export default function DriverApp() {
   };
 
   const renderContent = () => {
-    if (screen === 'charging-start') return <ChargingStartScreen station={selectedStation} onBack={() => setScreen('station')} onConfirm={startCharging} onOpenQR={() => setScreen('qr-scan')} />;
+    if (screen === 'charging-start') return <ChargingStartScreen station={selectedStation} onBack={backToStation} onConfirm={startCharging} onOpenQR={() => setScreen('qr-scan')} />;
     if (screen === 'charging-active') return <ChargingActiveScreen session={liveSession} startBattery={state?.vehicles.find(v => v.driverId === driverAccount?.id)?.battery ?? null} packKwh={driverAccount?.car?.battery} limit={driverAccount?.car?.chargeLimit} onStop={stopCharging} />;
     if (screen === 'charging-done') return <ChargingDoneScreen session={lastSession} onClose={handleBack} />;
     if (screen === 'trip') return <TripPlannerScreen onBack={() => setScreen('map')} onSelectStation={handleSelectStation} />;
-    if (screen === 'booking') return <BookingScreen station={selectedStation} onBack={() => setScreen('station')} onConfirm={b => { setLastBooking(b); setScreen('booking-done'); }} />;
+    if (screen === 'booking') return <BookingScreen station={selectedStation} onBack={backToStation} onConfirm={b => { setLastBooking(b); setScreen('booking-done'); }} />;
     if (screen === 'booking-done') return <BookingDoneScreen station={selectedStation} booking={lastBooking} onClose={handleBack} />;
     if (screen === 'add-car') return <AddCarScreen onBack={() => setScreen('profile')} onSave={saveCar} />;
     if (screen === 'notifications') return <NotificationsScreen onBack={() => setScreen('profile')} />;
-    if (screen === 'reviews') return <ReviewsScreen station={selectedStation} onBack={() => setScreen('station')} />;
-    if (screen === 'report') return <ReportScreen station={selectedStation} onBack={() => setScreen('station')} />;
-    if (screen === 'favorites') return <FavoritesScreen onBack={() => setScreen('map')} onSelectStation={s => { setSelectedStation(s); setScreen('station'); }} />;
-    if (screen === 'qr-scan') return <QRScanScreen onBack={() => setScreen(selectedStation ? 'station' : 'map')} onStartCharging={s => { setSelectedStation(s); setScreen('charging-start'); }} />;
+    if (screen === 'reviews') return <ReviewsScreen station={selectedStation} onBack={backToStation} />;
+    if (screen === 'report') return <ReportScreen station={selectedStation} onBack={backToStation} />;
+    if (screen === 'favorites') return <FavoritesScreen onBack={() => setScreen('map')} onSelectStation={handleSelectStation} />;
+    if (screen === 'qr-scan') return <QRScanScreen onBack={() => (selectedStation && activeTab === 'map' ? setScreen('station') : setScreen('map'))} onStartCharging={s => { setSelectedStation(s); setScreen('charging-start'); }} />;
     if (screen === 'app-settings') return <AppSettingsScreen onBack={() => setScreen('profile')} />;
     if (screen === 'wallet') return <WalletScreen onBack={() => setScreen(walletFrom.current)} />;
     if (screen === 'eco') return <EcoScreen onBack={() => setScreen('profile')} />;
@@ -2670,14 +2715,14 @@ export default function DriverApp() {
     if (screen === 'loyalty') return <LoyaltyScreen onBack={() => setScreen('profile')} />;
     if (screen === 'family') return <FamilyScreen onBack={() => setScreen('profile')} />;
     if (screen === 'credit') return <CreditScreen onBack={() => setScreen('profile')} />;
-    if (screen === 'navigate' && selectedStation) return <Navigator station={selectedStation} onClose={() => setScreen('station')} onArrive={() => setScreen('charging-start')} />;
+    if (screen === 'navigate' && selectedStation) return <Navigator station={selectedStation} onClose={backToStation} onArrive={() => setScreen('charging-start')} />;
     if (screen === 'host') return <HostScreen onBack={() => setScreen('profile')} />;
     if (screen === 'support') return <SupportScreen onBack={() => setScreen('profile')} onReport={() => setScreen(selectedStation ? 'report' : 'map')} />;
 
     if (screen === 'history') return <HistoryScreen onBack={() => { setScreen('map'); setActiveTab('charging'); }} />;
     if (activeTab === 'deals') return <DealsScreen onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} onRoute={st => { setActiveTab('map'); setSelectedStation(st); setScreen('navigate'); }} />;
     if (activeTab === 'profile') return <ProfileScreen onNavigate={s => { walletFrom.current = 'profile'; setScreen(s as Screen); }} />;
-    if (activeTab === 'charging') return <ChargingHubScreen onNavigate={(s) => { setScreen(s as Screen); setActiveTab('map'); }} onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} onOpenCharge={() => { setActiveTab('map'); setScreen('charging-active'); }} onRepeat={(st, cid, goal) => { setActiveTab('map'); setSelectedStation(st); void startCharging(cid, 'self', undefined, { goal }, st); }} />;
+    if (activeTab === 'charging') return <ChargingHubScreen onNavigate={(s) => setScreen(s as Screen)} onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} onOpenCharge={() => { setActiveTab('map'); setScreen('charging-active'); }} onRepeat={(st, cid, goal) => { setActiveTab('map'); setSelectedStation(st); void startCharging(cid, 'self', undefined, { goal }, st); }} />;
 
     return (
       <div className="relative w-full h-full">
@@ -2725,18 +2770,15 @@ export default function DriverApp() {
         </div>
       )}
 
-      {/* Tab bar: a dark floating pill; the yellow marker glides to the open tab */}
+      {/* Tab bar: a light floating pill; the yellow marker glides to the open tab */}
       {showTabs && (
         <div className="shrink-0 bg-white px-3 pt-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))]">
-          <nav aria-label="Разделы" className="relative h-[64px] rounded-[26px] bg-[#16161A] grid grid-cols-5 items-center shadow-[0_10px_30px_rgba(22,22,26,0.28)]">
-            <span aria-hidden="true" className="absolute top-2 bottom-2 left-0 w-1/5 px-1.5 pointer-events-none"
-              style={{ transform: `translateX(${([0, 1, 3, 4][tabs.findIndex(t => t.id === activeTab)] ?? 0) * 100}%)`, transition: 'transform .45s cubic-bezier(.32,.72,0,1), opacity .2s', opacity: screen === 'station' ? 0 : 1 }}>
-              <span className="block h-full rounded-[20px] bg-[#FFC83D] shadow-[0_4px_14px_rgba(255,200,61,0.45)]" />
-            </span>
+          <nav aria-label="Разделы" className="relative h-[64px] rounded-[26px] bg-white/90 backdrop-blur-xl border border-slate-100 grid grid-cols-5 items-center shadow-[0_10px_34px_rgba(22,22,26,0.12),0_2px_6px_rgba(22,22,26,0.05)]">
+            <TabMarker slot={[0, 1, 3, 4][tabs.findIndex(t => t.id === activeTab)] ?? 0} hidden={screen === 'station'} />
             {[tabs[0], tabs[1], null, tabs[2], tabs[3]].map(tab => {
               if (!tab) {
                 return (
-                  <div key="qr" className="flex justify-center">
+                  <div key="qr" className="relative z-[3] flex justify-center">
                     <button onClick={() => setScreen('qr-scan')} aria-label="Сканировать QR на станции"
                       className="pg-qr -mt-9 w-[64px] h-[64px] rounded-[22px] grid place-items-center text-[#111] border-[5px] border-white"
                       style={{ background: 'linear-gradient(145deg,#FFE08A,#FFB000)', boxShadow: '0 10px 24px rgba(255,176,0,0.55)' }}>
@@ -2751,17 +2793,17 @@ export default function DriverApp() {
               const promoCount = tab.id === 'deals' ? driverPromoCount : 0;
               return (
                 <button key={tab.id} aria-current={isActive ? 'page' : undefined} onClick={() => { setActiveTab(tab.id); setScreen('map'); setSelectedStation(null); }}
-                  className={`relative z-[1] h-full min-w-0 flex flex-col items-center justify-center gap-0.5 duration-300 ${isActive ? 'text-[#111]' : 'text-white/55 hover:text-white/85'}`}>
+                  className={`relative z-[2] h-full min-w-0 flex flex-col items-center justify-center gap-0.5 duration-300 ${isActive ? 'text-[#111]' : 'text-slate-400 hover:text-slate-700'}`}>
                   <span key={isActive ? 'on' : 'off'} className={`relative grid place-items-center ${isActive ? 'pg-icon-pop' : ''} ${isCharging ? 'pg-icon-charge' : ''}`}>
                     {tab.icon}
                     {isCharging && (
                       <span aria-hidden="true" className="absolute -top-1 -right-1.5 flex h-3 w-3">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-[#16161A]" />
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-white" />
                       </span>
                     )}
                     {promoCount > 0 && !isActive && (
-                      <span aria-hidden="true" className="absolute -top-1.5 -right-2.5 min-w-4 h-4 px-1 rounded-full bg-[#FF3B30] text-white text-[9px] font-bold grid place-items-center border-2 border-[#16161A]">{promoCount}</span>
+                      <span aria-hidden="true" className="absolute -top-1.5 -right-2.5 min-w-4 h-4 px-1 rounded-full bg-[#FF3B30] text-white text-[9px] font-bold grid place-items-center border-2 border-white">{promoCount}</span>
                     )}
                   </span>
                   <span className={`text-[10.5px] max-w-full truncate ${isActive ? 'font-bold' : 'font-medium'}`}>{tab.label}</span>

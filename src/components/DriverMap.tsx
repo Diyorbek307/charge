@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { Search, SlidersHorizontal, Navigation, X, Wallet, List, Map as MapIcon, Clock, Info, Percent } from 'lucide-react';
 import type { Station } from '../data/mockData';
@@ -8,7 +8,7 @@ import { useLiveStations } from '../lib/live';
 import { useSync } from '../lib/sync';
 import { locate as askLocation, samePort, openNow, km, fmtKm } from '../lib/geo';
 import { plural } from '../lib/analytics';
-import { MAP_TILES, MAP_ATTRIBUTION, MAP_TILE_CLASS } from '../lib/mapTiles';
+import BaseMap from './BaseMap';
 import { promoNow, isNight, networkLook, discounted, useDriverPromos } from '../lib/promos';
 import { NetworkBadge } from './driver/NetworkBadge';
 import { ChargerFriend } from './driver/Illustration';
@@ -50,29 +50,43 @@ const BOLT = '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor
 const PCT = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18"/><circle cx="7" cy="7" r="2.3"/><circle cx="17" cy="17" r="2.3"/></svg>';
 const MOON = '<svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>';
 
+const TONES = {
+  free: ['#34D399', '#059669'],
+  busy: ['#FB7185', '#DC2626'],
+  off: ['#CBD5E1', '#94A3B8'],
+  promo: ['#FFE08A', '#FF9F0A'],
+} as const;
+
 /**
- * A station pin of our own: a white capsule on a little stem. Far away it is
- * just the status disc; close up it carries the network, free/total with a
- * charge bar, and a yellow "−20%" when the network runs a promo here.
+ * A station pin: a glossy drop with a white rim and a shadow on the ground,
+ * a bolt (or % for a promo), and close up a free/total badge and a chip with
+ * the network and the discount. It drops in with a little bounce.
  */
 function stationIcon(s: Station, promo: Promo | null, labelled: boolean) {
   const free = freeOf(s);
   const total = s.connectors.length;
   const look = networkLook(s.operator);
-  const off = s.status === 'unavailable';
-  const tone = off ? '#94A3B8' : free > 0 ? '#16A34A' : '#EF4444';
-  const disc = `<span class="pg-disc" style="background:${tone}">${BOLT}</span>`;
-  const body = labelled
-    ? `<span class="pg-net" style="background:${look.color}">${look.initials}</span>${disc}<span class="pg-count"><span><b style="color:${tone}">${free}</b>/${total}</span><i class="pg-bar"><i style="width:${total ? Math.round((free / total) * 100) : 0}%;background:${tone}"></i></i></span>${promo ? `<span class="pg-off">${promo && isNight(promo) ? MOON : ''}−${promo.percent}%</span>` : ''}`
-    : `${disc}${promo ? '<span class="pg-dot-pct">%</span>' : ''}`;
-  const html = `<div class="pg-pin${labelled ? ' pg-pin-full' : ''}${promo ? ' pg-pin-promo' : ''}"><div class="pg-cap">${body}</div><span class="pg-stem"></span></div>`;
+  const kind = promo ? 'promo' : s.status === 'unavailable' ? 'off' : free > 0 ? 'free' : 'busy';
+  const [a, b] = TONES[kind];
+  const tone = kind === 'free' ? '#059669' : kind === 'busy' ? '#DC2626' : '#64748B';
+  const chip = labelled
+    ? `<span class="pg-chip"><i style="background:${look.color}">${look.initials}</i><span class="pg-chip-name">${esc(s.operator)}</span>${promo ? `<em>${isNight(promo) ? MOON : ''}−${promo.percent}%</em>` : ''}</span>`
+    : '';
+  const badge = labelled ? `<span class="pg-badge"><b style="color:${promo ? tone : b}">${free}</b>/${total}</span>` : '';
+  const html = `<div class="pg-pin pg-pin-${kind}">${chip}<div class="pg-drop">
+    <svg viewBox="0 0 40 50" width="40" height="50"><defs><linearGradient id="pg-g-${kind}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs>
+    <path d="M20 48C20 48 4 31 4 19a16 16 0 0 1 32 0c0 12-16 29-16 29z" fill="url(#pg-g-${kind})" stroke="#fff" stroke-width="3"/>
+    <ellipse cx="14.5" cy="12" rx="6" ry="3.4" fill="#fff" opacity=".35" transform="rotate(-30 14.5 12)"/></svg>
+    <span class="pg-drop-ic" style="color:${kind === 'promo' ? '#111' : '#fff'}">${promo ? PCT : BOLT}</span>${badge}</div><span class="pg-ground"></span></div>`;
   return L.divIcon({ html, className: 'pg-pin-wrap', iconSize: [0, 0], iconAnchor: [0, 0] });
 }
 
-function clusterIcon(count: number, free: number, promo: boolean) {
+/** A group of stations: a white disc whose ring fills green with the share of free connectors. */
+function clusterIcon(count: number, free: number, total: number, promo: boolean) {
   const size = count >= 10 ? 54 : 48;
-  const html = `<div class="pg-cluster" style="width:${size}px;height:${size}px">
-    <div class="pg-cluster-in">${count}<span>${free} своб.</span></div>${promo ? '<i class="pg-cluster-pct">%</i>' : ''}
+  const share = total ? Math.round((free / total) * 360) : 0;
+  const html = `<div class="pg-cluster" style="width:${size}px;height:${size}px;background:conic-gradient(#10B981 ${share}deg,#E4E4DD ${share}deg)">
+    <div class="pg-cluster-in"><b>${count}</b><span>${free} своб.</span></div>${promo ? '<i class="pg-cluster-pct">%</i>' : ''}
   </div>`;
   return L.divIcon({ html, className: '', iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
 }
@@ -124,12 +138,13 @@ function ClusteredMarkers({ stations, promos, onSelect }: { stations: Station[];
           );
         }
         const free = g.stations.reduce((n, s) => n + freeOf(s), 0);
+        const total = g.stations.reduce((n, s) => n + s.connectors.length, 0);
         const promo = g.stations.some(s => promoNow({ id: s.id, operatorId: opId(s) }, promos));
         return (
           <Marker
             key={g.stations.map(s => s.id).join('-')}
             position={[g.lat, g.lng]}
-            icon={clusterIcon(g.stations.length, free, promo)}
+            icon={clusterIcon(g.stations.length, free, total, promo)}
             title={`${g.stations.length} ${plural(g.stations.length, ['станция', 'станции', 'станций'])}`}
             eventHandlers={{
               click: () => map.fitBounds(L.latLngBounds(g.stations.map(s => [s.geoLat, s.geoLng] as [number, number])), { padding: [60, 60], maxZoom: 15 }),
@@ -252,7 +267,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
   return (
     <div className="relative isolate w-full h-full" style={{ fontFamily: 'Inter, sans-serif' }}>
       <MapContainer center={TASHKENT} zoom={11} style={{ height: '100%', width: '100%' }} zoomControl={false}>
-        <TileLayer attribution={MAP_ATTRIBUTION} url={MAP_TILES} className={MAP_TILE_CLASS} />
+        <BaseMap />
         <ClusteredMarkers stations={filtered} promos={promos} onSelect={pick} />
         {me && (
           <Marker

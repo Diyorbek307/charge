@@ -24,7 +24,7 @@
 5. Фото в отзывах о станции.
 
 **Пачка 4 — к запуску**
-0. Карта для продакшена: нужен поставщик плиток по договору (MapTiler, Stadia, Яндекс или Google), ключ в `VITE_MAP_TILES`. Сейчас — OpenStreetMap, его серверы не для большого трафика. Голос навигатора: сервер умеет нейроголоса Microsoft Azure (русский Светлана, узбекский Мадина) и Яндекс SpeechKit (голоса Яндекса, по договору с Yandex Cloud) — ключ `AZURE_SPEECH_KEY` или `YANDEX_SPEECHKIT_KEY` (см. `deploy/.env.example`). Без ключа говорит голос телефона.
+0. Карта: векторная OpenFreeMap (бесплатно, без ключа, разрешено коммерческое использование), наши цвета в `src/components/BaseMap.tsx`. Другой стиль — `VITE_MAP_STYLE` (MapTiler, Stadia), растровый поставщик — `VITE_MAP_TILES`. Голос навигатора: сервер умеет нейроголоса Microsoft Azure (русский Светлана, узбекский Мадина) и Яндекс SpeechKit (голоса Яндекса, по договору с Yandex Cloud) — ключ `AZURE_SPEECH_KEY` или `YANDEX_SPEECHKIT_KEY` (см. `deploy/.env.example`). Без ключа говорит голос телефона.
 1. Заготовка нативного приложения (Capacitor) для App Store / Google Play.
 2. Ежедневная сверка платежей Payme/Click с нашими записями.
 3. Autocharge: станция узнаёт машину (idTag по MAC) и запускает зарядку сама.
