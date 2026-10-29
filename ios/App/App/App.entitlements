@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- CarPlay EV charging: granted by Apple on request (developer.apple.com/carplay). -->
+	<key>com.apple.developer.carplay-charging</key>
+	<true/>
+</dict>
+</plist>

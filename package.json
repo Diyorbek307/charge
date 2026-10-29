@@ -10,12 +10,18 @@
     "start": "node server.js",
     "postinstall": "vite build",
     "test": "node --test --test-concurrency=1 \"tests/*.test.mjs\"",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "app:sync": "vite build && cap sync",
+    "app:android": "cap open android",
+    "app:ios": "cap open ios"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
     "@maplibre/maplibre-gl-leaflet": "^0.1.4",
     "@tailwindcss/vite": "^4.0.0",
     "@types/leaflet": "^1.9.22",
@@ -40,6 +46,7 @@
     "ws": "^8.21.3"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
     "@electric-sql/pglite": "^0.5.8",
     "@playwright/test": "^1.63.0",
     "@types/node": "^22.0.0",
