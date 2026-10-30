@@ -174,7 +174,11 @@ const mapStations = [
 
 export default function AdminApp({ onBack }: { onBack: () => void }) {
   // Authentication is handled by the real per-portal gate in App.tsx.
-  const [page, setPage] = useState<Page>('dashboard');
+  // A link from a notification letter (?page=leads) opens that page.
+  const [page, setPage] = useState<Page>(() => {
+    const p = new URLSearchParams(window.location.search).get('page');
+    return p && ['leads', 'support', 'sos'].includes(p) ? (p as Page) : 'dashboard';
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const go = (p: string) => setPage(p as Page);

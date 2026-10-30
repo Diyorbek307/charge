@@ -603,7 +603,7 @@ function ChargingStartScreen({ station, preferConnector, onBack, onConfirm, onOp
             )}
             <div className="grid grid-cols-3 gap-2 text-center">
               {[
-                { label: 'кВт·ч', value: kwNeeded.toFixed(1) },
+                { label: 'кВт·ч', value: kwNeeded.toLocaleString('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) },
                 { label: promo ? `сум · −${promo.percent}%` : 'сум', value: `~${(Math.round(estCost / 100) * 100).toLocaleString('ru-RU')}` },
                 { label: 'Время', value: `~${estMinutes} мин` },
               ].map(s => (

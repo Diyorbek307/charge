@@ -35,12 +35,12 @@ export default function BatteryScreen({ onBack, onAddCar }: { onBack: () => void
     const rows: [string, string][] = [
       ['Автомобиль', h.car ? `${h.car.brand} ${h.car.model} ${h.car.year}` : '—'],
       ['Ёмкость по паспорту', h.car ? `${h.car.rated} кВт·ч` : '—'],
-      ['Ёмкость сейчас', h.capacity ? `${h.capacity} кВт·ч` : 'не измерена'],
+      ['Ёмкость сейчас', h.capacity ? `${h.capacity.toLocaleString('ru-RU')} кВт·ч` : 'не измерена'],
       ['Состояние (SOH)', h.soh !== null ? `${h.soh}%` : '—'],
       ['Изменение за период', h.drift !== null ? `${h.drift > 0 ? '+' : ''}${h.drift}%` : '—'],
       ['Измерений', String(h.measured.length)],
       ['Зарядок всего', String(h.charges)],
-      ...h.measured.map(m => [`${day(m.at)} · ${m.station}`, `${m.from}→${m.to}% · ${m.energy} кВт·ч · ≈ ${m.kwh} кВт·ч`] as [string, string]),
+      ...h.measured.map(m => [`${day(m.at)} · ${m.station}`, `${m.from}→${m.to}% · ${m.energy.toLocaleString('ru-RU')} кВт·ч · ≈ ${m.kwh.toLocaleString('ru-RU')} кВт·ч`] as [string, string]),
       ['Номер отчёта', h.reportId],
     ];
     void exportPdf(`battery-${h.reportId}`, `Здоровье батареи · Voli · ${h.reportId}`, ['Показатель', 'Значение'], rows);
@@ -115,7 +115,7 @@ export default function BatteryScreen({ onBack, onAddCar }: { onBack: () => void
                     <div key={m.sessionId} className="px-4 py-2.5 flex items-center gap-3">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-slate-800 truncate">{m.station}</p>
-                        <p className="text-[11px] text-slate-400">{`${day(m.at)} · ${m.from}% → ${m.to}% · ${m.energy} кВт·ч`}</p>
+                        <p className="text-[11px] text-slate-400">{`${day(m.at)} · ${m.from}% → ${m.to}% · ${m.energy.toLocaleString('ru-RU')} кВт·ч`}</p>
                       </div>
                       <span className="text-sm font-bold text-slate-900 tabular-nums">{`≈ ${m.kwh.toLocaleString('ru-RU')}`}<span className="text-[10px] font-normal text-slate-400"> кВт·ч</span></span>
                     </div>

@@ -147,6 +147,7 @@ export interface SystemHealth {
   ocpp: { connected: number };
   webhooks: { endpoints: number; active: number; pending: number; failed: number; delivered: number; lastError: { url: string; error: string; at: string } | null };
   sms: boolean;
+  mail?: { configured: boolean; to: string };
   time: string;
 }
 

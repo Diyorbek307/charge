@@ -136,7 +136,7 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
 
         <div className="grid grid-cols-3 gap-2 w-full">
           {[
-            { label: 'кВт·ч', value: energy.toFixed(1), sub: 'получено' },
+            { label: 'кВт·ч', value: energy.toLocaleString('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), sub: 'получено' },
             { label: 'кВт', value: kw.toFixed(0), sub: 'мощность' },
             { label: '', value: mmss(seconds), sub: 'прошло' },
           ].map(s => (

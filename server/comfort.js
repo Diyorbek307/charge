@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { db } from './db.js';
 import { api, requireAuth, emit } from './api.js';
 import { demoEnergy } from './history.js';
+import { notifyTeam } from './mail.js';
 
 /**
  * Small things that make the app easier every day:
@@ -149,8 +150,18 @@ api.post('/support/messages', requireAuth('driver'), (req, res) => {
     t = { id: `SUP-${crypto.randomBytes(3).toString('hex').toUpperCase()}`, userId: req.account.id, user: req.account.name, phone: req.account.phone ?? null, status: 'open', messages: [], unreadAdmin: 0, unreadUser: 0, updatedAt: new Date().toISOString() };
     threads().push(t);
   }
+  const waiting = t.unreadAdmin ?? 0;
   const r = post(t, 'user', req.body ?? {});
   if (r.error) return res.status(r.status).json({ error: r.error });
+  // One letter per conversation the team has not opened yet, not one per message.
+  if (!waiting) {
+    notifyTeam(`Поддержка: пишет ${req.account.name}`, [
+      ['Обращение', t.id],
+      ['Водитель', req.account.name],
+      ['Телефон', req.account.login],
+      ['Сообщение', r.message.text || '(фото)'],
+    ], '/?portal=admin&page=support');
+  }
   emit({ type: 'support.message', portal: 'driver', actor: req.account.name, message: `Поддержка: сообщение от ${req.account.name}`, entity: t.id, payload: { userId: req.account.id, from: 'user' } });
   res.status(201).json(publicThread(t));
 });

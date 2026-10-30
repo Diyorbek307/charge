@@ -189,7 +189,7 @@ export default function TripPlannerScreen({ onBack, onSelectStation }: { onBack:
                     {i === 0 && s.atKm < 30 && <p className="text-[11px] font-semibold text-amber-600">Подзарядитесь перед выездом</p>}
                     <p className="text-sm font-semibold text-slate-800 truncate">{s.station.name}</p>
                     <p className="text-xs text-slate-500">{`${s.atKm} км · ${s.station.city} · до ${s.power} кВт · ${s.price.toLocaleString('ru-RU')} сум/кВт·ч`}</p>
-                    <p className="text-xs text-slate-400">{`${s.arrive}% → ${s.leave}% · ${s.kwh} кВт·ч · ${dur(s.minutes)} · ${s.cost.toLocaleString('ru-RU')} сум`}</p>
+                    <p className="text-xs text-slate-400">{`${s.arrive}% → ${s.leave}% · ${s.kwh.toLocaleString('ru-RU')} кВт·ч · ${dur(s.minutes)} · ${s.cost.toLocaleString('ru-RU')} сум`}</p>
                   </button>
                   <NearbyStop lat={s.station.geoLat} lng={s.station.geoLng} />
                   </div>

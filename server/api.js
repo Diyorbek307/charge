@@ -7,6 +7,7 @@ import { generateSecret, verifyTotp, otpauthUri } from './totp.js';
 import { hashPassword } from './seed.js';
 import { normalizePhone, issueCode, consumeCode, PURPOSES, smsConfigured } from './sms.js';
 import { submitLead, listLeads, updateLead, LEAD_KINDS } from './leads.js';
+import { notifyTeam, mailConfigured, NOTIFY_TO } from './mail.js';
 import { analyticsFor, adminUsers, setUserStatus, isBlocked, monthSpend } from './analytics.js';
 import { demoEnergy } from './history.js';
 import { riskReport, reviewFinding, cdrReport, bandFor, tariffBands, setTariffBands } from './admin.js';
@@ -1109,6 +1110,13 @@ api.post('/sos', requireAuth('driver'), featureOn('sos'), (req, res) => {
   const r = createSos(req.account, req.body ?? {});
   if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
   emit({ type: 'sos.new', portal: 'driver', actor: req.account.name, message: `SOS · ${req.account.name} · ${req.account.login}`, entity: r.sos.id, payload: { kind: r.sos.kind } });
+  notifyTeam(`SOS от водителя ${req.account.name}`, [
+    ['Водитель', req.account.name],
+    ['Телефон', req.account.login],
+    ['Что случилось', r.sos.kind],
+    ['Комментарий', r.sos.note ?? r.sos.text],
+    ['Где', r.sos.lat != null ? `https://maps.google.com/?q=${r.sos.lat},${r.sos.lng}` : undefined],
+  ], '/?portal=admin&page=sos');
   res.status(201).json(r);
 });
 
@@ -2895,6 +2903,17 @@ api.post('/leads', (req, res) => {
       entity: l.id,
       payload: { kind: l.kind },
     });
+    notifyTeam(`Новая заявка: ${LEAD_LABEL[l.kind]}`, [
+      ['Номер', l.id],
+      ['Тип', LEAD_LABEL[l.kind]],
+      ['Имя', l.name],
+      ['Телефон', l.phone],
+      ['Компания', l.company],
+      ['Город', l.city],
+      ['Размер', l.size],
+      ['Сообщение', l.message],
+      ['Язык', l.lang.toUpperCase()],
+    ], '/?portal=admin&page=leads');
   }
   res.status(result.status).json(result.body);
 });
@@ -3046,6 +3065,7 @@ api.get('/admin/health', requireAuth('admin'), (_req, res) => {
       lastError: lastFailed ? { url: lastFailed.url, error: lastFailed.lastError, at: lastFailed.ts } : null,
     },
     sms: smsConfigured(),
+    mail: { configured: mailConfigured(), to: NOTIFY_TO },
     time: new Date().toISOString(),
   });
 });
