@@ -162,7 +162,7 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
       } catch (e) {
         const name = (e as Error).name;
-        if (!cancelled) cameraFailed(name === 'NotAllowedError' ? 'Нет доступа к камере. Разрешите его в настройках браузера — или введите код вручную.' : name === 'NotFoundError' ? 'На этом устройстве нет камеры. Введите код со станции вручную.' : 'Камера не включилась. Попробуйте ещё раз или введите код вручную.');
+        if (!cancelled) cameraFailed(name === 'NotAllowedError' ? 'Нет доступа к камере. Разрешите его в настройках телефона или браузера — или введите код вручную.' : name === 'NotFoundError' ? 'На этом устройстве нет камеры. Введите код со станции вручную.' : 'Камера не включилась. Попробуйте ещё раз или введите код вручную.');
         return;
       }
       if (cancelled) return stream.getTracks().forEach(t => t.stop());

@@ -83,7 +83,7 @@ export default function AutochargeScreen({ onBack }: { onBack: () => void }) {
             <p className="text-sm font-bold text-slate-900">Связать машину</p>
             <p className="text-xs text-slate-500 mt-0.5 mb-3">Один раз: выберите станцию, у которой стоите, и подключите кабель.</p>
             {direct.length === 0 ? (
-              <p className="text-sm text-slate-500 bg-slate-50 rounded-xl px-3 py-3">Сейчас нет быстрых станций, подключённых напрямую. Autocharge заработает, как только сети подключат их к Voli по OCPP.</p>
+              <p className="text-sm text-slate-500 bg-slate-50 rounded-xl px-3 py-3">Сейчас нет быстрых станций, подключённых к Voli напрямую. Autocharge заработает, как только сети их подключат.</p>
             ) : (
               <div className="space-y-2">
                 {direct.map(({ s, d }) => (

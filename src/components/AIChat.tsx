@@ -186,9 +186,9 @@ function answer(topic: Topic, portal: PortalType, a: Analytics | null, live: Liv
       const dayEnergy = a.hourly.filter(h => !isNight(h.hour)).reduce((n, h) => n + h.energy, 0);
       const est = M(dayEnergy * t.avgPrice * 0.3 * 0.5);
       return L(
-        `Ночью (23:00–07:00) цена ×0.7, но сейчас там только **${nightShare}%** зарядок. Если перенести половину дневных зарядок на ночь, экономия составит около **${est}** за 30 дней (оценка).`,
-        `At night (23:00–07:00) the price is ×0.7, yet only **${nightShare}%** of charging happens then. Moving half of daytime charging to the night would save about **${est}** per 30 days (estimate).`,
-        `Tunda (23:00–07:00) narx ×0.7, lekin hozir zaryadlashning atigi **${nightShare}%** shu vaqtga to‘g‘ri keladi. Kunduzgi zaryadlashning yarmini tunga o‘tkazsangiz, 30 kunda taxminan **${est}** tejaysiz (baho).`,
+        `Ночью (23:00–07:00) цена ×0,7, но сейчас там только **${nightShare}%** зарядок. Если перенести половину дневных зарядок на ночь, экономия составит около **${est}** за 30 дней (оценка).`,
+        `At night (23:00–07:00) the price is ×0,7, yet only **${nightShare}%** of charging happens then. Moving half of daytime charging to the night would save about **${est}** per 30 days (estimate).`,
+        `Tunda (23:00–07:00) narx ×0,7, lekin hozir zaryadlashning atigi **${nightShare}%** shu vaqtga to‘g‘ri keladi. Kunduzgi zaryadlashning yarmini tunga o‘tkazsangiz, 30 kunda taxminan **${est}** tejaysiz (baho).`,
       );
     }
     default:

@@ -11,7 +11,7 @@ const effectiveKw = (power: number) => (power >= 50 ? power * 0.6 : Math.min(pow
 const PACK_KWH = 75;
 const DEFAULT_TARGET = 80;
 
-const BAND: Record<string, string> = { '0.7': 'ночной тариф ×0.7', '0.9': 'дневной тариф ×0.9', '1.25': 'пиковый тариф ×1.25' };
+const BAND: Record<string, string> = { '0.7': 'ночной тариф ×0,7', '0.9': 'дневной тариф ×0,9', '1.25': 'пиковый тариф ×1,25' };
 const bandOf = (m?: number) => (m && m !== 1 ? BAND[String(m)] ?? `×${m}` : null);
 const sum = (n: number) => `${Math.round(n).toLocaleString('ru-RU')} сум`;
 const clock = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tashkent' }) : '—');

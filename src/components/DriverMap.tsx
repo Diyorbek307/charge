@@ -36,9 +36,9 @@ const CONNECTORS = [
 ];
 const POWER = [
   { id: 'all', label: 'Все', sub: '', test: () => true },
-  { id: 'ac', label: 'AC ≤22кВт', sub: 'Медленная', test: (kw: number) => kw <= 22 },
-  { id: 'dc', label: 'DC 50кВт+', sub: 'Быстрая', test: (kw: number) => kw >= 50 },
-  { id: 'hpc', label: 'DC 150кВт+', sub: 'Сверхбыстрая', test: (kw: number) => kw >= 150 },
+  { id: 'ac', label: 'AC до 22 кВт', sub: 'Медленная', test: (kw: number) => kw <= 22 },
+  { id: 'dc', label: 'DC от 50 кВт', sub: 'Быстрая', test: (kw: number) => kw >= 50 },
+  { id: 'hpc', label: 'DC от 150 кВт', sub: 'Сверхбыстрая', test: (kw: number) => kw >= 150 },
 ];
 
 const TASHKENT: [number, number] = [41.3111, 69.2797];
@@ -472,7 +472,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
         frame(pos);
         follow();
       } else {
-        setLocateNote('Нет доступа к геопозиции — разрешите его в настройках браузера');
+        setLocateNote('Нет доступа к геопозиции — разрешите его в настройках телефона или браузера');
         setTimeout(() => setLocateNote(''), 4000);
       }
     });

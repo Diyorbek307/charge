@@ -54,7 +54,7 @@ export default function BusinessDashboard({ onNavigate }: { onNavigate: (page: s
         <Kpi label="Расходы" value={money(t.revenue, false)} sub="сум за 30 дней" change={data.deltas.revenue} goodWhenUp={false} icon={<Wallet size={14} />} tone="violet" />
         <Kpi label="Зарядки" value={num(t.completed)} sub={`ср. ${duration(t.avgMinutes)}`} change={data.deltas.sessions} icon={<Zap size={14} />} tone="sky" />
         <Kpi label="Цена за кВт·ч" value={num(t.avgPrice)} sub={`сум · ${num(t.energy, 0)} кВт·ч всего`} icon={<Receipt size={14} />} tone="amber" />
-        <Kpi label="Ночные зарядки" value={`${num(nightShare, 0)}%`} sub="цена ×0.7 с 23:00 до 07:00" icon={<Moon size={14} />} tone="emerald" />
+        <Kpi label="Ночные зарядки" value={`${num(nightShare, 0)}%`} sub="цена ×0,7 с 23:00 до 07:00" icon={<Moon size={14} />} tone="emerald" />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">

@@ -31,7 +31,7 @@ export default function BusinessExpenses() {
   const cost = done.reduce((n, x) => n + x.cost, 0);
   const energy = done.reduce((n, x) => n + x.energy, 0);
   const nightDone = done.filter(x => x.night);
-  // What night charges saved against the day price (night is ×0.7).
+  // What night charges saved against the day price (night is ×0,7).
   const saved = nightDone.reduce((n, x) => n + Math.round(x.cost / 0.7 - x.cost), 0);
   const depts = [...new Set(trips.map(x => x.dept).filter(Boolean))].sort();
   const pages = Math.max(1, Math.ceil(shown.length / PER_PAGE));

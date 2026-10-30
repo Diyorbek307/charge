@@ -13,7 +13,7 @@ const tk = (iso: string) => new Date(Date.parse(iso) + 5 * 3600_000);
 const when = (iso: string) => new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tashkent' });
 const minutesOf = (s: Session) => Math.max(1, Math.round((Date.parse(s.end ?? s.start) - Date.parse(s.start)) / 60000));
 const sum = (n: number) => `${Math.round(n).toLocaleString('ru-RU')} сум`;
-const band = (m?: number) => (m === 0.7 ? 'ночь ×0.7' : m === 0.9 ? 'день ×0.9' : m === 1.25 ? 'пик ×1.25' : null);
+const band = (m?: number) => (m === 0.7 ? 'ночь ×0,7' : m === 0.9 ? 'день ×0,9' : m === 1.25 ? 'пик ×1,25' : null);
 
 /** The driver's own charges, as the server recorded and billed them. */
 export default function HistoryScreen({ onBack }: { onBack?: () => void } = {}) {

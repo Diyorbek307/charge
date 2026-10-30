@@ -529,13 +529,13 @@ function ChargingStartScreen({ station, preferConnector, onBack, onConfirm, onOp
                   </div>
                 )}
                 <div className="absolute bottom-3 left-0 right-0 text-center">
-                  <p className="text-white/60 text-xs">{scanning ? 'Сканирование...' : 'Нажмите для сканирования QR'}</p>
+                  <p className="text-white/60 text-xs">{scanning ? 'Сканирование…' : 'Нажмите для сканирования QR'}</p>
                 </div>
               </>
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
                 <CheckCircle size={40} className="text-white" />
-                <p className="text-white font-bold">EVSE-1 найден</p>
+                <p className="text-white font-bold">Разъём найден</p>
                 <p className="text-green-100 text-xs">{selectedConnector?.type} · {selectedConnector?.power} кВт</p>
               </div>
             )}
@@ -1081,7 +1081,7 @@ function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: ()
         <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-5 text-white shadow-xl">
           <p className="text-xs font-semibold tracking-widest text-slate-400 uppercase mb-1">БАЛАНС Voli</p>
           <p key={balance} className="text-3xl font-bold tracking-tight mb-3 tabular-nums pg-pop">{balance.toLocaleString('ru-RU')} сум</p>
-          <p className="text-xs text-slate-400 mb-4">Пополнение через Payme или Click · списывается за каждую зарядку по счётчику</p>
+          <p className="text-xs text-slate-400 mb-4">Пополнение через Payme, Click, Uzum или Humo · списывается за каждую зарядку по счётчику</p>
           <div className="flex gap-2">
             <button onClick={() => setShowTopUp(true)}
               className="flex-1 py-2.5 bg-[#FFC83D] hover:bg-[#FFB000] text-[#111] rounded-2xl text-sm font-semibold transition-colors active:scale-95">
@@ -1212,9 +1212,9 @@ function SupportScreen({ onBack, onReport }: { onBack: () => void; onReport: () 
   const platform = usePlatform();
   const faqs = [
     { q: 'Как начать зарядку?', a: 'Найдите станцию на карте или отсканируйте QR-код на ней → «Начать зарядку» → выберите разъём и способ оплаты → подтвердите. Подключите кабель к машине — зарядка начнётся, когда станция её подтвердит.' },
-    { q: 'Почему зарядка не началась?', a: 'Частые причины: разъём занят или забронирован, на кошельке меньше чем на 5 кВт·ч, исчерпан лимит компании. Текст ошибки на экране подскажет, что именно. Если станция неисправна — сообщите о проблеме, оператор получит оповещение сразу.' },
-    { q: 'Как пополнить кошелёк?', a: 'Профиль → Кошелёк → Пополнить через Payme или Click. Деньги зачисляются, когда платёжная система подтвердит оплату. Данные карт мы не храним — их обрабатывают Payme и Click.' },
-    { q: 'Сколько стоит зарядка?', a: 'Цену за кВт·ч задаёт оператор станции, она видна на карточке разъёма. Ночью (23:00–07:00) — ×0.7, днём (10:00–17:00) — ×0.9, вечером в пик (17:00–22:00) — ×1.25. Тариф фиксируется в момент старта, оплата — по фактической энергии.' },
+    { q: 'Почему зарядка не началась?', a: 'Частые причины: разъём занят или забронирован, на кошельке не хватает на 5 кВт·ч, исчерпан лимит компании. Текст ошибки на экране подскажет, что именно. Если станция неисправна — сообщите о проблеме, оператор получит оповещение сразу.' },
+    { q: 'Как пополнить кошелёк?', a: 'Профиль → Кошелёк → Пополнить через Payme, Click, Uzum или Humo. Деньги зачисляются, когда платёжная система подтвердит оплату. Данные карт мы не храним — их обрабатывает платёжная система.' },
+    { q: 'Сколько стоит зарядка?', a: 'Цену за кВт·ч задаёт оператор станции, она видна на карточке разъёма. Ночью (23:00–07:00) — ×0,7, днём (10:00–17:00) — ×0,9, вечером в пик (17:00–22:00) — ×1,25. Тариф фиксируется в момент старта, оплата — по фактической энергии.' },
     { q: 'Как работает бронь?', a: `Бронь держит разъём за вами ${platform.booking.graceMin} минут после назначенного времени и стоит ${platform.booking.fee.toLocaleString('ru-RU')} сум (с Voli Plus — бесплатно). Если отменить до начала окна — плата возвращается на кошелёк.` },
     { q: 'Я сотрудник компании-клиента. Как заряжаться за счёт компании?', a: 'Если ваш номер привязан к автопарку компании, при старте зарядки появится вариант «За счёт компании» и остаток вашего месячного лимита. Лимит меняет менеджер автопарка.' },
   ];
@@ -1345,7 +1345,7 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
               { label: 'Модель', value: model },
               { label: 'Год', value: String(year) },
               { label: 'Ёмкость батареи', value: `${battery} кВт·ч` },
-              { label: 'Тип разъема', value: selectedPort?.label || port },
+              { label: 'Тип разъёма', value: selectedPort?.label || port },
               { label: 'Макс. мощность зарядки', value: `${maxKw} кВт` },
             ].map(row => (
               <div key={row.label} className="px-4 py-3 flex justify-between border-b border-slate-50 last:border-none">
@@ -1441,7 +1441,7 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
 
         {/* Port type */}
         <div className="bg-white rounded-2xl border border-slate-100 p-4">
-          <p className="text-xs font-semibold text-slate-500 mb-3">ТИП ЗАРЯДНОГО РАЗЪЕМА</p>
+          <p className="text-xs font-semibold text-slate-500 mb-3">ТИП ЗАРЯДНОГО РАЗЪЁМА</p>
           <div className="space-y-2">
             {portTypes.map(pt => (
               <button key={pt.type} onClick={() => { setPort(pt.type); setMaxKw(pt.maxKw); }}
@@ -1521,8 +1521,8 @@ function ReviewsScreen({ station, onBack }: { station: Station | null; onBack: (
 }
 
 const reportCategories = [
-  { id: 'broken', icon: '🔧', label: 'Неисправный разъем', sub: 'Коннектор не работает или повреждён' },
-  { id: 'stuck', icon: '🔒', label: 'Разъем застрял', sub: 'Невозможно извлечь кабель' },
+  { id: 'broken', icon: '🔧', label: 'Неисправный разъём', sub: 'Разъём не работает или повреждён' },
+  { id: 'stuck', icon: '🔒', label: 'Разъём застрял', sub: 'Невозможно извлечь кабель' },
   { id: 'payment', icon: '💳', label: 'Проблема с оплатой', sub: 'Не списалось или лишнее списание' },
   { id: 'slow', icon: '🐌', label: 'Медленная зарядка', sub: 'Мощность ниже заявленной' },
   { id: 'app', icon: '📱', label: 'Проблема с приложением', sub: 'Не запускается зарядка через приложение' },
@@ -1622,7 +1622,7 @@ function ReportScreen({ station: given, onBack }: { station: Station | null; onB
         <div className="bg-white rounded-2xl border border-slate-100 p-4">
           <p className="text-xs font-semibold text-slate-500 mb-2">ОПИСАНИЕ (необязательно)</p>
           <textarea value={text} onChange={e => setText(e.target.value.slice(0, 500))} aria-label="Описание проблемы"
-            placeholder="Укажите подробности — номер разъема, время возникновения..."
+            placeholder="Подробности: номер разъёма, когда началось…"
             className="w-full text-sm border border-slate-200 rounded-xl p-3 outline-none resize-none focus:border-red-300 text-slate-700 placeholder:text-slate-300"
             rows={4} />
         </div>
@@ -1680,7 +1680,7 @@ function FavoritesScreen({ onBack, onSelectStation }: { onBack: () => void; onSe
               value={query}
               onChange={e => setQuery(e.target.value)}
               aria-label="Поиск по избранному"
-              placeholder="Поиск станций..."
+              placeholder="Поиск станций…"
               className="flex-1 bg-transparent text-sm text-slate-800 placeholder-slate-400 outline-none"
             />
             {query && (
@@ -1738,7 +1738,7 @@ function FavoritesScreen({ onBack, onSelectStation }: { onBack: () => void; onSe
                     <div className="flex items-center gap-3 mt-1.5 text-xs">
                       <span className={`font-medium ${statusColors[s.status]}`}>{statusLabels[s.status]}</span>
                       <span className="text-slate-300">·</span>
-                      <span className="text-slate-500">{free}/{s.connectors.length} разъемов</span>
+                      <span className="text-slate-500">{free}/{s.connectors.length} разъёмов</span>
                       <span className="text-slate-300">·</span>
                       <span className="text-slate-500">{s.totalPower} кВт</span>
                     </div>
@@ -1823,7 +1823,7 @@ function BookingScreen({ station, onBack, onConfirm }: { station: Station | null
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {/* Connector select */}
         <div className="bg-white rounded-2xl border border-slate-100 p-4">
-          <p className="text-xs font-semibold text-slate-500 mb-3">РАЗЪЕМ</p>
+          <p className="text-xs font-semibold text-slate-500 mb-3">РАЗЪЁМ</p>
           <div className="space-y-2">
             {freeConnectors.length === 0 && (
               <p className="text-sm text-slate-500 bg-slate-50 rounded-xl px-3 py-3">Сейчас все разъёмы заняты — забронировать можно, когда освободится хотя бы один. Встаньте в очередь на карточке станции.</p>
@@ -1893,7 +1893,7 @@ function BookingScreen({ station, onBack, onConfirm }: { station: Station | null
           <div className="space-y-1.5 text-sm">
             {[
               ['Станция', station?.name || '—'],
-              ['Разъем', freeConnectors[connector] ? `${freeConnectors[connector].type} · ${freeConnectors[connector].power} кВт` : '—'],
+              ['Разъём', freeConnectors[connector] ? `${freeConnectors[connector].type} · ${freeConnectors[connector].power} кВт` : '—'],
               ['Дата', startsAt.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })],
               ['Время', time + ' – ' + (() => { const [h, m] = time.split(':').map(Number); const end = h * 60 + m + duration; return `${String(Math.floor(end / 60) % 24).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`; })()],
               ['Стоимость брони', plusFree ? 'Бесплатно с Plus' : `${fee.toLocaleString('ru-RU')} сум`],
@@ -1957,13 +1957,13 @@ function BookingDoneScreen({ station, booking, onClose }: { station: Station | n
           <CalendarCheck size={38} className="text-amber-500" />
         </div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Бронь подтверждена!</h2>
-        <p className="text-slate-500 text-sm mb-6">Ваш разъем зарезервирован. Жёлтый маркер на карте.</p>
+        <p className="text-slate-500 text-sm mb-6">Разъём забронирован за вами — на карте он отмечен жёлтым.</p>
 
         <div className="w-full bg-white rounded-2xl border border-slate-100 p-4 mb-4 text-left">
           <p className="text-xs font-semibold text-slate-400 mb-3">ДЕТАЛИ БРОНИ</p>
           {[
             ['Станция', booking?.stationName || station?.name || '—'],
-            ['Разъем', booking ? `${booking.connectorType} · ${booking.power} кВт` : '—'],
+            ['Разъём', booking ? `${booking.connectorType} · ${booking.power} кВт` : '—'],
             ['Дата', booking ? new Date(booking.startsAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) : '—'],
             ['Время', booking ? `${fmtTime(booking.startsAt)} – ${fmtTime(booking.endsAt)}` : '—'],
             ['Номер брони', booking?.code ?? '—'],
@@ -2066,9 +2066,9 @@ function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
         <p className="text-sm text-slate-400">Без привязки карты в приложении</p>
       </div>
       {[
-        { icon: <Wallet size={18} className="text-emerald-500" />, title: 'Кошелёк', text: 'Пополняете через Payme или Click — данные карты остаются у платёжной системы.' },
+        { icon: <Wallet size={18} className="text-emerald-500" />, title: 'Кошелёк', text: 'Пополняете через Payme, Click, Uzum или Humo — данные карты остаются у платёжной системы.' },
         { icon: <Zap size={18} className="text-sky-500" />, title: 'Оплата по факту', text: 'За зарядку списывается только полученная энергия по цене станции.' },
-        { icon: <Moon size={18} className="text-violet-500" />, title: 'Ночью дешевле', text: 'С 23:00 до 07:00 цена ×0.7 на всех станциях сети.' },
+        { icon: <Moon size={18} className="text-violet-500" />, title: 'Ночью дешевле', text: 'С 23:00 до 07:00 цена ×0,7 на всех станциях сети.' },
       ].map(x => (
         <div key={x.title} className="flex items-start gap-3 bg-slate-50 rounded-2xl px-4 py-3">
           <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">{x.icon}</div>
@@ -2483,7 +2483,7 @@ export default function DriverApp() {
         pushToast({
           icon: '⚠️',
           title: 'Не удалось начать зарядку',
-          body: err instanceof Error ? err.message : 'Попробуйте другой коннектор',
+          body: err instanceof Error ? err.message : 'Попробуйте другой разъём',
           color: '#F59E0B',
         });
         // Stay put: showing "charging active" after a refusal would be a lie.

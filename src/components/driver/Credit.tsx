@@ -272,7 +272,7 @@ export function CreditScreen({ onBack }: { onBack: () => void }) {
                 >
                   {balance >= c.debt ? `Погасить ${sum(c.debt)}` : `Погасить ${sum(balance)} из кошелька`}
                 </button>
-                {balance < c.debt && <p className="text-xs text-slate-500">Пополните кошелёк через Payme или Click, чтобы погасить всё.</p>}
+                {balance < c.debt && <p className="text-xs text-slate-500">Пополните кошелёк через Payme, Click, Uzum или Humo, чтобы погасить всё.</p>}
               </div>
             )}
             <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">

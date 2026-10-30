@@ -20,7 +20,7 @@ export default function OfflineTrip({ id, name, from, to, stations, allStations 
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const abort = useRef<AbortController | null>(null);
-  // Before the road is known, a straight line ×1.25 gives a fair size.
+  // Before the road is known, a straight line ×1,25 gives a fair size.
   const guess = useMemo(() => estimateMb(Math.min(MAX_TILES, tilesFor(straight(from, to), stations.map(s => ({ lat: s.geoLat, lng: s.geoLng }))).length * 1.25)), [from, to, stations]);
 
   const save = async () => {

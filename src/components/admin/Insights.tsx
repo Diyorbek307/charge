@@ -89,9 +89,9 @@ function buildInsights(a: Analytics, lang: Lang): Insight[] {
     title: L(`Ночью заряжаются ${nightShare}% водителей, пик — ${peak}`, `${nightShare}% of drivers charge at night; the peak is ${peak}`, `Haydovchilarning ${nightShare}% tunda zaryadlanadi, cho‘qqi — ${peak}`),
     text: lowNight
       ? L(
-          'Зелёные часы (×0.7) используются слабо. Напоминание в push за час до 23:00 и подсказка на карточке станции перенесут часть вечерних зарядок и разгрузят пик.',
-          'Green hours (×0.7) are underused. A push reminder an hour before 23:00 and a hint on the station card will move some evening charging and ease the peak.',
-          'Yashil soatlar (×0.7) kam ishlatilmoqda. 23:00 dan bir soat oldin push-eslatma va stansiya kartasidagi maslahat kechki zaryadlashning bir qismini ko‘chirib, cho‘qqini yengillashtiradi.',
+          'Зелёные часы (×0,7) используются слабо. Напоминание в push за час до 23:00 и подсказка на карточке станции перенесут часть вечерних зарядок и разгрузят пик.',
+          'Green hours (×0,7) are underused. A push reminder an hour before 23:00 and a hint on the station card will move some evening charging and ease the peak.',
+          'Yashil soatlar (×0,7) kam ishlatilmoqda. 23:00 dan bir soat oldin push-eslatma va stansiya kartasidagi maslahat kechki zaryadlashning bir qismini ko‘chirib, cho‘qqini yengillashtiradi.',
         )
       : L(
           'Зелёные часы работают: ночная доля заметная. Можно расширить окно скидки на 22:00, если вечерний пик продолжит расти.',
