@@ -1,9 +1,10 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import {
-  ArrowRight, ArrowUpRight, Battery, BellRing, CalendarClock, Check, ChevronDown, Columns2, Leaf, Lock,
-  Map as MapIcon, Menu, Minus, Moon, Network, Route, ScanLine, Server, ShieldCheck, Smartphone, Users,
-  Wallet, Webhook, X, Zap, Languages, MessageSquareWarning, KeyRound, Car, Building2, Code2, Apple, Play, ScrollText,
+  ArrowRight, ArrowUpRight, BatteryCharging, BellRing, CalendarClock, Check, ChevronDown, Columns2, Moon,
+  Map as MapIcon, Menu, Minus, Navigation, Network, QrCode, Route, ScanLine, Server, Smartphone,
+  Wallet, X, Zap, Car, Building2, Code2, Apple, Play, ScrollText, ShieldCheck, Sparkles, Handshake,
+  Layers, Clock, CircleDollarSign, Users, Wifi, WifiOff, Siren, Gift, HeartPulse, Coins, Plug, Send,
 } from 'lucide-react';
 import { useI18n, LANGS, type Lang } from '../lib/i18n';
 import { useSync } from '../lib/sync';
@@ -11,6 +12,7 @@ import { apiClient, type Station, type TariffForecast, type TariffHour } from '.
 import { BRAND } from '../brand';
 import { COPY, CARS, type LandingCopy } from './content';
 import { Logo, LogoMark } from './Logo';
+import HeroMap from './HeroCanvas';
 import type { SceneStation } from './heroScene';
 import Join from './Join';
 import LegalPage, { LEGAL_IDS, legalHref } from './LegalPage';
@@ -18,18 +20,18 @@ import type { LegalDocId } from './legal';
 import { track } from './analytics';
 import './landing.css';
 
-const HeroCanvas = lazy(() => import('./HeroCanvas'));
-
 export type LandingTarget = 'driver' | 'operator' | 'admin' | 'business' | 'api' | 'architecture';
 
 const fmt = (n: number, lang: Lang) =>
   Math.round(n).toLocaleString(lang === 'en' ? 'en-US' : 'ru-RU').replace(/,/g, lang === 'en' ? ',' : ' ');
 
+const delay = (ms: number) => ({ '--d': `${ms}ms` }) as CSSProperties;
+
 /** Adds `.in` to every `.rv` element as it scrolls into view. */
-function useReveal(root: HTMLElement | null) {
+function useReveal(root: HTMLElement | null, key: unknown) {
   useEffect(() => {
     if (!root) return;
-    const els = root.querySelectorAll<HTMLElement>('.rv');
+    const els = root.querySelectorAll<HTMLElement>('.rv:not(.in)');
     if (!('IntersectionObserver' in window)) {
       els.forEach(e => e.classList.add('in'));
       return;
@@ -41,29 +43,12 @@ function useReveal(root: HTMLElement | null) {
           io.unobserve(e.target);
         }
       }),
-      { rootMargin: '0px 0px -8% 0px', threshold: 0.08 },
+      // The huge top margin also reveals anything jumped past via an anchor link.
+      { root, rootMargin: '100000px 0px -6% 0px', threshold: 0.06 },
     );
     els.forEach(e => io.observe(e));
     return () => io.disconnect();
-  }, [root]);
-}
-
-/** Pointer-follow tilt for cards; sets CSS vars the stylesheet turns into a 3D rotation. */
-function tilt(e: ReactPointerEvent<HTMLElement>) {
-  if (e.pointerType !== 'mouse') return;
-  const el = e.currentTarget;
-  const r = el.getBoundingClientRect();
-  const x = (e.clientX - r.left) / r.width;
-  const y = (e.clientY - r.top) / r.height;
-  el.style.setProperty('--rx', `${(0.5 - y) * 7}deg`);
-  el.style.setProperty('--ry', `${(x - 0.5) * 9}deg`);
-  el.style.setProperty('--mx', `${x * 100}%`);
-  el.style.setProperty('--my', `${y * 100}%`);
-}
-function untilt(e: ReactPointerEvent<HTMLElement>) {
-  const el = e.currentTarget;
-  el.style.setProperty('--rx', '0deg');
-  el.style.setProperty('--ry', '0deg');
+  }, [root, key]);
 }
 
 function Count({ value, decimals = 0, lang }: { value: number; decimals?: number; lang: Lang }) {
@@ -92,10 +77,10 @@ function Kicker({ children }: { children: ReactNode }) {
 
 function SectionHead({ kicker, title, sub, center }: { kicker: string; title: string; sub?: string; center?: boolean }) {
   return (
-    <div className={`lp-head rv ${center ? 'is-center' : ''}`}>
-      <Kicker>{kicker}</Kicker>
-      <h2 className="lp-h2">{title}</h2>
-      {sub && <p className="lp-sub">{sub}</p>}
+    <div className={`lp-head ${center ? 'is-center' : ''}`}>
+      <div className="rv"><Kicker>{kicker}</Kicker></div>
+      <h2 className="lp-h2 rv" style={delay(60)}>{title}</h2>
+      {sub && <p className="lp-sub rv" style={delay(120)}>{sub}</p>}
     </div>
   );
 }
@@ -118,14 +103,13 @@ function LangPills() {
 function Nav({ c, scrolled, onDemo, base }: { c: LandingCopy; scrolled: boolean; onDemo: () => void; base: string }) {
   const [open, setOpen] = useState(false);
   const links = [
-    ['#how', c.nav.drivers],
+    ['#gives', c.nav.drivers],
     ['#network', c.nav.map],
-    ['#platform', c.nav.business],
-    ['#platform', c.nav.operators],
     ['#pricing', c.nav.pricing],
+    ['#partners', c.nav.partners],
     ['#compare', c.nav.compare],
-    ['#join', c.nav.join],
     ['#faq', c.nav.faq],
+    ['#join', c.nav.join],
   ].map(([h, l]) => [base + h, l] as const);
   return (
     <header className={`lp-nav ${scrolled ? 'is-solid' : ''} ${open ? 'is-open' : ''}`}>
@@ -136,7 +120,7 @@ function Nav({ c, scrolled, onDemo, base }: { c: LandingCopy; scrolled: boolean;
         </nav>
         <div className="lp-nav-right">
           <LangPills />
-          <button className="lp-btn lp-btn-primary lp-btn-sm lp-hide-sm" onClick={onDemo}>
+          <button className="lp-btn lp-btn-dark lp-btn-sm lp-hide-sm" onClick={onDemo}>
             {c.nav.demo}<ArrowRight size={15} />
           </button>
           <button className="lp-burger" aria-label={open ? c.nav.close : c.nav.menu} aria-expanded={open} onClick={() => setOpen(o => !o)}>
@@ -147,7 +131,7 @@ function Nav({ c, scrolled, onDemo, base }: { c: LandingCopy; scrolled: boolean;
       {open && (
         <div className="lp-sheet">
           {links.map(([h, l], i) => <a key={i} href={h} onClick={() => setOpen(false)}>{l}</a>)}
-          <button className="lp-btn lp-btn-primary" onClick={() => { setOpen(false); onDemo(); }}>
+          <button className="lp-btn lp-btn-dark" onClick={() => { setOpen(false); onDemo(); }}>
             {c.nav.demo}<ArrowRight size={16} />
           </button>
         </div>
@@ -158,15 +142,8 @@ function Nav({ c, scrolled, onDemo, base }: { c: LandingCopy; scrolled: boolean;
 
 // ───────────────────────── Hero ─────────────────────────
 
-function HeroPoster() {
-  // Shown while three.js loads and as the fallback when WebGL is unavailable.
-  return <div className="lp-hero-poster" aria-hidden="true" />;
-}
-
-function Hero({ c, lang, scrollEl, onDemo, onPick }: { c: LandingCopy; lang: Lang; scrollEl: HTMLElement | null; onDemo: () => void; onPick: () => void }) {
+function Hero({ c, lang, onDemo, onPick }: { c: LandingCopy; lang: Lang; onDemo: () => void; onPick: () => void }) {
   const { state } = useSync();
-  const [webgl, setWebgl] = useState(true);
-  const onFail = useCallback(() => setWebgl(false), []);
   const stations = useMemo<SceneStation[]>(
     () =>
       (state?.stations ?? [])
@@ -183,7 +160,7 @@ function Hero({ c, lang, scrollEl, onDemo, onPick }: { c: LandingCopy; lang: Lan
   );
   const cities = useMemo(
     () => (['tashkent', 'samarkand', 'bukhara', 'khiva', 'nukus', 'fergana', 'termez', 'namangan', 'karshi', 'navoi'] as const)
-      .map(id => ({ id, name: c.cities[id], major: id === 'tashkent' || id === 'samarkand' || id === 'bukhara' })),
+      .map(id => ({ id, name: c.cities[id], major: id === 'tashkent' || id === 'samarkand' || id === 'bukhara' || id === 'khiva' })),
     [c],
   );
   const st = state?.stats;
@@ -200,7 +177,6 @@ function Hero({ c, lang, scrollEl, onDemo, onPick }: { c: LandingCopy; lang: Lan
             <em className={free ? 'is-free' : 'is-full'}>{free}/{s.connectors.length} {c.network.freeOf}</em>
             <em>{Math.max(...s.connectors.map(k => k.power))} {c.phone.kw}</em>
           </span>
-          <small>{c.network.open} →</small>
         </>
       );
     },
@@ -209,239 +185,214 @@ function Hero({ c, lang, scrollEl, onDemo, onPick }: { c: LandingCopy; lang: Lan
 
   return (
     <section className="lp-hero" id="top">
-      <HeroPoster />
-      {webgl && (
-        <Suspense fallback={null}>
-          <HeroCanvas stations={stations} cities={cities} scrollEl={scrollEl} onFail={onFail} renderTip={renderTip} onPick={onPick} />
-        </Suspense>
-      )}
-      <div className="lp-hero-fade" aria-hidden="true" />
+      <div className="lp-hero-bg" aria-hidden="true">
+        <span className="lp-blob lp-blob-a" />
+        <span className="lp-blob lp-blob-b" />
+        <span className="lp-hero-grid" />
+      </div>
       <div className="lp-wrap lp-hero-in">
         <div className="lp-hero-copy">
           <p className="lp-badge rv"><span className="lp-dot" />{c.hero.badge}</p>
-          <h1 className="lp-h1 rv">
-            <span>{c.hero.title[0]}</span>
-            <span className="lp-grad">{c.hero.title[1]}</span>
-            <span>{c.hero.title[2]}</span>
+          <h1 className="lp-h1">
+            {c.hero.title.map((line, i) => (
+              <span key={i} className={`lp-h1-line ${i === 1 ? 'is-mark' : ''}`}>
+                <span className="lp-h1-in" style={delay(120 + i * 110)}>{i === 1 ? <mark className="lp-h1-mark">{line}</mark> : line}</span>
+              </span>
+            ))}
           </h1>
-          <p className="lp-hero-sub rv">{c.hero.sub}</p>
-          <div className="lp-hero-cta rv">
+          <p className="lp-hero-sub rv" style={delay(420)}>{c.hero.sub}</p>
+          <div className="lp-hero-cta rv" style={delay(520)}>
             <button className="lp-btn lp-btn-primary lp-btn-lg" onClick={onDemo}>
               <Zap size={18} />{c.hero.primary}
             </button>
-            <a className="lp-btn lp-btn-ghost lp-btn-lg" href="#how">{c.hero.secondary}<ChevronDown size={18} /></a>
+            <a className="lp-btn lp-btn-ghost lp-btn-lg" href="#gives">{c.hero.secondary}<ChevronDown size={18} /></a>
           </div>
-        </div>
-      </div>
-      <div className="lp-wrap lp-hero-foot">
-        <div className="lp-hero-stats rv" aria-live="polite">
-          <p className="lp-live"><span className="lp-dot" />{c.hero.live}</p>
-          <dl>
+          <dl className="lp-hero-stats rv" style={delay(620)} aria-live="polite">
             <div><dt>{c.hero.stations}</dt><dd><Count value={st?.stations ?? 0} lang={lang} /></dd></div>
             <div><dt>{c.hero.connectors}</dt><dd><Count value={st?.evseTotal ?? 0} lang={lang} /></dd></div>
             <div><dt>{c.hero.online}</dt><dd><Count value={st?.availability ?? 0} decimals={1} lang={lang} /><small>%</small></dd></div>
-            <div><dt>{c.hero.energy}</dt><dd><Count value={st?.energyToday ?? 0} lang={lang} /></dd></div>
           </dl>
+          <p className="lp-live rv" style={delay(680)}><span className="lp-dot" />{c.hero.live}</p>
+        </div>
+        <div className="lp-hero-art rv" style={delay(200)}>
+          <div className="lp-map-card">
+            <p className="lp-map-label"><Layers size={14} />{c.hero.map}</p>
+            <HeroMap stations={stations} cities={cities} renderTip={renderTip} onPick={onPick} />
+          </div>
+          <div className="lp-chip lp-chip-a"><span className="lp-chip-ic"><Clock size={16} /></span><span><small>{c.hero.chips.arrive}</small><b>{c.hero.chips.arriveV}</b></span></div>
+          <div className="lp-chip lp-chip-b"><span className="lp-chip-ic is-dark"><Moon size={16} /></span><span><small>{c.hero.chips.night}</small><b>{c.hero.chips.nightV}</b></span></div>
+          <div className="lp-chip lp-chip-c"><span className="lp-chip-ic"><CircleDollarSign size={16} /></span><span><small>{c.hero.chips.price}</small><b>{c.hero.chips.priceV}</b></span></div>
         </div>
       </div>
-      <a href="#strip" className="lp-scroll" aria-label={c.hero.scroll}><span /></a>
     </section>
   );
 }
 
-// ───────────────────────── Strip ─────────────────────────
+// ───────────────────────── Marquee ─────────────────────────
 
-function Strip({ c }: { c: LandingCopy }) {
-  const groups: [string, string[]][] = [
-    [c.strip.pay, ['Payme', 'Click', 'Humo', 'Uzcard', 'Visa', 'Mastercard']],
-    [c.strip.standards, ['OCPP 1.6-J', 'CCS2', 'Type 2', 'CHAdeMO', 'REST API', 'HMAC Webhooks', 'TOTP 2FA', 'PWA']],
-    [c.strip.langs, ["O‘zbekcha", 'Русский', 'English']],
-  ];
-  const row = groups.flatMap(([g, items]) => [
-    <span key={`g-${g}`} className="lp-strip-g">{g}</span>,
-    ...items.map(i => <span key={`${g}-${i}`} className="lp-strip-i">{i}</span>),
+function Marquee({ c }: { c: LandingCopy }) {
+  const row = c.marquee.flatMap((w, i) => [
+    <span key={`w${i}`} className="lp-mq-w">{w}</span>,
+    <span key={`s${i}`} className="lp-mq-s" aria-hidden="true"><Zap size={22} /></span>,
   ]);
   return (
-    <div className="lp-strip" id="strip">
-      <div className="lp-strip-track">
+    <div className="lp-mq" aria-label={c.marquee.join(' · ')}>
+      <div className="lp-mq-track" aria-hidden="true">
         <div>{row}</div>
-        <div aria-hidden="true">{row}</div>
+        <div>{row}</div>
       </div>
     </div>
   );
 }
 
-// ───────────────────────── Problem ─────────────────────────
+// ───────────────────────── Pains ─────────────────────────
 
-function Problem({ c }: { c: LandingCopy }) {
+const PAIN_ICON = [<Layers key={0} size={24} />, <Clock key={1} size={24} />, <CircleDollarSign key={2} size={24} />, <Route key={3} size={24} />, <Users key={4} size={24} />, <Moon key={5} size={24} />];
+
+function Pains({ c }: { c: LandingCopy }) {
   return (
-    <section className="lp-sec">
-      <div className="lp-wrap lp-problem">
-        <SectionHead kicker={c.problem.kicker} title={c.problem.title} sub={c.problem.sub} />
-        <div className="lp-problem-grid">
-          {c.problem.items.map((it, i) => (
-            <div key={i} className="lp-card lp-problem-card rv" style={{ '--d': `${i * 90}ms` } as CSSProperties}>
-              <p className="lp-problem-n">{it.n}</p>
-              <p className="lp-problem-t">{it.t}</p>
-              <p className="lp-problem-d">{it.d}</p>
-            </div>
+    <section className="lp-sec" id="pains">
+      <div className="lp-wrap">
+        <SectionHead kicker={c.pains.kicker} title={c.pains.title} sub={c.pains.sub} />
+        <div className="lp-pains">
+          {c.pains.items.map((it, i) => (
+            <article key={i} className="lp-pain rv" style={delay((i % 3) * 90)}>
+              <div className="lp-pain-top">
+                <span className="lp-pain-ic">{PAIN_ICON[i]}</span>
+                <span className="lp-pain-n">{String(i + 1).padStart(2, '0')}</span>
+              </div>
+              <h3>{it.t}</h3>
+              <p>{it.d}</p>
+            </article>
           ))}
         </div>
-        <p className="lp-answer rv"><LogoMark size={26} id="ans" />{c.problem.answer}</p>
+        <a href="#gives" className="lp-answer rv">
+          <LogoMark size={40} />
+          <span>{c.pains.answer}</span>
+          <ArrowRight size={26} />
+        </a>
       </div>
     </section>
   );
 }
 
-// ───────────────────────── Phone mock ─────────────────────────
+// ───────────────────────── What Voli gives ─────────────────────────
 
-function Phone({ c, variant }: { c: LandingCopy; variant: 'map' | 'charge' }) {
+const PILLAR_ICON: Record<string, ReactNode> = {
+  find: <MapIcon size={22} />, charge: <ScanLine size={22} />, road: <Navigation size={22} />, care: <Sparkles size={22} />,
+};
+
+function PillarVisual({ id, ui }: { id: string; ui: string[] }) {
+  if (id === 'find')
+    return (
+      <div className="lp-pv lp-pv-find">
+        <svg viewBox="0 0 320 240" className="lp-pv-roads" preserveAspectRatio="xMidYMid slice">
+          <path d="M-10 60 C80 70 140 20 330 50" />
+          <path d="M-10 170 C90 150 170 210 330 180" />
+          <path d="M90 -10 C100 80 70 160 110 250" />
+          <path d="M230 -10 C210 90 250 170 220 250" />
+          <path d="M38 206 C70 196 92 178 96 150 S 104 104 150 96 S 216 66 226 44" className="lp-pv-route" />
+        </svg>
+        {[[18, 22, 1], [46, 30, 0], [30, 62, 1], [82, 55, 0], [58, 70, 1]].map(([x, y, f], i) => (
+          <span key={i} className={`lp-pv-pin ${f ? 'is-free' : ''}`} style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${i * 0.3}s` }}><Zap size={11} /></span>
+        ))}
+        <span className="lp-pv-me" style={{ left: '12%', top: '86%' }} />
+        <span className="lp-pv-pin is-free is-target" style={{ left: '70.6%', top: '18.3%' }}><Zap size={11} /></span>
+        <div className="lp-pv-card">
+          <span className="lp-pv-badge"><Check size={13} strokeWidth={3} />{ui[0]}</span>
+          <b>{ui[1]}</b>
+          <small>{ui[2]}</small>
+        </div>
+      </div>
+    );
+  if (id === 'charge')
+    return (
+      <div className="lp-pv lp-pv-charge">
+        <div className="lp-pv-qr">
+          <QrCode size={96} strokeWidth={1.4} />
+          <i className="lp-pv-scan" />
+          <span className="lp-pv-corner is-tl" /><span className="lp-pv-corner is-tr" /><span className="lp-pv-corner is-bl" /><span className="lp-pv-corner is-br" />
+        </div>
+        <p className="lp-pv-hint">{ui[0]}</p>
+        <div className="lp-pv-price">
+          <small>{ui[1]}</small>
+          <b>{ui[2]}</b>
+        </div>
+        <div className="lp-pv-pay">{['Payme', 'Click', 'Uzum', 'Humo'].map(p => <span key={p}>{p}</span>)}</div>
+      </div>
+    );
+  if (id === 'road')
+    return (
+      <div className="lp-pv lp-pv-road">
+        <div className="lp-pv-sky" />
+        <div className="lp-pv-asphalt"><i /><i /><i /><i /><i /></div>
+        <div className="lp-pv-turn"><Navigation size={18} /><span>{ui[0]}</span></div>
+        <div className="lp-pv-off"><WifiOff size={15} />{ui[1]}</div>
+        <div className="lp-pv-sos"><Siren size={16} />{ui[2]}</div>
+      </div>
+    );
   return (
-    <div className="lp-phone" aria-hidden="true">
-      <div className="lp-phone-screen">
-        <div className="lp-phone-notch" />
-        {variant === 'map' ? (
-          <div className="lp-pm-map">
-            <svg viewBox="0 0 200 300" className="lp-pm-roads">
-              <path d="M-10 80 C60 90 90 40 210 60" />
-              <path d="M-10 190 C70 170 120 230 210 200" />
-              <path d="M60 -10 C70 90 40 180 80 310" />
-              <path d="M150 -10 C130 100 170 200 140 310" />
-              <path d="M-10 130 L210 140" className="lp-pm-main" />
-            </svg>
-            {[[28, 22, 1], [62, 35, 0], [40, 55, 1], [74, 62, 1], [20, 72, 0]].map(([x, y, f], i) => (
-              <span key={i} className={`lp-pm-pin ${f ? 'is-free' : 'is-busy'}`} style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${i * 0.4}s` }}>
-                <Zap size={10} />
-              </span>
-            ))}
-            <div className="lp-pm-sheet">
-              <p className="lp-pm-near">{c.phone.near}</p>
-              <p className="lp-pm-name">Toshkent Siti Hub</p>
-              <div className="lp-pm-row">
-                <span className="lp-pm-chip is-free">2/4 {c.phone.free}</span>
-                <span className="lp-pm-chip">150 {c.phone.kw}</span>
-                <span className="lp-pm-chip">CCS2</span>
-              </div>
-              <div className="lp-pm-btn"><Zap size={12} />{c.phone.start}</div>
-            </div>
-          </div>
-        ) : (
-          <div className="lp-pm-charge">
-            <p className="lp-pm-near">{c.phone.charging}</p>
-            <div className="lp-pm-ring">
-              <svg viewBox="0 0 120 120">
-                <defs>
-                  <linearGradient id="pmg" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stopColor="#FFC83D" />
-                    <stop offset="1" stopColor="#FFC857" />
-                  </linearGradient>
-                </defs>
-                <circle cx="60" cy="60" r="50" className="lp-pm-ring-bg" />
-                <circle cx="60" cy="60" r="50" className="lp-pm-ring-fg" stroke="url(#pmg)" />
-              </svg>
-              <div className="lp-pm-pct"><Battery size={14} /><b>72%</b></div>
-            </div>
-            <div className="lp-pm-kv">
-              <div><b>34.6</b><span>{c.phone.added}</span></div>
-              <div><b>41 520</b><span>{c.phone.cost}</span></div>
-              <div><b>12</b><span>{c.phone.left}</span></div>
-            </div>
-            <div className="lp-pm-wave"><span /><span /><span /><span /><span /></div>
-          </div>
-        )}
+    <div className="lp-pv lp-pv-care">
+      <Moon className="lp-pv-moon" size={46} />
+      <div className="lp-pv-bars">
+        {[10, 10, 10, 10, 10, 10, 10, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 12, 12, 12, 12, 12, 10, 7].map((v, i) => (
+          <span key={i} className={i < 7 || i === 23 ? 'is-night' : ''} style={{ height: `${(i < 7 || i === 23 ? 7 : v) * 7}%`, animationDelay: `${i * 40}ms` }} />
+        ))}
+      </div>
+      <div className="lp-pv-tags">
+        <span className="is-dark"><Moon size={14} />{ui[0]}</span>
+        <span><Gift size={14} />{ui[1]}</span>
+        <span><HeartPulse size={14} />{ui[2]}</span>
       </div>
     </div>
+  );
+}
+
+function Gives({ c }: { c: LandingCopy }) {
+  return (
+    <section className="lp-sec lp-gives-sec" id="gives">
+      <div className="lp-wrap">
+        <SectionHead kicker={c.gives.kicker} title={c.gives.title} sub={c.gives.sub} />
+        <div className="lp-pillars">
+          {c.gives.pillars.map((p, i) => (
+            <article key={p.id} className={`lp-pillar lp-pillar-${p.id} ${i % 2 ? 'is-flip' : ''}`}>
+              <div className="lp-pillar-copy rv">
+                <p className="lp-pillar-n"><span className="lp-pillar-ic">{PILLAR_ICON[p.id]}</span>{p.n}</p>
+                <h3 className="lp-h3">{p.t}</h3>
+                <p className="lp-pillar-lead">{p.lead}</p>
+                <ul>
+                  {p.points.map((pt, j) => <li key={pt} className="rv" style={delay(120 + j * 60)}><Check size={17} strokeWidth={3} />{pt}</li>)}
+                </ul>
+              </div>
+              <div className="lp-pillar-art rv" style={delay(120)}>
+                <PillarVisual id={p.id} ui={p.ui} />
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
 // ───────────────────────── How ─────────────────────────
 
 function How({ c }: { c: LandingCopy }) {
-  const icons = [<MapIcon key="m" size={22} />, <ScanLine key="s" size={22} />, <Wallet key="w" size={22} />];
+  const icons = [<MapIcon key="m" size={26} />, <Plug key="p" size={26} />, <Car key="c" size={26} />];
   return (
-    <section className="lp-sec" id="how">
-      <div className="lp-wrap lp-how">
-        <div className="lp-how-copy">
-          <SectionHead kicker={c.how.kicker} title={c.how.title} />
-          <ol className="lp-steps">
-            {c.how.steps.map((s, i) => (
-              <li key={i} className="rv" style={{ '--d': `${i * 110}ms` } as CSSProperties}>
-                <span className="lp-step-n">{String(i + 1).padStart(2, '0')}</span>
-                <span className="lp-step-ic">{icons[i]}</span>
-                <div>
-                  <h3>{s.t}</h3>
-                  <p>{s.d}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-        <div className="lp-how-phones rv">
-          <div className="lp-float lp-float-a"><Phone c={c} variant="map" /></div>
-          <div className="lp-float lp-float-b"><Phone c={c} variant="charge" /></div>
-          <div className="lp-how-glow" />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ───────────────────────── Features ─────────────────────────
-
-const FEATURE_ICON: Record<string, ReactNode> = {
-  map: <MapIcon size={20} />, queue: <Users size={20} />, book: <CalendarClock size={20} />, green: <Moon size={20} />,
-  trip: <Route size={20} />, wallet: <Wallet size={20} />, push: <BellRing size={20} />, eco: <Leaf size={20} />,
-  report: <MessageSquareWarning size={20} />, lang: <Languages size={20} />,
-};
-
-function FeatureVisual({ id }: { id: string }) {
-  if (id === 'map')
-    return (
-      <div className="lp-fv lp-fv-map">
-        {Array.from({ length: 18 }, (_, i) => (
-          <span key={i} style={{ left: `${(i * 37) % 92 + 4}%`, top: `${(i * 53) % 80 + 10}%`, animationDelay: `${(i % 6) * 0.35}s` }} className={i % 4 === 0 ? 'is-busy' : ''} />
-        ))}
-      </div>
-    );
-  if (id === 'queue')
-    return (
-      <div className="lp-fv lp-fv-queue">
-        {[0, 1, 2, 3].map(i => <span key={i} style={{ animationDelay: `${i * 0.5}s` }}><Car size={14} /></span>)}
-        <i><Zap size={14} /></i>
-      </div>
-    );
-  if (id === 'green')
-    return (
-      <div className="lp-fv lp-fv-bars">
-        {[7, 7, 7, 7, 7, 7, 7, 10, 10, 10, 9, 9, 9, 9, 9, 9, 9, 12.5, 12.5, 12.5, 12.5, 12.5, 10, 7].map((v, i) => (
-          <span key={i} style={{ height: `${v * 7}%` }} className={v === 7 ? 'is-g' : v > 11 ? 'is-p' : ''} />
-        ))}
-      </div>
-    );
-  return null;
-}
-
-function Features({ c }: { c: LandingCopy }) {
-  return (
-    <section className="lp-sec" id="features">
+    <section className="lp-sec lp-how-sec" id="how">
       <div className="lp-wrap">
-        <SectionHead kicker={c.features.kicker} title={c.features.title} sub={c.features.sub} />
-        <div className="lp-bento">
-          {c.features.items.map((f, i) => (
-            <article
-              key={f.id}
-              className={`lp-card lp-feat rv lp-feat-${f.id}`}
-              style={{ '--d': `${(i % 4) * 70}ms` } as CSSProperties}
-              onPointerMove={tilt}
-              onPointerLeave={untilt}
-            >
-              <div className="lp-feat-ic">{FEATURE_ICON[f.id]}</div>
-              <h3>{f.t}</h3>
-              <p>{f.d}</p>
-              <FeatureVisual id={f.id} />
-            </article>
+        <SectionHead kicker={c.how.kicker} title={c.how.title} center />
+        <ol className="lp-steps">
+          {c.how.steps.map((s, i) => (
+            <li key={i} className="rv" style={delay(i * 140)}>
+              <span className="lp-step-ic">{icons[i]}</span>
+              <span className="lp-step-n">{i + 1}</span>
+              <h3>{s.t}</h3>
+              <p>{s.d}</p>
+            </li>
           ))}
-        </div>
+        </ol>
       </div>
     </section>
   );
@@ -489,7 +440,7 @@ const ACT_ICON: Record<ActivityKind, ReactNode> = {
   start: <Zap size={14} />, stop: <Check size={14} />, reserved: <CalendarClock size={14} />, offline: <X size={14} />,
 };
 
-function LiveNetwork({ c, lang, fc, onOpen }: { c: LandingCopy; lang: Lang; fc: TariffForecast; onOpen: () => void }) {
+function LiveNetwork({ c, lang, fc, onOpen, onSplit }: { c: LandingCopy; lang: Lang; fc: TariffForecast; onOpen: () => void; onSplit: () => void }) {
   const { state } = useSync();
   const stations = state?.stations;
   const feed = useActivity(stations, c.phone.kw);
@@ -508,10 +459,13 @@ function LiveNetwork({ c, lang, fc, onOpen }: { c: LandingCopy; lang: Lang; fc: 
         <SectionHead kicker={c.network.kicker} title={c.network.title} sub={c.network.sub} />
         <div className="lp-net">
           <div>
-            <div className="lp-chips rv" role="group" aria-label={c.network.kicker}>
-              {(['all', 'free', 'fast'] as const).map(f => (
-                <button key={f} aria-pressed={filter === f} onClick={() => setFilter(f)}>{c.network.filters[f]}</button>
-              ))}
+            <div className="lp-net-bar rv">
+              <div className="lp-chips" role="group" aria-label={c.network.kicker}>
+                {(['all', 'free', 'fast'] as const).map(f => (
+                  <button key={f} aria-pressed={filter === f} onClick={() => setFilter(f)}>{c.network.filters[f]}</button>
+                ))}
+              </div>
+              <button className="lp-link" onClick={onSplit}><Columns2 size={16} />{c.network.split}</button>
             </div>
             <div className="lp-net-grid">
               {shown.map(st => {
@@ -574,7 +528,7 @@ function LiveNetwork({ c, lang, fc, onOpen }: { c: LandingCopy; lang: Lang; fc: 
   );
 }
 
-// ───────────────────────── Pricing: green hours + calculator ─────────────────────────
+// ───────────────────────── Pricing: night rate + calculator ─────────────────────────
 
 function fallbackForecast(): TariffForecast {
   const band = (h: number): TariffHour['band'] =>
@@ -585,7 +539,7 @@ function fallbackForecast(): TariffForecast {
   return { timezone: 'Asia/Tashkent', currentHour: now, current: hours[now], hours, bestWindow: { from: 23, to: 7, multiplier: 0.7, startsInHours: 0 } };
 }
 
-/** Green-hour forecast from the server, refreshed every 10 minutes; rule-based until it arrives. */
+/** Night-rate forecast from the server, refreshed every 10 minutes; rule-based until it arrives. */
 function useForecast() {
   const [fc, setFc] = useState<TariffForecast>(fallbackForecast);
   useEffect(() => {
@@ -615,7 +569,7 @@ function GreenHours({ c, fc }: { c: LandingCopy; fc: TariffForecast }) {
       <div className="lp-chart" role="img" aria-label={c.green.title}>
         {fc.hours.map(h => (
           <div key={h.hour} className={`lp-chart-col ${h.hour === fc.currentHour ? 'is-now' : ''}`}>
-            <span className={`lp-chart-bar is-${h.band}`} style={{ height: `${(h.multiplier / 1.25) * 100}%` }} />
+            <span className={`lp-chart-bar is-${h.band}`} style={{ height: `${(h.multiplier / 1.25) * 100}%`, animationDelay: `${h.hour * 30}ms` }} />
             <small>{h.hour % 3 === 0 ? String(h.hour).padStart(2, '0') : ''}</small>
           </div>
         ))}
@@ -656,7 +610,7 @@ function Calculator({ c, lang }: { c: LandingCopy; lang: Lang }) {
   const share = Math.max(4, Math.min(100, (evMonth / Math.max(petMonth, 1)) * 100));
 
   return (
-    <div className="lp-card lp-calc rv">
+    <div className="lp-card lp-calc rv" style={delay(100)}>
       <Kicker>{c.calc.kicker}</Kicker>
       <h3 className="lp-h3">{c.calc.title}</h3>
       <p className="lp-sub">{c.calc.sub}</p>
@@ -684,7 +638,7 @@ function Calculator({ c, lang }: { c: LandingCopy; lang: Lang }) {
           </div>
           <label className="lp-switch">
             <input type="checkbox" checked={night} onChange={e => setNight(e.target.checked)} />
-            <span className="lp-switch-ui" /><Moon size={15} />{c.calc.night} <em>×0.7</em>
+            <span className="lp-switch-ui" /><Moon size={15} />{c.calc.night} <em>×0,7</em>
           </label>
         </div>
         <div className="lp-calc-out">
@@ -702,7 +656,7 @@ function Calculator({ c, lang }: { c: LandingCopy; lang: Lang }) {
           </div>
           <div className="lp-calc-save">
             <span>{c.calc.save}</span>
-            <b className="lp-grad">{fmt(Math.max(year, 0), lang)} {c.calc.sum}</b>
+            <b>{fmt(Math.max(year, 0), lang)} {c.calc.sum}</b>
           </div>
           <div className="lp-calc-kv">
             <div><span>{c.calc.full}</span><b>{fmt(full, lang)} {c.calc.sum}</b></div>
@@ -726,28 +680,43 @@ function Pricing({ c, lang, fc }: { c: LandingCopy; lang: Lang; fc: TariffForeca
   );
 }
 
-// ───────────────────────── Route ─────────────────────────
+// ───────────────────────── Partners ─────────────────────────
 
-function RouteSection({ c, lang }: { c: LandingCopy; lang: Lang }) {
-  const total = c.route.stops[c.route.stops.length - 1].km;
+const PARTNER_ICON = [<ShieldCheck key={0} size={24} />, <Coins key={1} size={24} />, <Users key={2} size={24} />, <Handshake key={3} size={24} />];
+
+function Partners({ c }: { c: LandingCopy }) {
+  const p = c.partners;
   return (
-    <section className="lp-sec lp-route-sec">
+    <section className="lp-sec" id="partners">
       <div className="lp-wrap">
-        <SectionHead kicker={c.route.kicker} title={c.route.title} sub={c.route.sub} />
-        <div className="lp-card lp-route rv">
-          <div className="lp-route-line">
-            <div className="lp-route-track"><i /></div>
-            <span className="lp-route-car"><Car size={16} /></span>
-            {c.route.stops.map((s, i) => (
-              <div key={i} className={`lp-route-stop ${i === 0 || i === c.route.stops.length - 1 ? 'is-end' : ''}`} style={{ left: `${(s.km / total) * 100}%` }}>
-                <span className="lp-route-dot">{i > 0 && i < c.route.stops.length - 1 ? <Zap size={12} /> : null}</span>
-                <b>{s.city}</b>
-                <small>{fmt(s.km, lang)} {c.calc.km_}</small>
-                <em>{s.note}</em>
+        <div className="lp-partners rv">
+          <span className="lp-partners-bolt" aria-hidden="true"><LogoMark size={420} /></span>
+          <div className="lp-partners-head">
+            <Kicker>{p.kicker}</Kicker>
+            <h2 className="lp-h2">{p.title}</h2>
+            <p className="lp-sub">{p.sub}</p>
+          </div>
+          <div className="lp-partners-grid">
+            {p.items.map((it, i) => (
+              <div key={i} className="lp-partner rv" style={delay(i * 90)}>
+                <span className="lp-partner-ic">{PARTNER_ICON[i]}</span>
+                <h3>{it.t}</h3>
+                <p>{it.d}</p>
               </div>
             ))}
           </div>
-          <p className="lp-route-total"><Route size={16} />{c.route.total}</p>
+          <div className="lp-partners-foot">
+            <div className="lp-market rv">
+              <p className="lp-market-t">{p.market.title}</p>
+              <dl>
+                {p.market.items.map((m, i) => <div key={i}><dd>{m.n}</dd><dt>{m.t}</dt></div>)}
+              </dl>
+            </div>
+            <ol className="lp-psteps rv" style={delay(120)}>
+              {p.steps.map((s, i) => <li key={i}><span>{i + 1}</span>{s}</li>)}
+            </ol>
+            <a href="#join" className="lp-btn lp-btn-primary lp-btn-lg rv" style={delay(200)}><Handshake size={18} />{p.cta}<ArrowRight size={18} /></a>
+          </div>
         </div>
       </div>
     </section>
@@ -777,7 +746,7 @@ function Compare({ c }: { c: LandingCopy }) {
                 <tr>
                   <th />
                   {c.compare.cols.map((col, i) => (
-                    <th key={i} className={i === 0 ? 'is-us' : ''}>{i === 0 ? <span className="lp-compare-us"><LogoMark size={18} id="cmp" />{col}</span> : col}</th>
+                    <th key={i} className={i === 0 ? 'is-us' : ''}>{i === 0 ? <span className="lp-compare-us"><LogoMark size={22} />{col}</span> : col}</th>
                   ))}
                 </tr>
               </thead>
@@ -802,119 +771,38 @@ function Compare({ c }: { c: LandingCopy }) {
   );
 }
 
-// ───────────────────────── Audiences ─────────────────────────
+// ───────────────────────── Phone mock (app section) ─────────────────────────
 
-const TAB_ICON: Record<string, ReactNode> = {
-  driver: <Smartphone size={18} />, business: <Building2 size={18} />, operator: <Server size={18} />, api: <Code2 size={18} />,
-};
-
-function Audiences({ c, onOpen, onSplit }: { c: LandingCopy; onOpen: (p: LandingTarget) => void; onSplit: () => void }) {
-  const [tab, setTab] = useState(0);
-  const t = c.audiences.tabs[tab];
+function Phone({ c }: { c: LandingCopy }) {
   return (
-    <section className="lp-sec" id="platform">
-      <div className="lp-wrap">
-        <SectionHead kicker={c.audiences.kicker} title={c.audiences.title} sub={c.audiences.sub} />
-        <div className="lp-tabs rv" role="tablist">
-          {c.audiences.tabs.map((x, i) => (
-            <button key={x.id} role="tab" aria-selected={i === tab} onClick={() => setTab(i)}>
-              {TAB_ICON[x.id]}{x.label}
-            </button>
-          ))}
-        </div>
-        <div className="lp-aud rv" role="tabpanel">
-          <div className="lp-card lp-aud-copy">
-            <p className="lp-aud-title">{t.title}</p>
-            <p className="lp-aud-d">{t.d}</p>
-            <ul>
-              {t.points.map(p => <li key={p}><Check size={16} />{p}</li>)}
-            </ul>
-            <div className="lp-aud-cta">
-              <button className="lp-btn lp-btn-primary" onClick={() => onOpen(t.portal as LandingTarget)}>{c.audiences.open}<ArrowUpRight size={16} /></button>
-              <button className="lp-btn lp-btn-ghost" onClick={onSplit}><Columns2 size={16} />{c.cta.compare}</button>
-            </div>
+    <div className="lp-phone" aria-hidden="true">
+      <div className="lp-phone-screen">
+        <div className="lp-phone-notch" />
+        <div className="lp-pm-charge">
+          <p className="lp-pm-near">{c.phone.charging}</p>
+          <div className="lp-pm-ring">
+            <svg viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="50" className="lp-pm-ring-bg" />
+              <circle cx="60" cy="60" r="50" className="lp-pm-ring-fg" />
+            </svg>
+            <div className="lp-pm-pct"><BatteryCharging size={16} /><b>72%</b></div>
           </div>
-          <div className="lp-aud-visual" onPointerMove={tilt} onPointerLeave={untilt}>
-            {t.id === 'driver' ? <div className="lp-aud-phone"><Phone c={c} variant="map" /></div> : (
-            <div className="lp-window">
-              <div className="lp-window-bar"><i /><i /><i /><span>{t.title}</span></div>
-              <div className="lp-window-body">
-                <div className="lp-wb-side">{[0, 1, 2, 3, 4, 5].map(i => <span key={i} className={i === 0 ? 'is-on' : ''} />)}</div>
-                <div className="lp-wb-main">
-                  <div className="lp-wb-kpis">{[0, 1, 2, 3].map(i => <div key={i}><span /><b /></div>)}</div>
-                  <div className="lp-wb-chart">
-                    <svg viewBox="0 0 300 90" preserveAspectRatio="none">
-                      <path d="M0 70 C30 60 50 40 80 48 S130 20 160 30 S220 60 250 25 S290 15 300 18 L300 90 L0 90 Z" className="lp-wb-area" />
-                      <path d="M0 70 C30 60 50 40 80 48 S130 20 160 30 S220 60 250 25 S290 15 300 18" className="lp-wb-line" />
-                    </svg>
-                  </div>
-                  <div className="lp-wb-rows">{[0, 1, 2, 3].map(i => <div key={i}><span /><span /><i /></div>)}</div>
-                </div>
-              </div>
-            </div>
-            )}
+          <div className="lp-pm-kv">
+            <div><b>34.6</b><span>{c.phone.added}</span></div>
+            <div><b>41 520</b><span>{c.phone.cost}</span></div>
+            <div><b>12</b><span>{c.phone.left}</span></div>
           </div>
         </div>
-        <button className="lp-admin rv" onClick={() => onOpen('admin')}>
-          <ShieldCheck size={18} />{c.audiences.admin}<ArrowRight size={16} />
-        </button>
       </div>
-    </section>
+    </div>
   );
 }
-
-// ───────────────────────── Security ─────────────────────────
-
-const SEC_ICON = [<KeyRound key={0} size={20} />, <Lock key={1} size={20} />, <Smartphone key={2} size={20} />, <Webhook key={3} size={20} />, <Users key={4} size={20} />, <Server key={5} size={20} />];
-
-function Security({ c }: { c: LandingCopy }) {
-  return (
-    <section className="lp-sec" id="security">
-      <div className="lp-wrap">
-        <SectionHead kicker={c.security.kicker} title={c.security.title} />
-        <div className="lp-sec-grid">
-          {c.security.items.map((s, i) => (
-            <div key={i} className="lp-card lp-secure rv" style={{ '--d': `${(i % 3) * 80}ms` } as CSSProperties}>
-              <span className="lp-feat-ic">{SEC_ICON[i]}</span>
-              <h3>{s.t}</h3>
-              <p>{s.d}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ───────────────────────── Roadmap ─────────────────────────
-
-function Roadmap({ c }: { c: LandingCopy }) {
-  return (
-    <section className="lp-sec" id="roadmap">
-      <div className="lp-wrap">
-        <SectionHead kicker={c.roadmap.kicker} title={c.roadmap.title} />
-        <ol className="lp-road">
-          {c.roadmap.items.map((r, i) => (
-            <li key={i} className={`rv ${r.done ? 'is-done' : ''}`} style={{ '--d': `${i * 80}ms` } as CSSProperties}>
-              <span className="lp-road-dot">{r.done ? <Check size={13} strokeWidth={3} /> : null}</span>
-              <p className="lp-road-when">{r.when}{r.done && <em>{c.roadmap.done}</em>}</p>
-              <h3>{r.t}</h3>
-              <p>{r.d}</p>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </section>
-  );
-}
-
-// ───────────────────────── App download ─────────────────────────
 
 function AppSection({ c, onDemo }: { c: LandingCopy; onDemo: () => void }) {
   return (
     <section className="lp-sec">
       <div className="lp-wrap">
-        <div className="lp-card lp-app rv">
+        <div className="lp-app rv">
           <div className="lp-app-copy">
             <Kicker>{c.app.kicker}</Kicker>
             <h2 className="lp-h2">{c.app.title}</h2>
@@ -922,11 +810,10 @@ function AppSection({ c, onDemo }: { c: LandingCopy; onDemo: () => void }) {
             <div className="lp-stores">
               <span className="lp-store" aria-disabled="true"><Apple size={22} /><span><small>{c.app.soon}</small>App Store</span></span>
               <span className="lp-store" aria-disabled="true"><Play size={20} /><span><small>{c.app.soon}</small>Google Play</span></span>
-              <button className="lp-btn lp-btn-primary" onClick={onDemo}><Smartphone size={16} />{c.app.web}</button>
-              <a className="lp-btn lp-btn-ghost" href="#join"><BellRing size={16} />{c.join.submit.driver}</a>
+              <button className="lp-btn lp-btn-dark" onClick={onDemo}><Smartphone size={16} />{c.app.web}</button>
             </div>
           </div>
-          <div className="lp-app-phone"><Phone c={c} variant="charge" /></div>
+          <div className="lp-app-phone"><Phone c={c} /></div>
         </div>
       </div>
     </section>
@@ -942,8 +829,8 @@ function Faq({ c }: { c: LandingCopy }) {
         <SectionHead kicker={c.faq.kicker} title={c.faq.title} />
         <div className="lp-faq-list">
           {c.faq.items.map((f, i) => (
-            <details key={i} className="lp-faq-item rv" open={i === 0}>
-              <summary>{f.q}<ChevronDown size={18} /></summary>
+            <details key={i} className="lp-faq-item rv" style={delay((i % 5) * 50)} open={i === 0}>
+              <summary>{f.q}<span className="lp-faq-plus" aria-hidden="true" /></summary>
               <p>{f.a}</p>
             </details>
           ))}
@@ -955,17 +842,19 @@ function Faq({ c }: { c: LandingCopy }) {
 
 // ───────────────────────── CTA + footer ─────────────────────────
 
-function Cta({ c, onDemo, onSplit }: { c: LandingCopy; onDemo: () => void; onSplit: () => void }) {
+function Cta({ c, onDemo }: { c: LandingCopy; onDemo: () => void }) {
   return (
-    <section className="lp-sec">
+    <section className="lp-sec lp-cta-sec">
       <div className="lp-wrap">
         <div className="lp-cta rv">
-          <div className="lp-cta-glow" />
-          <h2 className="lp-h2">{c.cta.title}</h2>
-          <p className="lp-sub">{c.cta.sub}</p>
+          <span className="lp-cta-ring" aria-hidden="true" />
+          <span className="lp-cta-ring is-2" aria-hidden="true" />
+          <LogoMark size={64} />
+          <h2 className="lp-cta-t">{c.cta.title}</h2>
+          <p className="lp-cta-sub">{c.cta.sub}</p>
           <div className="lp-hero-cta">
-            <button className="lp-btn lp-btn-primary lp-btn-lg" onClick={onDemo}><Zap size={18} />{c.cta.button}</button>
-            <button className="lp-btn lp-btn-ghost lp-btn-lg" onClick={onSplit}><Columns2 size={18} />{c.cta.compare}</button>
+            <button className="lp-btn lp-btn-dark lp-btn-lg" onClick={onDemo}><Zap size={18} />{c.cta.button}</button>
+            <a className="lp-btn lp-btn-line lp-btn-lg" href="#join"><BellRing size={18} />{c.cta.join}</a>
           </div>
         </div>
       </div>
@@ -973,7 +862,7 @@ function Cta({ c, onDemo, onSplit }: { c: LandingCopy; onDemo: () => void; onSpl
   );
 }
 
-function Footer({ c, onOpen, base }: { c: LandingCopy; onOpen: (p: LandingTarget) => void; base: string }) {
+function Footer({ c, onOpen, onSplit, base }: { c: LandingCopy; onOpen: (p: LandingTarget) => void; onSplit: () => void; base: string }) {
   const L = c.footer.links;
   return (
     <footer className="lp-footer">
@@ -992,21 +881,22 @@ function Footer({ c, onOpen, base }: { c: LandingCopy; onOpen: (p: LandingTarget
         </div>
         <div>
           <p className="lp-footer-h">{c.footer.platform}</p>
-          <button onClick={() => onOpen('architecture')}><Network size={14} />{L.arch}</button>
-          <a href={`${base}#roadmap`}><Route size={14} />{L.roadmap}</a>
-          <a href={`${base}#security`}><ShieldCheck size={14} />{L.security}</a>
+          <a href={`${base}#partners`}><Handshake size={14} />{L.partners}</a>
+          <a href={`${base}#compare`}><Wallet size={14} />{L.compare}</a>
           <a href={`${base}#faq`}><ChevronDown size={14} />{L.faq}</a>
+          <button onClick={onSplit}><Columns2 size={14} />{c.cta.compare}</button>
+          <button onClick={() => onOpen('architecture')}><Network size={14} />{L.arch}</button>
         </div>
         <div>
           <p className="lp-footer-h">{c.footer.company}</p>
-          <a href={`mailto:${BRAND.email}`}><ArrowUpRight size={14} />{L.contact}</a>
+          <a href={`mailto:${BRAND.email}`}><Send size={14} />{L.contact}</a>
           <span className="lp-footer-muted">{BRAND.email}</span>
           {LEGAL_IDS.map(d => <a key={d} href={legalHref(d)}><ScrollText size={14} />{c.legal[d]}</a>)}
         </div>
       </div>
       <div className="lp-wrap lp-footer-base">
         <span>© {new Date().getFullYear()} {BRAND.name}. {c.footer.rights}</span>
-        <span>{c.footer.demo}</span>
+        <span><Wifi size={13} /> {c.footer.demo}</span>
       </div>
       <p className="lp-footer-giant" aria-hidden="true">{BRAND.name}</p>
     </footer>
@@ -1033,13 +923,22 @@ export default function Landing({ onSelect, onSplitView }: { onSelect: (p: Landi
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const fc = useForecast();
-  useReveal(root);
+  useReveal(root, lang);
 
   useEffect(() => {
     if (!root) return;
-    const onScroll = () => setScrolled(root.scrollTop > 40);
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const max = Math.max(root.scrollHeight - root.clientHeight, 1);
+        root.style.setProperty('--progress', String(root.scrollTop / max));
+        root.style.setProperty('--sy', `${Math.min(root.scrollTop, 900)}px`);
+        setScrolled(root.scrollTop > 24);
+      });
+    };
     root.addEventListener('scroll', onScroll, { passive: true });
-    return () => root.removeEventListener('scroll', onScroll);
+    return () => { root.removeEventListener('scroll', onScroll); cancelAnimationFrame(raf); };
   }, [root]);
 
   useEffect(() => {
@@ -1054,7 +953,7 @@ export default function Landing({ onSelect, onSplitView }: { onSelect: (p: Landi
     ld.text = JSON.stringify({
       '@context': 'https://schema.org',
       '@graph': [
-        { '@type': 'Organization', name: BRAND.name, url: `https://${BRAND.domain}`, logo: `https://${BRAND.domain}/icon-512.png`, areaServed: 'UZ' },
+        { '@type': 'Organization', name: BRAND.name, url: `https://${BRAND.domain}`, logo: `https://${BRAND.domain}/icon-512.png`, areaServed: 'UZ', slogan: BRAND.tagline },
         { '@type': 'FAQPage', inLanguage: lang, mainEntity: c.faq.items.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) },
       ],
     });
@@ -1072,28 +971,26 @@ export default function Landing({ onSelect, onSplitView }: { onSelect: (p: Landi
 
   return (
     <div ref={setRoot} className="lp" data-no-translate>
+      <div className="lp-progress" aria-hidden="true" />
       <Nav c={c} scrolled={scrolled || !!doc} onDemo={demo} base={base} />
       <main>
         {doc ? <LegalPage c={c} id={doc} /> : <>
-        <Hero c={c} lang={lang} scrollEl={root} onDemo={demo} onPick={() => open('driver', 'map')} />
-        <Strip c={c} />
-        <Problem c={c} />
+        <Hero c={c} lang={lang} onDemo={demo} onPick={() => open('driver', 'map')} />
+        <Marquee c={c} />
+        <Pains c={c} />
+        <Gives c={c} />
         <How c={c} />
-        <Features c={c} />
-        <LiveNetwork c={c} lang={lang} fc={fc} onOpen={demo} />
+        <LiveNetwork c={c} lang={lang} fc={fc} onOpen={demo} onSplit={onSplitView} />
         <Pricing c={c} lang={lang} fc={fc} />
-        <RouteSection c={c} lang={lang} />
+        <Partners c={c} />
         <Compare c={c} />
-        <Audiences c={c} onOpen={openFrom('platform')} onSplit={onSplitView} />
-        <Security c={c} />
-        <Roadmap c={c} />
         <AppSection c={c} onDemo={demo} />
         <Join c={c} lang={lang} privacyHref={legalHref('privacy')} />
         <Faq c={c} />
-        <Cta c={c} onDemo={demo} onSplit={onSplitView} />
+        <Cta c={c} onDemo={demo} />
         </>}
       </main>
-      <Footer c={c} onOpen={openFrom('footer')} base={base} />
+      <Footer c={c} onOpen={openFrom('footer')} onSplit={onSplitView} base={base} />
     </div>
   );
 }
