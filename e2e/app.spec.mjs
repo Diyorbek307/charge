@@ -14,14 +14,21 @@ test('landing page renders and switches language', async ({ page }) => {
   await page.getByRole('radio', { name: 'UZ' }).first().click();
   await expect(h1).toContainText('Bitta ilovada.');
 
-  // The landing does not lead into the app: its main button goes to the sign-up form on the page.
+  // The landing does not lead into the app: its main button opens the sign-up page.
   await expect(page.getByRole('button', { name: /Demoni/ })).toHaveCount(0);
   await page.getByRole('link', { name: /Ishga tushganda xabar bering/ }).first().click();
+  await expect(page).toHaveURL(/\/join$/);
   await expect(page.locator('#join')).toBeInViewport();
+
+  // Each page is a real address: a direct link opens it, and Back returns home.
+  await page.goBack();
+  await expect(h1).toContainText('Bitta ilovada.');
+  await page.goto('/networks');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Agregator, raqobatchi emas.');
 });
 
 test('the landing feed shows a charge starting and ending on the network', async ({ page, request }) => {
-  await page.goto('/');
+  await page.goto('/drivers');
   const feed = page.locator('#network .lp-feed');
   await feed.scrollIntoViewIfNeeded();
   await expect(page.locator('#network .lp-st').first()).toBeVisible();

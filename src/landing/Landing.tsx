@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, MouseEvent, ReactNode } from 'react';
+import { flushSync } from 'react-dom';
 import {
-  ArrowRight, ArrowUpRight, BatteryCharging, BellRing, CalendarClock, Check, ChevronDown, Columns2, Moon,
-  Map as MapIcon, Menu, Minus, Navigation, Network, QrCode, Route, ScanLine, Server, Smartphone,
-  Wallet, X, Zap, Car, Building2, Code2, Apple, Play, ScrollText, ShieldCheck, Sparkles, Handshake,
-  Layers, Clock, CircleDollarSign, Users, Wifi, WifiOff, Siren, Gift, HeartPulse, Coins, Plug, Send,
+  ArrowRight, ArrowUpRight, BellRing, CalendarClock, Check, Clock, CircleDollarSign, Gift, Handshake, HeartPulse,
+  Layers, Map as MapIcon, Menu, Minus, Moon, Navigation, Plug, QrCode, ScanLine, ScrollText, Send, Siren, Sparkles,
+  Car, Apple, Play, WifiOff, X, Zap,
 } from 'lucide-react';
 import { useI18n, LANGS, type Lang } from '../lib/i18n';
 import { useSync } from '../lib/sync';
@@ -20,12 +20,62 @@ import type { LegalDocId } from './legal';
 import { track } from './analytics';
 import './landing.css';
 
-export type LandingTarget = 'driver' | 'operator' | 'admin' | 'business' | 'api' | 'architecture';
-
 const fmt = (n: number, lang: Lang) =>
   Math.round(n).toLocaleString(lang === 'en' ? 'en-US' : 'ru-RU').replace(/,/g, lang === 'en' ? ',' : ' ');
 
 const delay = (ms: number) => ({ '--d': `${ms}ms` }) as CSSProperties;
+
+// ───────────────────────── Pages and routing ─────────────────────────
+
+/**
+ * The landing is a handful of pages on real paths (/drivers, /networks…) —
+ * the server answers every path with index.html, so each one works as a
+ * direct link. Moving between them swaps the page in place, animated with
+ * the View Transitions API where the browser has it.
+ */
+export type Page = 'home' | 'drivers' | 'networks' | 'prices' | 'faq' | 'join';
+const PATHS: Record<Page, string> = { home: '/', drivers: '/drivers', networks: '/networks', prices: '/prices', faq: '/faq', join: '/join' };
+const PAGES = Object.keys(PATHS) as Page[];
+
+function pageFromUrl(): Page {
+  try {
+    const q = new URLSearchParams(window.location.search).get('page') as Page | null;
+    if (q && PAGES.includes(q)) return q;
+    const path = window.location.pathname.replace(/\/+$/, '') || '/';
+    return PAGES.find(p => PATHS[p] === path) ?? 'home';
+  } catch {
+    return 'home';
+  }
+}
+
+/** ?doc=offer|privacy|terms|consent shows a legal document inside the landing shell. */
+function docFromUrl(): LegalDocId | null {
+  try {
+    const d = new URLSearchParams(window.location.search).get('doc');
+    return LEGAL_IDS.includes(d as LegalDocId) ? (d as LegalDocId) : null;
+  } catch {
+    return null;
+  }
+}
+
+type ViewTransitionDoc = Document & { startViewTransition?: (cb: () => void) => unknown };
+const canTransition = () =>
+  typeof document !== 'undefined' && !!(document as ViewTransitionDoc).startViewTransition
+  && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const GoCtx = createContext<(p: Page) => void>(() => {});
+
+/** An ordinary link to a page — modified clicks still open a new tab. */
+function PageLink({ to, className, children, onClick, style }: { to: Page; className?: string; children: ReactNode; onClick?: () => void; style?: CSSProperties }) {
+  const go = useContext(GoCtx);
+  const click = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    onClick?.();
+    go(to);
+  };
+  return <a href={PATHS[to]} className={className} style={style} onClick={click}>{children}</a>;
+}
 
 /** Adds `.in` to every `.rv` element as it scrolls into view. */
 function useReveal(root: HTMLElement | null, key: unknown) {
@@ -43,7 +93,7 @@ function useReveal(root: HTMLElement | null, key: unknown) {
           io.unobserve(e.target);
         }
       }),
-      // The huge top margin also reveals anything jumped past via an anchor link.
+      // The huge top margin also reveals anything scrolled past too quickly to catch.
       { root, rootMargin: '100000px 0px -6% 0px', threshold: 0.06 },
     );
     els.forEach(e => io.observe(e));
@@ -85,6 +135,21 @@ function SectionHead({ kicker, title, sub, center }: { kicker: string; title: st
   );
 }
 
+/** The opening of an inner page: a big title in place of the home page's hero. */
+function PageHead({ kicker, title, sub, children }: { kicker: string; title: string; sub: string; children?: ReactNode }) {
+  return (
+    <header className="lp-phead">
+      <div className="lp-hero-bg" aria-hidden="true"><span className="lp-blob lp-blob-a" /></div>
+      <div className="lp-wrap">
+        <div className="rv"><Kicker>{kicker}</Kicker></div>
+        <h1 className="lp-ptitle rv" style={delay(80)}>{title}</h1>
+        <p className="lp-psub rv" style={delay(160)}>{sub}</p>
+        {children}
+      </div>
+    </header>
+  );
+}
+
 // ───────────────────────── Nav ─────────────────────────
 
 function LangPills() {
@@ -100,29 +165,26 @@ function LangPills() {
   );
 }
 
-function Nav({ c, scrolled, base }: { c: LandingCopy; scrolled: boolean; base: string }) {
+const NAV_PAGES: Page[] = ['drivers', 'networks', 'prices', 'faq'];
+
+function Nav({ c, page, scrolled }: { c: LandingCopy; page: Page | null; scrolled: boolean }) {
   const [open, setOpen] = useState(false);
-  const links = [
-    ['#gives', c.nav.drivers],
-    ['#network', c.nav.map],
-    ['#pricing', c.nav.pricing],
-    ['#partners', c.nav.partners],
-    ['#compare', c.nav.compare],
-    ['#faq', c.nav.faq],
-    ['#join', c.nav.join],
-  ].map(([h, l]) => [base + h, l] as const);
+  const go = useContext(GoCtx);
   return (
     <header className={`lp-nav ${scrolled ? 'is-solid' : ''} ${open ? 'is-open' : ''}`}>
       <div className="lp-wrap lp-nav-in">
-        <a href={base ? '/' : '#top'} className="lp-nav-logo" aria-label={BRAND.name}><Logo /></a>
+        <PageLink to="home" className="lp-nav-logo"><Logo /><span className="lp-sr">{c.nav.home}</span></PageLink>
         <nav className="lp-nav-links" aria-label="Main">
-          {links.map(([h, l], i) => <a key={i} href={h}>{l}</a>)}
+          {NAV_PAGES.map(p => (
+            <PageLink key={p} to={p} className={page === p ? 'is-on' : ''}>
+              {page === p && <span className="lp-nav-pill" aria-hidden="true" />}
+              <span className="lp-nav-t" aria-current={page === p ? 'page' : undefined}>{c.nav[p]}</span>
+            </PageLink>
+          ))}
         </nav>
         <div className="lp-nav-right">
           <LangPills />
-          <a className="lp-btn lp-btn-dark lp-btn-sm lp-hide-sm" href={`${base}#join`}>
-            {c.nav.join}<ArrowRight size={15} />
-          </a>
+          <PageLink to="join" className="lp-btn lp-btn-dark lp-btn-sm lp-hide-sm">{c.nav.join}<ArrowRight size={15} /></PageLink>
           <button className="lp-burger" aria-label={open ? c.nav.close : c.nav.menu} aria-expanded={open} onClick={() => setOpen(o => !o)}>
             {open ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -130,20 +192,24 @@ function Nav({ c, scrolled, base }: { c: LandingCopy; scrolled: boolean; base: s
       </div>
       {open && (
         <div className="lp-sheet">
-          {links.map(([h, l], i) => <a key={i} href={h} onClick={() => setOpen(false)}>{l}</a>)}
-          <a className="lp-btn lp-btn-dark" href={`${base}#join`} onClick={() => setOpen(false)}>
-            {c.nav.join}<ArrowRight size={16} />
-          </a>
+          {(['home', ...NAV_PAGES] as Page[]).map((p, i) => (
+            <a key={p} href={PATHS[p]} className={page === p ? 'is-on' : ''} style={delay(i * 40)}
+              onClick={e => { e.preventDefault(); setOpen(false); go(p); }}>
+              {c.nav[p]}<ArrowRight size={18} />
+            </a>
+          ))}
+          <PageLink to="join" className="lp-btn lp-btn-dark" onClick={() => setOpen(false)}>{c.nav.join}<ArrowRight size={16} /></PageLink>
         </div>
       )}
     </header>
   );
 }
 
-// ───────────────────────── Hero ─────────────────────────
+// ───────────────────────── Home ─────────────────────────
 
 function Hero({ c, lang }: { c: LandingCopy; lang: Lang }) {
   const { state } = useSync();
+  const go = useContext(GoCtx);
   const stations = useMemo<SceneStation[]>(
     () =>
       (state?.stations ?? [])
@@ -195,17 +261,15 @@ function Hero({ c, lang }: { c: LandingCopy; lang: Lang }) {
           <p className="lp-badge rv"><span className="lp-dot" />{c.hero.badge}</p>
           <h1 className="lp-h1">
             {c.hero.title.map((line, i) => (
-              <span key={i} className={`lp-h1-line ${i === 1 ? 'is-mark' : ''}`}>
+              <span key={i} className="lp-h1-line">
                 <span className="lp-h1-in" style={delay(120 + i * 110)}>{i === 1 ? <mark className="lp-h1-mark">{line}</mark> : line}</span>
               </span>
             ))}
           </h1>
           <p className="lp-hero-sub rv" style={delay(420)}>{c.hero.sub}</p>
           <div className="lp-hero-cta rv" style={delay(520)}>
-            <a className="lp-btn lp-btn-primary lp-btn-lg" href="#join">
-              <Zap size={18} />{c.cta.join}
-            </a>
-            <a className="lp-btn lp-btn-ghost lp-btn-lg" href="#gives">{c.hero.secondary}<ChevronDown size={18} /></a>
+            <PageLink to="join" className="lp-btn lp-btn-primary lp-btn-lg"><BellRing size={18} />{c.cta.join}</PageLink>
+            <PageLink to="drivers" className="lp-btn lp-btn-ghost lp-btn-lg">{c.hero.secondary}<ArrowRight size={18} /></PageLink>
           </div>
           <dl className="lp-hero-stats rv" style={delay(620)} aria-live="polite">
             <div><dt>{c.hero.stations}</dt><dd><Count value={st?.stations ?? 0} lang={lang} /></dd></div>
@@ -217,7 +281,7 @@ function Hero({ c, lang }: { c: LandingCopy; lang: Lang }) {
         <div className="lp-hero-art rv" style={delay(200)}>
           <div className="lp-map-card">
             <p className="lp-map-label"><Layers size={14} />{c.hero.map}</p>
-            <HeroMap stations={stations} cities={cities} renderTip={renderTip} onPick={() => document.getElementById('network')?.scrollIntoView({ behavior: 'smooth' })} />
+            <HeroMap stations={stations} cities={cities} renderTip={renderTip} onPick={() => go('drivers')} />
           </div>
           <div className="lp-chip lp-chip-a"><span className="lp-chip-ic"><Clock size={16} /></span><span><small>{c.hero.chips.arrive}</small><b>{c.hero.chips.arriveV}</b></span></div>
           <div className="lp-chip lp-chip-b"><span className="lp-chip-ic is-dark"><Moon size={16} /></span><span><small>{c.hero.chips.night}</small><b>{c.hero.chips.nightV}</b></span></div>
@@ -227,8 +291,6 @@ function Hero({ c, lang }: { c: LandingCopy; lang: Lang }) {
     </section>
   );
 }
-
-// ───────────────────────── Marquee ─────────────────────────
 
 function Marquee({ c }: { c: LandingCopy }) {
   const row = c.marquee.flatMap((w, i) => [
@@ -245,38 +307,93 @@ function Marquee({ c }: { c: LandingCopy }) {
   );
 }
 
-// ───────────────────────── Pains ─────────────────────────
-
-const PAIN_ICON = [<Layers key={0} size={24} />, <Clock key={1} size={24} />, <CircleDollarSign key={2} size={24} />, <Route key={3} size={24} />, <Users key={4} size={24} />, <Moon key={5} size={24} />];
-
+/** The problem, as a plain struck-through list rather than a grid of tiles. */
 function Pains({ c }: { c: LandingCopy }) {
   return (
-    <section className="lp-sec" id="pains">
-      <div className="lp-wrap">
-        <SectionHead kicker={c.pains.kicker} title={c.pains.title} sub={c.pains.sub} />
-        <div className="lp-pains">
-          {c.pains.items.map((it, i) => (
-            <article key={i} className="lp-pain rv" style={delay((i % 3) * 90)}>
-              <div className="lp-pain-top">
-                <span className="lp-pain-ic">{PAIN_ICON[i]}</span>
-                <span className="lp-pain-n">{String(i + 1).padStart(2, '0')}</span>
-              </div>
-              <h3>{it.t}</h3>
-              <p>{it.d}</p>
-            </article>
-          ))}
+    <section className="lp-sec">
+      <div className="lp-wrap lp-pains">
+        <div className="lp-pains-head">
+          <div className="rv"><Kicker>{c.pains.kicker}</Kicker></div>
+          <h2 className="lp-h2 rv" style={delay(60)}>{c.pains.title}</h2>
         </div>
-        <a href="#gives" className="lp-answer rv">
-          <LogoMark size={40} />
-          <span>{c.pains.answer}</span>
-          <ArrowRight size={26} />
-        </a>
+        <ol className="lp-pains-list">
+          {c.pains.items.map((it, i) => (
+            <li key={i} className="rv" style={delay(i * 90)}>
+              <span className="lp-pains-n">{String(i + 1).padStart(2, '0')}</span>
+              <div>
+                <h3><span>{it.t}</span></h3>
+                <p>{it.d}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+      <div className="lp-wrap">
+        <p className="lp-answer rv"><LogoMark size={44} /><span>{c.pains.answer}</span></p>
       </div>
     </section>
   );
 }
 
-// ───────────────────────── What Voli gives ─────────────────────────
+function How({ c }: { c: LandingCopy }) {
+  const icons = [<MapIcon key="m" size={26} />, <Plug key="p" size={26} />, <Car key="c" size={26} />];
+  return (
+    <section className="lp-sec">
+      <div className="lp-wrap">
+        <SectionHead kicker={c.how.kicker} title={c.how.title} center />
+        <ol className="lp-steps">
+          {c.how.steps.map((s, i) => (
+            <li key={i} className="rv" style={delay(i * 140)}>
+              <span className="lp-step-ic">{icons[i]}</span>
+              <span className="lp-step-n">{i + 1}</span>
+              <h3>{s.t}</h3>
+              <p>{s.d}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  );
+}
+
+/** Big typographic links to the inner pages. */
+function NextPages({ c }: { c: LandingCopy }) {
+  const items: Page[] = ['drivers', 'networks', 'prices'];
+  return (
+    <section className="lp-sec">
+      <div className="lp-wrap">
+        <div className="rv"><Kicker>{c.next.kicker}</Kicker></div>
+        <nav className="lp-next" aria-label={c.next.kicker}>
+          {items.map((p, i) => {
+            const it = c.next.items[p as 'drivers' | 'networks' | 'prices'];
+            return (
+              <PageLink key={p} to={p} className="lp-next-row rv" style={delay(i * 90)}>
+                <span className="lp-next-t">{it.t}</span>
+                <span className="lp-next-d">{it.d}</span>
+                <span className="lp-next-go"><ArrowUpRight size={28} /></span>
+              </PageLink>
+            );
+          })}
+        </nav>
+      </div>
+    </section>
+  );
+}
+
+function HomePage({ c, lang }: { c: LandingCopy; lang: Lang }) {
+  return (
+    <>
+      <Hero c={c} lang={lang} />
+      <Marquee c={c} />
+      <Pains c={c} />
+      <How c={c} />
+      <NextPages c={c} />
+      <Cta c={c} />
+    </>
+  );
+}
+
+// ───────────────────────── Drivers ─────────────────────────
 
 const PILLAR_ICON: Record<string, ReactNode> = {
   find: <MapIcon size={22} />, charge: <ScanLine size={22} />, road: <Navigation size={22} />, care: <Sparkles size={22} />,
@@ -348,57 +465,30 @@ function PillarVisual({ id, ui }: { id: string; ui: string[] }) {
   );
 }
 
-function Gives({ c }: { c: LandingCopy }) {
+/** Four open text-and-picture rows, alternating sides. */
+function Pillars({ c }: { c: LandingCopy }) {
   return (
-    <section className="lp-sec lp-gives-sec" id="gives">
-      <div className="lp-wrap">
-        <SectionHead kicker={c.gives.kicker} title={c.gives.title} sub={c.gives.sub} />
-        <div className="lp-pillars">
-          {c.gives.pillars.map((p, i) => (
-            <article key={p.id} className={`lp-pillar lp-pillar-${p.id} ${i % 2 ? 'is-flip' : ''}`}>
-              <div className="lp-pillar-copy rv">
-                <p className="lp-pillar-n"><span className="lp-pillar-ic">{PILLAR_ICON[p.id]}</span>{p.n}</p>
-                <h3 className="lp-h3">{p.t}</h3>
-                <p className="lp-pillar-lead">{p.lead}</p>
-                <ul>
-                  {p.points.map((pt, j) => <li key={pt} className="rv" style={delay(120 + j * 60)}><Check size={17} strokeWidth={3} />{pt}</li>)}
-                </ul>
-              </div>
-              <div className="lp-pillar-art rv" style={delay(120)}>
-                <PillarVisual id={p.id} ui={p.ui} />
-              </div>
-            </article>
-          ))}
-        </div>
+    <section className="lp-sec lp-sec-tight">
+      <div className="lp-wrap lp-pillars">
+        {c.gives.pillars.map((p, i) => (
+          <article key={p.id} className={`lp-pillar ${i % 2 ? 'is-flip' : ''}`}>
+            <div className="lp-pillar-copy rv">
+              <p className="lp-pillar-n"><span className="lp-pillar-ic">{PILLAR_ICON[p.id]}</span>{p.n}</p>
+              <h2 className="lp-h3">{p.t}</h2>
+              <p className="lp-pillar-lead">{p.lead}</p>
+              <ul>
+                {p.points.map((pt, j) => <li key={pt} className="rv" style={delay(120 + j * 60)}><Check size={17} strokeWidth={3} />{pt}</li>)}
+              </ul>
+            </div>
+            <div className="lp-pillar-art rv" style={delay(120)}>
+              <PillarVisual id={p.id} ui={p.ui} />
+            </div>
+          </article>
+        ))}
       </div>
     </section>
   );
 }
-
-// ───────────────────────── How ─────────────────────────
-
-function How({ c }: { c: LandingCopy }) {
-  const icons = [<MapIcon key="m" size={26} />, <Plug key="p" size={26} />, <Car key="c" size={26} />];
-  return (
-    <section className="lp-sec lp-how-sec" id="how">
-      <div className="lp-wrap">
-        <SectionHead kicker={c.how.kicker} title={c.how.title} center />
-        <ol className="lp-steps">
-          {c.how.steps.map((s, i) => (
-            <li key={i} className="rv" style={delay(i * 140)}>
-              <span className="lp-step-ic">{icons[i]}</span>
-              <span className="lp-step-n">{i + 1}</span>
-              <h3>{s.t}</h3>
-              <p>{s.d}</p>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </section>
-  );
-}
-
-// ───────────────────────── Live network ─────────────────────────
 
 type ActivityKind = 'start' | 'stop' | 'reserved' | 'offline';
 type Activity = { id: string; kind: ActivityKind; station: string; city: string; connector: string; at: Date };
@@ -440,6 +530,7 @@ const ACT_ICON: Record<ActivityKind, ReactNode> = {
   start: <Zap size={14} />, stop: <Check size={14} />, reserved: <CalendarClock size={14} />, offline: <X size={14} />,
 };
 
+/** The live demo network as one list of stations beside the event feed. */
 function LiveNetwork({ c, lang, fc }: { c: LandingCopy; lang: Lang; fc: TariffForecast }) {
   const { state } = useSync();
   const stations = state?.stations;
@@ -458,43 +549,27 @@ function LiveNetwork({ c, lang, fc }: { c: LandingCopy; lang: Lang; fc: TariffFo
       <div className="lp-wrap">
         <SectionHead kicker={c.network.kicker} title={c.network.title} sub={c.network.sub} />
         <div className="lp-net">
-          <div>
-            <div className="lp-net-bar rv">
-              <div className="lp-chips" role="group" aria-label={c.network.kicker}>
-                {(['all', 'free', 'fast'] as const).map(f => (
-                  <button key={f} aria-pressed={filter === f} onClick={() => setFilter(f)}>{c.network.filters[f]}</button>
-                ))}
-              </div>
+          <div className="lp-card lp-st-list rv">
+            <div className="lp-chips" role="group" aria-label={c.network.kicker}>
+              {(['all', 'free', 'fast'] as const).map(f => (
+                <button key={f} aria-pressed={filter === f} onClick={() => setFilter(f)}>{c.network.filters[f]}</button>
+              ))}
             </div>
-            <div className="lp-net-grid">
+            <div className="lp-st-rows">
               {shown.map(st => {
                 const free = st.connectors.filter(k => k.status === 'available').length;
                 const min = Math.min(...st.connectors.map(k => k.price));
                 return (
-                  <article key={st.id} className="lp-card lp-st">
-                    <div className="lp-st-head">
-                      <div>
-                        <h3>{st.name}</h3>
-                        <p>{st.city} · {st.operator}</p>
-                      </div>
-                      <span className={`lp-st-free ${free ? 'is-free' : 'is-full'}`}>{free}/{st.connectors.length} {c.network.freeOf}</span>
+                  <article key={st.id} className="lp-st">
+                    <div className="lp-st-name">
+                      <h3>{st.name}</h3>
+                      <p>{st.city} · {st.operator}</p>
                     </div>
-                    <ul className="lp-st-conns">
-                      {st.connectors.map(k => (
-                        <li key={k.id} className={`is-${k.status}`}>
-                          <i />
-                          <span>{k.type}</span>
-                          <b>{k.power} {c.phone.kw}</b>
-                          <em>{c.network.status[k.status]}</em>
-                        </li>
-                      ))}
+                    <ul className="lp-st-dots" aria-label={`${free}/${st.connectors.length} ${c.network.freeOf}`}>
+                      {st.connectors.map(k => <li key={k.id} className={`is-${k.status}`} title={`${k.type} · ${k.power} ${c.phone.kw} · ${c.network.status[k.status]}`} />)}
                     </ul>
-                    <div className="lp-st-foot">
-                      <span>
-                        <b>{fmt(min * fc.current.multiplier, lang)}</b> {c.network.perKwh}
-                        {fc.current.multiplier !== 1 && <small className={`is-${fc.current.band}`}>×{fc.current.multiplier}</small>}
-                      </span>
-                    </div>
+                    <span className={`lp-st-free ${free ? 'is-free' : 'is-full'}`}>{free}/{st.connectors.length} {c.network.freeOf}</span>
+                    <span className="lp-st-price"><b>{fmt(min * fc.current.multiplier, lang)}</b> {c.network.perKwh}</span>
                   </article>
                 );
               })}
@@ -526,7 +601,126 @@ function LiveNetwork({ c, lang, fc }: { c: LandingCopy; lang: Lang; fc: TariffFo
   );
 }
 
-// ───────────────────────── Pricing: night rate + calculator ─────────────────────────
+function Mark({ v, label }: { v: number; label: string }) {
+  return (
+    <span className={`lp-mark is-${v}`} title={label} aria-label={label}>
+      {v === 2 ? <Check size={15} strokeWidth={3} /> : v === 1 ? <span className="lp-half" /> : <Minus size={15} />}
+    </span>
+  );
+}
+
+function Compare({ c }: { c: LandingCopy }) {
+  const labels = [c.compare.legend[2], c.compare.legend[1], c.compare.legend[0]];
+  return (
+    <section className="lp-sec" id="compare">
+      <div className="lp-wrap">
+        <SectionHead kicker={c.compare.kicker} title={c.compare.title} sub={c.compare.sub} center />
+        <div className="lp-compare rv">
+          <div className="lp-compare-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th />
+                  {c.compare.cols.map((col, i) => (
+                    <th key={i} className={i === 0 ? 'is-us' : ''}>{i === 0 ? <span className="lp-compare-us"><LogoMark size={22} />{col}</span> : col}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {c.compare.rows.map((r, i) => (
+                  <tr key={i}>
+                    <td>{r.t}</td>
+                    {r.v.map((v, j) => <td key={j} className={j === 0 ? 'is-us' : ''}><Mark v={v} label={labels[v]} /></td>)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="lp-legend lp-compare-legend">
+            <span><Mark v={2} label={c.compare.legend[0]} />{c.compare.legend[0]}</span>
+            <span><Mark v={1} label={c.compare.legend[1]} />{c.compare.legend[1]}</span>
+            <span><Mark v={0} label={c.compare.legend[2]} />{c.compare.legend[2]}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DriversPage({ c, lang, fc }: { c: LandingCopy; lang: Lang; fc: TariffForecast }) {
+  const p = c.pages.drivers;
+  return (
+    <>
+      <PageHead kicker={p.kicker} title={p.title} sub={p.sub} />
+      <Pillars c={c} />
+      <LiveNetwork c={c} lang={lang} fc={fc} />
+      <Compare c={c} />
+      <Cta c={c} />
+    </>
+  );
+}
+
+// ───────────────────────── Networks ─────────────────────────
+
+/** Driver → Voli → the network's till, with a charge travelling along the line. */
+function Flow({ c }: { c: LandingCopy }) {
+  const [a, b, z] = c.partners.flow;
+  return (
+    <div className="lp-flow rv" aria-label={c.partners.flow.join(' → ')}>
+      <span className="lp-flow-node"><Car size={22} />{a}</span>
+      <span className="lp-flow-line"><i /></span>
+      <span className="lp-flow-node is-us"><LogoMark size={30} />{b}</span>
+      <span className="lp-flow-line"><i style={{ animationDelay: '1.2s' }} /></span>
+      <span className="lp-flow-node is-dark"><CircleDollarSign size={22} />{z}</span>
+    </div>
+  );
+}
+
+function NetworksPage({ c }: { c: LandingCopy }) {
+  const p = c.partners;
+  const head = c.pages.networks;
+  return (
+    <>
+      <PageHead kicker={head.kicker} title={head.title} sub={head.sub}>
+        <Flow c={c} />
+      </PageHead>
+      <section className="lp-sec lp-sec-tight">
+        <div className="lp-wrap">
+          <ol className="lp-benefits">
+            {p.items.map((it, i) => (
+              <li key={i} className="rv" style={delay((i % 2) * 100)}>
+                <span className="lp-benefits-n">{String(i + 1).padStart(2, '0')}</span>
+                <h2>{it.t}</h2>
+                <p>{it.d}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+      <section className="lp-sec">
+        <div className="lp-wrap">
+          <div className="lp-band rv">
+            <div className="lp-band-market">
+              <Kicker>{p.market.title}</Kicker>
+              <dl>
+                {p.market.items.map((m, i) => <div key={i}><dd>{m.n}</dd><dt>{m.t}</dt></div>)}
+              </dl>
+            </div>
+            <div className="lp-band-steps">
+              <Kicker>{p.stepsTitle}</Kicker>
+              <ol>
+                {p.steps.map((s, i) => <li key={i}><span>{i + 1}</span>{s}</li>)}
+              </ol>
+              <PageLink to="join" className="lp-btn lp-btn-primary lp-btn-lg"><Handshake size={18} />{p.cta}<ArrowRight size={18} /></PageLink>
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
+// ───────────────────────── Prices ─────────────────────────
 
 function fallbackForecast(): TariffForecast {
   const band = (h: number): TariffHour['band'] =>
@@ -556,7 +750,7 @@ function GreenHours({ c, fc }: { c: LandingCopy; fc: TariffForecast }) {
       <div className="lp-green-head">
         <div>
           <Kicker>{c.green.kicker}</Kicker>
-          <h3 className="lp-h3">{c.green.title}</h3>
+          <h2 className="lp-h3">{c.green.title}</h2>
           <p className="lp-sub">{c.green.sub}</p>
         </div>
         <div className="lp-green-now">
@@ -610,7 +804,7 @@ function Calculator({ c, lang }: { c: LandingCopy; lang: Lang }) {
   return (
     <div className="lp-card lp-calc rv" style={delay(100)}>
       <Kicker>{c.calc.kicker}</Kicker>
-      <h3 className="lp-h3">{c.calc.title}</h3>
+      <h2 className="lp-h3">{c.calc.title}</h2>
       <p className="lp-sub">{c.calc.sub}</p>
       <div className="lp-calc-grid">
         <div className="lp-calc-in">
@@ -667,164 +861,35 @@ function Calculator({ c, lang }: { c: LandingCopy; lang: Lang }) {
   );
 }
 
-function Pricing({ c, lang, fc }: { c: LandingCopy; lang: Lang; fc: TariffForecast }) {
+function PricesPage({ c, lang, fc }: { c: LandingCopy; lang: Lang; fc: TariffForecast }) {
+  const p = c.pages.prices;
   return (
-    <section className="lp-sec" id="pricing">
-      <div className="lp-wrap lp-pricing">
-        <GreenHours c={c} fc={fc} />
-        <Calculator c={c} lang={lang} />
-      </div>
-    </section>
-  );
-}
-
-// ───────────────────────── Partners ─────────────────────────
-
-const PARTNER_ICON = [<ShieldCheck key={0} size={24} />, <Coins key={1} size={24} />, <Users key={2} size={24} />, <Handshake key={3} size={24} />];
-
-function Partners({ c }: { c: LandingCopy }) {
-  const p = c.partners;
-  return (
-    <section className="lp-sec" id="partners">
-      <div className="lp-wrap">
-        <div className="lp-partners rv">
-          <span className="lp-partners-bolt" aria-hidden="true"><LogoMark size={420} /></span>
-          <div className="lp-partners-head">
-            <Kicker>{p.kicker}</Kicker>
-            <h2 className="lp-h2">{p.title}</h2>
-            <p className="lp-sub">{p.sub}</p>
-          </div>
-          <div className="lp-partners-grid">
-            {p.items.map((it, i) => (
-              <div key={i} className="lp-partner rv" style={delay(i * 90)}>
-                <span className="lp-partner-ic">{PARTNER_ICON[i]}</span>
-                <h3>{it.t}</h3>
-                <p>{it.d}</p>
-              </div>
-            ))}
-          </div>
-          <div className="lp-partners-foot">
-            <div className="lp-market rv">
-              <p className="lp-market-t">{p.market.title}</p>
-              <dl>
-                {p.market.items.map((m, i) => <div key={i}><dd>{m.n}</dd><dt>{m.t}</dt></div>)}
-              </dl>
-            </div>
-            <ol className="lp-psteps rv" style={delay(120)}>
-              {p.steps.map((s, i) => <li key={i}><span>{i + 1}</span>{s}</li>)}
-            </ol>
-            <a href="#join" className="lp-btn lp-btn-primary lp-btn-lg rv" style={delay(200)}><Handshake size={18} />{p.cta}<ArrowRight size={18} /></a>
-          </div>
+    <>
+      <PageHead kicker={p.kicker} title={p.title} sub={p.sub}>
+        <dl className="lp-facts">
+          {c.facts.map((f, i) => <div key={i} className="rv" style={delay(220 + i * 80)}><dd>{f.n}</dd><dt>{f.t}</dt></div>)}
+        </dl>
+      </PageHead>
+      <section className="lp-sec lp-sec-tight">
+        <div className="lp-wrap lp-pricing">
+          <GreenHours c={c} fc={fc} />
+          <Calculator c={c} lang={lang} />
         </div>
-      </div>
-    </section>
+      </section>
+      <Cta c={c} />
+    </>
   );
 }
 
-// ───────────────────────── Compare ─────────────────────────
+// ───────────────────────── FAQ and join ─────────────────────────
 
-function Mark({ v, label }: { v: number; label: string }) {
+function FaqPage({ c }: { c: LandingCopy }) {
+  const p = c.pages.faq;
   return (
-    <span className={`lp-mark is-${v}`} title={label} aria-label={label}>
-      {v === 2 ? <Check size={15} strokeWidth={3} /> : v === 1 ? <span className="lp-half" /> : <Minus size={15} />}
-    </span>
-  );
-}
-
-function Compare({ c }: { c: LandingCopy }) {
-  const labels = [c.compare.legend[2], c.compare.legend[1], c.compare.legend[0]];
-  return (
-    <section className="lp-sec" id="compare">
-      <div className="lp-wrap">
-        <SectionHead kicker={c.compare.kicker} title={c.compare.title} sub={c.compare.sub} center />
-        <div className="lp-card lp-compare rv">
-          <div className="lp-compare-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th />
-                  {c.compare.cols.map((col, i) => (
-                    <th key={i} className={i === 0 ? 'is-us' : ''}>{i === 0 ? <span className="lp-compare-us"><LogoMark size={22} />{col}</span> : col}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {c.compare.rows.map((r, i) => (
-                  <tr key={i}>
-                    <td>{r.t}</td>
-                    {r.v.map((v, j) => <td key={j} className={j === 0 ? 'is-us' : ''}><Mark v={v} label={labels[v]} /></td>)}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="lp-legend lp-compare-legend">
-            <span><Mark v={2} label={c.compare.legend[0]} />{c.compare.legend[0]}</span>
-            <span><Mark v={1} label={c.compare.legend[1]} />{c.compare.legend[1]}</span>
-            <span><Mark v={0} label={c.compare.legend[2]} />{c.compare.legend[2]}</span>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ───────────────────────── Phone mock (app section) ─────────────────────────
-
-function Phone({ c }: { c: LandingCopy }) {
-  return (
-    <div className="lp-phone" aria-hidden="true">
-      <div className="lp-phone-screen">
-        <div className="lp-phone-notch" />
-        <div className="lp-pm-charge">
-          <p className="lp-pm-near">{c.phone.charging}</p>
-          <div className="lp-pm-ring">
-            <svg viewBox="0 0 120 120">
-              <circle cx="60" cy="60" r="50" className="lp-pm-ring-bg" />
-              <circle cx="60" cy="60" r="50" className="lp-pm-ring-fg" />
-            </svg>
-            <div className="lp-pm-pct"><BatteryCharging size={16} /><b>72%</b></div>
-          </div>
-          <div className="lp-pm-kv">
-            <div><b>34.6</b><span>{c.phone.added}</span></div>
-            <div><b>41 520</b><span>{c.phone.cost}</span></div>
-            <div><b>12</b><span>{c.phone.left}</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AppSection({ c }: { c: LandingCopy }) {
-  return (
-    <section className="lp-sec">
-      <div className="lp-wrap">
-        <div className="lp-app rv">
-          <div className="lp-app-copy">
-            <Kicker>{c.app.kicker}</Kicker>
-            <h2 className="lp-h2">{c.app.title}</h2>
-            <p className="lp-sub">{c.app.sub}</p>
-            <div className="lp-stores">
-              <span className="lp-store" aria-disabled="true"><Apple size={22} /><span><small>{c.app.soon}</small>App Store</span></span>
-              <span className="lp-store" aria-disabled="true"><Play size={20} /><span><small>{c.app.soon}</small>Google Play</span></span>
-            </div>
-          </div>
-          <div className="lp-app-phone"><Phone c={c} /></div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ───────────────────────── FAQ ─────────────────────────
-
-function Faq({ c }: { c: LandingCopy }) {
-  return (
-    <section className="lp-sec" id="faq">
-      <div className="lp-wrap lp-faq">
-        <SectionHead kicker={c.faq.kicker} title={c.faq.title} />
-        <div className="lp-faq-list">
+    <>
+      <PageHead kicker={p.kicker} title={p.title} sub={p.sub} />
+      <section className="lp-sec lp-sec-tight" id="faq">
+        <div className="lp-wrap lp-faq-list">
           {c.faq.items.map((f, i) => (
             <details key={i} className="lp-faq-item rv" style={delay((i % 5) * 50)} open={i === 0}>
               <summary>{f.q}<span className="lp-faq-plus" aria-hidden="true" /></summary>
@@ -832,8 +897,25 @@ function Faq({ c }: { c: LandingCopy }) {
             </details>
           ))}
         </div>
+      </section>
+      <Cta c={c} />
+    </>
+  );
+}
+
+function JoinPage({ c, lang }: { c: LandingCopy; lang: Lang }) {
+  return (
+    <div className="lp-joinpage">
+      <div className="lp-hero-bg" aria-hidden="true"><span className="lp-blob lp-blob-a" /></div>
+      <Join c={c} lang={lang} privacyHref={legalHref('privacy')} />
+      <div className="lp-wrap">
+        <div className="lp-stores rv">
+          <p>{c.app.title}</p>
+          <span className="lp-store" aria-disabled="true"><Apple size={22} /><span><small>{c.app.soon}</small>App Store</span></span>
+          <span className="lp-store" aria-disabled="true"><Play size={20} /><span><small>{c.app.soon}</small>Google Play</span></span>
+        </div>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -850,7 +932,7 @@ function Cta({ c }: { c: LandingCopy }) {
           <h2 className="lp-cta-t">{c.cta.title}</h2>
           <p className="lp-cta-sub">{c.cta.sub}</p>
           <div className="lp-hero-cta">
-            <a className="lp-btn lp-btn-dark lp-btn-lg" href="#join"><BellRing size={18} />{c.cta.join}</a>
+            <PageLink to="join" className="lp-btn lp-btn-dark lp-btn-lg"><BellRing size={18} />{c.cta.join}</PageLink>
           </div>
         </div>
       </div>
@@ -858,8 +940,7 @@ function Cta({ c }: { c: LandingCopy }) {
   );
 }
 
-function Footer({ c, base }: { c: LandingCopy; base: string }) {
-  const L = c.footer.links;
+function Footer({ c }: { c: LandingCopy }) {
   return (
     <footer className="lp-footer">
       <div className="lp-wrap lp-footer-in">
@@ -869,54 +950,63 @@ function Footer({ c, base }: { c: LandingCopy; base: string }) {
           <LangPills />
         </div>
         <div>
-          <p className="lp-footer-h">{c.footer.product}</p>
-          <a href={`${base}#gives`}><Car size={14} />{L.drivers}</a>
-          <a href={`${base}#network`}><Server size={14} />{c.nav.map}</a>
-          <a href={`${base}#pricing`}><Wallet size={14} />{c.nav.pricing}</a>
-        </div>
-        <div>
-          <p className="lp-footer-h">{c.footer.platform}</p>
-          <a href={`${base}#partners`}><Handshake size={14} />{L.partners}</a>
-          <a href={`${base}#compare`}><Wallet size={14} />{L.compare}</a>
-          <a href={`${base}#faq`}><ChevronDown size={14} />{L.faq}</a>
+          <p className="lp-footer-h">{c.footer.pages}</p>
+          {(['home', 'drivers', 'networks', 'prices', 'faq', 'join'] as Page[]).map(p => <PageLink key={p} to={p}>{c.nav[p]}</PageLink>)}
         </div>
         <div>
           <p className="lp-footer-h">{c.footer.company}</p>
-          <a href={`mailto:${BRAND.email}`}><Send size={14} />{L.contact}</a>
+          <a href={`mailto:${BRAND.email}`}><Send size={14} />{c.footer.contact}</a>
           <span className="lp-footer-muted">{BRAND.email}</span>
           {LEGAL_IDS.map(d => <a key={d} href={legalHref(d)}><ScrollText size={14} />{c.legal[d]}</a>)}
         </div>
       </div>
       <div className="lp-wrap lp-footer-base">
         <span>© {new Date().getFullYear()} {BRAND.name}. {c.footer.rights}</span>
-        <span><Wifi size={13} /> {c.footer.demo}</span>
+        <span>{c.footer.demo}</span>
       </div>
       <p className="lp-footer-giant" aria-hidden="true">{BRAND.name}</p>
     </footer>
   );
 }
 
-// ───────────────────────── Page ─────────────────────────
-
-/** ?doc=offer|privacy|terms shows a legal document inside the landing shell. */
-function docFromUrl(): LegalDocId | null {
-  try {
-    const d = new URLSearchParams(window.location.search).get('doc');
-    return LEGAL_IDS.includes(d as LegalDocId) ? (d as LegalDocId) : null;
-  } catch {
-    return null;
-  }
-}
+// ───────────────────────── Shell ─────────────────────────
 
 export default function Landing() {
   const { lang } = useI18n();
-  const [doc] = useState(docFromUrl);
-  const base = doc ? '/' : '';
   const c = COPY[lang] ?? COPY.ru;
+  const [page, setPage] = useState<Page>(pageFromUrl);
+  const [doc, setDoc] = useState(docFromUrl);
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
   const [scrolled, setScrolled] = useState(false);
+  const [vt] = useState(canTransition);
   const fc = useForecast();
-  useReveal(root, lang);
+  useReveal(root, `${lang}:${page}:${doc}`);
+
+  /** Swaps to the page in the URL, through a view transition when there is one. */
+  const show = useCallback((p: Page, d: LegalDocId | null) => {
+    const apply = () => {
+      flushSync(() => { setPage(p); setDoc(d); });
+      if (root) root.scrollTop = 0;
+    };
+    if (canTransition()) (document as ViewTransitionDoc).startViewTransition!(apply);
+    else apply();
+  }, [root]);
+
+  const go = useCallback((p: Page) => {
+    if (p === page && !doc) {
+      root?.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    window.history.pushState({ page: p }, '', PATHS[p]);
+    track('page', { page: p });
+    show(p, null);
+  }, [page, doc, root, show]);
+
+  useEffect(() => {
+    const onPop = () => show(pageFromUrl(), docFromUrl());
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [show]);
 
   useEffect(() => {
     if (!root) return;
@@ -930,13 +1020,15 @@ export default function Landing() {
         setScrolled(root.scrollTop > 24);
       });
     };
+    onScroll();
     root.addEventListener('scroll', onScroll, { passive: true });
     return () => { root.removeEventListener('scroll', onScroll); cancelAnimationFrame(raf); };
-  }, [root]);
+  }, [root, page]);
 
   useEffect(() => {
     const prev = document.title;
-    document.title = c.meta.title;
+    const name = doc ? c.legal[doc] : page === 'home' ? null : c.nav[page];
+    document.title = name ? `${name} — ${BRAND.name}` : c.meta.title;
     const desc = document.querySelector<HTMLMetaElement>('meta[name="description"]');
     const prevDesc = desc?.content;
     if (desc) desc.content = c.network.meta;
@@ -947,7 +1039,7 @@ export default function Landing() {
       '@context': 'https://schema.org',
       '@graph': [
         { '@type': 'Organization', name: BRAND.name, url: `https://${BRAND.domain}`, logo: `https://${BRAND.domain}/icon-512.png`, areaServed: 'UZ', slogan: BRAND.tagline },
-        { '@type': 'FAQPage', inLanguage: lang, mainEntity: c.faq.items.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) },
+        ...(page === 'faq' ? [{ '@type': 'FAQPage', inLanguage: lang, mainEntity: c.faq.items.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }] : []),
       ],
     });
     document.head.appendChild(ld);
@@ -956,30 +1048,24 @@ export default function Landing() {
       if (desc && prevDesc !== undefined) desc.content = prevDesc;
       ld.remove();
     };
-  }, [c, lang]);
+  }, [c, lang, page, doc]);
 
   return (
-    <div ref={setRoot} className="lp" data-no-translate>
-      <div className="lp-progress" aria-hidden="true" />
-      <Nav c={c} scrolled={scrolled || !!doc} base={base} />
-      <main>
-        {doc ? <LegalPage c={c} id={doc} /> : <>
-        <Hero c={c} lang={lang} />
-        <Marquee c={c} />
-        <Pains c={c} />
-        <Gives c={c} />
-        <How c={c} />
-        <LiveNetwork c={c} lang={lang} fc={fc} />
-        <Pricing c={c} lang={lang} fc={fc} />
-        <Partners c={c} />
-        <Compare c={c} />
-        <AppSection c={c} />
-        <Join c={c} lang={lang} privacyHref={legalHref('privacy')} />
-        <Faq c={c} />
-        <Cta c={c} />
-        </>}
-      </main>
-      <Footer c={c} base={base} />
-    </div>
+    <GoCtx.Provider value={go}>
+      <div ref={setRoot} className={`lp ${vt ? 'has-vt' : ''}`} data-no-translate>
+        <div className="lp-progress" aria-hidden="true" />
+        <Nav c={c} page={doc ? null : page} scrolled={scrolled || !!doc} />
+        <main key={doc ?? page} className="lp-main">
+          {doc ? <LegalPage c={c} id={doc} />
+            : page === 'drivers' ? <DriversPage c={c} lang={lang} fc={fc} />
+            : page === 'networks' ? <NetworksPage c={c} />
+            : page === 'prices' ? <PricesPage c={c} lang={lang} fc={fc} />
+            : page === 'faq' ? <FaqPage c={c} />
+            : page === 'join' ? <JoinPage c={c} lang={lang} />
+            : <HomePage c={c} lang={lang} />}
+        </main>
+        <Footer c={c} />
+      </div>
+    </GoCtx.Provider>
   );
 }
