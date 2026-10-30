@@ -1,3 +1,4 @@
+import "./server/monitoring.js";
 import express from "express";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -17,6 +18,7 @@ import "./server/cameras.js";
 import "./server/comfort.js";
 import "./server/tts.js";
 import "./server/places.js";
+import { errorHandler } from "./server/monitoring.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -38,6 +40,8 @@ const connect = [
   "https://overpass-api.de",
   "https://plausible.io",
   "https://cloud.umami.is",
+  // Error reports from the browser go to the Sentry project the DSN names.
+  ...[process.env.VITE_SENTRY_DSN].filter(Boolean).map(dsn => `https://${new URL(dsn).host}`),
   ...(process.env.CSP_EXTRA_CONNECT ?? "").split(/[\s,]+/).filter(Boolean),
 ];
 const CSP = [
@@ -72,9 +76,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health-check для Render
+// For Render and uptime monitors: 200 while the server runs and its data is
+// being saved, 503 when saving has started to fail, so an alert goes out
+// before anything is lost.
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok", time: new Date().toISOString() });
+  const store = db.health();
+  res.status(store.saving ? 200 : 503).json({ status: store.saving ? "ok" : "degraded", storage: store.storage, time: new Date().toISOString() });
 });
 
 // REST API + live-синхронизация (SSE)
@@ -102,12 +109,13 @@ app.get("*", (req, res, next) => {
   if (req.path.startsWith("/api/")) return next();
   res.sendFile(join(distDir, "index.html"));
 });
+errorHandler(app);
 
 // Load the database before accepting traffic, so no request sees empty state.
 await db.ready;
 
 const server = app.listen(PORT, () => {
-  console.log(`PowerGo running on port ${PORT}`);
+  console.log(`Voli running on port ${PORT}`);
   if (demoCpo) connectDemoPartner();
 });
 

@@ -5,8 +5,10 @@ import { SyncProvider } from './lib/sync'
 import { I18nProvider } from './lib/i18n'
 import './index.css'
 import { initAnalytics } from './landing/analytics'
+import { initMonitoring } from './lib/monitoring'
 
 initAnalytics()
+initMonitoring()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

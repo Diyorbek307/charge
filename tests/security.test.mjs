@@ -72,6 +72,15 @@ describe('security', () => {
     assert.equal(res.headers.get('x-powered-by'), null);
   });
 
+  test('the health check says where data is kept and that it is being saved, and nothing else', async () => {
+    const res = await fetch(`http://127.0.0.1:${PORT}/health`);
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.status, 'ok');
+    assert.equal(body.storage, 'file');
+    assert.deepEqual(Object.keys(body).sort(), ['status', 'storage', 'time']);
+  });
+
   test("nobody moves another driver's meter", async () => {
     const token = await driver();
     const st = (await call('/state', { token })).data.stations.find(s => !s.ocpi && s.operatorId !== 'op-001' && s.connectors.some(c => c.status === 'available'));

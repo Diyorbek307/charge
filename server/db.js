@@ -3,6 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { seed, SCHEMA_VERSION } from './seed.js';
+import { report } from './monitoring.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', '.data');
@@ -156,8 +157,21 @@ class Database {
     const json = JSON.stringify(this.data);
     this.writing = this.writing
       .then(() => this.store.write(json))
-      .catch(err => console.warn('[db] persist failed:', err.message));
+      .then(() => {
+        this.saveError = null;
+      })
+      .catch(err => {
+        // Reported once per failing streak, not on every write.
+        if (!this.saveError) report(err, 'db.save');
+        this.saveError = err;
+        console.warn('[db] persist failed:', err.message);
+      });
     return this.writing;
+  }
+
+  /** Where the data lives and whether the last write reached it. */
+  health() {
+    return { storage: this.store instanceof PostgresStore ? 'postgres' : 'file', saving: !this.saveError };
   }
 
   /** Debounced flush — callers mutate `db.data` then call this. */
