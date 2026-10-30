@@ -4,7 +4,7 @@ import { db } from './db.js';
 /**
  * Discounts that a partner network runs at its own stations and pays for
  * itself: "−20% at night", "−50% on the first charge". The driver pays the
- * reduced price, so the network simply earns less on that session — PowerGo's
+ * reduced price, so the network simply earns less on that session — Voli's
  * commission is a share of what the driver paid, as for any other charge.
  *
  * A promo covers either every station of the network or a chosen few, and

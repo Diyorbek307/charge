@@ -6,7 +6,7 @@ import { useSync } from '../../lib/sync';
 const TYPES: { id: IntegrationType; label: string; hint: string }[] = [
   { id: 'OCPP 1.6-J', label: 'OCPP — станции напрямую', hint: 'Своей системы у сети нет: зарядки подключаются к нам по OCPP 1.6-J.' },
   { id: 'OCPI 2.2.1', label: 'OCPI 2.2.1', hint: 'У сети своя система с OCPI — подключается в блоке «Сети-партнёры по OCPI».' },
-  { id: 'Network API', label: 'API PowerGo для сетей', hint: 'Своя система без OCPI: сеть передаёт станции, статусы и зарядки в наше API, а команды старта и остановки получает на свой вебхук.' },
+  { id: 'Network API', label: 'API Voli для сетей', hint: 'Своя система без OCPI: сеть передаёт станции, статусы и зарядки в наше API, а команды старта и остановки получает на свой вебхук.' },
   { id: 'Только карта', label: 'Только на карте', hint: 'Без интеграции: станции, разъёмы и цены видны на карте, заряжаются в приложении сети.' },
 ];
 
@@ -112,7 +112,7 @@ export function OperatorSetup({ operatorId, onChanged }: { operatorId: string; o
         {type === 'Network API' && (
           <label className="block text-xs font-semibold text-slate-500">
             Вебхук сети для команд старта и остановки
-            <input value={webhook} onChange={e => setWebhook(e.target.value)} placeholder="https://network.uz/powergo/hook" className={input} data-no-translate />
+            <input value={webhook} onChange={e => setWebhook(e.target.value)} placeholder="https://network.uz/voli/hook" className={input} data-no-translate />
           </label>
         )}
         {type === 'Network API' && integration?.networkApi && !issued && (
@@ -141,7 +141,7 @@ export function OperatorSetup({ operatorId, onChanged }: { operatorId: string; o
       <section className="space-y-2">
         <p className="text-sm font-semibold text-slate-800 inline-flex items-center gap-2"><Wallet size={15} />Куда идут деньги водителей</p>
         <div className="grid sm:grid-cols-2 gap-2" role="radiogroup" aria-label="Расчёты">
-          {([['platform', 'Через платформу', 'Водитель платит из кошелька PowerGo, сети — выплата за вычетом комиссии.'], ['direct', 'Напрямую сети', 'У водителя баланс этой сети; пополнение идёт в кассу сети в Payme или Click, мы видим каждый платёж.']] as const).map(([id, label, text]) => (
+          {([['platform', 'Через платформу', 'Водитель платит из кошелька Voli, сети — выплата за вычетом комиссии.'], ['direct', 'Напрямую сети', 'У водителя баланс этой сети; пополнение идёт в кассу сети в Payme или Click, мы видим каждый платёж.']] as const).map(([id, label, text]) => (
             <button key={id} role="radio" aria-checked={mode === id} onClick={() => setMode(id)} className={`text-left px-3 py-2 rounded-xl border ${mode === id ? 'border-[#FFB000] bg-amber-50' : 'border-slate-200 bg-white'}`}>
               <span className="block text-sm font-semibold text-slate-800">{label}</span>
               <span className="block text-xs text-slate-500">{text}</span>

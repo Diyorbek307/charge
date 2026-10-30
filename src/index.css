@@ -4,7 +4,7 @@
 @import 'tailwindcss';
 
 /*
- * Brand palette (PowerGo). The portals were written against Tailwind's sky
+ * Brand palette (Voli). The portals were written against Tailwind's sky
  * (primary) and violet (secondary); remapping sky here moves every portal onto
  * the brand yellow without touching thousands of class names. Yellow is a
  * fill colour: text on it is near-black, and yellow text on white is replaced

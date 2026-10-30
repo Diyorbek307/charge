@@ -1,7 +1,7 @@
 /**
- * PowerGo Plus: a monthly subscription for drivers who charge often.
+ * Voli Plus: a monthly subscription for drivers who charge often.
  *
- *   −5% on every charge in every network (PowerGo pays the difference: the
+ *   −5% on every charge in every network (Voli pays the difference: the
  *   network still earns its full price), free bookings, a place in a queue
  *   ahead of drivers without Plus, double points.
  *
@@ -91,7 +91,7 @@ export function cancelPlus(account) {
   return { plus: plusFor(account.id) };
 }
 
-/** For the admin: who has Plus, what it brought and what PowerGo paid the networks for it. */
+/** For the admin: who has Plus, what it brought and what Voli paid the networks for it. */
 export function plusOverview() {
   const month = new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 7);
   const list = Object.entries(subs()).map(([userId, s]) => ({ userId, user: db.byId('accounts', userId)?.name ?? userId, ...s, active: Date.parse(s.renewsAt) > Date.now() }));

@@ -96,7 +96,7 @@ function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current:
         <div className="flex items-center gap-2.5 mb-4">
           <LogoMark size={32} />
           <div>
-            <p className="text-white font-bold text-sm leading-tight">Power<span style={{ color: '#FFC83D' }}>Go</span></p>
+            <p className="text-white font-bold text-sm leading-tight"><span style={{ color: '#FFC83D' }}>V</span>oli</p>
             <p className="text-[11px] leading-none mt-0.5" style={{ color: 'rgba(148,163,184,0.7)' }}>Admin Control Center</p>
           </div>
         </div>
@@ -104,7 +104,7 @@ function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current:
           <div className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white" style={{ background: 'linear-gradient(135deg, #4F6BFF, #2F3DB8)' }}>A</div>
           <div className="flex-1 min-w-0">
             <p className="text-white text-xs font-semibold truncate">Super Admin</p>
-            <p className="text-[10px] truncate" style={{ color: 'rgba(148,163,184,0.5)' }}>PowerGo</p>
+            <p className="text-[10px] truncate" style={{ color: 'rgba(148,163,184,0.5)' }}>Voli</p>
           </div>
           <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
         </div>

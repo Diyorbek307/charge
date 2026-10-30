@@ -6,7 +6,7 @@ import { setting, feature } from './settings.js';
 /**
  * "While you charge": what is a short walk from a station.
  *
- *   partners   cafés, shops and the like that pay PowerGo to be shown to
+ *   partners   cafés, shops and the like that pay Voli to be shown to
  *              drivers at a station, with an offer for them. Each show and
  *              each tap is counted: that is what the partner is billed for
  *              (`pricePerShow`, sum).
@@ -31,7 +31,7 @@ function demoPartners() {
   const near = (st, dLat, dLng) => (st ? { lat: Math.round((st.geoLat + dLat) * 1e5) / 1e5, lng: Math.round((st.geoLng + dLng) * 1e5) / 1e5 } : null);
   const until = new Date(Date.now() + 90 * DAY).toISOString();
   return [
-    { id: 'PP-001', name: 'Coffee Lab', kind: 'food', stationIds: ['st-001'], ...near(at('st-001'), 0.0011, 0.0008), offer: '−15% на кофе и выпечку водителям PowerGo', pricePerShow: 50, shows: 0, taps: 0, until, active: true },
+    { id: 'PP-001', name: 'Coffee Lab', kind: 'food', stationIds: ['st-001'], ...near(at('st-001'), 0.0011, 0.0008), offer: '−15% на кофе и выпечку водителям Voli', pricePerShow: 50, shows: 0, taps: 0, until, active: true },
     { id: 'PP-002', name: 'Korzinka', kind: 'shop', stationIds: ['st-002'], ...near(at('st-002'), -0.0009, 0.0012), offer: 'Вода в подарок при покупке от 50 000 сум', pricePerShow: 40, shows: 0, taps: 0, until, active: true },
     { id: 'PP-003', name: 'Choyxona Samarqand', kind: 'food', stationIds: ['st-003'], ...near(at('st-003'), 0.0007, -0.001), offer: 'Чай бесплатно, пока заряжается машина', pricePerShow: 50, shows: 0, taps: 0, until, active: true },
   ].filter(p => Number.isFinite(p.lat));
@@ -67,7 +67,7 @@ async function fetchOsm(st, hit) {
   );out center 80;`;
   for (const url of MIRRORS) {
     try {
-      const res = await fetch(url, { method: 'POST', headers: { 'User-Agent': 'PowerGo/1.0 (EV charging app)' }, body: new URLSearchParams({ data: q }), signal: AbortSignal.timeout(20_000) });
+      const res = await fetch(url, { method: 'POST', headers: { 'User-Agent': 'Voli/1.0 (EV charging app)' }, body: new URLSearchParams({ data: q }), signal: AbortSignal.timeout(20_000) });
       if (!res.ok) continue;
       const json = await res.json();
       const places = (json.elements ?? [])

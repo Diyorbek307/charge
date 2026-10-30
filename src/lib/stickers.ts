@@ -1,6 +1,6 @@
 /**
  * QR stickers for a network's chargers, one per charge point, four to an A4
- * page. The code is a link: a phone's own camera opens PowerGo on that
+ * page. The code is a link: a phone's own camera opens Voli on that
  * station, and the in-app scanner reads the station and point from it.
  *
  * Drawn on a canvas and placed in the PDF as an image, like the other PDF
@@ -93,9 +93,9 @@ async function drawSticker(st: StickerStation, index: number, origin: string): P
   ctx.textBaseline = 'middle';
   const [w1, w2] = BRAND.wordmark;
   const x0 = 96;
-  ctx.fillStyle = '#fff';
-  ctx.fillText(w1, x0, 132);
   ctx.fillStyle = YELLOW;
+  ctx.fillText(w1, x0, 132);
+  ctx.fillStyle = '#fff';
   ctx.fillText(w2, x0 + ctx.measureText(w1).width, 132);
   ctx.font = '600 40px Inter, Arial, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.7)';

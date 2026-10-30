@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">PowerGo</string>
-    <string name="title_activity_main">PowerGo</string>
-    <string name="package_name">uz.powergo.app</string>
-    <string name="custom_url_scheme">uz.powergo.app</string>
-    <!-- The PowerGo server the car screen asks for stations -->
-    <string name="powergo_server" translatable="false">https://charge-qogf.onrender.com</string>
+    <string name="app_name">Voli</string>
+    <string name="title_activity_main">Voli</string>
+    <string name="package_name">uz.voli.app</string>
+    <string name="custom_url_scheme">uz.voli.app</string>
+    <!-- The Voli server the car screen asks for stations -->
+    <string name="voli_server" translatable="false">https://charge-qogf.onrender.com</string>
 </resources>

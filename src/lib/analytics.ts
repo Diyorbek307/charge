@@ -43,7 +43,7 @@ export interface OperatorStat extends Totals {
   logo: string;
   status: string;
   integration: string;
-  /** platform: paid from the PowerGo wallet; direct: straight to the network’s cashbox. */
+  /** platform: paid from the Voli wallet; direct: straight to the network’s cashbox. */
   settlement?: 'platform' | 'direct';
   since: string;
   region: string;

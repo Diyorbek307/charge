@@ -97,10 +97,10 @@ export function signedHeaders(secret, event, body) {
   const { timestamp, signature } = sign(secret, body);
   return {
     'Content-Type': 'application/json',
-    'User-Agent': 'PowerGo-Webhooks/1.0',
-    'X-PowerGo-Event': event,
-    'X-PowerGo-Timestamp': String(timestamp),
-    'X-PowerGo-Signature': `t=${timestamp},v1=${signature}`,
+    'User-Agent': 'Voli-Webhooks/1.0',
+    'X-Voli-Event': event,
+    'X-Voli-Timestamp': String(timestamp),
+    'X-Voli-Signature': `t=${timestamp},v1=${signature}`,
   };
 }
 

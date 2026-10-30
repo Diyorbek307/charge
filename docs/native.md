@@ -1,7 +1,7 @@
-# Приложение PowerGo для Google Play и App Store
+# Приложение Voli для Google Play и App Store
 
 Нативная оболочка на Capacitor 8 (`capacitor.config.ts`). Внутри открывается
-боевой сайт PowerGo (`CAP_SERVER_URL`; сейчас `https://charge-qogf.onrender.com`, после запуска домена — `https://powergo.uz`: поменять там же, в `powergo_server` у Android и `PowerGoServer`/`WKAppBoundDomains` у iOS):
+боевой сайт Voli (`CAP_SERVER_URL`; сейчас `https://charge-qogf.onrender.com`, после запуска домена — `https://voli.uz`: поменять там же, в `voli_server` у Android и `VoliServer`/`WKAppBoundDomains` у iOS):
 у водителей всегда последняя версия, а вход, API, офлайн-трассы и QR-сканер
 работают так же, как в вебе. Сборка сайта из `dist/` лежит в приложении
 запасным вариантом.
@@ -10,7 +10,7 @@
 
 | Что | Где | Статус |
 |---|---|---|
-| Android Auto (категория «зарядка») | `android/app/src/main/java/uz/powergo/app/car/` | собирается, проверить на машине или в DHU |
+| Android Auto (категория «зарядка») | `android/app/src/main/java/uz/voli/app/car/` | собирается, проверить на машине или в DHU |
 | CarPlay (EV Charging) | `ios/App/App/CarPlaySceneDelegate.swift`, `App.entitlements` | код готов, нужен Mac и разрешение Apple |
 | Геолокация, камера, уведомления | разрешения в `AndroidManifest.xml` и `Info.plist` | готово |
 | Нативные push (FCM/APNs) | — | следующий шаг, см. ниже |
@@ -33,11 +33,11 @@ APK: `android/app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Android Auto
 
-- Сервис `PowerGoCarAppService` в категории `androidx.car.app.category.CHARGING`,
+- Сервис `VoliCarAppService` в категории `androidx.car.app.category.CHARGING`,
   экран `StationsScreen`: до 6 станций рядом (свободные выше), «2/4 свободно ·
   до 150 кВт · от 1 800 сум», зелёные/красные метки на карте машины, по нажатию —
   навигация в приложении карт машины. Обновляется раз в минуту.
-- Адрес сервера — строка `powergo_server` в `res/values/strings.xml`.
+- Адрес сервера — строка `voli_server` в `res/values/strings.xml`.
 - Проверка без машины: Desktop Head Unit (SDK Manager → Android Auto Desktop
   Head Unit Emulator), на телефоне — режим разработчика Android Auto →
   «Unknown sources».

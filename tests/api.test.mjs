@@ -25,9 +25,9 @@ let dataDir;
 const CREDS = {
   driver: { login: '+998901234567', password: 'Driver2026' },
   operator: { login: 'operator@greencharge.uz', password: 'Operator2026' },
-  admin: { login: 'admin@powergo.uz', password: 'Admin2026' },
+  admin: { login: 'admin@voli.uz', password: 'Admin2026' },
   business: { login: 'fleet@uzauto.uz', password: 'Business2026' },
-  api: { login: 'partner@powergo.uz', password: 'Partner2026' },
+  api: { login: 'partner@voli.uz', password: 'Partner2026' },
 };
 
 async function call(path, { method = 'GET', token, body } = {}) {
@@ -347,7 +347,7 @@ describe('webhooks', () => {
 
     const d = (await call('/webhooks/deliveries?limit=20', { token: api })).data.find(x => x.webhookId === id);
     assert.ok(d, 'no delivery recorded');
-    const [, ts, v1] = d.headers['X-PowerGo-Signature'].match(/t=(\d+),v1=([a-f0-9]+)/);
+    const [, ts, v1] = d.headers['X-Voli-Signature'].match(/t=(\d+),v1=([a-f0-9]+)/);
     const expected = crypto.createHmac('sha256', secret).update(`${ts}.${d.body}`).digest('hex');
     assert.equal(v1, expected);
 
@@ -691,7 +691,7 @@ describe('data isolation', () => {
     assert.ok(!anon.some(e => e.type === 'wallet.topup'), 'anonymous reader saw a top-up');
     assert.ok(!anon.some(e => e.type === 'auth.login'), 'anonymous reader saw a login');
     const pubStart = anon.find(e => e.type === 'session.start');
-    assert.equal(pubStart.actor, 'PowerGo');
+    assert.equal(pubStart.actor, 'Voli');
     assert.ok(!JSON.stringify(anon).includes('Alisher'), 'a name leaked to anonymous readers');
 
     const own = (await call('/events?limit=50', { token: driver })).data;
@@ -720,7 +720,7 @@ describe('data isolation', () => {
 
     const competitorStart = op.events.find(e => e.type === 'session.start');
     assert.ok(competitorStart, 'public session event missing');
-    assert.equal(competitorStart.actor, 'PowerGo', "operator saw a name on a competitor's session");
+    assert.equal(competitorStart.actor, 'Voli', "operator saw a name on a competitor's session");
 
     anon.close();
     mine.close();

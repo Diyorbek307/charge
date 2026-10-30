@@ -17,7 +17,7 @@ function accountFor(station, idTag) {
   if (linked) return { account: linked, auto: true };
   const fresh = linkFromCharger(station.id, tag);
   if (fresh) {
-    emit({ type: 'autocharge.linked', portal: 'system', actor: 'PowerGo', message: `Autocharge включён: ${station.name} узнала вашу машину — дальше просто подключайте кабель`, entity: fresh.id, payload: { userId: fresh.id, stationId: station.id } });
+    emit({ type: 'autocharge.linked', portal: 'system', actor: 'Voli', message: `Autocharge включён: ${station.name} узнала вашу машину — дальше просто подключайте кабель`, entity: fresh.id, payload: { userId: fresh.id, stationId: station.id } });
     return { account: fresh, auto: true };
   }
   return { account: null, auto: false };
@@ -296,7 +296,7 @@ const handlers = {
     if (result.error) {
       return { transactionId, idTagInfo: { status: result.status === 402 ? 'Blocked' : 'Invalid' } };
     }
-    if (auto) emit({ type: 'autocharge.start', portal: 'system', actor: 'PowerGo', message: `Autocharge: зарядка началась сама · ${station.name}`, entity: result.session?.id ?? null, payload: { userId: account.id, stationId: station.id } });
+    if (auto) emit({ type: 'autocharge.start', portal: 'system', actor: 'Voli', message: `Autocharge: зарядка началась сама · ${station.name}`, entity: result.session?.id ?? null, payload: { userId: account.id, stationId: station.id } });
     return { transactionId, idTagInfo: { status: 'Accepted' } };
   },
 

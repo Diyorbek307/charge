@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>PowerGo</string>
+        <string>Voli</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -52,16 +52,16 @@
       </array>
     </dict>
 	</dict>
-	<key>PowerGoServer</key>
+	<key>VoliServer</key>
 	<string>https://charge-qogf.onrender.com</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>PowerGo показывает станции рядом с вами и расстояние до них.</string>
+	<string>Voli показывает станции рядом с вами и расстояние до них.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Камера нужна, чтобы считать QR-код на зарядной станции.</string>
 	<key>WKAppBoundDomains</key>
 	<array>
 		<string>charge-qogf.onrender.com</string>
-		<string>powergo.uz</string>
+		<string>voli.uz</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>

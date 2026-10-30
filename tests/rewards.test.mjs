@@ -1,5 +1,5 @@
 /**
- * PowerGo's own rewards: the car bonus, milestones, and paying a charge with the bonus.
+ * Voli's own rewards: the car bonus, milestones, and paying a charge with the bonus.
  */
 import { test, before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -57,7 +57,7 @@ after(() => {
   }
 });
 
-describe('PowerGo rewards', () => {
+describe('Voli rewards', () => {
   test('telling us about the car grants 100 000 sum once, as a bonus that burns', async () => {
     const token = await driver();
     const before = (await call('/rewards', { token })).data;

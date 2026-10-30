@@ -5,7 +5,7 @@ import { useSync } from '../../lib/sync';
 const sum = (n: number) => `${Math.round(n).toLocaleString('ru-RU')} сум`;
 const date = (iso: string) => new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', timeZone: 'Asia/Tashkent' });
 
-/** PowerGo Plus: what it gives, what it costs, and the driver's own month with it. */
+/** Voli Plus: what it gives, what it costs, and the driver's own month with it. */
 export default function PlusScreen({ onBack, onTopUp }: { onBack: () => void; onTopUp: () => void }) {
   const { state, actions, refresh, sessions } = useSync();
   const plus = state?.plus;
@@ -30,7 +30,7 @@ export default function PlusScreen({ onBack, onTopUp }: { onBack: () => void; on
   };
 
   const perks = [
-    { icon: <Percent size={17} />, title: `−${discount}% на зарядку во всех сетях`, text: 'Скидку оплачивает PowerGo — сеть получает свою цену полностью' },
+    { icon: <Percent size={17} />, title: `−${discount}% на зарядку во всех сетях`, text: 'Скидку оплачивает Voli — сеть получает свою цену полностью' },
     { icon: <CalendarCheck size={17} />, title: 'Бронь без платы', text: 'Держим разъём к вашему времени бесплатно' },
     { icon: <Users size={17} />, title: 'Очередь — вперёд', text: 'Встаёте за другими Plus, перед остальными' },
     { icon: <Gift size={17} />, title: 'Баллы ×2', text: 'Вдвое больше баллов за каждый кВт·ч' },
@@ -40,12 +40,12 @@ export default function PlusScreen({ onBack, onTopUp }: { onBack: () => void; on
     <div className="h-full flex flex-col bg-slate-50">
       <div className="bg-white px-4 pt-4 pb-3 flex items-center gap-3 border-b border-slate-100 shrink-0">
         <button onClick={onBack} aria-label="Назад" className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
-        <h1 className="text-base font-bold text-slate-900">PowerGo Plus</h1>
+        <h1 className="text-base font-bold text-slate-900">Voli Plus</h1>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         <div className="relative overflow-hidden rounded-3xl p-5 text-white" style={{ background: 'linear-gradient(150deg,#1F1F1F,#0A0A0A)' }}>
           <span className="absolute -right-10 -top-10 w-44 h-44 rounded-full opacity-30 pg-float" style={{ background: 'radial-gradient(circle,#FFC83D,transparent 65%)' }} aria-hidden="true" />
-          <p className="text-2xl font-black tracking-tight">Power<span className="text-[#FFC83D]">Go</span> <span className="px-2 py-0.5 rounded-lg bg-[#FFC83D] text-[#111] text-base align-middle">Plus</span></p>
+          <p className="text-2xl font-black tracking-tight"><span className="text-[#FFC83D]">V</span>oli <span className="px-2 py-0.5 rounded-lg bg-[#FFC83D] text-[#111] text-base align-middle">Plus</span></p>
           {plus?.active ? (
             <>
               <p className="mt-3 text-sm text-white/70">{plus.autoRenew ? `Подключён · продлится ${date(plus.renewsAt!)}` : `Действует до ${date(plus.renewsAt!)} · продление выключено`}</p>

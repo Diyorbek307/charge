@@ -89,7 +89,7 @@ export function verifyTotp(secretBase32, code, window = 1) {
 }
 
 /** otpauth:// URI that authenticator apps import. */
-export function otpauthUri(secretBase32, account, issuer = 'PowerGo') {
+export function otpauthUri(secretBase32, account, issuer = 'Voli') {
   const label = encodeURIComponent(`${issuer}:${account}`);
   const params = new URLSearchParams({
     secret: secretBase32,

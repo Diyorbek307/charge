@@ -32,7 +32,7 @@ async function call(path, { method = 'GET', token, body } = {}) {
 const login = async (portal, l, p) => (await call('/auth/login', { method: 'POST', body: { portal, login: l, password: p } })).data.token;
 const driver = () => login('driver', '+998901234567', 'Driver2026');
 const operator = () => login('operator', 'operator@greencharge.uz', 'Operator2026');
-const admin = () => login('admin', 'admin@powergo.uz', 'Admin2026');
+const admin = () => login('admin', 'admin@voli.uz', 'Admin2026');
 
 before(async () => {
   dataDir = mkdtempSync(join(tmpdir(), 'oc-tts-'));

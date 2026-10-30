@@ -324,7 +324,7 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
           // A network with no integration: we show where and how much; its own app runs the charge.
           <div className="mb-2 rounded-xl bg-slate-50 border border-slate-100 px-3 py-3">
             <p className="text-sm font-semibold text-slate-800">{`Зарядка — в приложении ${station.operator}`}</p>
-            <p className="text-xs text-slate-500 mt-0.5">Эта сеть пока не подключена к запуску из PowerGo. Здесь — расположение, разъёмы и цены.</p>
+            <p className="text-xs text-slate-500 mt-0.5">Эта сеть пока не подключена к запуску из Voli. Здесь — расположение, разъёмы и цены.</p>
           </div>
         ) : (
         <div className="grid grid-cols-2 gap-2 mb-2">
@@ -444,7 +444,7 @@ function ChargingStartScreen({ station, preferConnector, onBack, onConfirm, onOp
     return d.toISOString();
   };
   // What the network charges right now, its discount included.
-  // PowerGo Plus takes its share off what the network charges (not on OCPI partners, who bill themselves).
+  // Voli Plus takes its share off what the network charges (not on OCPI partners, who bill themselves).
   const plusOn = !!state?.plus?.active && !(station as Station & { ocpi?: unknown } | null)?.ocpi;
   const plusK = plusOn ? 1 - (state?.plus?.discount ?? 5) / 100 : 1;
   const price = Math.round(discounted(selectedConnector?.price ?? 1800, promo) * plusK);
@@ -892,10 +892,10 @@ function AppSettingsScreen({ onBack, onReplayTour }: { onBack: () => void; onRep
           <Row label="Скидки сетей" right={<Toggle label="Скидки сетей" value={notes.promo} onChange={() => flip('promo')} />} />
           <div className="px-4 py-3.5 flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm text-slate-700">Акции и новости PowerGo</p>
+              <p className="text-sm text-slate-700">Акции и новости Voli</p>
               <p className="text-xs text-slate-400">Рассылка по вашему согласию — без неё сервис работает так же</p>
             </div>
-            <Toggle label="Акции и новости PowerGo" value={!!consent?.marketing} onChange={() => void flipMarketing()} />
+            <Toggle label="Акции и новости Voli" value={!!consent?.marketing} onChange={() => void flipMarketing()} />
           </div>
         </div>
 
@@ -1078,7 +1078,7 @@ function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: ()
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         {/* Balance card */}
         <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-5 text-white shadow-xl">
-          <p className="text-xs font-semibold tracking-widest text-slate-400 uppercase mb-1">БАЛАНС PowerGo</p>
+          <p className="text-xs font-semibold tracking-widest text-slate-400 uppercase mb-1">БАЛАНС Voli</p>
           <p key={balance} className="text-3xl font-bold tracking-tight mb-3 tabular-nums pg-pop">{balance.toLocaleString('ru-RU')} сум</p>
           <p className="text-xs text-slate-400 mb-4">Пополнение через Payme или Click · списывается за каждую зарядку по счётчику</p>
           <div className="flex gap-2">
@@ -1094,7 +1094,7 @@ function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: ()
           <button onClick={onRewards} className="w-full rounded-2xl p-4 flex items-center gap-3 text-left text-[#111]" style={{ background: 'linear-gradient(135deg,#FFF3C4,#FFE08A)' }}>
             <span className="text-2xl" aria-hidden="true">🎁</span>
             <span className="flex-1 min-w-0">
-              <span className="block text-xs font-semibold opacity-70">БОНУС POWERGO</span>
+              <span className="block text-xs font-semibold opacity-70">БОНУС VOLI</span>
               <span className="block text-lg font-black tabular-nums">{`${state!.rewards!.bonus.balance.toLocaleString('ru-RU')} сум`}</span>
               {state!.rewards!.bonus.nextExpiry && <span className="block text-[11px] opacity-70">{`Тратится первым · до ${new Date(state!.rewards!.bonus.nextExpiry).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}`}</span>}
             </span>
@@ -1214,7 +1214,7 @@ function SupportScreen({ onBack, onReport }: { onBack: () => void; onReport: () 
     { q: 'Почему зарядка не началась?', a: 'Частые причины: разъём занят или забронирован, на кошельке меньше чем на 5 кВт·ч, исчерпан лимит компании. Текст ошибки на экране подскажет, что именно. Если станция неисправна — сообщите о проблеме, оператор получит оповещение сразу.' },
     { q: 'Как пополнить кошелёк?', a: 'Профиль → Кошелёк → Пополнить через Payme или Click. Деньги зачисляются, когда платёжная система подтвердит оплату. Данные карт мы не храним — их обрабатывают Payme и Click.' },
     { q: 'Сколько стоит зарядка?', a: 'Цену за кВт·ч задаёт оператор станции, она видна на карточке разъёма. Ночью (23:00–07:00) — ×0.7, днём (10:00–17:00) — ×0.9, вечером в пик (17:00–22:00) — ×1.25. Тариф фиксируется в момент старта, оплата — по фактической энергии.' },
-    { q: 'Как работает бронь?', a: `Бронь держит разъём за вами ${platform.booking.graceMin} минут после назначенного времени и стоит ${platform.booking.fee.toLocaleString('ru-RU')} сум (с PowerGo Plus — бесплатно). Если отменить до начала окна — плата возвращается на кошелёк.` },
+    { q: 'Как работает бронь?', a: `Бронь держит разъём за вами ${platform.booking.graceMin} минут после назначенного времени и стоит ${platform.booking.fee.toLocaleString('ru-RU')} сум (с Voli Plus — бесплатно). Если отменить до начала окна — плата возвращается на кошелёк.` },
     { q: 'Я сотрудник компании-клиента. Как заряжаться за счёт компании?', a: 'Если ваш номер привязан к автопарку компании, при старте зарядки появится вариант «За счёт компании» и остаток вашего месячного лимита. Лимит меняет менеджер автопарка.' },
   ];
 
@@ -1290,7 +1290,7 @@ function CarBonusBanner() {
       <span className="text-2xl pg-float" aria-hidden="true">🎁</span>
       <span className="flex-1 min-w-0">
         <span className="block text-sm font-extrabold">{`+${reward.amount.toLocaleString('ru-RU')} сум на зарядку`}</span>
-        <span className="block text-xs opacity-75">PowerGo дарит бонус за данные вашего автомобиля</span>
+        <span className="block text-xs opacity-75">Voli дарит бонус за данные вашего автомобиля</span>
       </span>
     </div>
   );
@@ -1355,7 +1355,7 @@ function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { 
           </div>
           <div className="bg-sky-50 border border-sky-100 rounded-2xl p-4">
             <p className="text-xs font-semibold text-sky-700 mb-2 flex items-center gap-1.5">
-              <Zap size={12} />Совместимость с сетью PowerGo
+              <Zap size={12} />Совместимость с сетью Voli
             </p>
             <div className="space-y-1.5">
               <div className="flex items-center gap-2 text-xs">

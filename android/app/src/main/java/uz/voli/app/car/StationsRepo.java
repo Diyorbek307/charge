@@ -1,4 +1,4 @@
-package uz.powergo.app.car;
+package uz.voli.app.car;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/** The stations from the PowerGo server, the same public list the map shows. */
+/** The stations from the Voli server, the same public list the map shows. */
 final class StationsRepo {
     static final class Station {
         final String id;

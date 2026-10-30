@@ -9,7 +9,7 @@ const left = (iso: string) => Math.max(0, Math.round((Date.parse(iso) - Date.now
 /**
  * Autocharge: link the car once at a fast charger, then plugging in is
  * enough — the charger recognises the car and the charge starts, paid from
- * the wallet. Works on chargers connected to PowerGo directly (OCPP).
+ * the wallet. Works on chargers connected to Voli directly (OCPP).
  */
 export default function AutochargeScreen({ onBack }: { onBack: () => void }) {
   const { state, actions, refresh } = useSync();
@@ -69,7 +69,7 @@ export default function AutochargeScreen({ onBack }: { onBack: () => void }) {
             {ac.cars.map(c => (
               <p key={c.carId} className="text-xs text-slate-500 mt-1">{`${c.car ?? 'Машина'} · ID ${c.carId} · с ${new Date(c.since).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}`}</p>
             ))}
-            <p className="text-xs text-slate-500 mt-2">Работает на станциях, подключённых к PowerGo напрямую. На остальных — как обычно, через приложение.</p>
+            <p className="text-xs text-slate-500 mt-2">Работает на станциях, подключённых к Voli напрямую. На остальных — как обычно, через приложение.</p>
             <button onClick={() => void run(() => actions.unlinkAutocharge())} disabled={busy} className="mt-3 w-full py-2.5 rounded-xl bg-slate-100 text-sm font-semibold text-slate-700 inline-flex items-center justify-center gap-1.5 disabled:opacity-50"><X size={14} />Выключить Autocharge</button>
           </div>
         ) : ac?.linking ? (
@@ -83,7 +83,7 @@ export default function AutochargeScreen({ onBack }: { onBack: () => void }) {
             <p className="text-sm font-bold text-slate-900">Связать машину</p>
             <p className="text-xs text-slate-500 mt-0.5 mb-3">Один раз: выберите станцию, у которой стоите, и подключите кабель.</p>
             {direct.length === 0 ? (
-              <p className="text-sm text-slate-500 bg-slate-50 rounded-xl px-3 py-3">Сейчас нет быстрых станций, подключённых напрямую. Autocharge заработает, как только сети подключат их к PowerGo по OCPP.</p>
+              <p className="text-sm text-slate-500 bg-slate-50 rounded-xl px-3 py-3">Сейчас нет быстрых станций, подключённых напрямую. Autocharge заработает, как только сети подключат их к Voli по OCPP.</p>
             ) : (
               <div className="space-y-2">
                 {direct.map(({ s, d }) => (

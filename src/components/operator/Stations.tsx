@@ -128,7 +128,7 @@ export default function OperatorStations({ onOpen }: { onOpen: (stationId: strin
       subtitle={`${own.length} ${plural(own.length, ['станция', 'станции', 'станций'])} вашей сети · выручка и загрузка за 30 дней`}
       actions={
         <span className="flex flex-wrap gap-2">
-          <StickerButton stations={shown} fileName="powergo-qr-stickers.pdf" label={shown.length === own.length ? 'Все наклейки QR' : `Наклейки QR · ${shown.length}`} />
+          <StickerButton stations={shown} fileName="voli-qr-stickers.pdf" label={shown.length === own.length ? 'Все наклейки QR' : `Наклейки QR · ${shown.length}`} />
           <button onClick={() => setAdding(true)} className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sky-500 text-white text-sm font-semibold hover:bg-sky-600"><Plus size={15} />Добавить станцию</button>
         </span>
       }

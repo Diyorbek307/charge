@@ -15,7 +15,7 @@ const KIND: Record<DirectReport['lines'][number]['kind'], { label: string; tone:
 
 /**
  * Money that goes straight to partner networks. Nothing here passes through
- * PowerGo: the networks' cashboxes confirm every payment to us, so we see
+ * Voli: the networks' cashboxes confirm every payment to us, so we see
  * what each network received, what drivers charged, and the commission due.
  */
 export function DirectSettlement({ portal }: { portal: Extract<Portal, 'admin' | 'operator'> }) {
@@ -40,14 +40,14 @@ export function DirectSettlement({ portal }: { portal: Extract<Portal, 'admin' |
       title={title}
       subtitle={portal === 'admin'
         ? 'Сети, которые принимают оплату напрямую: деньги водителей идут в их кассы Payme и Click, а подтверждения — нам. Комиссию сеть оплачивает по счёту.'
-        : 'Водители пополняют баланс вашей сети — деньги поступают в вашу кассу. Здесь всё, что прошло, и комиссия PowerGo за период.'}
+        : 'Водители пополняют баланс вашей сети — деньги поступают в вашу кассу. Здесь всё, что прошло, и комиссия Voli за период.'}
       actions={<Segmented options={[{ id: '7', label: '7 дней' }, { id: '30', label: '30 дней' }, { id: '90', label: '90 дней' }]} value={days} onChange={setDays} />}
     >
       {error && <ErrorNote text={error} />}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Kpi label="Поступило сетям" value={money(data.totals.received, false)} sub="сум · пополнения" icon={<ArrowDownToLine size={14} />} tone="emerald" />
         <Kpi label="Списано за зарядки" value={money(data.totals.charged, false)} sub="сум" icon={<Zap size={14} />} tone="amber" />
-        <Kpi label={portal === 'admin' ? 'Комиссия к оплате нам' : 'Комиссия PowerGo'} value={money(data.totals.commission, false)} sub="сум за период" icon={<Percent size={14} />} tone="violet" />
+        <Kpi label={portal === 'admin' ? 'Комиссия к оплате нам' : 'Комиссия Voli'} value={money(data.totals.commission, false)} sub="сум за период" icon={<Percent size={14} />} tone="violet" />
         <Kpi label="На балансах водителей" value={money(data.totals.held, false)} sub="сум · ещё не потрачено" icon={<Wallet size={14} />} tone="sky" />
       </div>
 

@@ -56,7 +56,7 @@ export function ProfileScreen({ onNavigate }: { onNavigate: (s: string) => void 
   const menu: { icon: ReactNode; label: string; badge?: string; screen: string }[] = [
     { icon: <Wallet size={16} className="text-emerald-500" />, label: 'Кошелёк', badge: sum(balance), screen: 'wallet' },
     { icon: <PieChart size={16} className="text-sky-500" />, label: 'Расходы и экономия', screen: 'finance' },
-    ...(on.plus || state?.plus?.active ? [{ icon: <span className="text-[11px] font-black leading-none px-1 py-0.5 rounded bg-[#FFC83D] text-[#111]" aria-hidden="true">+</span>, label: 'PowerGo Plus', badge: state?.plus?.active ? 'активен' : `−${state?.plus?.discount ?? 5}%`, screen: 'plus' }] : []),
+    ...(on.plus || state?.plus?.active ? [{ icon: <span className="text-[11px] font-black leading-none px-1 py-0.5 rounded bg-[#FFC83D] text-[#111]" aria-hidden="true">+</span>, label: 'Voli Plus', badge: state?.plus?.active ? 'активен' : `−${state?.plus?.discount ?? 5}%`, screen: 'plus' }] : []),
     ...(on.rewards || (state?.rewards?.bonus.balance ?? 0) > 0 ? [{ icon: <span className="text-[15px] leading-none" aria-hidden="true">🎁</span>, label: 'Награды и бонусы', badge: state?.rewards?.bonus.balance ? sum(state.rewards.bonus.balance) : state?.rewards?.achievements.some(a => !a.grantedAt) ? 'новые' : undefined, screen: 'rewards' }] : []),
     { icon: <Gift size={16} className="text-violet-500" />, label: 'Баллы', screen: 'loyalty' },
     { icon: <ScanFace size={16} className="text-amber-500" />, label: 'Зарядка в долг', badge: state?.credit?.debt ? sum(state.credit.debt) : undefined, screen: 'credit' },

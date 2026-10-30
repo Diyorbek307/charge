@@ -15,7 +15,7 @@ const untilText = (iso: string | null) => (iso ? `до ${new Date(iso).toLocaleD
 
 /**
  * Discounts from partner networks: what runs, where, and how far. Each
- * discount is paid by the network that runs it; PowerGo only shows it and
+ * discount is paid by the network that runs it; Voli only shows it and
  * applies it at the start of a charge.
  */
 export default function DealsScreen({ onSelectStation, onRoute }: { onSelectStation: (s: Station) => void; onRoute: (s: Station) => void }) {

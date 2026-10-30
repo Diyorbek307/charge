@@ -1,4 +1,4 @@
-package uz.powergo.app;
+package uz.voli.app;
 
 import com.getcapacitor.BridgeActivity;
 

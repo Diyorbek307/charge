@@ -72,7 +72,7 @@ describe('leads', () => {
     const res = await lead();
     assert.equal(res.status, 201);
 
-    const admin = await login('admin', 'admin@powergo.uz', 'Admin2026');
+    const admin = await login('admin', 'admin@voli.uz', 'Admin2026');
     const { data } = await call('/leads', { token: admin });
     const saved = data.leads.find(l => l.company === 'Volt Tashkent');
     assert.ok(saved, 'lead is listed for the admin');
@@ -99,14 +99,14 @@ describe('leads', () => {
     const bot = await lead({ name: 'Bot', phone: '+998935550000', website: 'http://spam.example' });
     assert.equal(bot.status, 200);
 
-    const admin = await login('admin', 'admin@powergo.uz', 'Admin2026');
+    const admin = await login('admin', 'admin@voli.uz', 'Admin2026');
     const { leads } = (await call('/leads', { token: admin })).data;
     assert.equal(leads.filter(l => l.phone === '+998935554433').length, 1);
     assert.ok(!leads.some(l => l.name === 'Bot'));
   });
 
   test('the admin can update status and note, and a demo reset keeps leads', async () => {
-    const admin = await login('admin', 'admin@powergo.uz', 'Admin2026');
+    const admin = await login('admin', 'admin@voli.uz', 'Admin2026');
     const first = (await call('/leads', { token: admin })).data.leads[0];
 
     const upd = await call(`/leads/${first.id}`, { method: 'PATCH', token: admin, body: { status: 'contacted', note: 'Позвонить в пятницу' } });
@@ -115,7 +115,7 @@ describe('leads', () => {
     assert.equal((await call(`/leads/${first.id}`, { method: 'PATCH', token: admin, body: { status: 'deleted' } })).status, 400);
 
     assert.equal((await call('/admin/reset', { method: 'POST', token: admin })).status, 200);
-    const admin2 = await login('admin', 'admin@powergo.uz', 'Admin2026');
+    const admin2 = await login('admin', 'admin@voli.uz', 'Admin2026');
     const after = (await call('/leads', { token: admin2 })).data.leads;
     assert.ok(after.some(l => l.id === first.id && l.status === 'contacted'), 'lead survives the reset');
   });

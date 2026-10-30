@@ -216,9 +216,9 @@ export interface Session {
   /** Tariff band at start: 0.7 at night, 0.9 by day, 1.25 at the evening peak. */
   multiplier?: number;
   basePrice?: number;
-  /** Paid from PowerGo's bonus, sum. */
+  /** Paid from Voli's bonus, sum. */
   bonusUsed?: number;
-  /** Charged with PowerGo Plus; `plusCovered` is what PowerGo paid the network on top. */
+  /** Charged with Voli Plus; `plusCovered` is what Voli paid the network on top. */
   plus?: boolean;
   plusCovered?: number;
   networkPrice?: number;
@@ -237,11 +237,11 @@ export interface Transaction {
   method: string;
   status: string;
   time: string;
-  /** Paid from PowerGo's bonus, sum; the rest came from the wallet. */
+  /** Paid from Voli's bonus, sum; the rest came from the wallet. */
   bonus?: number;
 }
 
-/** A milestone PowerGo pays a bonus for. */
+/** A milestone Voli pays a bonus for. */
 export interface Achievement { id: string; icon: string; title: string; desc: string; amount: number; goal: number; progress: number; grantedAt: string | null }
 export interface Rewards {
   /** Bonus money for charging only; it burns after `bonusDays`. */

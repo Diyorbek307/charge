@@ -18,7 +18,7 @@ const show = (v: unknown, s: SettingItem) =>
   s.type === 'bool' ? (v ? 'вкл' : 'выкл') : s.type === 'tiers' ? (v as Tier[]).map(t => `${num(t.kwh)}→${t.pct}%`).join(', ') : `${Number(v).toLocaleString('ru-RU')}${s.unit ? ` ${s.unit}` : ''}`;
 
 /**
- * Platform control: every number and switch of PowerGo in one place — what
+ * Platform control: every number and switch of Voli in one place — what
  * drivers see, what bonuses, Plus and the taxi tariff give and cost, booking
  * and queue rules, top-up limits, partners. Changes apply at once and go to
  * the journal with who made them.
@@ -125,12 +125,12 @@ export default function AdminPlatform() {
 
   const r = programs?.rewards;
   return (
-    <Page title="Управление платформой" subtitle="Каждая цифра и каждая функция PowerGo — меняются сразу, без новой версии. Все изменения в журнале.">
+    <Page title="Управление платформой" subtitle="Каждая цифра и каждая функция Voli — меняются сразу, без новой версии. Все изменения в журнале.">
       {programs && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <Kpi label="Награды в этом месяце" value={money(r!.grantedMonth)} sub={`из бюджета ${money(r!.budget)}`} tone={r!.grantedMonth > r!.budget * 0.8 ? 'amber' : 'emerald'} />
           <Kpi label="Бонусов на счетах" value={money(r!.outstanding)} sub={`потрачено в месяце ${money(r!.spentMonth)}`} tone="sky" />
-          <Kpi label="PowerGo Plus" value={num(programs.plus.active)} sub={`продлевают ${programs.plus.renewing} · выручка ${money(programs.plus.revenueMonth)}`} tone="violet" />
+          <Kpi label="Voli Plus" value={num(programs.plus.active)} sub={`продлевают ${programs.plus.renewing} · выручка ${money(programs.plus.revenueMonth)}`} tone="violet" />
           <Kpi label="Доплатили сетям" value={money(programs.plus.coveredMonth + programs.fleetCoveredMonth)} sub={`Plus ${money(programs.plus.coveredMonth)} · такси ${money(programs.fleetCoveredMonth)}`} tone="slate" />
         </div>
       )}
@@ -201,7 +201,7 @@ export default function AdminPlatform() {
       </div>
 
       {programs && programs.plus.subscribers.length > 0 && (
-        <Card title="Подписчики PowerGo Plus" pad={false}>
+        <Card title="Подписчики Voli Plus" pad={false}>
           <div className="divide-y divide-slate-50">
             {programs.plus.subscribers.map(s => (
               <div key={s.userId} className="px-5 py-2.5 flex items-center gap-3 text-sm">

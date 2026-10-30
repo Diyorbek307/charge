@@ -45,7 +45,7 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
     try {
       const { token } = await actions.shareSession(session.id);
       const url = `${window.location.origin}/?share=${token}`;
-      if (navigator.share) await navigator.share({ title: 'PowerGo', text: `Машина заряжается · ${session.stationName}`, url });
+      if (navigator.share) await navigator.share({ title: 'Voli', text: `Машина заряжается · ${session.stationName}`, url });
       else {
         await navigator.clipboard.writeText(url);
         setShared('Ссылка скопирована — отправьте её близким');
@@ -219,7 +219,7 @@ export function ChargingDoneScreen({ session, onClose }: { session: Session | nu
     ['Энергия', `${session.energy} кВт·ч`],
     ['Цена', `${(session.price ?? 0).toLocaleString('ru-RU')} сум/кВт·ч${band ? ` (${band})` : ''}`],
     ...(session.promo ? [['Скидка сети', `−${session.promo.percent}% · ${session.promo.title}`] as [string, string]] : []),
-    ...(session.bonusUsed ? [['Бонусом PowerGo', `−${sum(session.bonusUsed)}`] as [string, string], ['С кошелька', sum(session.cost - session.bonusUsed)] as [string, string]] : []),
+    ...(session.bonusUsed ? [['Бонусом Voli', `−${sum(session.bonusUsed)}`] as [string, string], ['С кошелька', sum(session.cost - session.bonusUsed)] as [string, string]] : []),
     ['Оплата', payer],
   ];
 

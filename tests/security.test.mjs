@@ -30,9 +30,9 @@ async function call(path, { method = 'GET', token, body } = {}) {
 }
 const login = async (portal, l, p) => (await call('/auth/login', { method: 'POST', body: { portal, login: l, password: p } })).data.token;
 const driver = () => login('driver', '+998901234567', 'Driver2026');
-const admin = () => login('admin', 'admin@powergo.uz', 'Admin2026');
+const admin = () => login('admin', 'admin@voli.uz', 'Admin2026');
 const operator = () => login('operator', 'operator@greencharge.uz', 'Operator2026');
-const partner = () => login('api', 'partner@powergo.uz', 'Partner2026');
+const partner = () => login('api', 'partner@voli.uz', 'Partner2026');
 const fleet = () => login('business', 'fleet@uzauto.uz', 'Business2026');
 
 before(async () => {
@@ -93,7 +93,7 @@ describe('security', () => {
   });
 
   test("a partner sees and changes only its own webhooks", async () => {
-    const made = await call('/webhooks', { method: 'POST', token: await admin(), body: { url: 'https://example.com/powergo-hook', events: ['session.start'] } });
+    const made = await call('/webhooks', { method: 'POST', token: await admin(), body: { url: 'https://example.com/voli-hook', events: ['session.start'] } });
     assert.ok([200, 201].includes(made.status), JSON.stringify(made.data));
     const id = made.data.webhook.id;
     const key = await partner();
@@ -109,7 +109,7 @@ describe('security', () => {
     const locked = await call('/auth/login', body('Operator2026'));
     assert.equal(locked.status, 429);
     // An unknown login answers like a wrong password, not "no such user".
-    const unknown = await call('/auth/login', { method: 'POST', body: { portal: 'admin', login: 'nobody@powergo.uz', password: 'whatever' } });
+    const unknown = await call('/auth/login', { method: 'POST', body: { portal: 'admin', login: 'nobody@voli.uz', password: 'whatever' } });
     assert.equal(unknown.status, 401);
     assert.equal(unknown.data.error, 'Неверный логин или пароль');
   });

@@ -25,7 +25,7 @@ async function call(path, { method = 'GET', token, body } = {}) {
   return { status: res.status, data: text ? JSON.parse(text) : null };
 }
 const login = async (portal, l, p) => (await call('/auth/login', { method: 'POST', body: { portal, login: l, password: p } })).data.token;
-const admin = () => login('admin', 'admin@powergo.uz', 'Admin2026');
+const admin = () => login('admin', 'admin@voli.uz', 'Admin2026');
 /** A camera frame stand-in: a JPEG data URL with fresh bytes each time. */
 const photo = () => `data:image/jpeg;base64,${crypto.randomBytes(6000).toString('base64')}`;
 

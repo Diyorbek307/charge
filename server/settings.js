@@ -21,7 +21,7 @@ export const SCHEMA = [
   { key: 'feature.arrival', group: 'features', label: '«Будет ли свободно, когда доеду»', hint: 'Шанс свободной точки к приезду и станции рядом', type: 'bool', def: true },
   { key: 'feature.places', group: 'features', label: '«Пока заряжаетесь»', hint: 'Места рядом со станцией и предложения партнёров', type: 'bool', def: true },
   { key: 'feature.rewards', group: 'features', label: 'Награды и бонусы', hint: 'Новые бонусы не начисляются; уже начисленные тратятся до срока', type: 'bool', def: true },
-  { key: 'feature.plus', group: 'features', label: 'PowerGo Plus', hint: 'Выключено — новые подписки и продления не принимаются, оплаченные месяцы действуют', type: 'bool', def: true },
+  { key: 'feature.plus', group: 'features', label: 'Voli Plus', hint: 'Выключено — новые подписки и продления не принимаются, оплаченные месяцы действуют', type: 'bool', def: true },
   { key: 'feature.autocharge', group: 'features', label: 'Autocharge', hint: 'Запуск по ID машины на станциях OCPP', type: 'bool', def: true },
   { key: 'feature.liveNotice', group: 'features', label: 'Зарядка на экране блокировки', hint: 'Push-уведомление, которое обновляется во время зарядки', type: 'bool', def: true },
   { key: 'feature.bookings', group: 'features', label: 'Бронь разъёма', type: 'bool', def: true },
@@ -35,7 +35,7 @@ export const SCHEMA = [
   { key: 'onboarding.tour', group: 'onboarding', label: 'Обучение после первого входа', hint: 'Подсказки поверх карты: баланс, поиск, QR, разделы', type: 'bool', def: true },
   { key: 'legal.consentVersion', group: 'onboarding', label: 'Версия пользовательского согласия', hint: 'Увеличьте после изменения документа — каждый водитель примет его заново при следующем открытии', type: 'int', def: 1, min: 1, max: 1000 },
 
-  // Bonuses and rewards (PowerGo pays them)
+  // Bonuses and rewards (Voli pays them)
   { key: 'rewards.carBonus', group: 'rewards', label: 'Бонус за данные автомобиля', type: 'money', def: n('CAR_BONUS_UZS', 100_000), min: 0, max: 1_000_000, unit: 'сум' },
   { key: 'rewards.bonusDays', group: 'rewards', label: 'Срок жизни бонуса', type: 'int', def: n('BONUS_DAYS', 60), min: 1, max: 365, unit: 'дней' },
   { key: 'rewards.monthBudget', group: 'rewards', label: 'Бюджет наград в месяц', hint: 'Сверх него награды в этом месяце не начисляются', type: 'money', def: n('REWARDS_MONTH_BUDGET_UZS', 50_000_000), min: 0, max: 10_000_000_000, unit: 'сум' },
@@ -54,10 +54,10 @@ export const SCHEMA = [
   ]),
   { key: 'points.valueUzs', group: 'rewards', label: 'Стоимость одного балла', hint: 'При обмене баллов на кошелёк', type: 'money', def: 10, min: 0, max: 1000, unit: 'сум' },
 
-  // PowerGo Plus
+  // Voli Plus
   { key: 'plus.price', group: 'plus', label: 'Цена подписки', type: 'money', def: n('PLUS_PRICE_UZS', 49_000), min: 0, max: 10_000_000, unit: 'сум' },
   { key: 'plus.days', group: 'plus', label: 'Период подписки', type: 'int', def: 30, min: 1, max: 366, unit: 'дней' },
-  { key: 'plus.discount', group: 'plus', label: 'Скидка на зарядку', hint: 'Её платит PowerGo, сеть получает полную цену', type: 'percent', def: n('PLUS_DISCOUNT_PCT', 5), min: 0, max: 50, unit: '%' },
+  { key: 'plus.discount', group: 'plus', label: 'Скидка на зарядку', hint: 'Её платит Voli, сеть получает полную цену', type: 'percent', def: n('PLUS_DISCOUNT_PCT', 5), min: 0, max: 50, unit: '%' },
 
   // Fleets
   { key: 'fleet.tiers', group: 'fleet', label: 'Скидка тарифа для такси по объёму', hint: 'От скольких кВт·ч за 30 дней — какая скидка', type: 'tiers', def: [{ kwh: 0, pct: 3 }, { kwh: 500, pct: 5 }, { kwh: 2000, pct: 8 }, { kwh: 5000, pct: 10 }] },
@@ -89,7 +89,7 @@ export const SCHEMA = [
 export const GROUPS = {
   features: 'Функции для водителей',
   rewards: 'Награды и бонусы',
-  plus: 'PowerGo Plus',
+  plus: 'Voli Plus',
   fleet: 'Автопарки и такси',
   charging: 'Зарядка, бронь, очередь',
   payments: 'Пополнение кошелька',

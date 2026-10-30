@@ -1,5 +1,5 @@
 /**
- * PowerGo Plus: the monthly subscription and what it changes.
+ * Voli Plus: the monthly subscription and what it changes.
  */
 import { test, before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -30,7 +30,7 @@ async function call(path, { method = 'GET', token, body } = {}) {
 }
 const login = async (portal, l, p) => (await call('/auth/login', { method: 'POST', body: { portal, login: l, password: p } })).data.token;
 const driver = () => login('driver', '+998901234567', 'Driver2026');
-const admin = () => login('admin', 'admin@powergo.uz', 'Admin2026');
+const admin = () => login('admin', 'admin@voli.uz', 'Admin2026');
 
 before(async () => {
   dataDir = mkdtempSync(join(tmpdir(), 'oc-plus-'));
@@ -58,7 +58,7 @@ after(() => {
   }
 });
 
-describe('PowerGo Plus', () => {
+describe('Voli Plus', () => {
   test('subscribing takes the month from the wallet, once', async () => {
     const token = await driver();
     const w0 = (await call('/state', { token })).data.wallets['acc-driver'].balance;

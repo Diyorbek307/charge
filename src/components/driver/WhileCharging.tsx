@@ -66,7 +66,7 @@ export default function WhileCharging({ stationId, dark = false, minutes }: { st
           <span className="flex-1 min-w-0">
             <span className="block text-sm font-extrabold truncate">{p.name}</span>
             <span className="block text-xs opacity-80">{p.offer}</span>
-            <span className="block text-[10px] opacity-60">{`${p.walkMin} мин пешком · партнёр PowerGo`}</span>
+            <span className="block text-[10px] opacity-60">{`${p.walkMin} мин пешком · партнёр Voli`}</span>
           </span>
           <ChevronRight size={15} className="opacity-50" />
         </a>

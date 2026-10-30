@@ -45,7 +45,7 @@ export default function SharePage({ token }: { token: string }) {
     <div className="min-h-full bg-[#f5f5f5] flex flex-col items-center px-4 py-8">
       <div className="flex items-center gap-2 mb-6">
         <LogoMark size={32} />
-        <span className="font-bold text-slate-900">Power<span className="text-[#8a5b00]">Go</span></span>
+        <span className="font-bold text-slate-900"><span className="text-[#8a5b00]">V</span>oli</span>
       </div>
       <div className="w-full max-w-sm bg-white rounded-3xl border border-slate-100 p-5 space-y-4 shadow-sm">
         {gone ? (
@@ -81,7 +81,7 @@ export default function SharePage({ token }: { token: string }) {
             </div>
           </>
         )}
-        <a href="/?portal=driver" className="block text-center w-full py-3 rounded-2xl bg-[#111] text-white font-semibold text-sm">Открыть PowerGo</a>
+        <a href="/?portal=driver" className="block text-center w-full py-3 rounded-2xl bg-[#111] text-white font-semibold text-sm">Открыть Voli</a>
       </div>
       <p className="text-xs text-slate-400 mt-4 text-center max-w-xs">Страница обновляется сама. Имя водителя и сумма здесь не показываются.</p>
     </div>

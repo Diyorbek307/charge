@@ -24,9 +24,9 @@
 
         </activity>
 
-        <!-- Android Auto: PowerGo on the car's screen, in the charging category -->
+        <!-- Android Auto: Voli on the car's screen, in the charging category -->
         <service
-            android:name=".car.PowerGoCarAppService"
+            android:name=".car.VoliCarAppService"
             android:exported="true">
             <intent-filter>
                 <action android:name="androidx.car.app.CarAppService" />

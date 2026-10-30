@@ -1,6 +1,6 @@
 /**
- * PowerGo's own rewards: bonus money for telling us about the car and for
- * milestones along the way. Paid by PowerGo, not by the networks — a charge
+ * Voli's own rewards: bonus money for telling us about the car and for
+ * milestones along the way. Paid by Voli, not by the networks — a charge
  * paid with a bonus still earns the network its full price.
  *
  * A bonus is not money in the wallet: it pays for charging only, cannot be

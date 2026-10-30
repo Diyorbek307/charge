@@ -473,7 +473,7 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
         {errorKind === 'code' && (
           <div className="w-full p-4 rounded-2xl bg-white border border-slate-100">
             <p className="text-xs font-semibold text-slate-700 mb-2">Почему так бывает</p>
-            {['QR-код от сети, которая ещё не подключена к PowerGo', 'Наклейка повреждена или плохо освещена', 'Это QR не станции, а, например, рекламы рядом'].map(r => (
+            {['QR-код от сети, которая ещё не подключена к Voli', 'Наклейка повреждена или плохо освещена', 'Это QR не станции, а, например, рекламы рядом'].map(r => (
               <p key={r} className="text-xs text-slate-500 flex gap-2 mt-1"><span className="w-1 h-1 rounded-full bg-slate-400 shrink-0 mt-1.5" />{r}</p>
             ))}
           </div>

@@ -2,7 +2,7 @@ import CarPlay
 import CoreLocation
 import UIKit
 
-/// PowerGo on the car's screen (CarPlay, EV charging category): the stations
+/// Voli on the car's screen (CarPlay, EV charging category): the stations
 /// nearby with free connectors and prices; "Маршрут" hands the way there to
 /// the car's maps. Needs Apple's CarPlay EV Charging entitlement.
 final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate, CLLocationManagerDelegate {
@@ -10,11 +10,11 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
     private var scene: CPTemplateApplicationScene?
     private let location = CLLocationManager()
     private var timer: Timer?
-    private let template = CPPointOfInterestTemplate(title: "PowerGo", pointsOfInterest: [], selectedIndex: NSNotFound)
+    private let template = CPPointOfInterestTemplate(title: "Voli", pointsOfInterest: [], selectedIndex: NSNotFound)
 
-    /// The PowerGo server the stations come from (set in Info.plist as PowerGoServer).
+    /// The Voli server the stations come from (set in Info.plist as VoliServer).
     private var server: String {
-        (Bundle.main.object(forInfoDictionaryKey: "PowerGoServer") as? String) ?? "https://charge-qogf.onrender.com"
+        (Bundle.main.object(forInfoDictionaryKey: "VoliServer") as? String) ?? "https://charge-qogf.onrender.com"
     }
 
     func templateApplicationScene(_ scene: CPTemplateApplicationScene, didConnect interfaceController: CPInterfaceController) {

@@ -2,7 +2,7 @@
  * The tariff for taxi parks and couriers: cars that charge every day.
  *
  *   a discount that grows with the park's volume over the last 30 days
- *   (PowerGo pays it, the network earns its full price), priority in a
+ *   (Voli pays it, the network earns its full price), priority in a
  *   queue for the park's drivers, one account for the whole park, and a
  *   report per driver for any month.
  */

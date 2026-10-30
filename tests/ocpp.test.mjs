@@ -33,7 +33,7 @@ async function call(path, { method = 'GET', token, body } = {}) {
 
 const CREDS = {
   driver: { login: '+998901234567', password: 'Driver2026' },
-  admin: { login: 'admin@powergo.uz', password: 'Admin2026' },
+  admin: { login: 'admin@voli.uz', password: 'Admin2026' },
   operator: { login: 'operator@greencharge.uz', password: 'Operator2026' },
 };
 const login = async portal => (await call('/auth/login', { method: 'POST', body: { portal, ...CREDS[portal] } })).data.token;

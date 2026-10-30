@@ -1,20 +1,20 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 /**
- * The PowerGo app for Google Play and the App Store.
+ * The Voli app for Google Play and the App Store.
  *
- * The app opens the live PowerGo site in its web view (CAP_SERVER_URL), so
+ * The app opens the live Voli site in its web view (CAP_SERVER_URL), so
  * drivers always have the current version and the API, sign-in and offline
  * packs work exactly as on the web. The built site in dist/ ships inside the
  * app as the fallback. Native parts — Android Auto, CarPlay — live in
  * android/ and ios/ (see docs/native.md).
  */
-// The site as deployed today; set CAP_SERVER_URL=https://powergo.uz once that domain serves it.
+// The site as deployed today; set CAP_SERVER_URL=https://voli.uz once that domain serves it.
 const server = process.env.CAP_SERVER_URL ?? 'https://charge-qogf.onrender.com';
 
 const config: CapacitorConfig = {
-  appId: 'uz.powergo.app',
-  appName: 'PowerGo',
+  appId: 'uz.voli.app',
+  appName: 'Voli',
   webDir: 'dist',
   server: {
     url: server,

@@ -1,4 +1,4 @@
-package uz.powergo.app.car;
+package uz.voli.app.car;
 
 import android.content.pm.ApplicationInfo;
 
@@ -8,11 +8,11 @@ import androidx.car.app.Session;
 import androidx.car.app.validation.HostValidator;
 
 /**
- * PowerGo on the car's screen (Android Auto), in the "charging" category:
+ * Voli on the car's screen (Android Auto), in the "charging" category:
  * the stations nearby with free connectors and prices, and a tap hands the
  * way there to the car's navigation app.
  */
-public final class PowerGoCarAppService extends CarAppService {
+public final class VoliCarAppService extends CarAppService {
     @NonNull
     @Override
     public HostValidator createHostValidator() {

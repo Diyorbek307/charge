@@ -1,7 +1,7 @@
 {
-  "name": "PowerGo — зарядка электромобилей",
-  "short_name": "PowerGo",
-  "description": "Вся зарядка Узбекистана в одном приложении",
+  "name": "Voli — зарядка электромобилей",
+  "short_name": "Voli",
+  "description": "Все зарядки. Одно приложение.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

@@ -6,7 +6,7 @@ const sum = (n: number) => `${Math.round(n).toLocaleString('ru-RU')} сум`;
 const date = (iso: string) => new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', timeZone: 'Asia/Tashkent' });
 
 /**
- * PowerGo's rewards: the bonus on the account, and each milestone with how
+ * Voli's rewards: the bonus on the account, and each milestone with how
  * far along the driver is. The bonus pays for charging only and burns.
  */
 export default function RewardsScreen({ onBack, onAddCar }: { onBack: () => void; onAddCar: () => void }) {
@@ -32,7 +32,7 @@ export default function RewardsScreen({ onBack, onAddCar }: { onBack: () => void
         <div className="relative overflow-hidden rounded-3xl p-5 text-[#111]" style={{ background: 'linear-gradient(135deg,#FFE08A,#FFC83D 55%,#FFB000)' }}>
           <span className="absolute -right-6 -top-6 w-32 h-32 rounded-full bg-white/25 pg-float" aria-hidden="true" />
           <span className="absolute right-6 bottom-4 text-5xl pg-float" style={{ animationDelay: '.8s' }} aria-hidden="true">🎁</span>
-          <p className="text-xs font-semibold opacity-70">БОНУС POWERGO</p>
+          <p className="text-xs font-semibold opacity-70">БОНУС VOLI</p>
           <p key={r?.bonus.balance} className="text-3xl font-black tabular-nums mt-1 pg-pop">{sum(r?.bonus.balance ?? 0)}</p>
           <p className="text-xs mt-1 opacity-80 max-w-[70%]">
             {r?.bonus.nextExpiry && r.bonus.balance > 0
@@ -87,7 +87,7 @@ export default function RewardsScreen({ onBack, onAddCar }: { onBack: () => void
           ))}
         </div>
 
-        <p className="text-[11px] text-slate-400 px-1 flex gap-1.5"><Info size={12} className="shrink-0 mt-0.5" />{`Бонусы дарит PowerGo. Ими можно оплатить только зарядку, вывести нельзя. Каждая награда — один раз на аккаунт, бонус действует ${r?.bonusDays ?? 60} дней.`}</p>
+        <p className="text-[11px] text-slate-400 px-1 flex gap-1.5"><Info size={12} className="shrink-0 mt-0.5" />{`Бонусы дарит Voli. Ими можно оплатить только зарядку, вывести нельзя. Каждая награда — один раз на аккаунт, бонус действует ${r?.bonusDays ?? 60} дней.`}</p>
       </div>
     </div>
   );

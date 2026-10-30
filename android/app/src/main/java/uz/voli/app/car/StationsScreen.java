@@ -1,4 +1,4 @@
-package uz.powergo.app.car;
+package uz.voli.app.car;
 
 import android.Manifest;
 import android.content.Intent;
@@ -37,7 +37,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import uz.powergo.app.R;
+import uz.voli.app.R;
 
 /**
  * Stations nearby on the car's screen: name, free/total, the cheapest price
@@ -94,7 +94,7 @@ public final class StationsScreen extends Screen implements DefaultLifecycleObse
     private void load() {
         main.removeCallbacks(refresh);
         final double[] at = here();
-        final String server = getCarContext().getString(R.string.powergo_server);
+        final String server = getCarContext().getString(R.string.voli_server);
         io.execute(() -> {
             List<StationsRepo.Station> next;
             String err = null;
@@ -102,7 +102,7 @@ public final class StationsScreen extends Screen implements DefaultLifecycleObse
                 next = StationsRepo.nearby(server, at[0], at[1], 6);
             } catch (Exception e) {
                 next = stations == null ? Collections.emptyList() : stations;
-                err = "Нет связи с PowerGo";
+                err = "Нет связи с Voli";
             }
             final List<StationsRepo.Station> result = next;
             final String failure = err;
@@ -119,7 +119,7 @@ public final class StationsScreen extends Screen implements DefaultLifecycleObse
     @Override
     public Template onGetTemplate() {
         PlaceListMapTemplate.Builder t = new PlaceListMapTemplate.Builder()
-                .setTitle("PowerGo · станции рядом")
+                .setTitle("Voli · станции рядом")
                 .setHeaderAction(Action.APP_ICON)
                 .setCurrentLocationEnabled(true)
                 .setActionStrip(new ActionStrip.Builder()

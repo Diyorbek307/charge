@@ -1,17 +1,17 @@
 import { BRAND } from '../brand';
 
-/** The bolt drawn in the mark and the app icons (48×48 box). */
-export const BOLT_PATH = 'M28.5 6 L12.5 27.5 H22.5 L19 42 L35.5 19.5 H25.5 Z';
+/** The V of the mark, its right stroke kinked like a lightning bolt (48×48 box). */
+export const V_PATH = 'M8 11 H17.5 L24.5 27 L31.5 9 H41 L34 24.5 H38 L27.5 39.5 H21 Z';
 
 /**
- * Brand mark: a black lightning bolt on a yellow rounded square — readable on
- * white and on black, and at favicon size.
+ * Brand mark: a black V-bolt on a yellow rounded square — readable on white
+ * and on black, and at favicon size.
  */
-export function LogoMark({ size = 32, id: _id }: { size?: number; id?: string }) {
+export function LogoMark({ size = 32 }: { size?: number; id?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
       <rect width="48" height="48" rx="12" fill="#FFC83D" />
-      <path d={BOLT_PATH} fill="#111111" />
+      <path d={V_PATH} fill="#111111" />
     </svg>
   );
 }
@@ -22,8 +22,8 @@ export function Logo({ size = 30 }: { size?: number }) {
     <span className="lp-logo">
       <LogoMark size={size} />
       <span className="lp-logo-word">
-        <span>{a}</span>
-        <span className="lp-logo-a">{b}</span>
+        <span className="lp-logo-a">{a}</span>
+        <span>{b}</span>
       </span>
     </span>
   );

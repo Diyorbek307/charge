@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "uz.powergo.app"
+    namespace = "uz.voli.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "uz.powergo.app"
+        applicationId "uz.voli.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

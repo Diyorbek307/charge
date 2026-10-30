@@ -3,7 +3,7 @@ import { db } from './db.js';
 
 /**
  * Direct settlement: money for a partner network goes straight to that
- * network, never through PowerGo.
+ * network, never through Voli.
  *
  * A driver holds a separate balance per such network. It is topped up through
  * the network's own Payme cashbox or Click service — the network points the

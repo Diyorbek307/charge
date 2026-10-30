@@ -43,7 +43,7 @@ export default function BatteryScreen({ onBack, onAddCar }: { onBack: () => void
       ...h.measured.map(m => [`${day(m.at)} · ${m.station}`, `${m.from}→${m.to}% · ${m.energy} кВт·ч · ≈ ${m.kwh} кВт·ч`] as [string, string]),
       ['Номер отчёта', h.reportId],
     ];
-    void exportPdf(`battery-${h.reportId}`, `Здоровье батареи · PowerGo · ${h.reportId}`, ['Показатель', 'Значение'], rows);
+    void exportPdf(`battery-${h.reportId}`, `Здоровье батареи · Voli · ${h.reportId}`, ['Показатель', 'Значение'], rows);
   };
 
   return (

@@ -5,10 +5,10 @@
  * Intellectual Property Agency (ima.uz).
  */
 export const BRAND = {
-  name: 'PowerGo',
-  /** Two-part wordmark: the second part is drawn in the accent colour. */
-  wordmark: ['Power', 'Go'] as const,
-  tagline: 'Одна карта. Все станции.',
-  domain: 'powergo.uz',
-  email: 'hello@powergo.uz',
+  name: 'Voli',
+  /** Two-part wordmark: the first part, the V, is drawn in the accent colour. */
+  wordmark: ['V', 'oli'] as const,
+  tagline: 'Все зарядки. Одно приложение.',
+  domain: 'voli.uz',
+  email: 'hello@voli.uz',
 };

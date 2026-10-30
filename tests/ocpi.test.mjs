@@ -1,5 +1,5 @@
 /**
- * OCPI 2.2.1, PowerGo as the eMSP: a partner network (the mock CPO from
+ * OCPI 2.2.1, Voli as the eMSP: a partner network (the mock CPO from
  * scripts/) is connected by the admin, its stations appear on the map, and a
  * driver's charge runs through the partner's own system to a settled bill.
  */
@@ -30,7 +30,7 @@ async function call(path, { method = 'GET', token, body } = {}) {
   return { status: res.status, data: text ? JSON.parse(text) : null };
 }
 const login = async (portal, l, p) => (await call('/auth/login', { method: 'POST', body: { portal, login: l, password: p } })).data.token;
-const admin = () => login('admin', 'admin@powergo.uz', 'Admin2026');
+const admin = () => login('admin', 'admin@voli.uz', 'Admin2026');
 const driver = () => login('driver', '+998901234567', 'Driver2026');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function until(fn, what, ms = 8000) {
@@ -141,7 +141,7 @@ describe('OCPI partner networks', () => {
     assert.ok(done.energy > 0);
     assert.equal(done.cost, Math.round(done.energy * 2200), 'the bill is not the partner’s');
     const after = (await call('/state', { token })).data;
-    // PowerGo's bonus pays first; the wallet covers the rest.
+    // Voli's bonus pays first; the wallet covers the rest.
     assert.equal(Object.values(after.wallets)[0].balance, walletBefore - (done.cost - (done.bonusUsed ?? 0)));
     assert.equal(after.stations.find(s => s.id === st.id).connectors[0].status, 'available');
   });

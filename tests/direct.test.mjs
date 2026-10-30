@@ -27,7 +27,7 @@ async function call(path, { method = 'GET', token, body } = {}) {
   return { status: res.status, data: text ? JSON.parse(text) : null };
 }
 const login = async (portal, l, p) => (await call('/auth/login', { method: 'POST', body: { portal, login: l, password: p } })).data.token;
-const admin = () => login('admin', 'admin@powergo.uz', 'Admin2026');
+const admin = () => login('admin', 'admin@voli.uz', 'Admin2026');
 const driver = () => login('driver', '+998901234567', 'Driver2026');
 
 const PAYME_KEY = 'ecovolt-payme-key-123';
@@ -121,7 +121,7 @@ describe('paying a network directly', () => {
     assert.equal((await payme('/payme/op-002', PAYME_KEY, 'PerformTransaction', { id: 'pm-tx-1' })).result.state, 2);
 
     assert.equal((await netOf(token)).balance, 100000);
-    assert.equal(Object.values((await call('/state', { token })).data.wallets)[0].balance, mainBefore, 'the PowerGo wallet changed');
+    assert.equal(Object.values((await call('/state', { token })).data.wallets)[0].balance, mainBefore, 'the Voli wallet changed');
   });
 
   test('a Click payment to the network is signed with the network’s secret', async () => {

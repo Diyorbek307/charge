@@ -52,7 +52,7 @@ export default function HistoryScreen({ onBack }: { onBack?: () => void } = {}) 
     ['Энергия', `${s.energy} кВт·ч`],
     ['Цена', `${(s.price ?? 0).toLocaleString('ru-RU')} сум/кВт·ч${band(s.multiplier) ? ` (${band(s.multiplier)})` : ''}`],
     ['Оплата', s.corporate ? 'Корпоративный счёт' : s.credit ? 'В долг' : s.familyOwner ? 'Семейный кошелёк' : s.direct ? `Баланс сети ${s.operator}` : 'Кошелёк'],
-    ...(s.bonusUsed ? [['Бонусом PowerGo', `−${sum(s.bonusUsed)}`] as [string, string]] : []),
+    ...(s.bonusUsed ? [['Бонусом Voli', `−${sum(s.bonusUsed)}`] as [string, string]] : []),
     ['Итого', sum(s.cost)],
   ];
 

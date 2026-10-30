@@ -203,7 +203,7 @@ function publicView(event) {
     id: event.id,
     type: event.type,
     portal: 'system',
-    actor: 'PowerGo',
+    actor: 'Voli',
     message: PUBLIC_MESSAGE[event.type]?.(event) ?? event.message,
     entity: null,
     payload,
@@ -1082,7 +1082,7 @@ api.get('/plus', requireAuth('driver'), (req, res) => res.json(plusFor(req.accou
 api.post('/plus', requireAuth('driver'), featureOn('plus'), (req, res) => {
   const r = subscribePlus(req.account);
   if (r.error) return res.status(r.status).json({ error: r.error });
-  emit({ type: 'plus.start', portal: 'driver', actor: req.account.name, message: 'PowerGo Plus подключён', entity: req.account.id, payload: { userId: req.account.id } });
+  emit({ type: 'plus.start', portal: 'driver', actor: req.account.name, message: 'Voli Plus подключён', entity: req.account.id, payload: { userId: req.account.id } });
   res.json(r.plus);
 });
 api.delete('/plus', requireAuth('driver'), (req, res) => {
@@ -1133,7 +1133,7 @@ api.put('/admin/settings', requireAuth('admin'), (req, res) => {
   res.json(settingsView());
 });
 
-// What PowerGo's own programmes cost and bring: rewards, Plus, the taxi tariff, Autocharge.
+// What Voli's own programmes cost and bring: rewards, Plus, the taxi tariff, Autocharge.
 api.get('/admin/programs', requireAuth('admin'), (_req, res) => {
   const month = new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 7);
   res.json({
@@ -1365,7 +1365,7 @@ function promoteQueue(stationId, connectorId) {
   emit({
     type: 'queue.ready',
     portal: 'system',
-    actor: 'PowerGo',
+    actor: 'Voli',
     message: `Коннектор ${connectorId} освободился — очередь подошла для ${next.user}`,
     entity: next.id,
     payload: { userId: next.userId, stationId, connectorId },
@@ -1537,7 +1537,7 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     // Price is locked at start with the tariff band in effect right now.
     basePrice: connector.price,
     multiplier: band.multiplier,
-    // The network's own promo first; PowerGo Plus takes its share off what is left, and PowerGo pays it.
+    // The network's own promo first; Voli Plus takes its share off what is left, and Voli pays it.
     networkPrice: Math.round(connector.price * band.multiplier * (1 - (promo?.percent ?? 0) / 100)),
     // A company charge on the taxi tariff takes the park's volume discount; a private one, Plus.
     price: Math.round(connector.price * band.multiplier * (1 - (promo?.percent ?? 0) / 100) * (station.ocpi ? 1 : 1 - (corporate ? fleetDiscount() : plusActive(account.id) ? PLUS.discount : 0) / 100)),
@@ -1681,8 +1681,8 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
       : round(Math.max(0, energyKwh), 1);
   // A partner network's charge record states the price; otherwise our locked price applies.
   const cost = billed ?? Math.round(energy * (session.price ?? 1800));
-  // What Plus took off this charge: PowerGo owes it to the network.
-  // What Plus or the taxi tariff took off this charge: PowerGo owes it to the network.
+  // What Plus took off this charge: Voli owes it to the network.
+  // What Plus or the taxi tariff took off this charge: Voli owes it to the network.
   const plusCovered = (session.plus || session.fleetDiscount) && billed === null && session.networkPrice ? Math.max(0, Math.round(energy * session.networkPrice) - cost) : 0;
   if (plusCovered) session[session.plus ? 'plusCovered' : 'fleetCovered'] = plusCovered;
 
@@ -1725,7 +1725,7 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
   // Paid from the driver's balance at the network; the money is already the network's.
   else if (session.direct) chargeNetwork(session);
   else if (wallet) {
-    // PowerGo's bonus pays first; the network is paid its full price either way.
+    // Voli's bonus pays first; the network is paid its full price either way.
     const fromBonus = walletId === session.userId ? spendBonus(session.userId, cost, session.id) : 0;
     if (fromBonus) {
       session.bonusUsed = fromBonus;
@@ -1810,7 +1810,7 @@ function announceRewards(account, grants) {
     emit({
       type: 'reward.granted',
       portal: 'system',
-      actor: 'PowerGo',
+      actor: 'Voli',
       message: `+${g.amount.toLocaleString('ru-RU')} сум бонусом · ${g.title}`,
       entity: g.id,
       payload: { userId: account.id, amount: g.amount, kind: g.kind, title: g.title, expiresAt: g.expiresAt },
@@ -2271,7 +2271,7 @@ function pruneBookings() {
     emit({
       type: 'booking.expire',
       portal: 'system',
-      actor: 'PowerGo',
+      actor: 'Voli',
       message: `Бронь ${b.code} истекла — водитель не приехал`,
       entity: b.id,
       payload: { stationId: b.stationId, connectorId: b.connectorId },

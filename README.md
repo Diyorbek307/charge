@@ -1,4 +1,4 @@
-# PowerGo
+# Voli
 
 Прототип национальной платформы зарядной инфраструктуры для электромобилей в Узбекистане.
 
@@ -18,9 +18,9 @@
 | --- | --- | --- |
 | Driver App | `+998901234567` | `Driver2026` |
 | Operator Portal | `operator@greencharge.uz` | `Operator2026` |
-| Admin Control Center | `admin@powergo.uz` | `Admin2026` |
+| Admin Control Center | `admin@voli.uz` | `Admin2026` |
 | Business Portal | `fleet@uzauto.uz` | `Business2026` |
-| Partner API | `partner@powergo.uz` | `Partner2026` |
+| Partner API | `partner@voli.uz` | `Partner2026` |
 
 ---
 
@@ -164,7 +164,7 @@ RemoteStart/RemoteStop из приложения и отдаёт показан�
 
 ### Сети-партнёры по OCPI 2.2.1
 
-Своих станций у PowerGo нет: сети подключаются по договору. Если у сети уже есть своя система и приложение,
+Своих станций у Voli нет: сети подключаются по договору. Если у сети уже есть своя система и приложение,
 мы подключаемся к ней по OCPI 2.2.1 — мы eMSP (`UZ*Z24`), сеть — CPO. Админ вводит адрес versions партнёра и
 token A в «Операторы → Сети-партнёры по OCPI»; дальше всё идёт само: обмен ключами, станции, тарифы в сумах,
 живые статусы, запуск и остановка зарядки командами START_SESSION / STOP_SESSION, итоговый счёт по CDR партнёра.
@@ -186,7 +186,7 @@ node scripts/ocpi-cpo-mock.mjs
 |---|---|---|
 | OCPP 1.6-J | своей системы у сети нет | её станции подключаются к нам напрямую |
 | OCPI 2.2.1 | своя система с OCPI | см. выше |
-| API PowerGo для сетей | своя система без OCPI | сеть шлёт нам станции, статусы и зарядки, команды старта и остановки получает на свой вебхук |
+| API Voli для сетей | своя система без OCPI | сеть шлёт нам станции, статусы и зарядки, команды старта и остановки получает на свой вебхук |
 | Только на карте | интеграции нет | станции, разъёмы и цены на карте, заряжаются в приложении сети |
 
 API для сетей — [server/networkApi.js](server/networkApi.js), ключ `Bearer znk_…` выдаётся в админке один раз:
@@ -194,12 +194,12 @@ API для сетей — [server/networkApi.js](server/networkApi.js), ключ
 - `PUT /api/network/v1/stations/:ref` — станция и её разъёмы `{ name, address, city, lat, lng, connectors: [{ ref, type, power, price, status }] }`;
 - `PATCH /api/network/v1/stations/:ref/connectors/:cref` — `{ status: available | occupied | reserved | unavailable }`;
 - `POST /api/network/v1/sessions/:ref` — `{ event: started, driverId, station, connector }`, `{ event: meter, kwh }`, `{ event: stopped, kwh, cost }`;
-- команды сети: `POST <вебхук> { type: start | stop, … }` с заголовком `X-PowerGo-Signature: t=<unix>,v1=<HMAC-SHA256 от "<t>.<тело>">`.
+- команды сети: `POST <вебхук> { type: start | stop, … }` с заголовком `X-Voli-Signature: t=<unix>,v1=<HMAC-SHA256 от "<t>.<тело>">`.
 
 ### Оплата напрямую сети
 
 Сеть может принимать деньги водителей сама. Тогда у водителя появляется баланс этой сети. Он пополняет его через
-Payme или Click прямо в кассу сети — деньги идут ей на счёт, мимо PowerGo. Зарядки на станциях сети списываются с этого
+Payme или Click прямо в кассу сети — деньги идут ей на счёт, мимо Voli. Зарядки на станциях сети списываются с этого
 баланса. Сеть указывает в настройках своей кассы наши адреса уведомлений (`/api/payments/payme/<id сети>`,
 `/api/payments/click/<id сети>/prepare|complete`) и даёт ключ кассы. Каждый платёж нам подтверждается подписанным
 уведомлением. Поэтому в «Финансы → Расчёты с сетями» видно: сколько получила каждая сеть, сколько списано за

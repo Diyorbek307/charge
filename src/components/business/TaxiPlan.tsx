@@ -39,7 +39,7 @@ export default function TaxiPlan() {
       <Card title="Тариф для такси и курьеров" right={on ? <Pill tone="green">{`подключён · −${plan.discount}%`}</Pill> : <Pill tone="slate">не подключён</Pill>}>
         <div className="grid md:grid-cols-3 gap-4">
           <div className="md:col-span-2 space-y-3">
-            <p className="text-sm text-slate-600">Скидка растёт с объёмом парка за последние 30 дней. Её платит PowerGo — сети получают свою цену. Водители парка встают в очередь раньше обычных водителей, вся зарядка — на один счёт компании.</p>
+            <p className="text-sm text-slate-600">Скидка растёт с объёмом парка за последние 30 дней. Её платит Voli — сети получают свою цену. Водители парка встают в очередь раньше обычных водителей, вся зарядка — на один счёт компании.</p>
             <div className="flex gap-2 flex-wrap">
               {plan.tiers.map(t => (
                 <span key={t.kwh} className={`px-3 py-2 rounded-xl text-xs font-semibold ${plan.kwh30 >= t.kwh ? 'bg-[#FFF3C4] text-[#8a5b00]' : 'bg-slate-50 text-slate-500'}`}>

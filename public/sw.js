@@ -1,4 +1,4 @@
-/* PowerGo — service worker.
+/* Voli — service worker.
  *
  * Goals, in order: never serve a stale build, keep the app openable offline,
  * and stay entirely out of the way of the live-sync channel.
@@ -155,7 +155,7 @@ self.addEventListener('push', event => {
     data = { body: event.data ? event.data.text() : '' };
   }
   event.waitUntil(
-    self.registration.showNotification(data.title || 'PowerGo', {
+    self.registration.showNotification(data.title || 'Voli', {
       body: data.body || '',
       tag: data.tag,
       icon: '/icon-192.png',

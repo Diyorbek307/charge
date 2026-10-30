@@ -51,7 +51,7 @@ async function synthesize(provider, lang, text) {
         'Ocp-Apim-Subscription-Key': process.env.AZURE_SPEECH_KEY,
         'Content-Type': 'application/ssml+xml',
         'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3',
-        'User-Agent': 'PowerGo',
+        'User-Agent': 'Voli',
       },
       body: ssml,
       signal: AbortSignal.timeout(8000),

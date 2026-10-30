@@ -40,11 +40,11 @@ export const DEMO_ACCOUNTS = [
   {
     id: 'acc-admin',
     portal: 'admin',
-    login: 'admin@powergo.uz',
+    login: 'admin@voli.uz',
     password: 'Admin2026',
     name: 'Nodira Baxtiyorova',
     role: 'Администратор платформы',
-    org: 'PowerGo',
+    org: 'Voli',
     avatar: 'NB',
   },
   {
@@ -61,7 +61,7 @@ export const DEMO_ACCOUNTS = [
   {
     id: 'acc-partner',
     portal: 'api',
-    login: 'partner@powergo.uz',
+    login: 'partner@voli.uz',
     password: 'Partner2026',
     name: 'Integration Partner',
     role: 'API-партнёр',

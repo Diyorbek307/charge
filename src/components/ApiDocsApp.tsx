@@ -301,7 +301,7 @@ function Overview({ go }: { go: (s: Section) => void }) {
 
 const VERIFY_NODE = `import crypto from 'node:crypto';
 
-// header: X-PowerGo-Signature: t=1730108472,v1=5f2b…
+// header: X-Voli-Signature: t=1730108472,v1=5f2b…
 export function verify(rawBody, header, secret, toleranceSec = 300) {
   const parts = Object.fromEntries(header.split(',').map(p => p.split('=')));
   const t = Number(parts.t);
@@ -339,7 +339,7 @@ function Webhooks() {
       </div>
       <div>
         <p className="text-sm font-semibold text-white mb-2">Что приходит</p>
-        <Code id="wh-body" text={`POST /your/endpoint\nX-PowerGo-Event: session.start\nX-PowerGo-Timestamp: 1730108472\nX-PowerGo-Signature: t=1730108472,v1=5f2b…\n\n{\n  "id": "EV-1042",\n  "type": "session.start",\n  "created": "2026-10-28T09:41:12.000Z",\n  "data": { "message": "Старт зарядки · Toshkent Siti Hub", "stationId": "st-001", "connectorId": "c1" }\n}`} />
+        <Code id="wh-body" text={`POST /your/endpoint\nX-Voli-Event: session.start\nX-Voli-Timestamp: 1730108472\nX-Voli-Signature: t=1730108472,v1=5f2b…\n\n{\n  "id": "EV-1042",\n  "type": "session.start",\n  "created": "2026-10-28T09:41:12.000Z",\n  "data": { "message": "Старт зарядки · Toshkent Siti Hub", "stationId": "st-001", "connectorId": "c1" }\n}`} />
         <p className="text-xs text-slate-500 mt-2">Данные обезличены: без водителей и сумм. Ответьте 2xx в течение 10 секунд; обработку делайте асинхронно и по полю id отбрасывайте дубли.</p>
       </div>
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
