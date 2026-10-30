@@ -12,6 +12,7 @@ import BaseMap from './BaseMap';
 import { promoNow, isNight, networkLook, discounted, useDriverPromos } from '../lib/promos';
 import { NetworkBadge } from './driver/NetworkBadge';
 import { ChargerFriend } from './driver/Illustration';
+import { V_PATH } from '../landing/Logo';
 
 const statusColor: Record<string, string> = {
   available: '#16A34A',
@@ -56,7 +57,8 @@ let askedOnce = false;
 
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
-const BOLT = '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M13.2 2 5 13.4h5.6L9.4 22l8.6-11.6h-5.7z"/></svg>';
+// The Voli mark in the drop: the V-bolt on a white disc, as on the app icon.
+const MARK = `<svg class="pg-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="#fff"/><path d="${V_PATH}" fill="#111" transform="translate(24 25) scale(.76) translate(-24 -24)"/></svg>`;
 const PCT = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18"/><circle cx="7" cy="7" r="2.3"/><circle cx="17" cy="17" r="2.3"/></svg>';
 const MOON = '<svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>';
 
@@ -69,7 +71,7 @@ const TONES = {
 
 /**
  * A station pin: a glossy drop with a white rim and a shadow on the ground,
- * a bolt (or % for a promo), and close up a free/total badge and a chip with
+ * the Voli mark (or % for a promo), and close up a free/total badge and a chip with
  * the network and the discount. It drops in with a little bounce.
  */
 type PinMotion = { anim: 'enter' | 'split' | 'change' | 'none'; delay?: number; dx?: number; dy?: number; selected?: boolean; fan?: [number, number] };
@@ -93,7 +95,7 @@ function stationIcon(s: Station, promo: Promo | null, labelled: boolean, m: PinM
     <svg viewBox="0 0 40 50" width="40" height="50"><defs><linearGradient id="pg-g-${kind}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs>
     <path d="M20 48C20 48 4 31 4 19a16 16 0 0 1 32 0c0 12-16 29-16 29z" fill="url(#pg-g-${kind})" stroke="#fff" stroke-width="3"/>
     <ellipse cx="14.5" cy="12" rx="6" ry="3.4" fill="#fff" opacity=".35" transform="rotate(-30 14.5 12)"/></svg>
-    <span class="pg-drop-ic" style="color:${kind === 'promo' ? '#111' : '#fff'}">${promo ? PCT : BOLT}</span>${badge}</div><span class="pg-ground"></span></div>`;
+    <span class="pg-drop-ic" style="color:${kind === 'promo' ? '#111' : '#fff'}">${promo ? PCT : MARK}</span>${badge}</div><span class="pg-ground"></span></div>`;
   return L.divIcon({ html, className: 'pg-pin-wrap', iconSize: [0, 0], iconAnchor: [0, 0] });
 }
 
