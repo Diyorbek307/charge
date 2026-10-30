@@ -7,7 +7,7 @@ import { generateSecret, verifyTotp, otpauthUri } from './totp.js';
 import { hashPassword } from './seed.js';
 import { normalizePhone, issueCode, consumeCode, PURPOSES, smsConfigured } from './sms.js';
 import { submitLead, listLeads, updateLead, LEAD_KINDS } from './leads.js';
-import { notifyTeam, mailConfigured, NOTIFY_TO } from './mail.js';
+import { notifyTeam, mailConfigured, mailbox } from './mail.js';
 import { analyticsFor, adminUsers, setUserStatus, isBlocked, monthSpend } from './analytics.js';
 import { demoEnergy } from './history.js';
 import { riskReport, reviewFinding, cdrReport, bandFor, tariffBands, setTariffBands } from './admin.js';
@@ -1116,7 +1116,7 @@ api.post('/sos', requireAuth('driver'), featureOn('sos'), (req, res) => {
     ['Что случилось', r.sos.kind],
     ['Комментарий', r.sos.note ?? r.sos.text],
     ['Где', r.sos.lat != null ? `https://maps.google.com/?q=${r.sos.lat},${r.sos.lng}` : undefined],
-  ], '/?portal=admin&page=sos');
+  ], '/?portal=admin&page=sos', 'support');
   res.status(201).json(r);
 });
 
@@ -2913,7 +2913,7 @@ api.post('/leads', (req, res) => {
       ['Размер', l.size],
       ['Сообщение', l.message],
       ['Язык', l.lang.toUpperCase()],
-    ], '/?portal=admin&page=leads');
+    ], '/?portal=admin&page=leads', { driver: 'hello', operator: 'partners', partner: 'partners', fleet: 'business' }[l.kind]);
   }
   res.status(result.status).json(result.body);
 });
@@ -3065,7 +3065,7 @@ api.get('/admin/health', requireAuth('admin'), (_req, res) => {
       lastError: lastFailed ? { url: lastFailed.url, error: lastFailed.lastError, at: lastFailed.ts } : null,
     },
     sms: smsConfigured(),
-    mail: { configured: mailConfigured(), to: NOTIFY_TO },
+    mail: { configured: mailConfigured(), to: ['info', 'hello', 'partners', 'business', 'support'].map(mailbox).join(', ') },
     time: new Date().toISOString(),
   });
 });

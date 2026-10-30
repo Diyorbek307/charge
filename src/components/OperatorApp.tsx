@@ -355,7 +355,7 @@ function HelpPage({ onNavigate }: { onNavigate: (page: string) => void }) {
     { q: 'Роуминг с другими сетями (OCPI)', a: 'Пока не подключён — в дорожной карте платформы. Сейчас ваши станции видны всем водителям приложения и партнёрам через Partner API.' },
   ];
 
-  const mail = `mailto:${BRAND.email}?subject=${encodeURIComponent(`[${topic}] Оператор`)}&body=${encodeURIComponent(text)}`;
+  const mail = `mailto:${BRAND.emails.partners}?subject=${encodeURIComponent(`[${topic}] Оператор`)}&body=${encodeURIComponent(text)}`;
 
   return (
     <div className="p-4 md:p-6 pb-28 space-y-5 overflow-y-auto h-full">
@@ -401,7 +401,7 @@ function HelpPage({ onNavigate }: { onNavigate: (page: string) => void }) {
           </select>
           <textarea value={text} onChange={e => setText(e.target.value)} rows={5} placeholder="Опишите вопрос; для станции укажите её ID" aria-label="Сообщение" className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 resize-none text-slate-700" />
           <a href={mail} className={`block text-center w-full py-2.5 rounded-xl text-sm font-semibold text-white bg-sky-500 ${text.trim() ? '' : 'pointer-events-none opacity-40'}`}>Открыть письмо</a>
-          <p className="text-xs text-slate-400">{`Откроется ваша почта с готовым письмом на ${BRAND.email}.`}</p>
+          <p className="text-xs text-slate-400">{`Откроется ваша почта с готовым письмом на ${BRAND.emails.partners}.`}</p>
         </div>
       </div>
     </div>

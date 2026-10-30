@@ -4,9 +4,13 @@
  * SMTP_USER and SMTP_PASS are set; without them nothing is sent and the
  * admin panel still shows everything.
  *
- *   NOTIFY_EMAIL  where the letters go (default info@voli.uz)
+ *   NOTIFY_EMAIL  the general mailbox (default info@voli.uz)
  *   MAIL_FROM     the sender shown (default "Voli <SMTP_USER>")
  *   SMTP_PORT     465 (SSL, default) or 587 (STARTTLS)
+ *
+ * Each letter goes to the mailbox of its kind: networks to partners@, fleets
+ * to business@, waitlisted drivers to hello@, support and SOS to support@.
+ * MAIL_TO_<BOX> (MAIL_TO_PARTNERS, …) points one of them elsewhere.
  */
 import { report } from './monitoring.js';
 
@@ -15,6 +19,8 @@ const USER = process.env.SMTP_USER || '';
 const PASS = process.env.SMTP_PASS || '';
 const PORT = Number(process.env.SMTP_PORT || 465);
 export const NOTIFY_TO = process.env.NOTIFY_EMAIL || 'info@voli.uz';
+const BOX = { info: NOTIFY_TO, hello: 'hello@voli.uz', partners: 'partners@voli.uz', business: 'business@voli.uz', support: 'support@voli.uz' };
+export const mailbox = box => process.env[`MAIL_TO_${box.toUpperCase()}`] || BOX[box] || NOTIFY_TO;
 const FROM = process.env.MAIL_FROM || (USER ? `Voli <${USER}>` : '');
 const SITE = (process.env.PUBLIC_URL || 'https://app.voli.uz').replace(/\/+$/, '');
 
@@ -45,12 +51,12 @@ ${link ? `<p style="text-align:center;margin:20px 0"><a href="${SITE}${link}" st
   return { text, html };
 }
 
-/** Sends to the team without holding up the request that caused it. */
-export function notifyTeam(subject, rows, link) {
+/** Sends to the team's mailbox `box` without holding up the request that caused it. */
+export function notifyTeam(subject, rows, link, box = 'info') {
   if (!mailConfigured()) return;
   const { text, html } = letter(subject, rows, link);
   void transporter()
-    .then(t => t.sendMail({ from: FROM, to: NOTIFY_TO, subject: `Voli · ${subject}`, text, html }))
+    .then(t => t.sendMail({ from: FROM, to: mailbox(box), subject: `Voli · ${subject}`, text, html }))
     .catch(err => {
       console.warn('[mail]', err.message);
       report(err, 'mail');

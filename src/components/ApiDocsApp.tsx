@@ -295,7 +295,7 @@ function Overview({ go }: { go: (s: Section) => void }) {
           </button>
         ))}
       </div>
-      <p className="text-xs text-slate-500">Доступ выдаётся по заявке: {BRAND.email}. Обратно несовместимые изменения анонсируем минимум за 30 дней.</p>
+      <p className="text-xs text-slate-500">Доступ выдаётся по заявке: {BRAND.emails.partners}. Обратно несовместимые изменения анонсируем минимум за 30 дней.</p>
     </div>
   );
 }

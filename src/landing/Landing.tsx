@@ -955,8 +955,9 @@ function Footer({ c }: { c: LandingCopy }) {
         </div>
         <div>
           <p className="lp-footer-h">{c.footer.company}</p>
-          <a href={`mailto:${BRAND.email}`}><Send size={14} />{c.footer.contact}</a>
-          <span className="lp-footer-muted">{BRAND.email}</span>
+          {(['info', 'partners', 'business', 'support', 'hr'] as const).map(k => (
+            <a key={k} href={`mailto:${BRAND.emails[k]}`}><Send size={14} /><span>{c.footer.mail[k]}<span className="lp-footer-muted"> · {BRAND.emails[k]}</span></span></a>
+          ))}
           {LEGAL_IDS.map(d => <a key={d} href={legalHref(d)}><ScrollText size={14} />{c.legal[d]}</a>)}
         </div>
       </div>

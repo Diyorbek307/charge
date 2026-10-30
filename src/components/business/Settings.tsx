@@ -30,7 +30,7 @@ export default function BusinessSettings() {
           </dl>
           <p className="mt-4 text-xs text-slate-500 flex items-start gap-2">
             <Mail size={13} className="shrink-0 mt-0.5" />
-            {`Реквизиты, договор и состав сотрудников меняются через менеджера платформы: ${BRAND.email}`}
+            {`Реквизиты, договор и состав сотрудников меняются через менеджера платформы: ${BRAND.emails.business}`}
           </p>
         </Card>
 

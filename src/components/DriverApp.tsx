@@ -939,7 +939,7 @@ function AppSettingsScreen({ onBack, onReplayTour }: { onBack: () => void; onRep
             { label: 'Условия использования', href: '/?doc=terms' },
             { label: 'Политика конфиденциальности', href: '/?doc=privacy' },
             { label: 'Публичная оферта', href: '/?doc=offer' },
-            { label: 'Отправить отзыв', href: `mailto:${BRAND.email}?subject=${encodeURIComponent(`Отзыв о ${BRAND.name}`)}` },
+            { label: 'Отправить отзыв', href: `mailto:${BRAND.emails.support}?subject=${encodeURIComponent(`Отзыв о ${BRAND.name}`)}` },
           ].map(item => (
             <a key={item.label} href={item.href} target={item.href.startsWith('/') ? '_blank' : undefined} rel="noreferrer" className="px-4 py-3.5 flex items-center justify-between w-full border-b border-slate-50 last:border-none hover:bg-slate-50 transition-colors">
               <span className="text-sm text-slate-700">{item.label}</span>
@@ -1247,10 +1247,10 @@ function SupportScreen({ onBack, onReport }: { onBack: () => void; onReport: () 
           </div>
         ))}
 
-        <a href={`mailto:${BRAND.email}`} className="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+        <a href={`mailto:${BRAND.emails.support}`} className="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
           <div className="w-10 h-10 bg-sky-50 rounded-xl flex items-center justify-center shrink-0"><Send size={17} className="text-sky-600" /></div>
           <div>
-            <p className="text-sm font-semibold text-slate-800">{BRAND.email}</p>
+            <p className="text-sm font-semibold text-slate-800">{BRAND.emails.support}</p>
             <p className="text-xs text-slate-400">Напишите нам — укажите номер телефона и, если есть, номер зарядки из чека</p>
           </div>
         </a>

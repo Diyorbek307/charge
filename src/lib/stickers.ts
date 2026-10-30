@@ -172,7 +172,7 @@ async function drawSticker(st: StickerStation, index: number, origin: string): P
 
   // Whose charger it is and who answers.
   ctx.fillStyle = '#A3A3A3';
-  ctx.fillText(fitText(ctx, `Сеть ${st.operator} · ${BRAND.email}`, W - 140, 30, 500), W / 2, H - 60);
+  ctx.fillText(fitText(ctx, `Сеть ${st.operator} · ${BRAND.emails.support}`, W - 140, 30, 500), W / 2, H - 60);
   ctx.textAlign = 'left';
   return canvas;
 }

@@ -42,7 +42,7 @@ export default function AdminHealth() {
     { icon: <Cpu size={15} />, name: 'OCPP 1.6-J', ok: true, detail: data.ocpp.connected ? `${data.ocpp.connected} станций на связи` : 'Ни одна станция сейчас не подключена по OCPP' },
     { icon: <Bell size={15} />, name: 'Вебхуки', ok: w.failed === 0, detail: `${w.active} из ${w.endpoints} endpoint’ов активны · в очереди ${w.pending} · доставлено ${w.delivered} · с ошибкой ${w.failed}` },
     { icon: <MessageSquare size={15} />, name: 'SMS-шлюз', ok: data.sms, detail: data.sms ? 'Настроен' : 'Не настроен — коды входа показываются на экране (демо-режим)' },
-    { icon: <Bell size={15} />, name: 'Письма команде', ok: !!data.mail?.configured, detail: data.mail?.configured ? `Заявки, поддержка и SOS приходят на ${data.mail.to}` : `Не настроены — нужны SMTP_HOST, SMTP_USER и SMTP_PASS; письма пойдут на ${data.mail?.to ?? 'info@voli.uz'}` },
+    { icon: <Bell size={15} />, name: 'Письма команде', ok: !!data.mail?.configured, detail: data.mail?.configured ? `Заявки, поддержка и SOS приходят по ящикам: ${data.mail.to}` : `Не настроены — нужны SMTP_HOST, SMTP_USER и SMTP_PASS; письма пойдут на ящики @voli.uz` },
   ];
 
   return (

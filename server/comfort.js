@@ -160,7 +160,7 @@ api.post('/support/messages', requireAuth('driver'), (req, res) => {
       ['Водитель', req.account.name],
       ['Телефон', req.account.login],
       ['Сообщение', r.message.text || '(фото)'],
-    ], '/?portal=admin&page=support');
+    ], '/?portal=admin&page=support', 'support');
   }
   emit({ type: 'support.message', portal: 'driver', actor: req.account.name, message: `Поддержка: сообщение от ${req.account.name}`, entity: t.id, payload: { userId: req.account.id, from: 'user' } });
   res.status(201).json(publicThread(t));

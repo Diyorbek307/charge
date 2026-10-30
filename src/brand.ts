@@ -10,5 +10,15 @@ export const BRAND = {
   wordmark: ['V', 'oli'] as const,
   tagline: 'Все зарядки. Одно приложение.',
   domain: 'voli.uz',
-  email: 'hello@voli.uz',
+  /** General address: legal pages, anything without its own mailbox. */
+  email: 'info@voli.uz',
+  /** One mailbox per kind of conversation. */
+  emails: {
+    info: 'info@voli.uz',
+    hello: 'hello@voli.uz',
+    partners: 'partners@voli.uz',
+    business: 'business@voli.uz',
+    hr: 'hr@voli.uz',
+    support: 'support@voli.uz',
+  },
 };
