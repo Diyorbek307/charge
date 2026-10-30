@@ -72,7 +72,10 @@ class PostgresStore {
       this.client = { query: (text, params) => this.pglite.query(text, params) };
     } else {
       const { default: pg } = await import('pg');
-      const local = /localhost|127\.0\.0\.1/.test(this.url) || /sslmode=disable/.test(this.url);
+      // A host without a dot is a private-network name (Render's internal URL,
+      // a Docker service): no TLS there. Public hosts are always encrypted.
+      const host = new URL(this.url).hostname;
+      const local = /^(localhost|127\.0\.0\.1)$/.test(host) || !host.includes('.') || /sslmode=disable/.test(this.url);
       this.pool = new pg.Pool({
         connectionString: this.url,
         max: 3,
