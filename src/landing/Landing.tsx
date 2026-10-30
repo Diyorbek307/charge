@@ -34,8 +34,8 @@ const delay = (ms: number) => ({ '--d': `${ms}ms` }) as CSSProperties;
  * direct link. Moving between them swaps the page in place, animated with
  * the View Transitions API where the browser has it.
  */
-export type Page = 'home' | 'drivers' | 'networks' | 'prices' | 'faq' | 'about' | 'join';
-const PATHS: Record<Page, string> = { home: '/', drivers: '/drivers', networks: '/networks', prices: '/prices', faq: '/faq', about: '/about', join: '/join' };
+export type Page = 'home' | 'drivers' | 'networks' | 'prices' | 'guide' | 'faq' | 'about' | 'join';
+const PATHS: Record<Page, string> = { home: '/', drivers: '/drivers', networks: '/networks', prices: '/prices', guide: '/guide', faq: '/faq', about: '/about', join: '/join' };
 const PAGES = Object.keys(PATHS) as Page[];
 
 function pageFromUrl(): Page {
@@ -166,7 +166,7 @@ function LangPills() {
   );
 }
 
-const NAV_PAGES: Page[] = ['drivers', 'networks', 'prices', 'faq', 'about'];
+const NAV_PAGES: Page[] = ['drivers', 'networks', 'prices', 'guide', 'faq', 'about'];
 
 function Nav({ c, page, scrolled }: { c: LandingCopy; page: Page | null; scrolled: boolean }) {
   const [open, setOpen] = useState(false);
@@ -370,14 +370,14 @@ function HowTo({ c }: { c: LandingCopy }) {
 
 /** Big typographic links to the inner pages. */
 function NextPages({ c }: { c: LandingCopy }) {
-  const items: Page[] = ['drivers', 'networks', 'prices'];
+  const items = ['drivers', 'networks', 'prices', 'guide'] as const;
   return (
     <section className="lp-sec">
       <div className="lp-wrap">
         <div className="rv"><Kicker>{c.next.kicker}</Kicker></div>
         <nav className="lp-next" aria-label={c.next.kicker}>
           {items.map((p, i) => {
-            const it = c.next.items[p as 'drivers' | 'networks' | 'prices'];
+            const it = c.next.items[p];
             return (
               <PageLink key={p} to={p} className="lp-next-row rv" style={delay(i * 90)}>
                 <span className="lp-next-t">{it.t}</span>
@@ -1008,6 +1008,250 @@ function FaqPage({ c }: { c: LandingCopy }) {
   );
 }
 
+// ───────────────────────── Guide ─────────────────────────
+
+const shot = (lang: Lang, id: string) => `/landing/guide/${lang}/${id}.webp`;
+
+/** A phone with a real screenshot of the app inside. */
+function PhoneShot({ src, alt, eager }: { src: string; alt: string; eager?: boolean }) {
+  return (
+    <div className="lp-shot">
+      <img src={src} alt={alt} width={540} height={1169} loading={eager ? 'eager' : 'lazy'} decoding="async" />
+    </div>
+  );
+}
+
+/**
+ * The steps scroll past a phone that stays in place on wide screens and
+ * swaps to each step's screen; on a phone every step carries its own shot.
+ */
+function GuideSteps({ c, lang }: { c: LandingCopy; lang: Lang }) {
+  const g = c.guide;
+  const [active, setActive] = useState(0);
+  const list = useRef<HTMLOListElement>(null);
+  useEffect(() => {
+    const el = list.current;
+    if (!el || !('IntersectionObserver' in window)) return;
+    const root = el.closest('.lp');
+    const io = new IntersectionObserver(
+      entries => entries.forEach(e => { if (e.isIntersecting) setActive(Number((e.target as HTMLElement).dataset.i)); }),
+      { root, rootMargin: '-45% 0px -45% 0px' },
+    );
+    el.querySelectorAll('li').forEach(li => io.observe(li));
+    return () => io.disconnect();
+  }, []);
+  return (
+    <section className="lp-sec lp-sec-tight">
+      <div className="lp-wrap lp-guide">
+        <div className="lp-guide-phone" aria-hidden="true">
+          <div className="lp-shot">
+            {g.steps.map((s, i) => (
+              <img key={s.id} src={shot(lang, s.id)} alt="" width={540} height={1169} className={i === active ? 'is-on' : ''} loading={i < 2 ? 'eager' : 'lazy'} decoding="async" />
+            ))}
+          </div>
+          <div className="lp-guide-dots">{g.steps.map((s, i) => <i key={s.id} className={i === active ? 'is-on' : ''} />)}</div>
+        </div>
+        <ol className="lp-guide-steps" ref={list}>
+          {g.steps.map((s, i) => (
+            <li key={s.id} data-i={i} className={i === active ? 'is-on' : ''}>
+              <span className="lp-guide-n">{String(i + 1).padStart(2, '0')}</span>
+              <h2>{s.t}</h2>
+              <p>{s.d}</p>
+              <div className="lp-guide-inline"><PhoneShot src={shot(lang, s.id)} alt={`${g.alt}: ${s.t}`} /></div>
+            </li>
+          ))}
+        </ol>
+      </div>
+      <div className="lp-wrap"><p className="lp-note">{g.note}</p></div>
+    </section>
+  );
+}
+
+/** The Voli mark as an app icon inside a notification. */
+const AppIcon = ({ size = 20 }: { size?: number }) => <span className="lp-n-icon"><LogoMark size={size} /></span>;
+
+function AndroidLock({ c }: { c: LandingCopy }) {
+  const d = c.devices;
+  const a = d.android;
+  return (
+    <div className="lp-dev lp-dev-android" aria-hidden="true">
+      <div className="lp-dev-screen lp-wall-a">
+        <div className="lp-dev-status"><span>21:47</span><span className="lp-dev-sys"><i /><i /><b>78%</b></span></div>
+        <p className="lp-lock-time lp-lock-time-a">21:47</p>
+        <p className="lp-lock-date">{d.date}</p>
+        <div className="lp-n-stack">
+          <div className="lp-n lp-n-a lp-n-live" style={delay(200)}>
+            <div className="lp-n-head"><AppIcon /><span>Voli</span><em>· {d.now}</em></div>
+            <b>{a.live.title}</b>
+            <p>{a.live.body}</p>
+            <div className="lp-n-bar"><i style={{ width: '72%' }} /></div>
+            <div className="lp-n-actions"><span>{a.live.action}</span></div>
+          </div>
+          <div className="lp-n lp-n-a" style={delay(700)}>
+            <div className="lp-n-head"><AppIcon /><span>Voli</span><em>· {d.ago}</em></div>
+            <b>{a.queue.title}</b>
+            <p>{a.queue.body}</p>
+          </div>
+          <div className="lp-n lp-n-a" style={delay(1200)}>
+            <div className="lp-n-head"><AppIcon /><span>Voli</span><em>· 1 h</em></div>
+            <b>{a.done.title}</b>
+            <p>{a.done.body}</p>
+          </div>
+        </div>
+        <span className="lp-dev-home" />
+      </div>
+    </div>
+  );
+}
+
+function IphoneLock({ c }: { c: LandingCopy }) {
+  const d = c.devices;
+  const o = d.ios;
+  const rows = [[o.goal, d.now], [o.support, d.ago], [o.booking, '9:12']] as const;
+  return (
+    <div className="lp-dev lp-dev-ios" aria-hidden="true">
+      <div className="lp-dev-screen lp-wall-i">
+        <span className="lp-dev-island" />
+        <div className="lp-dev-status lp-dev-status-i"><span>9:41</span><span className="lp-dev-sys"><i /><i /><b /></span></div>
+        <p className="lp-lock-date lp-lock-date-i">{d.date}</p>
+        <p className="lp-lock-time">9:41</p>
+        <div className="lp-n-stack lp-n-stack-i">
+          {rows.map(([n, when], i) => (
+            <div key={i} className="lp-n lp-n-i" style={delay(200 + i * 500)}>
+              <AppIcon size={30} />
+              <div>
+                <div className="lp-n-row"><b>{n.title}</b><em>{when}</em></div>
+                <p>{n.body}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <span className="lp-dev-home" />
+      </div>
+    </div>
+  );
+}
+
+/** Demo stations as the car screens list them (CarPlaySceneDelegate / StationsScreen). */
+const CAR_STATIONS = [
+  { name: 'Toshkent Siti Hub', km: 1.2, op: 'GreenCharge UZ', free: 3, total: 4, kw: 150, price: 2000, x: 62, y: 46 },
+  { name: 'Yunusobod Mall Charge', km: 4.6, op: 'EcoVolt', free: 0, total: 3, kw: 120, price: 1600, x: 84, y: 24 },
+  { name: 'Samarqand Gateway', km: 289, op: 'SilkRoad EV', free: 2, total: 2, kw: 120, price: 1900, x: 74, y: 80 },
+];
+
+function CarScreen({ c, lang }: { c: LandingCopy; lang: Lang }) {
+  const k = c.devices.car;
+  const [sys, setSys] = useState<'carplay' | 'auto'>('carplay');
+  const km = (v: number) => `${v.toLocaleString(lang === 'en' ? 'en-US' : 'ru-RU', { maximumFractionDigits: 1, minimumFractionDigits: v < 10 ? 1 : 0 })} ${k.km}`;
+  const fill = (tpl: string, v: Record<string, string | number>) => tpl.replace(/\{(\w+)\}/g, (_, key: string) => String(v[key] ?? ''));
+  const status = (s: typeof CAR_STATIONS[number], withPrice: boolean) =>
+    s.free > 0
+      ? fill(k.free, { f: s.free, t: s.total, kw: s.kw }) + (withPrice ? ` · ${fill(k.price, { p: fmt(s.price, lang) })}` : '')
+      : fill(k.busy, { kw: s.kw });
+  return (
+    <div className="lp-car-wrap">
+      <div className="lp-switcher lp-switcher-sm" role="tablist" data-on={sys === 'carplay' ? 'driver' : 'network'}>
+        {(['carplay', 'auto'] as const).map(s => <button key={s} role="tab" aria-selected={sys === s} onClick={() => setSys(s)}>{k.tabs[s]}</button>)}
+      </div>
+      <div className={`lp-car lp-car-${sys}`} aria-hidden="true">
+        <div className="lp-car-screen" key={sys}>
+          {sys === 'carplay' ? (
+            <>
+              <div className="lp-cp-dock">
+                <span className="lp-cp-time">9:41</span>
+                <span className="lp-cp-app is-on"><LogoMark size={30} /></span>
+                <span className="lp-cp-app lp-cp-maps" />
+                <span className="lp-cp-app lp-cp-music" />
+                <span className="lp-cp-grid" />
+              </div>
+              <div className="lp-car-map">
+                {CAR_STATIONS.map((s, i) => <span key={i} className={`lp-car-pin ${i === 0 ? 'is-sel' : ''}`} style={{ left: `${s.x}%`, top: `${s.y}%` }}>{i + 1}</span>)}
+                <span className="lp-car-me" style={{ left: '56%', top: '60%' }} />
+              </div>
+              <div className="lp-cp-panel">
+                <p className="lp-cp-title">Voli</p>
+                {CAR_STATIONS.map((s, i) => (
+                  <div key={i} className={`lp-cp-row ${i === 0 ? 'is-sel' : ''}`}>
+                    <span className="lp-cp-n">{i + 1}</span>
+                    <div><b>{s.name}</b><small>{km(s.km)} · {s.op}</small><em className={s.free ? '' : 'is-busy'}>{status(s, false)}</em></div>
+                  </div>
+                ))}
+                <span className="lp-cp-btn">{k.route}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="lp-aa-rail"><span className="lp-aa-time">9:41</span><span className="lp-aa-ic lp-aa-nav" /><span className="lp-aa-ic is-on"><LogoMark size={26} /></span><span className="lp-aa-ic lp-aa-media" /><span className="lp-aa-ic lp-aa-dots" /></div>
+              <div className="lp-aa-panel">
+                <div className="lp-aa-head"><LogoMark size={22} /><b>{k.aaTitle}</b><span>{k.refresh}</span></div>
+                {CAR_STATIONS.map((s, i) => (
+                  <div key={i} className="lp-aa-row">
+                    <span className={`lp-aa-mark ${s.free ? '' : 'is-busy'}`}>{i + 1}</span>
+                    <div><b>{s.name}</b><small><strong>{km(s.km)}</strong>  ·  {s.op}</small><em>{status(s, true)}</em></div>
+                  </div>
+                ))}
+              </div>
+              <div className="lp-car-map lp-aa-map">
+                {CAR_STATIONS.map((s, i) => <span key={i} className={`lp-car-pin lp-aa-pin ${s.free ? '' : 'is-busy'}`} style={{ left: `${s.x}%`, top: `${s.y}%` }}>{i + 1}</span>)}
+                <span className="lp-car-me" style={{ left: '40%', top: '58%' }} />
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Devices({ c, lang }: { c: LandingCopy; lang: Lang }) {
+  const d = c.devices;
+  return (
+    <section className="lp-sec" id="devices">
+      <div className="lp-wrap">
+        <SectionHead kicker={d.kicker} title={d.title} sub={d.sub} />
+        <div className="lp-scene rv">
+          <div className="lp-scene-copy">
+            <h3>{d.android.t}</h3>
+            <p>{d.android.d}</p>
+          </div>
+          <AndroidLock c={c} />
+        </div>
+        <div className="lp-scene is-flip rv">
+          <div className="lp-scene-copy">
+            <h3>{d.ios.t}</h3>
+            <p>{d.ios.d}</p>
+            <h4>{d.kinds.title}</h4>
+            <ul className="lp-kinds">
+              {d.kinds.items.map((it, i) => <li key={i}><b>{it.t}</b><span>{it.d}</span></li>)}
+            </ul>
+          </div>
+          <IphoneLock c={c} />
+        </div>
+        <div className="lp-scene lp-scene-car rv">
+          <div className="lp-scene-copy">
+            <h3>{d.car.t}</h3>
+            <p>{d.car.d}</p>
+            <p className="lp-scene-soon"><Clock size={16} />{d.car.soon}</p>
+          </div>
+          <CarScreen c={c} lang={lang} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function GuidePage({ c, lang }: { c: LandingCopy; lang: Lang }) {
+  const g = c.guide;
+  return (
+    <>
+      <PageHead kicker={g.kicker} title={g.title} sub={g.sub} />
+      <GuideSteps c={c} lang={lang} />
+      <Devices c={c} lang={lang} />
+      <Cta c={c} />
+    </>
+  );
+}
+
 const MAILBOXES = ['info', 'partners', 'business', 'support', 'hr'] as const;
 
 function AboutPage({ c }: { c: LandingCopy }) {
@@ -1109,7 +1353,7 @@ function Footer({ c }: { c: LandingCopy }) {
         </div>
         <div>
           <p className="lp-footer-h">{c.footer.pages}</p>
-          {(['home', 'drivers', 'networks', 'prices', 'faq', 'about', 'join'] as Page[]).map(p => <PageLink key={p} to={p}>{c.nav[p]}</PageLink>)}
+          {(['home', 'drivers', 'networks', 'prices', 'guide', 'faq', 'about', 'join'] as Page[]).map(p => <PageLink key={p} to={p}>{c.nav[p]}</PageLink>)}
         </div>
         <div>
           <p className="lp-footer-h">{c.footer.company}</p>
@@ -1219,6 +1463,7 @@ export default function Landing() {
             : page === 'drivers' ? <DriversPage c={c} lang={lang} fc={fc} />
             : page === 'networks' ? <NetworksPage c={c} />
             : page === 'prices' ? <PricesPage c={c} lang={lang} fc={fc} />
+            : page === 'guide' ? <GuidePage c={c} lang={lang} />
             : page === 'faq' ? <FaqPage c={c} />
             : page === 'about' ? <AboutPage c={c} />
             : page === 'join' ? <JoinPage c={c} lang={lang} />
