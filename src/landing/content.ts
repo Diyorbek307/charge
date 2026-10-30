@@ -13,10 +13,11 @@ const B = BRAND.name;
 const ru = {
   meta: { title: `${B} — все зарядки Узбекистана в одном приложении` },
   nav: {
-    home: 'Главная', drivers: 'Водителям', networks: 'Сетям', prices: 'Тарифы', faq: 'Вопросы', join: 'Подключиться',
+    home: 'Главная', drivers: 'Водителям', networks: 'Сетям', prices: 'Тарифы', faq: 'Вопросы', about: 'О нас', join: 'Подключиться',
     menu: 'Меню', close: 'Закрыть',
   },
   pages: {
+    about: { kicker: 'О компании', title: 'Мы собираем зарядку Узбекистана в одно целое.', sub: `${B} — команда из Узбекистана. Мы не строим станции, а соединяем сети: водителю так проще, а сетям выгоднее.` },
     drivers: { kicker: 'Водителям', title: 'Всё для зарядки — в одном приложении.', sub: 'Найти свободную станцию, узнать цену заранее и спокойно доехать до цели.' },
     networks: { kicker: 'Сетям зарядки', title: 'Агрегатор, а не конкурент.', sub: `Своих станций у ${B} нет и не будет. Мы приводим водителей на ваши станции, а бренд, цены и приложение остаются вашими.` },
     prices: { kicker: 'Тарифы', title: 'Цена известна до старта.', sub: 'Стоимость кВт·ч задаёт сеть. Вы видите её заранее, а ночью платите меньше.' },
@@ -55,14 +56,73 @@ const ru = {
     ],
     answer: `${B} решает всё это в одном приложении.`,
   },
-  how: {
+  howTo: {
     kicker: 'Как это работает',
-    title: 'Нашёл. Подключил. Поехал.',
-    steps: [
-      { t: 'Найдите', d: 'Карта покажет ближайшую свободную станцию любой сети и проложит маршрут.' },
-      { t: 'Подключите', d: 'Вставьте кабель и отсканируйте QR-код. Цену вы уже видели.' },
-      { t: 'Поезжайте', d: 'Оплата спишется по факту, чек придёт в приложение.' },
+    title: 'Пара минут — и всё понятно.',
+    tabs: { driver: 'Водителю', network: 'Сети зарядки' },
+    driver: [
+      { t: 'Войдите по номеру телефона', d: 'Код придёт в SMS. Добавьте автомобиль и получите 100 000 сум бонуса.' },
+      { t: 'Найдите станцию', d: 'Карта покажет все сети, путь по дорогам и где будет свободно к вашему приезду. Разъём можно забронировать.' },
+      { t: 'Подключите кабель и отсканируйте QR', d: 'Цену вы видите заранее, а ход зарядки — даже на экране блокировки.' },
+      { t: 'Оплатите и поезжайте', d: 'Деньги спишутся из кошелька по факту, чек останется в приложении. Ночью на 30% дешевле.' },
     ],
+    network: [
+      { t: 'Оставьте заявку', d: 'Расскажите о сети: сколько станций и где они стоят. Ответим в течение рабочего дня.' },
+      { t: 'Подпишем договор', d: 'Без вложений и абонентской платы. Комиссия — только с зарядок, которые привели мы.' },
+      { t: 'Подключим станции', d: 'Станции, цены и статусы разъёмов появятся на карте Voli. Ваше приложение продолжит работать.' },
+      { t: 'Встречайте водителей', d: 'Оплата поступает в кассу сети, а загрузку и отзывы вы видите в своём кабинете.' },
+    ],
+  },
+  promo: {
+    kicker: 'Продвижение станций',
+    title: 'Станция простаивает? Приведём к ней водителей.',
+    sub: 'Новая станция в спальном районе или на трассе может неделями ждать клиентов. Voli помогает сети заполнить её — инструментами, которые уже работают в приложении.',
+    items: [
+      { id: 'reach', t: 'Станцию видят все', d: 'Её найдут водители всех подключённых сетей, а не только ваши постоянные клиенты.' },
+      { id: 'deals', t: 'Акции прямо на карте', d: 'Скидка сети видна на карте ярлыком «−N%» и попадает на страницу «Скидки».' },
+      { id: 'night', t: 'Спрос в нужные часы', d: 'Ночная цена ×0,7 переносит зарядки из часа пик на время, когда станция свободна.' },
+      { id: 'nearby', t: '«Пока заряжаетесь»', d: 'Кафе, магазины и предложения партнёров рядом — ещё один повод заехать именно к вам.' },
+      { id: 'rewards', t: 'Бонусы за наш счёт', d: 'Бонусы и награды водителям платит Voli, а не сеть.' },
+      { id: 'launch', t: 'Громкое открытие', d: 'Анонсируем запуск новой станции вместе с вами.' },
+      { id: 'forecast', t: 'Едут без сомнений', d: 'Прогноз «свободно к приезду» и бронь снимают главный страх водителя — приехать к занятой станции.' },
+      { id: 'insights', t: 'Всё видно в кабинете', d: 'Загрузка по часам и отзывы водителей подскажут, что работает, а что стоит поменять.' },
+    ],
+    mock: { name: 'Станция у ТЦ', deal: '−20%', note: 'до 18:00', load: 'Загрузка по часам' },
+  },
+  safety: {
+    kicker: 'Безопасность и оплата',
+    title: 'Платить просто. Рисковать нечем.',
+    items: [
+      { t: 'Один кошелёк на все сети', d: 'Пополняйте через Payme, Click, Uzum или картой Humo. Деньги зачисляются только после подтверждения платёжной системы.' },
+      { t: 'Карта остаётся у банка', d: 'Данные карты вводятся на стороне платёжной системы. Voli их не видит и не хранит.' },
+      { t: 'Цена не меняется', d: 'Стоимость фиксируется в момент старта, а списывается ровно столько, сколько вы зарядили.' },
+      { t: 'Долг — только по вашему лицу', d: 'Перед зарядкой в долг приложение сверяет лицо, поэтому за ваш счёт никто не зарядится.' },
+      { t: 'Вход без паролей', d: 'Вы входите по коду из SMS — нечего забыть и нечего украсть.' },
+      { t: 'Помощь в дороге', d: 'Кнопка SOS на трассе и поддержка по почте, на трёх языках.' },
+    ],
+  },
+  about: {
+    mission: {
+      kicker: 'Зачем мы это делаем',
+      title: 'Электромобилей всё больше. Заряжаться должно быть проще.',
+      text: 'Сегодня зарядка разбита на десяток приложений, балансов и правил. Мы хотим, чтобы водитель открывал одно приложение и спокойно ехал куда угодно, а каждая станция в стране находила своих клиентов.',
+    },
+    facts: [
+      { n: '0', t: 'своих станций — мы одинаково честны со всеми сетями' },
+      { n: '3', t: 'языка: узбекский, русский и английский' },
+      { n: '[___]', t: 'сетей-партнёров на старте' },
+      { n: 'IV кв. 2026', t: 'запуск в Ташкенте' },
+    ],
+    principles: {
+      kicker: 'Наши принципы',
+      items: [
+        { t: 'Честная цена', d: 'Водитель видит стоимость до старта. Никаких сюрпризов после.' },
+        { t: 'Нейтральность', d: 'Мы не конкурируем с сетями и показываем все станции по одним правилам.' },
+        { t: 'Бережно к данным', d: 'Берём только то, что нужно для зарядки и оплаты.' },
+        { t: 'Сделано здесь', d: 'Три языка, местные платёжные системы и дороги, которые мы знаем.' },
+      ],
+    },
+    contacts: { kicker: 'Контакты', title: 'Напишите нам.', sub: 'У каждого вопроса свой адрес — так ответ придёт быстрее.' },
   },
   next: {
     kicker: 'Дальше',
@@ -112,7 +172,7 @@ const ru = {
   },
   facts: [
     { n: '×0,7', t: 'ночью, с 23:00 до 07:00' },
-    { n: '0 сум', t: 'за подписку — платите только за кВт·ч' },
+    { n: '0 сум', t: 'за регистрацию — платите только за зарядку' },
     { n: '100 000', t: 'сум бонуса за данные автомобиля' },
     { n: '14 дней', t: 'на оплату зарядки в долг, без процентов' },
   ],
@@ -162,7 +222,6 @@ const ru = {
       ],
     },
     stepsTitle: 'Как подключиться',
-    steps: ['Оставляете заявку', 'Подписываем договор', 'Ваши станции появляются в Voli'],
     cta: 'Подключить сеть',
   },
   compare: {
@@ -190,10 +249,10 @@ const ru = {
   join: {
     kicker: 'Подключиться',
     title: 'Оставьте заявку.',
-    sub: 'Выберите, кто вы, — и мы свяжемся с вами.',
+    sub: 'Расскажите, кто вы, и мы свяжемся с вами.',
     tabs: { driver: 'Водителям', operator: 'Сетям зарядки', fleet: 'Автопаркам', partner: 'Партнёрам' },
     pitch: {
-      driver: 'Сообщим о запуске одними из первых и откроем ранний доступ к приложению.',
+      driver: 'Вы первыми узнаете о запуске и получите ранний доступ к приложению.',
       operator: 'Подключим вашу сеть по договору. Риск ноль, деньги — сразу в вашу кассу.',
       fleet: 'Один счёт на все машины и лимиты для водителей. Расскажем, как перевести парк.',
       partner: 'ТЦ, отели, автосалоны: зарядка на вашей площадке и новые гости у дверей.',
@@ -223,22 +282,44 @@ const ru = {
     ruOnly: '',
   },
   faq: {
-    items: [
-      { q: `Что такое ${B}?`, a: `${B} — одно приложение для всех зарядных станций Узбекистана. Мы не строим свои станции, а подключаем сети-партнёров. Карта, запуск, оплата и очередь работают одинаково в любой сети.` },
-      { q: 'Сколько стоит зарядка?', a: 'Цену за кВт·ч устанавливает сеть, и вы видите её до старта. С 23:00 до 07:00 она умножается на 0,7. Множитель фиксируется в момент начала зарядки.' },
-      { q: 'Как оплатить?', a: 'Пополните кошелёк через Payme, Click, Uzum или картой Humo и заряжайтесь в любой сети. Списывается ровно столько, сколько вы зарядили.' },
-      { q: 'Можно зарядиться в долг?', a: 'Да. Один раз сохраните фото лица и примите условия. После этого при старте можно выбрать «В долг»: до 300 000 сум, вернуть в течение 14 дней, без процентов. Перед каждой такой зарядкой приложение сверяет лицо, поэтому за ваш счёт никто другой не зарядится.' },
-      { q: 'Что если все разъёмы заняты?', a: 'Встаньте в очередь или забронируйте разъём заранее. Когда он освободится, мы придержим его для вас и пришлём уведомление.' },
-      { q: 'Что если на трассе нет интернета?', a: 'Сохраните маршрут заранее: карта, станции и навигатор с камерами будут работать офлайн. На крайний случай есть кнопка SOS.' },
-      { q: 'Подойдёт ли моя машина?', a: 'Приложение показывает тип и мощность каждого разъёма, а фильтр оставляет только подходящие станции. Добавьте данные автомобиля и получите бонус 100 000 сум.' },
-      { q: 'У нас своя сеть и своё приложение. Зачем нам Voli?', a: `${B} — агрегатор, а не конкурент: своих станций у нас нет. Мы приводим водителей, которые не ставили ваше приложение. Риска нет, оплата поступает сразу в кассу вашей сети, а ваше приложение продолжает работать.` },
-      { q: 'Есть ли решение для автопарков и семей?', a: 'Да: один счёт на несколько машин, лимиты для водителей и отчёты о расходах.' },
-      { q: 'Когда запуск?', a: 'Запуск в Ташкенте запланирован на IV квартал 2026 года. Оставьте номер — сообщим первыми.' },
+    groups: [
+      {
+        t: 'Водителям',
+        items: [
+          { q: `Что такое ${B}?`, a: `${B} — одно приложение для всех зарядных станций Узбекистана. Мы не строим свои станции, а подключаем сети-партнёров. Карта, запуск, оплата и очередь работают одинаково в любой сети.` },
+          { q: 'Подойдёт ли моя машина?', a: 'Приложение показывает тип и мощность каждого разъёма, а фильтр оставляет только подходящие станции. Добавьте данные автомобиля и получите бонус 100 000 сум.' },
+          { q: 'Что если все разъёмы заняты?', a: 'Встаньте в очередь или забронируйте разъём заранее. Когда он освободится, мы придержим его для вас и пришлём уведомление.' },
+          { q: 'Что если на трассе нет интернета?', a: 'Сохраните маршрут заранее: карта, станции и навигатор с камерами будут работать офлайн. На крайний случай есть кнопка SOS.' },
+          { q: 'Работает ли Voli в машине?', a: 'Да, через Android Auto и CarPlay: карта и навигатор появятся на экране автомобиля.' },
+          { q: 'Есть ли решение для автопарков и семей?', a: 'Да: один счёт на несколько машин, лимиты для водителей и отчёты о расходах.' },
+          { q: 'Когда запуск?', a: 'Запуск в Ташкенте запланирован на IV квартал 2026 года. Оставьте номер — сообщим первыми.' },
+        ],
+      },
+      {
+        t: 'Оплата и безопасность',
+        items: [
+          { q: 'Сколько стоит зарядка?', a: 'Цену за кВт·ч устанавливает сеть, и вы видите её до старта. С 23:00 до 07:00 она умножается на 0,7. Множитель фиксируется в момент начала зарядки.' },
+          { q: 'Как оплатить?', a: 'Пополните кошелёк через Payme, Click, Uzum или картой Humo и заряжайтесь в любой сети. Списывается ровно столько, сколько вы зарядили.' },
+          { q: 'Нужно ли платить за само приложение?', a: 'Нет. Регистрация и пользование бесплатны, вы платите только за зарядку. Подписка Voli Plus — по желанию.' },
+          { q: 'Можно зарядиться в долг?', a: 'Да. Один раз сохраните фото лица и примите условия. После этого при старте можно выбрать «В долг»: до 300 000 сум, вернуть в течение 14 дней, без процентов. Перед каждой такой зарядкой приложение сверяет лицо, поэтому за ваш счёт никто другой не зарядится.' },
+          { q: 'Безопасно ли платить картой?', a: 'Да. Карту вы вводите на стороне платёжной системы, Voli её данные не видит и не хранит. Кошелёк пополняется только после подтверждения платежа.' },
+        ],
+      },
+      {
+        t: 'Сетям зарядки',
+        items: [
+          { q: 'У нас своя сеть и своё приложение. Зачем нам Voli?', a: `${B} — агрегатор, а не конкурент: своих станций у нас нет. Мы приводим водителей, которые не ставили ваше приложение. Риска нет, оплата поступает сразу в кассу вашей сети, а ваше приложение продолжает работать.` },
+          { q: 'Сколько стоит подключение?', a: 'Подключение бесплатное, абонентской платы нет. Комиссию мы берём только с зарядок, которые привели сами; её размер закрепляем в договоре.' },
+          { q: 'Как Voli помогает станциям, у которых мало клиентов?', a: 'Станцию видят водители всех сетей, ваши акции отмечены на карте ярлыком «−N%», ночная цена переносит спрос из часа пик, а места и предложения партнёров рядом дают повод заехать. Бонусы водителям платим мы, а открытие новой станции анонсируем вместе с вами.' },
+          { q: 'Куда поступают деньги за зарядку?', a: 'Сразу в кассу вашей сети. Они не задерживаются у посредника.' },
+          { q: 'Что сеть видит в своём кабинете?', a: 'Загрузку станций по часам, зарядки, отзывы и жалобы водителей, тарифы и выплаты.' },
+        ],
+      },
     ],
   },
   cta: {
     title: 'Подключайся и поехали!',
-    sub: 'Оставьте номер — сообщим о запуске одними из первых.',
+    sub: 'Оставьте номер — и вы первыми узнаете о запуске.',
     join: 'Сообщить о запуске',
   },
   phone: { kw: 'кВт' },
@@ -258,10 +339,11 @@ export type LandingCopy = typeof ru;
 const uz: LandingCopy = {
   meta: { title: `${B} — O‘zbekistondagi barcha zaryadlash shoxobchalari bitta ilovada` },
   nav: {
-    home: 'Bosh sahifa', drivers: 'Haydovchilarga', networks: 'Tarmoqlarga', prices: 'Tariflar', faq: 'Savollar', join: 'Ulanish',
+    home: 'Bosh sahifa', drivers: 'Haydovchilarga', networks: 'Tarmoqlarga', prices: 'Tariflar', faq: 'Savollar', about: 'Biz haqimizda', join: 'Ulanish',
     menu: 'Menyu', close: 'Yopish',
   },
   pages: {
+    about: { kicker: 'Kompaniya haqida', title: 'O‘zbekistondagi zaryadlashni bir butunga yig‘amiz.', sub: `${B} — O‘zbekistondan bo‘lgan jamoa. Biz stansiya qurmaymiz, tarmoqlarni bog‘laymiz: haydovchiga qulayroq, tarmoqlarga foydaliroq.` },
     drivers: { kicker: 'Haydovchilarga', title: 'Zaryadlash uchun hammasi — bitta ilovada.', sub: 'Bo‘sh stansiyani toping, narxni oldindan biling va manzilga xotirjam yetib boring.' },
     networks: { kicker: 'Zaryadlash tarmoqlariga', title: 'Agregator, raqobatchi emas.', sub: `${B}ning o‘z stansiyalari yo‘q va bo‘lmaydi. Biz haydovchilarni stansiyalaringizga olib kelamiz, brend, narxlar va ilova esa sizniki bo‘lib qoladi.` },
     prices: { kicker: 'Tariflar', title: 'Narx boshlashdan oldin ma’lum.', sub: 'kVt·s narxini tarmoq belgilaydi. Siz uni oldindan ko‘rasiz, tunda esa kamroq to‘laysiz.' },
@@ -300,14 +382,73 @@ const uz: LandingCopy = {
     ],
     answer: `${B} bularning hammasini bitta ilovada hal qiladi.`,
   },
-  how: {
+  howTo: {
     kicker: 'Qanday ishlaydi',
-    title: 'Topdim. Uladim. Ketdim.',
-    steps: [
-      { t: 'Toping', d: 'Xarita istalgan tarmoqning eng yaqin bo‘sh stansiyasini ko‘rsatadi va yo‘l chizadi.' },
-      { t: 'Ulang', d: 'Kabelni ulang va QR kodni skanerlang. Narxni allaqachon ko‘rgansiz.' },
-      { t: 'Yo‘lga chiqing', d: 'To‘lov haqiqiy sarf bo‘yicha yechiladi, chek ilovaga keladi.' },
+    title: 'Bir necha daqiqa — va hammasi tushunarli.',
+    tabs: { driver: 'Haydovchiga', network: 'Zaryadlash tarmog‘iga' },
+    driver: [
+      { t: 'Telefon raqamingiz bilan kiring', d: 'Kod SMS orqali keladi. Avtomobilingizni qo‘shing va 100 000 so‘m bonus oling.' },
+      { t: 'Stansiyani toping', d: 'Xarita barcha tarmoqlarni, yo‘l bo‘yicha masofani va yetib borganingizda qayer bo‘sh bo‘lishini ko‘rsatadi. Ulagichni band qilish mumkin.' },
+      { t: 'Kabelni ulang va QR kodni skanerlang', d: 'Narxni oldindan ko‘rasiz, zaryadlash jarayonini esa hatto qulf ekranida.' },
+      { t: 'To‘lang va yo‘lga chiqing', d: 'Pul hamyondan haqiqiy sarf bo‘yicha yechiladi, chek ilovada qoladi. Tunda 30% arzonroq.' },
     ],
+    network: [
+      { t: 'Ariza qoldiring', d: 'Tarmog‘ingiz haqida aytib bering: nechta stansiya va qayerda. Ish kuni davomida javob beramiz.' },
+      { t: 'Shartnoma imzolaymiz', d: 'Sarmoyasiz va abonent to‘lovisiz. Komissiya faqat biz olib kelgan zaryadlashlardan.' },
+      { t: 'Stansiyalarni ulaymiz', d: 'Stansiyalar, narxlar va ulagichlar holati Voli xaritasida paydo bo‘ladi. Ilovangiz ishlashda davom etadi.' },
+      { t: 'Haydovchilarni kutib oling', d: 'To‘lov tarmoq kassasiga tushadi, yuklama va sharhlarni esa kabinetingizda ko‘rasiz.' },
+    ],
+  },
+  promo: {
+    kicker: 'Stansiyalarni targ‘ib qilish',
+    title: 'Stansiya bo‘sh turibdimi? Unga haydovchilarni olib kelamiz.',
+    sub: 'Turar-joy mahallasi yoki trassadagi yangi stansiya mijozlarni haftalab kutishi mumkin. Voli tarmoqqa uni to‘ldirishga yordam beradi — ilovada allaqachon ishlayotgan vositalar bilan.',
+    items: [
+      { id: 'reach', t: 'Stansiyani hamma ko‘radi', d: 'Uni faqat doimiy mijozlaringiz emas, barcha ulangan tarmoqlar haydovchilari topadi.' },
+      { id: 'deals', t: 'Aksiyalar xaritada', d: 'Tarmoq chegirmasi xaritada «−N%» belgisi bilan ko‘rinadi va «Chegirmalar» sahifasiga tushadi.' },
+      { id: 'night', t: 'Kerakli soatlarda talab', d: 'Tungi narx ×0,7 zaryadlashlarni cho‘qqi soatdan stansiya bo‘sh paytga ko‘chiradi.' },
+      { id: 'nearby', t: '«Zaryadlanayotganda»', d: 'Yaqin atrofdagi kafe, do‘konlar va hamkorlar takliflari — aynan sizga kirish uchun yana bir sabab.' },
+      { id: 'rewards', t: 'Bonuslar bizning hisobimizdan', d: 'Haydovchilarga bonus va mukofotlarni tarmoq emas, Voli to‘laydi.' },
+      { id: 'launch', t: 'Shovqinli ochilish', d: 'Yangi stansiya ochilishini siz bilan birga e’lon qilamiz.' },
+      { id: 'forecast', t: 'Ikkilanmasdan kelishadi', d: '«Yetib borganda bo‘sh» prognozi va bron haydovchining asosiy xavotirini — band stansiyaga borib qolishni yo‘qotadi.' },
+      { id: 'insights', t: 'Hammasi kabinetda', d: 'Soatlar bo‘yicha yuklama va haydovchilar sharhlari nima ishlayotganini va nimani o‘zgartirish kerakligini ko‘rsatadi.' },
+    ],
+    mock: { name: 'Savdo markazi yonidagi stansiya', deal: '−20%', note: '18:00 gacha', load: 'Soatlar bo‘yicha yuklama' },
+  },
+  safety: {
+    kicker: 'Xavfsizlik va to‘lov',
+    title: 'To‘lash oson. Xavf yo‘q.',
+    items: [
+      { t: 'Barcha tarmoqlar uchun bitta hamyon', d: 'Payme, Click, Uzum yoki Humo kartasi orqali to‘ldiring. Pul faqat to‘lov tizimi tasdiqlagandan keyin tushadi.' },
+      { t: 'Karta bankda qoladi', d: 'Karta ma’lumotlari to‘lov tizimi tomonida kiritiladi. Voli ularni ko‘rmaydi va saqlamaydi.' },
+      { t: 'Narx o‘zgarmaydi', d: 'Narx boshlash paytida qayd etiladi, aynan qancha zaryadlagan bo‘lsangiz, shuncha yechiladi.' },
+      { t: 'Qarz — faqat yuzingiz bilan', d: 'Qarzga zaryadlashdan oldin ilova yuzni tekshiradi, shuning uchun sizning hisobingizdan hech kim zaryadlay olmaydi.' },
+      { t: 'Parolsiz kirish', d: 'SMS kod bilan kirasiz — unutadigan ham, o‘g‘irlatadigan ham narsa yo‘q.' },
+      { t: 'Yo‘lda yordam', d: 'Trassada SOS tugmasi va uch tilda pochta orqali yordam.' },
+    ],
+  },
+  about: {
+    mission: {
+      kicker: 'Nega bu bilan shug‘ullanamiz',
+      title: 'Elektromobillar ko‘paymoqda. Zaryadlash osonroq bo‘lishi kerak.',
+      text: 'Bugun zaryadlash o‘nlab ilovalar, balanslar va qoidalarga bo‘linib ketgan. Biz haydovchi bitta ilovani ochib, istalgan joyga xotirjam borishini, mamlakatdagi har bir stansiya esa o‘z mijozlarini topishini istaymiz.',
+    },
+    facts: [
+      { n: '0', t: 'o‘z stansiyamiz — barcha tarmoqlarga birdek halolmiz' },
+      { n: '3', t: 'til: o‘zbek, rus va ingliz' },
+      { n: '[___]', t: 'hamkor tarmoq boshlanishda' },
+      { n: '2026, IV chorak', t: 'Toshkentda ishga tushish' },
+    ],
+    principles: {
+      kicker: 'Tamoyillarimiz',
+      items: [
+        { t: 'Halol narx', d: 'Haydovchi narxni boshlashdan oldin ko‘radi. Keyin hech qanday kutilmagan holat yo‘q.' },
+        { t: 'Betaraflik', d: 'Biz tarmoqlar bilan raqobatlashmaymiz va barcha stansiyalarni bir xil qoidalar bilan ko‘rsatamiz.' },
+        { t: 'Ma’lumotlarga ehtiyotkorlik', d: 'Faqat zaryadlash va to‘lov uchun keraklisini olamiz.' },
+        { t: 'Shu yerda yaratilgan', d: 'Uch til, mahalliy to‘lov tizimlari va biz biladigan yo‘llar.' },
+      ],
+    },
+    contacts: { kicker: 'Kontaktlar', title: 'Bizga yozing.', sub: 'Har bir savolning o‘z manzili bor — shunda javob tezroq keladi.' },
   },
   next: {
     kicker: 'Batafsil',
@@ -357,7 +498,7 @@ const uz: LandingCopy = {
   },
   facts: [
     { n: '×0,7', t: 'tunda, 23:00 dan 07:00 gacha' },
-    { n: '0 so‘m', t: 'obuna uchun — faqat kVt·s uchun to‘laysiz' },
+    { n: '0 so‘m', t: 'ro‘yxatdan o‘tish uchun — faqat zaryadlash uchun to‘laysiz' },
     { n: '100 000', t: 'so‘m bonus avtomobil ma’lumotlari uchun' },
     { n: '14 kun', t: 'qarzga zaryadlashni to‘lash uchun, foizsiz' },
   ],
@@ -407,7 +548,6 @@ const uz: LandingCopy = {
       ],
     },
     stepsTitle: 'Qanday ulanish mumkin',
-    steps: ['Ariza qoldirasiz', 'Shartnoma imzolaymiz', 'Stansiyalaringiz Voli’da paydo bo‘ladi'],
     cta: 'Tarmoqni ulash',
   },
   compare: {
@@ -468,17 +608,39 @@ const uz: LandingCopy = {
     ruOnly: 'Hujjat hozircha rus tilida. O‘zbek tilidagi tarjimasi nashrdan oldin qo‘shiladi.',
   },
   faq: {
-    items: [
-      { q: `${B} nima?`, a: `${B} — O‘zbekistondagi barcha zaryadlash stansiyalari uchun bitta ilova. Biz o‘z stansiyalarimizni qurmaymiz, hamkor tarmoqlarni ulaymiz. Xarita, boshlash, to‘lov va navbat istalgan tarmoqda bir xil ishlaydi.` },
-      { q: 'Zaryadlash qancha turadi?', a: 'kVt·s narxini tarmoq belgilaydi va siz uni boshlashdan oldin ko‘rasiz. 23:00 dan 07:00 gacha narx 0,7 ga ko‘paytiriladi. Koeffitsient zaryadlash boshlangan paytda qayd etiladi.' },
-      { q: 'Qanday to‘lash mumkin?', a: 'Hamyonni Payme, Click, Uzum yoki Humo kartasi orqali to‘ldiring va istalgan tarmoqda zaryadlang. Qancha zaryadlagan bo‘lsangiz, aynan shuncha yechiladi.' },
-      { q: 'Qarzga zaryadlash mumkinmi?', a: 'Ha. Bir marta yuzingiz suratini saqlang va shartlarni qabul qiling. Shundan so‘ng boshlashda «Qarzga»ni tanlash mumkin: 300 000 so‘mgacha, 14 kun ichida qaytarish, foizsiz. Har bir bunday zaryadlashdan oldin ilova yuzni tekshiradi, shuning uchun sizning hisobingizdan boshqa hech kim zaryadlay olmaydi.' },
-      { q: 'Hamma ulagichlar band bo‘lsa-chi?', a: 'Navbatga turing yoki ulagichni oldindan band qiling. U bo‘shaganda uni siz uchun saqlab turamiz va bildirishnoma yuboramiz.' },
-      { q: 'Trassada internet bo‘lmasa-chi?', a: 'Marshrutni oldindan saqlang: xarita, stansiyalar va kamerali navigator oflayn ishlaydi. Favqulodda holat uchun SOS tugmasi bor.' },
-      { q: 'Mashinam mos keladimi?', a: 'Ilova har bir ulagichning turi va quvvatini ko‘rsatadi, filtr esa faqat mos stansiyalarni qoldiradi. Avtomobil ma’lumotlarini qo‘shing va 100 000 so‘m bonus oling.' },
-      { q: 'Bizning o‘z tarmog‘imiz va ilovamiz bor. Voli bizga nima uchun kerak?', a: `${B} — agregator, raqobatchi emas: bizning o‘z stansiyalarimiz yo‘q. Biz ilovangizni o‘rnatmagan haydovchilarni olib kelamiz. Xavf yo‘q, to‘lov darhol tarmog‘ingiz kassasiga tushadi, ilovangiz esa ishlashda davom etadi.` },
-      { q: 'Avtoparklar va oilalar uchun yechim bormi?', a: 'Ha: bir nechta mashina uchun bitta hisob, haydovchilarga limitlar va xarajatlar hisobotlari.' },
-      { q: 'Qachon ishga tushadi?', a: 'Toshkentda ishga tushish 2026-yilning IV choragiga rejalashtirilgan. Raqamingizni qoldiring — birinchi bo‘lib xabar beramiz.' },
+    groups: [
+      {
+        t: 'Haydovchilarga',
+        items: [
+          { q: `${B} nima?`, a: `${B} — O‘zbekistondagi barcha zaryadlash stansiyalari uchun bitta ilova. Biz o‘z stansiyalarimizni qurmaymiz, hamkor tarmoqlarni ulaymiz. Xarita, boshlash, to‘lov va navbat istalgan tarmoqda bir xil ishlaydi.` },
+          { q: 'Mashinam mos keladimi?', a: 'Ilova har bir ulagichning turi va quvvatini ko‘rsatadi, filtr esa faqat mos stansiyalarni qoldiradi. Avtomobil ma’lumotlarini qo‘shing va 100 000 so‘m bonus oling.' },
+          { q: 'Hamma ulagichlar band bo‘lsa-chi?', a: 'Navbatga turing yoki ulagichni oldindan band qiling. U bo‘shaganda uni siz uchun saqlab turamiz va bildirishnoma yuboramiz.' },
+          { q: 'Trassada internet bo‘lmasa-chi?', a: 'Marshrutni oldindan saqlang: xarita, stansiyalar va kamerali navigator oflayn ishlaydi. Favqulodda holat uchun SOS tugmasi bor.' },
+          { q: 'Voli mashinada ishlaydimi?', a: 'Ha, Android Auto va CarPlay orqali: xarita va navigator avtomobil ekranida paydo bo‘ladi.' },
+          { q: 'Avtoparklar va oilalar uchun yechim bormi?', a: 'Ha: bir nechta mashina uchun bitta hisob, haydovchilarga limitlar va xarajatlar hisobotlari.' },
+          { q: 'Qachon ishga tushadi?', a: 'Toshkentda ishga tushish 2026-yilning IV choragiga rejalashtirilgan. Raqamingizni qoldiring — birinchi bo‘lib xabar beramiz.' },
+        ],
+      },
+      {
+        t: 'To‘lov va xavfsizlik',
+        items: [
+          { q: 'Zaryadlash qancha turadi?', a: 'kVt·s narxini tarmoq belgilaydi va siz uni boshlashdan oldin ko‘rasiz. 23:00 dan 07:00 gacha narx 0,7 ga ko‘paytiriladi. Koeffitsient zaryadlash boshlangan paytda qayd etiladi.' },
+          { q: 'Qanday to‘lash mumkin?', a: 'Hamyonni Payme, Click, Uzum yoki Humo kartasi orqali to‘ldiring va istalgan tarmoqda zaryadlang. Qancha zaryadlagan bo‘lsangiz, aynan shuncha yechiladi.' },
+          { q: 'Ilovaning o‘zi uchun to‘lash kerakmi?', a: 'Yo‘q. Ro‘yxatdan o‘tish va foydalanish bepul, faqat zaryadlash uchun to‘laysiz. Voli Plus obunasi — ixtiyoriy.' },
+          { q: 'Qarzga zaryadlash mumkinmi?', a: 'Ha. Bir marta yuzingiz suratini saqlang va shartlarni qabul qiling. Shundan so‘ng boshlashda «Qarzga»ni tanlash mumkin: 300 000 so‘mgacha, 14 kun ichida qaytarish, foizsiz. Har bir bunday zaryadlashdan oldin ilova yuzni tekshiradi, shuning uchun sizning hisobingizdan boshqa hech kim zaryadlay olmaydi.' },
+          { q: 'Karta bilan to‘lash xavfsizmi?', a: 'Ha. Kartani to‘lov tizimi tomonida kiritasiz, Voli uning ma’lumotlarini ko‘rmaydi va saqlamaydi. Hamyon faqat to‘lov tasdiqlangandan keyin to‘ldiriladi.' },
+        ],
+      },
+      {
+        t: 'Zaryadlash tarmoqlariga',
+        items: [
+          { q: 'Bizning o‘z tarmog‘imiz va ilovamiz bor. Voli bizga nima uchun kerak?', a: `${B} — agregator, raqobatchi emas: bizning o‘z stansiyalarimiz yo‘q. Biz ilovangizni o‘rnatmagan haydovchilarni olib kelamiz. Xavf yo‘q, to‘lov darhol tarmog‘ingiz kassasiga tushadi, ilovangiz esa ishlashda davom etadi.` },
+          { q: 'Ulanish qancha turadi?', a: 'Ulanish bepul, abonent to‘lovi yo‘q. Komissiyani faqat o‘zimiz olib kelgan zaryadlashlardan olamiz; uning miqdori shartnomada belgilanadi.' },
+          { q: 'Voli mijozi kam stansiyalarga qanday yordam beradi?', a: 'Stansiyani barcha tarmoqlar haydovchilari ko‘radi, aksiyalaringiz xaritada «−N%» belgisi bilan ajralib turadi, tungi narx talabni cho‘qqi soatdan ko‘chiradi, yaqindagi joylar va hamkorlar takliflari esa kirishga sabab beradi. Haydovchilarga bonuslarni biz to‘laymiz, yangi stansiya ochilishini siz bilan birga e’lon qilamiz.' },
+          { q: 'Zaryadlash puli qayerga tushadi?', a: 'To‘g‘ridan-to‘g‘ri tarmog‘ingiz kassasiga. U vositachida qolib ketmaydi.' },
+          { q: 'Tarmoq o‘z kabinetida nimalarni ko‘radi?', a: 'Soatlar bo‘yicha stansiyalar yuklamasi, zaryadlashlar, haydovchilar sharh va shikoyatlari, tariflar va to‘lovlar.' },
+        ],
+      },
     ],
   },
   cta: {
@@ -501,10 +663,11 @@ const uz: LandingCopy = {
 const en: LandingCopy = {
   meta: { title: `${B} — every charger in Uzbekistan, one app` },
   nav: {
-    home: 'Home', drivers: 'Drivers', networks: 'Networks', prices: 'Prices', faq: 'FAQ', join: 'Join',
+    home: 'Home', drivers: 'Drivers', networks: 'Networks', prices: 'Prices', faq: 'FAQ', about: 'About', join: 'Join',
     menu: 'Menu', close: 'Close',
   },
   pages: {
+    about: { kicker: 'About us', title: 'We’re joining up EV charging across Uzbekistan.', sub: `${B} is a team from Uzbekistan. We don’t build chargers — we connect networks, so drivers have it easier and networks earn more.` },
     drivers: { kicker: 'For drivers', title: 'Everything for charging, in one app.', sub: 'Find a free charger, know the price up front and get where you’re going without worry.' },
     networks: { kicker: 'For charging networks', title: 'An aggregator, not a competitor.', sub: `${B} owns no chargers and never will. We bring drivers to your chargers, while your brand, prices and app stay yours.` },
     prices: { kicker: 'Prices', title: 'Know the price before you start.', sub: 'The network sets the price per kWh. You see it up front, and pay less at night.' },
@@ -543,14 +706,73 @@ const en: LandingCopy = {
     ],
     answer: `${B} fixes all of this in one app.`,
   },
-  how: {
+  howTo: {
     kicker: 'How it works',
-    title: 'Find. Plug in. Go.',
-    steps: [
-      { t: 'Find', d: 'The map shows the nearest free charger of any network and routes you there.' },
-      { t: 'Plug in', d: 'Connect the cable and scan the QR code. You’ve already seen the price.' },
-      { t: 'Go', d: 'You pay for what you actually used; the receipt lands in the app.' },
+    title: 'A couple of minutes and you’re set.',
+    tabs: { driver: 'For drivers', network: 'For networks' },
+    driver: [
+      { t: 'Sign in with your phone number', d: 'The code arrives by text. Add your car and get a 100,000 UZS bonus.' },
+      { t: 'Find a charger', d: 'The map shows every network, the route by road and what will be free when you arrive. You can book a connector.' },
+      { t: 'Plug in and scan the QR code', d: 'You see the price up front and the charging progress even on your lock screen.' },
+      { t: 'Pay and drive off', d: 'Your wallet pays for what you used, and the receipt stays in the app. 30% cheaper at night.' },
     ],
+    network: [
+      { t: 'Send a request', d: 'Tell us about your network: how many chargers and where. We reply within a working day.' },
+      { t: 'We sign a contract', d: 'No investment and no subscription. We take a commission only on charges we bring you.' },
+      { t: 'We connect your chargers', d: 'Your chargers, prices and connector statuses appear on the Voli map. Your own app keeps working.' },
+      { t: 'Welcome new drivers', d: 'Payments go to your network’s till, and you see usage and reviews in your console.' },
+    ],
+  },
+  promo: {
+    kicker: 'Promoting your chargers',
+    title: 'A quiet charger? We’ll send drivers its way.',
+    sub: 'A new charger in a residential area or on the highway can wait weeks for customers. Voli helps networks fill it, with tools that already work in the app.',
+    items: [
+      { id: 'reach', t: 'Seen by everyone', d: 'Drivers from every connected network find it — not just your regulars.' },
+      { id: 'deals', t: 'Deals right on the map', d: 'Your discount shows on the map as a “−N%” tag and lands on the Deals page.' },
+      { id: 'night', t: 'Demand when you need it', d: 'The ×0.7 night price moves charging out of rush hour into the hours your charger sits free.' },
+      { id: 'nearby', t: '“While you charge”', d: 'Cafés, shops and partner offers nearby give drivers one more reason to pick you.' },
+      { id: 'rewards', t: 'Rewards on us', d: 'Voli pays drivers’ bonuses and rewards — not the network.' },
+      { id: 'launch', t: 'A launch people notice', d: 'We announce a new charger’s opening together with you.' },
+      { id: 'forecast', t: 'Drivers come with confidence', d: 'The “free when you arrive” forecast and booking remove a driver’s biggest worry: arriving at a busy charger.' },
+      { id: 'insights', t: 'It’s all in your console', d: 'Hourly usage and driver reviews show what works and what to change.' },
+    ],
+    mock: { name: 'Charger at the mall', deal: '−20%', note: 'until 18:00', load: 'Usage by hour' },
+  },
+  safety: {
+    kicker: 'Safety and payments',
+    title: 'Easy to pay. Nothing to risk.',
+    items: [
+      { t: 'One wallet for every network', d: 'Top up with Payme, Click, Uzum or a Humo card. Money arrives only once the payment provider confirms.' },
+      { t: 'Your card stays with the bank', d: 'You enter card details on the payment provider’s side. Voli never sees or stores them.' },
+      { t: 'The price doesn’t change', d: 'The price locks when you start, and you pay for exactly what you charged.' },
+      { t: 'Credit only with your face', d: 'Before a pay-later charge the app checks your face, so nobody else can charge on your account.' },
+      { t: 'No passwords', d: 'You sign in with a text code — nothing to forget, nothing to steal.' },
+      { t: 'Help on the road', d: 'An SOS button on the highway and email support in three languages.' },
+    ],
+  },
+  about: {
+    mission: {
+      kicker: 'Why we do it',
+      title: 'There are more electric cars every year. Charging should get easier.',
+      text: 'Today charging is split across a dozen apps, balances and rules. We want a driver to open one app and drive anywhere without worry — and every charger in the country to find its customers.',
+    },
+    facts: [
+      { n: '0', t: 'chargers of our own — we’re equally fair to every network' },
+      { n: '3', t: 'languages: Uzbek, Russian and English' },
+      { n: '[___]', t: 'partner networks at launch' },
+      { n: 'Q4 2026', t: 'launch in Tashkent' },
+    ],
+    principles: {
+      kicker: 'What we stand for',
+      items: [
+        { t: 'Honest prices', d: 'Drivers see the price before they start. No surprises afterwards.' },
+        { t: 'Neutrality', d: 'We don’t compete with networks, and we show every charger by the same rules.' },
+        { t: 'Care with data', d: 'We take only what charging and payment need.' },
+        { t: 'Made here', d: 'Three languages, local payment providers and roads we know.' },
+      ],
+    },
+    contacts: { kicker: 'Contact', title: 'Write to us.', sub: 'Every kind of question has its own address, so the answer comes faster.' },
   },
   next: {
     kicker: 'Read on',
@@ -600,7 +822,7 @@ const en: LandingCopy = {
   },
   facts: [
     { n: '×0.7', t: 'at night, 23:00 to 07:00' },
-    { n: '0 UZS', t: 'subscription — you pay only per kWh' },
+    { n: '0 UZS', t: 'to sign up — you pay only for charging' },
     { n: '100,000', t: 'UZS bonus for your car’s details' },
     { n: '14 days', t: 'to pay for a charge on credit, interest-free' },
   ],
@@ -650,7 +872,6 @@ const en: LandingCopy = {
       ],
     },
     stepsTitle: 'How to join',
-    steps: ['You send a request', 'We sign a contract', 'Your chargers appear in Voli'],
     cta: 'Connect your network',
   },
   compare: {
@@ -711,17 +932,39 @@ const en: LandingCopy = {
     ruOnly: 'This document is currently in Russian. An English version will be added before publication.',
   },
   faq: {
-    items: [
-      { q: `What is ${B}?`, a: `${B} is one app for every EV charger in Uzbekistan. We don’t build chargers — we connect partner networks. The map, starting, paying and queuing work the same on any network.` },
-      { q: 'How much does charging cost?', a: 'The network sets the price per kWh and you see it before you start. From 23:00 to 07:00 it’s multiplied by 0.7. The multiplier locks when charging starts.' },
-      { q: 'How do I pay?', a: 'Top up your wallet with Payme, Click, Uzum or a Humo card and charge on any network. You pay for exactly what you charged.' },
-      { q: 'Can I charge now and pay later?', a: 'Yes. Save a photo of your face once and accept the terms. Then choose “On credit” when you start: up to 300,000 UZS, paid back within 14 days, interest-free. The app checks your face before every such charge, so nobody else can charge on your account.' },
-      { q: 'What if every connector is busy?', a: 'Join the queue or book a connector in advance. When it frees up, we hold it for you and send a notification.' },
-      { q: 'What if there’s no signal on the highway?', a: 'Save the route in advance: the map, chargers and navigation with cameras all work offline. And for emergencies there’s an SOS button.' },
-      { q: 'Will my car work?', a: 'The app shows each connector’s type and power, and a filter keeps only compatible chargers. Add your car’s details and get a 100,000 UZS bonus.' },
-      { q: 'We have our own network and app. Why Voli?', a: `${B} is an aggregator, not a competitor — we own no chargers. We bring you drivers who never installed your app. There’s no risk, payments go straight to your network’s till, and your app keeps working.` },
-      { q: 'Is there something for fleets and families?', a: 'Yes: one account for several cars, limits per driver and spend reports.' },
-      { q: 'When do you launch?', a: 'The launch in Tashkent is planned for Q4 2026. Leave your number and you’ll hear first.' },
+    groups: [
+      {
+        t: 'For drivers',
+        items: [
+          { q: `What is ${B}?`, a: `${B} is one app for every EV charger in Uzbekistan. We don’t build chargers — we connect partner networks. The map, starting, paying and queuing work the same on any network.` },
+          { q: 'Will my car work?', a: 'The app shows each connector’s type and power, and a filter keeps only compatible chargers. Add your car’s details and get a 100,000 UZS bonus.' },
+          { q: 'What if every connector is busy?', a: 'Join the queue or book a connector in advance. When it frees up, we hold it for you and send a notification.' },
+          { q: 'What if there’s no signal on the highway?', a: 'Save the route in advance: the map, chargers and navigation with cameras all work offline. And for emergencies there’s an SOS button.' },
+          { q: 'Does Voli work in the car?', a: 'Yes, through Android Auto and CarPlay: the map and navigation appear on your car’s screen.' },
+          { q: 'Is there something for fleets and families?', a: 'Yes: one account for several cars, limits per driver and spend reports.' },
+          { q: 'When do you launch?', a: 'The launch in Tashkent is planned for Q4 2026. Leave your number and you’ll hear first.' },
+        ],
+      },
+      {
+        t: 'Payments and safety',
+        items: [
+          { q: 'How much does charging cost?', a: 'The network sets the price per kWh and you see it before you start. From 23:00 to 07:00 it’s multiplied by 0.7. The multiplier locks when charging starts.' },
+          { q: 'How do I pay?', a: 'Top up your wallet with Payme, Click, Uzum or a Humo card and charge on any network. You pay for exactly what you charged.' },
+          { q: 'Do I pay for the app itself?', a: 'No. Signing up and using Voli are free; you pay only for charging. A Voli Plus subscription is optional.' },
+          { q: 'Can I charge now and pay later?', a: 'Yes. Save a photo of your face once and accept the terms. Then choose “On credit” when you start: up to 300,000 UZS, paid back within 14 days, interest-free. The app checks your face before every such charge, so nobody else can charge on your account.' },
+          { q: 'Is it safe to pay by card?', a: 'Yes. You enter your card on the payment provider’s side; Voli never sees or stores its details. Your wallet is topped up only after the payment is confirmed.' },
+        ],
+      },
+      {
+        t: 'For charging networks',
+        items: [
+          { q: 'We have our own network and app. Why Voli?', a: `${B} is an aggregator, not a competitor — we own no chargers. We bring you drivers who never installed your app. There’s no risk, payments go straight to your network’s till, and your app keeps working.` },
+          { q: 'How much does it cost to join?', a: 'Joining is free and there’s no subscription. We take a commission only on charges we bring you; the rate is set in the contract.' },
+          { q: 'How does Voli help chargers with few customers?', a: 'Drivers from every network see the charger, your deals carry a “−N%” tag on the map, the night price shifts demand out of rush hour, and places and partner offers nearby give drivers a reason to stop. We pay drivers’ bonuses ourselves and announce new chargers together with you.' },
+          { q: 'Where does the money for a charge go?', a: 'Straight to your network’s till. It doesn’t sit with a middleman.' },
+          { q: 'What does a network see in its console?', a: 'Hourly usage per charger, charging sessions, driver reviews and reports, tariffs and payouts.' },
+        ],
+      },
     ],
   },
   cta: {

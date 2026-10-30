@@ -3,8 +3,9 @@ import type { CSSProperties, MouseEvent, ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import {
   ArrowRight, ArrowUpRight, BellRing, CalendarClock, Check, Clock, CircleDollarSign, Gift, Handshake, HeartPulse,
-  Layers, Map as MapIcon, Menu, Minus, Moon, Navigation, Plug, QrCode, ScanLine, ScrollText, Send, Siren, Sparkles,
-  Car, Apple, Play, WifiOff, X, Zap,
+  Layers, Map as MapIcon, Menu, Minus, Moon, Navigation, QrCode, ScanLine, ScrollText, Send, Siren, Sparkles,
+  Car, Apple, Play, WifiOff, X, Zap, Users, BadgePercent, Coffee, Megaphone, ChartColumn, Wallet, CreditCard, Lock,
+  ScanFace, KeyRound, LifeBuoy, Mail,
 } from 'lucide-react';
 import { useI18n, LANGS, type Lang } from '../lib/i18n';
 import { useSync } from '../lib/sync';
@@ -33,8 +34,8 @@ const delay = (ms: number) => ({ '--d': `${ms}ms` }) as CSSProperties;
  * direct link. Moving between them swaps the page in place, animated with
  * the View Transitions API where the browser has it.
  */
-export type Page = 'home' | 'drivers' | 'networks' | 'prices' | 'faq' | 'join';
-const PATHS: Record<Page, string> = { home: '/', drivers: '/drivers', networks: '/networks', prices: '/prices', faq: '/faq', join: '/join' };
+export type Page = 'home' | 'drivers' | 'networks' | 'prices' | 'faq' | 'about' | 'join';
+const PATHS: Record<Page, string> = { home: '/', drivers: '/drivers', networks: '/networks', prices: '/prices', faq: '/faq', about: '/about', join: '/join' };
 const PAGES = Object.keys(PATHS) as Page[];
 
 function pageFromUrl(): Page {
@@ -165,7 +166,7 @@ function LangPills() {
   );
 }
 
-const NAV_PAGES: Page[] = ['drivers', 'networks', 'prices', 'faq'];
+const NAV_PAGES: Page[] = ['drivers', 'networks', 'prices', 'faq', 'about'];
 
 function Nav({ c, page, scrolled }: { c: LandingCopy; page: Page | null; scrolled: boolean }) {
   const [open, setOpen] = useState(false);
@@ -335,19 +336,30 @@ function Pains({ c }: { c: LandingCopy }) {
   );
 }
 
-function How({ c }: { c: LandingCopy }) {
-  const icons = [<MapIcon key="m" size={26} />, <Plug key="p" size={26} />, <Car key="c" size={26} />];
+/** How it works, step by step — for a driver or for a network, one switch apart. */
+function HowTo({ c }: { c: LandingCopy }) {
+  const [who, setWho] = useState<'driver' | 'network'>('driver');
+  const h = c.howTo;
   return (
     <section className="lp-sec">
       <div className="lp-wrap">
-        <SectionHead kicker={c.how.kicker} title={c.how.title} center />
-        <ol className="lp-steps">
-          {c.how.steps.map((s, i) => (
-            <li key={i} className="rv" style={delay(i * 140)}>
-              <span className="lp-step-ic">{icons[i]}</span>
-              <span className="lp-step-n">{i + 1}</span>
-              <h3>{s.t}</h3>
-              <p>{s.d}</p>
+        <div className="lp-howto-head">
+          <div>
+            <div className="rv"><Kicker>{h.kicker}</Kicker></div>
+            <h2 className="lp-h2 rv" style={delay(60)}>{h.title}</h2>
+          </div>
+          <div className="lp-switcher rv" role="tablist" aria-label={h.kicker} data-on={who}>
+            {(['driver', 'network'] as const).map(k => (
+              <button key={k} role="tab" aria-selected={who === k} onClick={() => setWho(k)}>{h.tabs[k]}</button>
+            ))}
+          </div>
+        </div>
+        <ol className="lp-howto" key={who} role="tabpanel">
+          {h[who].map((st, i) => (
+            <li key={i} style={delay(i * 90)}>
+              <span className="lp-howto-n">{i + 1}</span>
+              <h3>{st.t}</h3>
+              <p>{st.d}</p>
             </li>
           ))}
         </ol>
@@ -386,7 +398,7 @@ function HomePage({ c, lang }: { c: LandingCopy; lang: Lang }) {
       <Hero c={c} lang={lang} />
       <Marquee c={c} />
       <Pains c={c} />
-      <How c={c} />
+      <HowTo c={c} />
       <NextPages c={c} />
       <Cta c={c} />
     </>
@@ -647,12 +659,38 @@ function Compare({ c }: { c: LandingCopy }) {
   );
 }
 
+const SAFETY_ICON = [Wallet, CreditCard, Lock, ScanFace, KeyRound, LifeBuoy];
+
+/** Payments and safety as an open grid of short statements. */
+function Safety({ c }: { c: LandingCopy }) {
+  return (
+    <section className="lp-sec" id="safety">
+      <div className="lp-wrap">
+        <SectionHead kicker={c.safety.kicker} title={c.safety.title} />
+        <ul className="lp-safety">
+          {c.safety.items.map((it, i) => {
+            const Icon = SAFETY_ICON[i] ?? Lock;
+            return (
+              <li key={i} className="rv" style={delay((i % 3) * 90)}>
+                <span className="lp-safety-ic"><Icon size={22} /></span>
+                <h3>{it.t}</h3>
+                <p>{it.d}</p>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
 function DriversPage({ c, lang, fc }: { c: LandingCopy; lang: Lang; fc: TariffForecast }) {
   const p = c.pages.drivers;
   return (
     <>
       <PageHead kicker={p.kicker} title={p.title} sub={p.sub} />
       <Pillars c={c} />
+      <Safety c={c} />
       <LiveNetwork c={c} lang={lang} fc={fc} />
       <Compare c={c} />
       <Cta c={c} />
@@ -673,6 +711,65 @@ function Flow({ c }: { c: LandingCopy }) {
       <span className="lp-flow-line"><i style={{ animationDelay: '1.2s' }} /></span>
       <span className="lp-flow-node is-dark"><CircleDollarSign size={22} />{z}</span>
     </div>
+  );
+}
+
+const PROMO_ICON: Record<string, typeof Users> = {
+  reach: Users, deals: BadgePercent, night: Moon, nearby: Coffee, rewards: Gift, launch: Megaphone, forecast: CalendarClock, insights: ChartColumn,
+};
+
+/** A quiet charger getting busier: its deal tag on the map and hourly usage rising. */
+function PromoVisual({ mock }: { mock: LandingCopy['promo']['mock'] }) {
+  const bars = [2, 2, 1, 1, 1, 2, 3, 5, 6, 5, 4, 5, 6, 7, 6, 6, 7, 8, 9, 8, 6, 5, 4, 3];
+  return (
+    <div className="lp-promo-art rv" style={delay(120)} aria-hidden="true">
+      <div className="lp-promo-map">
+        <svg viewBox="0 0 320 240" className="lp-pv-roads" preserveAspectRatio="xMidYMid slice">
+          <path d="M-10 70 C90 80 170 40 330 60" />
+          <path d="M-10 180 C100 160 190 200 330 170" />
+          <path d="M120 -10 C130 90 110 160 140 250" />
+        </svg>
+        {[[16, 30], [34, 68], [72, 22], [84, 64], [52, 82]].map(([x, y], i) => <span key={i} className="lp-promo-dot" style={{ left: `${x}%`, top: `${y}%` }} />)}
+        <div className="lp-promo-pin">
+          <span className="lp-promo-tag">{mock.deal}</span>
+          <LogoMark size={60} />
+        </div>
+        <div className="lp-promo-card"><b>{mock.name}</b><small>{mock.deal} · {mock.note}</small></div>
+      </div>
+      <div className="lp-promo-load">
+        <span>{mock.load}</span>
+        <div className="lp-promo-bars">{bars.map((v, i) => <i key={i} style={{ height: `${v * 11}%`, animationDelay: `${i * 35}ms` }} />)}</div>
+      </div>
+    </div>
+  );
+}
+
+/** How Voli helps a network fill chargers that see few drivers. */
+function Promo({ c }: { c: LandingCopy }) {
+  const p = c.promo;
+  return (
+    <section className="lp-sec" id="promo">
+      <div className="lp-wrap lp-promo">
+        <div className="lp-promo-copy">
+          <SectionHead kicker={p.kicker} title={p.title} sub={p.sub} />
+          <ol className="lp-promo-list">
+            {p.items.map((it, i) => {
+              const Icon = PROMO_ICON[it.id] ?? Zap;
+              return (
+                <li key={it.id} className="rv" style={delay((i % 2) * 90)}>
+                  <span className="lp-promo-ic"><Icon size={20} /></span>
+                  <div>
+                    <h3>{it.t}</h3>
+                    <p>{it.d}</p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+        <PromoVisual mock={p.mock} />
+      </div>
+    </section>
   );
 }
 
@@ -697,6 +794,7 @@ function NetworksPage({ c }: { c: LandingCopy }) {
           </ol>
         </div>
       </section>
+      <Promo c={c} />
       <section className="lp-sec">
         <div className="lp-wrap">
           <div className="lp-band rv">
@@ -709,7 +807,7 @@ function NetworksPage({ c }: { c: LandingCopy }) {
             <div className="lp-band-steps">
               <Kicker>{p.stepsTitle}</Kicker>
               <ol>
-                {p.steps.map((s, i) => <li key={i}><span>{i + 1}</span>{s}</li>)}
+                {c.howTo.network.map((st, i) => <li key={i}><span>{i + 1}</span>{st.t}</li>)}
               </ol>
               <PageLink to="join" className="lp-btn lp-btn-primary lp-btn-lg"><Handshake size={18} />{p.cta}<ArrowRight size={18} /></PageLink>
             </div>
@@ -889,13 +987,73 @@ function FaqPage({ c }: { c: LandingCopy }) {
     <>
       <PageHead kicker={p.kicker} title={p.title} sub={p.sub} />
       <section className="lp-sec lp-sec-tight" id="faq">
-        <div className="lp-wrap lp-faq-list">
-          {c.faq.items.map((f, i) => (
-            <details key={i} className="lp-faq-item rv" style={delay((i % 5) * 50)} open={i === 0}>
-              <summary>{f.q}<span className="lp-faq-plus" aria-hidden="true" /></summary>
-              <p>{f.a}</p>
-            </details>
+        <div className="lp-wrap">
+          {c.faq.groups.map((g, gi) => (
+            <div key={gi} className="lp-faq-group">
+              <h2 className="lp-faq-gt rv">{g.t}</h2>
+              <div className="lp-faq-list">
+                {g.items.map((f, i) => (
+                  <details key={i} className="lp-faq-item rv" style={delay((i % 5) * 50)} open={gi === 0 && i === 0}>
+                    <summary>{f.q}<span className="lp-faq-plus" aria-hidden="true" /></summary>
+                    <p>{f.a}</p>
+                  </details>
+                ))}
+              </div>
+            </div>
           ))}
+        </div>
+      </section>
+      <Cta c={c} />
+    </>
+  );
+}
+
+const MAILBOXES = ['info', 'partners', 'business', 'support', 'hr'] as const;
+
+function AboutPage({ c }: { c: LandingCopy }) {
+  const a = c.about;
+  const p = c.pages.about;
+  return (
+    <>
+      <PageHead kicker={p.kicker} title={p.title} sub={p.sub} />
+      <section className="lp-sec lp-sec-tight">
+        <div className="lp-wrap lp-mission">
+          <div className="rv"><Kicker>{a.mission.kicker}</Kicker></div>
+          <h2 className="lp-h2 rv" style={delay(60)}>{a.mission.title}</h2>
+          <p className="rv" style={delay(140)}>{a.mission.text}</p>
+        </div>
+        <div className="lp-wrap">
+          <dl className="lp-facts">
+            {a.facts.map((f, i) => <div key={i} className="rv" style={delay(i * 80)}><dd>{f.n}</dd><dt>{f.t}</dt></div>)}
+          </dl>
+        </div>
+      </section>
+      <section className="lp-sec">
+        <div className="lp-wrap">
+          <div className="rv"><Kicker>{a.principles.kicker}</Kicker></div>
+          <ol className="lp-benefits lp-benefits-mt">
+            {a.principles.items.map((it, i) => (
+              <li key={i} className="rv" style={delay((i % 2) * 100)}>
+                <span className="lp-benefits-n">{String(i + 1).padStart(2, '0')}</span>
+                <h2>{it.t}</h2>
+                <p>{it.d}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+      <section className="lp-sec" id="contacts">
+        <div className="lp-wrap">
+          <SectionHead kicker={a.contacts.kicker} title={a.contacts.title} sub={a.contacts.sub} />
+          <div className="lp-next">
+            {MAILBOXES.map((k, i) => (
+              <a key={k} href={`mailto:${BRAND.emails[k]}`} className="lp-next-row lp-mail-row rv" style={delay(i * 70)}>
+                <span className="lp-next-t">{c.footer.mail[k]}</span>
+                <span className="lp-next-d">{BRAND.emails[k]}</span>
+                <span className="lp-next-go"><Mail size={24} /></span>
+              </a>
+            ))}
+          </div>
         </div>
       </section>
       <Cta c={c} />
@@ -951,7 +1109,7 @@ function Footer({ c }: { c: LandingCopy }) {
         </div>
         <div>
           <p className="lp-footer-h">{c.footer.pages}</p>
-          {(['home', 'drivers', 'networks', 'prices', 'faq', 'join'] as Page[]).map(p => <PageLink key={p} to={p}>{c.nav[p]}</PageLink>)}
+          {(['home', 'drivers', 'networks', 'prices', 'faq', 'about', 'join'] as Page[]).map(p => <PageLink key={p} to={p}>{c.nav[p]}</PageLink>)}
         </div>
         <div>
           <p className="lp-footer-h">{c.footer.company}</p>
@@ -1040,7 +1198,7 @@ export default function Landing() {
       '@context': 'https://schema.org',
       '@graph': [
         { '@type': 'Organization', name: BRAND.name, url: `https://${BRAND.domain}`, logo: `https://${BRAND.domain}/icon-512.png`, areaServed: 'UZ', slogan: BRAND.tagline },
-        ...(page === 'faq' ? [{ '@type': 'FAQPage', inLanguage: lang, mainEntity: c.faq.items.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }] : []),
+        ...(page === 'faq' ? [{ '@type': 'FAQPage', inLanguage: lang, mainEntity: c.faq.groups.flatMap(g => g.items).map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }] : []),
       ],
     });
     document.head.appendChild(ld);
@@ -1062,6 +1220,7 @@ export default function Landing() {
             : page === 'networks' ? <NetworksPage c={c} />
             : page === 'prices' ? <PricesPage c={c} lang={lang} fc={fc} />
             : page === 'faq' ? <FaqPage c={c} />
+            : page === 'about' ? <AboutPage c={c} />
             : page === 'join' ? <JoinPage c={c} lang={lang} />
             : <HomePage c={c} lang={lang} />}
         </main>
