@@ -37,7 +37,7 @@ import { useOfflinePacks, deletePack, packsBytes, savedStations } from '../lib/o
 import { usePlatform } from '../lib/platform';
 import { NetworkBadge } from './driver/NetworkBadge';
 import { ChargerFriend } from './driver/Illustration';
-import { promoNow, promosOf, promoHours, discounted, useDriverPromos } from '../lib/promos';
+import { promoNow, promosOf, promoHours, discounted, useDriverPromos, promoGiver } from '../lib/promos';
 import SupportChat from './driver/SupportChat';
 import { useI18n } from '../lib/i18n';
 import type { Payer, ChargeGoal } from '../lib/api';
@@ -247,7 +247,7 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
             {promo ? (
               <span className="flex-1 min-w-0">
                 <span className="block text-sm font-extrabold text-[#111]">{`−${promo.percent}% · ${promo.title}`}</span>
-                <span className="block text-xs text-[#111]/70">{`${promo.firstOnly ? 'На первую зарядку в сети · ' : ''}${promoHours(promo)} · скидку даёт ${station.operator}`}</span>
+                <span className="block text-xs text-[#111]/70">{`${promo.firstOnly ? (promo.operatorId ? 'На первую зарядку в сети · ' : 'На первую зарядку · ') : ''}${promoHours(promo)} · скидку даёт ${promoGiver(promo, station.operator)}`}</span>
               </span>
             ) : later && (
               <span className="flex-1 min-w-0">
@@ -2346,6 +2346,7 @@ export default function DriverApp() {
       return;
     }
     if (go === 'qr') setScreen('qr-scan');
+    if (go === 'deals') setActiveTab('deals');
     // From the lock-screen notice: straight to the running charge when there is one.
     if (go === 'charging') {
       if (state?.sessions.some(s => s.status === 'active' && s.userId === driverAccount.id)) setScreen('charging-active');
@@ -2430,6 +2431,17 @@ export default function DriverApp() {
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [driverAccount?.id]);
+
+  // A new campaign of Voli's, while the app is open: a notice that leads to the deals.
+  const seenCampaign = useRef<string | null>(null);
+  useEffect(() => {
+    const c = events.find(e => e.type === 'promo.campaign' && Date.now() - Date.parse(e.ts) < 60_000);
+    if (!c || seenCampaign.current === c.id || !driverAccount) return;
+    seenCampaign.current = c.id;
+    pushToast({ icon: '🎁', title: 'Новая акция Voli', body: c.message, color: '#FFB000' });
+    // pushToast is a stable local helper.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events, driverAccount]);
 
   const seenQueueEvent = useRef<string | null>(null);
   useEffect(() => {

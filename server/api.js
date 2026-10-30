@@ -26,7 +26,7 @@ import {
 import {
   directOperatorOf, netBalance, chargeNetwork, refundNetwork, networkWalletsFor, publicPayout, setPayout, directReport,
 } from './direct.js';
-import { promoFor, publicPromos, createPromo, stopPromo, promosOf } from './promos.js';
+import { promoFor, publicPromos, createPromo, createCampaign, stopPromo, promosOf } from './promos.js';
 import { syncRewards, rewardsFor, bonusFor, spendBonus, rewardsOverview, grantManual } from './rewards.js';
 import { batteryHealthFor } from './battery.js';
 import { setting, feature, updateSettings, settingsView, publicSettings } from './settings.js';
@@ -173,6 +173,10 @@ function scopeOf({ type, entity, payload = {} }) {
       return { operatorId: entity };
     case 'system.reset':
       return { public: true };
+    // Promos are for everyone to see: the map refreshes, a new campaign is announced.
+    case 'promo.update':
+    case 'promo.campaign':
+      return { operatorId: payload.operatorId ?? null, public: true };
     default:
       return {};
   }
@@ -1529,6 +1533,7 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
 
   const band = station.ocpi ? { multiplier: 1 } : tariffBand(tashkentHour());
   // A network's own promo, paid by the network: the driver pays less, it earns less.
+  // A campaign Voli pays for leaves the network its full price.
   const promo = station.ocpi ? null : promoFor(station, account);
   const session = {
     id: db.nextId('session', 'S-'),
@@ -1549,12 +1554,12 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     basePrice: connector.price,
     multiplier: band.multiplier,
     // The network's own promo first; Voli Plus takes its share off what is left, and Voli pays it.
-    networkPrice: Math.round(connector.price * band.multiplier * (1 - (promo?.percent ?? 0) / 100)),
+    networkPrice: Math.round(connector.price * band.multiplier * (1 - (promo && promo.funder !== 'voli' ? promo.percent : 0) / 100)),
     // A company charge on the taxi tariff takes the park's volume discount; a private one, Plus.
     price: Math.round(connector.price * band.multiplier * (1 - (promo?.percent ?? 0) / 100) * (station.ocpi ? 1 : 1 - (corporate ? fleetDiscount() : plusActive(account.id) ? PLUS.discount : 0) / 100)),
     ...(!station.ocpi && !corporate && plusActive(account.id) ? { plus: true } : {}),
     ...(!station.ocpi && corporate && fleetDiscount() ? { fleetDiscount: fleetDiscount() } : {}),
-    ...(promo ? { promo: { id: promo.id, title: promo.title, percent: promo.percent } } : {}),
+    ...(promo ? { promo: { id: promo.id, title: promo.title, percent: promo.percent, funder: promo.funder ?? 'network' } } : {}),
     // Platform commission is locked at start too, so a rate change is not retroactive.
     commissionRate: db.byId('operators', station.operatorId)?.commission ?? 3,
     status: 'active',
@@ -1694,8 +1699,12 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
   const cost = billed ?? Math.round(energy * (session.price ?? 1800));
   // What Plus took off this charge: Voli owes it to the network.
   // What Plus or the taxi tariff took off this charge: Voli owes it to the network.
-  const plusCovered = (session.plus || session.fleetDiscount) && billed === null && session.networkPrice ? Math.max(0, Math.round(energy * session.networkPrice) - cost) : 0;
-  if (plusCovered) session[session.plus ? 'plusCovered' : 'fleetCovered'] = plusCovered;
+  // And what a campaign Voli pays for took off: the network still gets its full price.
+  const voliPromo = session.promo?.funder === 'voli';
+  const plusCovered = (session.plus || session.fleetDiscount || voliPromo) && billed === null && session.networkPrice ? Math.max(0, Math.round(energy * session.networkPrice) - cost) : 0;
+  const promoCovered = voliPromo ? Math.min(plusCovered, Math.round((energy * session.networkPrice * session.promo.percent) / 100)) : 0;
+  if (promoCovered) session.promoCovered = promoCovered;
+  if (plusCovered - promoCovered) session[session.plus ? 'plusCovered' : 'fleetCovered'] = plusCovered - promoCovered;
 
   session.status = 'completed';
   session.end = new Date().toISOString();
@@ -3127,6 +3136,29 @@ api.post('/operator/promos', requireAuth('operator'), (req, res) => {
   if (r.error) return res.status(400).json({ error: r.error });
   emit({ type: 'promo.update', portal: 'operator', actor: req.account.name, message: `Новая скидка: ${r.promo.title}`, entity: r.promo.id, payload: { operatorId: r.promo.operatorId } });
   res.status(201).json(r.promo);
+});
+
+// Voli's own campaigns: the admin runs them across networks, paid by Voli or by the networks.
+api.get('/admin/promos', requireAuth('admin'), (_req, res) => {
+  const month = new Date().toISOString().slice(0, 7);
+  res.json({
+    promos: promosOf(null),
+    voliPaidMonth: db.data.sessions.filter(s => s.promoCovered && s.start.startsWith(month)).reduce((n, s) => n + s.promoCovered, 0),
+    driversReachable: db.data.accounts.filter(a => a.portal === 'driver' && a.consent?.marketing).length,
+  });
+});
+
+api.post('/admin/promos', requireAuth('admin'), (req, res) => {
+  const r = createCampaign(req.body ?? {}, req.account.name);
+  if (r.error) return res.status(400).json({ error: r.error });
+  const p = r.promo;
+  emit({ type: 'promo.update', portal: 'admin', actor: req.account.name, message: `Новая акция: ${p.title}`, entity: p.id, payload: { operatorIds: p.operatorIds } });
+  // Told to drivers who agreed to hear about offers: in the app, and by push where they allowed it.
+  if (req.body?.announce) {
+    const where = p.operatorIds ? p.operatorIds.map(id => db.byId('operators', id)?.name).filter(Boolean).join(', ') : 'все станции Voli';
+    emit({ type: 'promo.campaign', portal: 'admin', actor: req.account.name, message: `−${p.percent}% · ${p.title} · ${where}`, entity: p.id, payload: { promoId: p.id } });
+  }
+  res.status(201).json(p);
 });
 
 api.delete('/operator/promos/:id', requireAuth('operator', 'admin'), (req, res) => {

@@ -9,6 +9,7 @@ import { plural } from '../../lib/analytics';
 import { promosOf, promoNow, promoHours, isNight, discounted, useDriverPromos } from '../../lib/promos';
 import { NetworkBadge } from './NetworkBadge';
 import { ChargerFriend } from './Illustration';
+import { LogoMark } from '../../landing/Logo';
 
 const opId = (s: Station) => (s as Station & { operatorId?: string }).operatorId;
 const untilText = (iso: string | null) => (iso ? `до ${new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}` : 'без срока');
@@ -26,6 +27,9 @@ export default function DealsScreen({ onSelectStation, onRoute }: { onSelectStat
   const [only, setOnly] = useState<string | null>(null);
 
   const networkName = (id: string) => state?.operators.find(o => o.id === id)?.name ?? stations.find(s => opId(s) === id)?.operator ?? 'Сеть';
+  // Who the card is from: the network, or Voli for a campaign of its own.
+  const fromOf = (p: Promo) => (p.operatorId ? networkName(p.operatorId) : 'Voli');
+  const whereOf = (p: Promo) => (p.operatorId ? networkName(p.operatorId) : p.operatorIds ? p.operatorIds.map(networkName).join(', ') : 'Все сети');
 
   const rows = useMemo(() => {
     return stations
@@ -46,7 +50,7 @@ export default function DealsScreen({ onSelectStation, onRoute }: { onSelectStat
     <div className="h-full overflow-y-auto bg-slate-50">
       <div className="px-4 pt-5 pb-3 bg-white">
         <h1 className="text-[26px] font-extrabold text-slate-900 tracking-tight">Скидки</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Акции сетей-партнёров — скидку оплачивает сама сеть</p>
+        <p className="text-sm text-slate-500 mt-0.5">Акции Voli и сетей-партнёров — скидка уже в цене</p>
       </div>
 
       {promos.length > 0 && (
@@ -64,11 +68,12 @@ export default function DealsScreen({ onSelectStation, onRoute }: { onSelectStat
                 >
                   <span className="absolute -right-6 -bottom-8 text-[110px] font-black text-white/25 leading-none select-none" aria-hidden="true">%</span>
                   <span className="flex items-center gap-2">
-                    <NetworkBadge name={networkName(p.operatorId)} size={30} />
-                    <span className="text-sm font-semibold text-[#111]/80 truncate">{networkName(p.operatorId)}</span>
+                    {p.operatorId ? <NetworkBadge name={fromOf(p)} size={30} /> : <span className="rounded-[9px] ring-2 ring-white/70 shrink-0"><LogoMark size={30} /></span>}
+                    <span className="text-sm font-semibold text-[#111]/80 truncate">{p.operatorId ? fromOf(p) : `Voli · ${whereOf(p)}`}</span>
                   </span>
                   <span className="block mt-3 text-[34px] font-black text-[#111] leading-none tracking-tight">{`−${p.percent}%`}</span>
                   <span className="block mt-1 text-sm font-semibold text-[#111] truncate">{p.title}</span>
+                  {p.note && <span className="block text-xs text-[#111]/75 line-clamp-2">{p.note}</span>}
                   <span className="mt-3 flex flex-wrap gap-1.5 text-[11px] font-semibold text-[#111]">
                     <span className="px-2 py-1 rounded-lg bg-white/60 inline-flex items-center gap-1">{isNight(p) ? <Moon size={11} /> : <Clock size={11} />}{promoHours(p)}</span>
                     {p.firstOnly && <span className="px-2 py-1 rounded-lg bg-white/60 inline-flex items-center gap-1"><Sparkles size={11} />первая зарядка</span>}
@@ -89,7 +94,7 @@ export default function DealsScreen({ onSelectStation, onRoute }: { onSelectStat
           <div className="rounded-3xl bg-white border border-slate-100 p-6 text-center">
             <span className="flex justify-center"><ChargerFriend mood="wait" /></span>
             <p className="mt-2 font-semibold text-slate-800">Сейчас акций нет</p>
-            <p className="text-sm text-slate-500 mt-1">Когда сеть запустит скидку, она появится здесь и значком «%» на карте</p>
+            <p className="text-sm text-slate-500 mt-1">Когда появится скидка, она будет здесь и значком «%» на карте</p>
           </div>
         )}
         {rows.map(({ s, best, now, d }) => {

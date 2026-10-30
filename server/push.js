@@ -69,7 +69,8 @@ const KINDS = {
   'session.progress': { title: 'Зарядка почти готова', url: '/?portal=driver' },
   'session.failed': { title: 'Зарядка не началась', url: '/?portal=driver' },
   // The driver hears back from support; support sees new messages in the admin portal.
-  'support.message': { title: 'Ответ поддержки', url: '/?portal=driver', when: e => e.payload?.from === 'support' },
+  'support.message': { title: 'Ответ поддержки', url: '/?portal=driver', when: e => ['support', 'ai'].includes(e.payload?.from) },
+  'promo.campaign': { title: 'Новая акция Voli', url: '/?portal=driver&go=deals' },
   'schedule.started': { title: 'Отложенная зарядка началась', url: '/?portal=driver' },
   'schedule.failed': { title: 'Отложенная зарядка не началась', url: '/?portal=driver' },
   'alert.new': { title: 'Новое оповещение', url: '/?portal=operator' },
@@ -95,6 +96,10 @@ function recipients(event) {
   // The dispatcher on duty is every admin.
   if (event.type === 'sos.new' || event.type === 'host.applied') {
     for (const a of db.data.accounts) if (a.portal === 'admin') ids.add(a.id);
+  }
+  // Offers go only to drivers who agreed to hear about them.
+  if (event.type === 'promo.campaign') {
+    for (const a of db.data.accounts) if (a.portal === 'driver' && a.consent?.marketing) ids.add(a.id);
   }
   if (event.type === 'community.broken' && scope.operatorId) {
     for (const a of db.data.accounts) if (a.portal === 'operator' && a.orgId === scope.operatorId) ids.add(a.id);

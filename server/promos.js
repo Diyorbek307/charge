@@ -9,6 +9,12 @@ import { db } from './db.js';
  *
  * A promo covers either every station of the network or a chosen few, and
  * optionally only some hours (Tashkent time) and only until a date.
+ *
+ * Voli's own team runs campaigns too, from the admin portal: across every
+ * network or a chosen few (operatorId null, operatorIds the list or null for
+ * all). Such a campaign is paid either by the networks, as agreed with them,
+ * or by Voli — then the network still gets its full price and Voli pays the
+ * difference, like with Plus.
  */
 
 const TZ = 5 * 3600_000;
@@ -31,28 +37,57 @@ const inHours = (p, hour) => {
   if (p.fromHour == null || p.toHour == null) return true;
   return p.fromHour <= p.toHour ? hour >= p.fromHour && hour < p.toHour : hour >= p.fromHour || hour < p.toHour;
 };
-const covers = (p, station) => p.operatorId === station.operatorId && (!p.stationIds || p.stationIds.includes(station.id));
+const coversNetwork = (p, operatorId) => (p.operatorId ? p.operatorId === operatorId : !p.operatorIds || p.operatorIds.includes(operatorId));
+const covers = (p, station) => coversNetwork(p, station.operatorId) && (!p.stationIds || p.stationIds.includes(station.id));
 
 /** What every driver sees on the map: running promos, nothing internal. */
 export const publicPromos = (at = Date.now()) =>
   promos()
     .filter(p => live(p, at))
-    .map(({ id, operatorId, title, percent, fromHour, toHour, firstOnly, stationIds, until }) => ({ id, operatorId, title, percent, fromHour, toHour, firstOnly, stationIds, until }));
+    .map(({ id, operatorId, operatorIds, title, note, percent, fromHour, toHour, firstOnly, stationIds, until, funder }) => ({
+      id, operatorId: operatorId ?? null, operatorIds: operatorIds ?? null, title, note: note ?? null, percent, fromHour, toHour, firstOnly, stationIds, until, funder: funder ?? 'network',
+    }));
 
 /**
  * The best promo this driver gets at this station right now, or null.
- * "First charge" counts only completed charges at the same network.
+ * "First charge" counts only completed charges at the same network, or in
+ * Voli at all for a campaign of Voli's own.
  */
 export function promoFor(station, account, at = Date.now()) {
   const hour = tashkentHour(at);
-  let charged = null;
   const fits = promos().filter(p => {
     if (!live(p, at) || !covers(p, station) || !inHours(p, hour)) return false;
     if (!p.firstOnly) return true;
-    charged ??= db.data.sessions.some(s => s.userId === account?.id && s.operatorId === station.operatorId && s.status === 'completed');
-    return !charged;
+    return !db.data.sessions.some(s => s.userId === account?.id && (!p.operatorId || s.operatorId === station.operatorId) && s.status === 'completed');
   });
   return fits.sort((a, b) => b.percent - a.percent)[0] ?? null;
+}
+
+/**
+ * A campaign of Voli's own, from the admin portal: every network or a chosen
+ * few, paid by Voli or by the networks. Returns { promo } or { error }.
+ */
+export function createCampaign(b = {}, actor = '') {
+  const funder = b.funder === 'voli' ? 'voli' : b.funder === 'network' ? 'network' : null;
+  if (!funder) return { error: 'Укажите, кто оплачивает скидку: Voli или сети' };
+  let operatorIds = null;
+  if (Array.isArray(b.operatorIds) && b.operatorIds.length) {
+    const known = new Set(db.data.operators.map(o => o.id));
+    if (b.operatorIds.some(id => !known.has(id))) return { error: 'Такой сети нет' };
+    operatorIds = [...new Set(b.operatorIds)];
+  }
+  let stationIds = null;
+  if (Array.isArray(b.stationIds) && b.stationIds.length) {
+    const ok = new Set(db.data.stations.filter(s => !operatorIds || operatorIds.includes(s.operatorId)).map(s => s.id));
+    if (b.stationIds.some(id => !ok.has(id))) return { error: 'Станции — только из выбранных сетей' };
+    stationIds = [...new Set(b.stationIds)];
+  }
+  // The checks of a network's own promo apply as they are; then it becomes Voli's.
+  const r = createPromo(null, { ...b, stationIds: null }, actor);
+  if (r.error) return r;
+  Object.assign(r.promo, { operatorIds, stationIds, note: text(b.note, 200) || null, funder, by: 'admin' });
+  db.save();
+  return r;
 }
 
 const text = (v, max) => String(v ?? '').trim().replace(/\s+/g, ' ').slice(0, max);
@@ -103,9 +138,16 @@ export function stopPromo(operatorId, id) {
 /** For the network's own portal: all its promos and how many charges used each. */
 export function promosOf(operatorId) {
   return promos()
-    .filter(p => operatorId === null || p.operatorId === operatorId)
+    .filter(p => operatorId === null || coversNetwork(p, operatorId))
     .map(p => {
-      const used = db.data.sessions.filter(s => s.promo?.id === p.id && s.status === 'completed');
-      return { ...p, uses: used.length, discount: used.reduce((n, s) => n + Math.round((s.basePrice * (s.multiplier ?? 1) - s.price) * s.energy), 0) };
+      const used = db.data.sessions.filter(s => s.promo?.id === p.id && s.status === 'completed' && (operatorId === null || s.operatorId === operatorId));
+      return {
+        ...p,
+        operatorIds: p.operatorIds ?? null,
+        funder: p.funder ?? 'network',
+        uses: used.length,
+        discount: used.reduce((n, s) => n + Math.round((s.basePrice * (s.multiplier ?? 1) - s.price) * s.energy), 0),
+        voliPaid: used.reduce((n, s) => n + (s.promoCovered ?? 0), 0),
+      };
     });
 }

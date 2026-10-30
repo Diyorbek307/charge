@@ -20,9 +20,14 @@ const inHours = (p: Promo, hour: number) =>
 
 type StationRef = { id: string; operatorId?: string };
 
-/** Every promo of this station's network that covers it, running now or later today. */
+const coversNetwork = (p: Promo, operatorId?: string) => (p.operatorId ? p.operatorId === operatorId : !p.operatorIds || (!!operatorId && p.operatorIds.includes(operatorId)));
+
+/** Every promo that covers this station — its network's own and Voli's campaigns — running now or later today. */
 export const promosOf = (st: StationRef, promos: Promo[] = []) =>
-  promos.filter(p => p.operatorId === st.operatorId && (!p.stationIds || p.stationIds.includes(st.id)));
+  promos.filter(p => coversNetwork(p, st.operatorId) && (!p.stationIds || p.stationIds.includes(st.id)));
+
+/** Who gives the discount, as the driver reads it. */
+export const promoGiver = (p: Promo, network: string) => (p.funder === 'voli' || !p.operatorId ? 'Voli' : network);
 
 /** The biggest discount at this station right now (a first-charge promo counts: most drivers are new to a network). */
 export function promoNow(st: StationRef, promos: Promo[] = [], at = Date.now()) {
@@ -61,7 +66,9 @@ export function useDriverPromos(): Promo[] {
   const { state, sessions } = useSync();
   const me = sessions.driver?.id;
   return useMemo(() => {
-    const charged = new Set((state?.sessions ?? []).filter(s => s.userId === me && s.status === 'completed').map(s => s.operatorId));
-    return (state?.promos ?? []).filter(p => !p.firstOnly || !charged.has(p.operatorId));
+    const mine = (state?.sessions ?? []).filter(s => s.userId === me && s.status === 'completed');
+    const charged = new Set(mine.map(s => s.operatorId));
+    // A first-charge campaign of Voli's is for the first charge in Voli at all.
+    return (state?.promos ?? []).filter(p => !p.firstOnly || (p.operatorId ? !charged.has(p.operatorId) : mine.length === 0));
   }, [state?.promos, state?.sessions, me]);
 }

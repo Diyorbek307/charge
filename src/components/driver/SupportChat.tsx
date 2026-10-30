@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ImagePlus, LoaderCircle, Send, X } from 'lucide-react';
+import { ImagePlus, LoaderCircle, Send, Sparkles, X } from 'lucide-react';
 import type { SupportThread } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 
@@ -45,6 +45,10 @@ export default function SupportChat() {
     end.current?.scrollIntoView({ block: 'end' });
   }, [thread?.messages.length]);
 
+  // The agents answer within seconds: while the last word is the driver's, show that they are writing.
+  const last = thread?.messages[thread.messages.length - 1];
+  const thinking = !!thread?.aiActive && last?.from === 'user' && Date.now() - Date.parse(last.at) < 90_000;
+
   const send = async () => {
     if (!text.trim() && !image) return;
     setBusy(true);
@@ -64,7 +68,7 @@ export default function SupportChat() {
     <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
       <div className="px-4 py-3 border-b border-slate-100">
         <p className="text-sm font-semibold text-slate-800">Чат с поддержкой</p>
-        <p className="text-xs text-slate-500">Опишите проблему и приложите фото — ответим здесь и пришлём уведомление</p>
+        <p className="text-xs text-slate-500">{thread?.aiActive ? 'Опишите проблему и приложите фото — ИИ-помощник ответит сразу, в сложных случаях подключится специалист' : 'Опишите проблему и приложите фото — ответим здесь и пришлём уведомление'}</p>
       </div>
       <div className="max-h-72 overflow-y-auto px-3 py-3 space-y-2 bg-slate-50">
         {(thread?.messages ?? []).length === 0 && <p className="text-center text-xs text-slate-400 py-4">Сообщений пока нет</p>}
@@ -72,12 +76,18 @@ export default function SupportChat() {
           <div key={m.id} className={`flex ${m.from === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[80%] rounded-2xl px-3 py-2 ${m.from === 'user' ? 'bg-[#FFC83D] text-[#111]' : 'bg-white border border-slate-100 text-slate-800'}`}>
               {m.from === 'support' && <p className="text-[10px] font-semibold text-slate-400 mb-0.5">Поддержка Voli</p>}
+              {m.from === 'ai' && <p className="text-[10px] font-semibold text-[#8A5B00] mb-0.5 inline-flex items-center gap-1"><Sparkles size={10} />{`ИИ-помощник · ${m.agentName ?? 'Voli'}`}</p>}
               {m.image && <img src={m.image} alt="Фото к сообщению" className="rounded-xl mb-1 max-h-48 object-cover" />}
               {m.text && <p className="text-sm whitespace-pre-wrap">{m.text}</p>}
               <p className={`text-[10px] mt-0.5 ${m.from === 'user' ? 'text-black/50' : 'text-slate-400'}`}>{time(m.at)}</p>
             </div>
           </div>
         ))}
+        {thinking && (
+          <div className="flex justify-start" aria-live="polite">
+            <div className="rounded-2xl px-3 py-2 bg-white border border-slate-100 text-xs text-slate-500 inline-flex items-center gap-1.5"><Sparkles size={12} className="text-[#8A5B00]" />Помощник отвечает…</div>
+          </div>
+        )}
         <div ref={end} />
       </div>
       {image && (

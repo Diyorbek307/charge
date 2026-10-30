@@ -124,8 +124,18 @@ export interface OcpiOverview { partners: OcpiPartner[]; version: string; ourVer
 export type ChargeGoal = { kind: 'percent'; value: number; fromPct?: number } | { kind: 'sum'; value: number } | { kind: 'km'; value: number };
 export interface SessionGoal { kind: 'percent' | 'sum' | 'km'; value: number; fromPct?: number; stopKwh?: number; stopCost?: number }
 export interface ScheduledStart { id: string; stationId: string; stationName: string; connectorId: string; connector: string; payer: string; goal: ChargeGoal | null; at: string; status: 'pending' | 'starting' | 'started' | 'failed' | 'cancelled' }
-export interface SupportMessage { id: string; from: 'user' | 'support'; text: string; image: string | null; at: string }
-export interface SupportThread { id: string; userId: string; user: string; phone: string | null; status: 'open' | 'closed' | 'new'; updatedAt: string; unreadAdmin: number; unreadUser: number; messages: SupportMessage[] }
+export interface SupportMessage { id: string; from: 'user' | 'support' | 'ai'; text: string; image: string | null; at: string; agent?: string; agentName?: string }
+export interface SupportThread {
+  id: string; userId: string; user: string; phone: string | null; status: 'open' | 'closed' | 'new'; updatedAt: string; unreadAdmin: number; unreadUser: number; messages: SupportMessage[];
+  /** An AI agent called a person into this chat. */
+  needsHuman?: boolean; handoffReason?: string | null;
+  /** Until when the agents stay out (a person is answering). */
+  aiHoldUntil?: string | null;
+  aiActive?: boolean;
+}
+export interface AiAgent { id: string; name: string; emoji: string; topics: string; instructions: string; on: boolean; answered: number; handoffs: number }
+export interface AiAgentsView { on: boolean; connected: boolean; model: string | null; agents: AiAgent[]; waiting: number }
+export interface AiAnswer { agent: string; agentName: string; emoji: string; reply: string; handoff: boolean; reason: string; source: 'claude' | 'basic' }
 export type Payer = 'self' | 'company' | 'credit' | `family:${string}`;
 export type HostKind = 'home' | 'hotel' | 'business' | 'parking' | 'cafe';
 export interface HostApplication {
@@ -392,9 +402,27 @@ export interface Stats {
 }
 
 /** A discount a partner network runs at its stations and pays for itself. */
+export interface CampaignDraft {
+  title: string;
+  note?: string;
+  percent: number;
+  funder: 'network' | 'voli';
+  operatorIds: string[] | null;
+  fromHour?: number | null;
+  toHour?: number | null;
+  firstOnly?: boolean;
+  until?: string | null;
+  announce?: boolean;
+}
 export interface Promo {
   id: string;
-  operatorId: string;
+  /** The network running its own promo; null for a campaign of Voli's. */
+  operatorId: string | null;
+  /** A campaign of Voli's: the networks it covers, null for all. */
+  operatorIds?: string[] | null;
+  /** Who pays the discount: the network, or Voli (the network then gets its full price). */
+  funder?: 'network' | 'voli';
+  note?: string | null;
   title: string;
   percent: number;
   /** Tashkent hours it runs, e.g. 23 → 7; null for all day. */
@@ -811,7 +839,10 @@ export const apiClient = {
   supportThread: () => request<SupportThread>('/support/messages', { portal: 'driver' }),
   sendSupport: (text: string, image: string | null) => post<SupportThread>('/support/messages', { text, ...(image ? { image } : {}) }, 'driver'),
   adminSupport: () => request<SupportThread[]>('/admin/support', { portal: 'admin' }),
-  answerSupport: (id: string, body: { text?: string; close?: boolean }) => post<SupportThread>(`/admin/support/${id}`, body, 'admin'),
+  answerSupport: (id: string, body: { text?: string; close?: boolean; ai?: boolean }) => post<SupportThread>(`/admin/support/${id}`, body, 'admin'),
+  aiAgents: () => request<AiAgentsView>('/admin/ai-agents', { portal: 'admin' }),
+  saveAiAgents: (body: { on?: boolean; agents?: Partial<AiAgent>[] }) => request<AiAgentsView>('/admin/ai-agents', { method: 'PUT', body: JSON.stringify(body), portal: 'admin' }),
+  testAiAgents: (text: string) => post<AiAnswer>('/admin/ai-agents/test', { text }, 'admin'),
   setStationInfo: (id: string, body: { findHint?: string; hours?: string; amenities?: string[]; photo?: string | null }) =>
     request<{ id: string }>(`/stations/${id}/info`, { method: 'PATCH', body: JSON.stringify(body), portal: 'operator' }),
   shareSession: (id: string) => post<{ token: string }>(`/sessions/${id}/share`, undefined, 'driver'),
@@ -820,6 +851,9 @@ export const apiClient = {
   createPromo: (body: { percent: number; title?: string; fromHour?: number | null; toHour?: number | null; firstOnly?: boolean; stationIds?: string[]; until?: string | null }) =>
     post<Promo>('/operator/promos', body, 'operator'),
   stopPromo: (id: string) => request<Promo>(`/operator/promos/${id}`, { method: 'DELETE', portal: 'operator' }),
+  adminPromos: () => request<{ promos: (Promo & { voliPaid?: number; createdBy?: string })[]; voliPaidMonth: number; driversReachable: number }>('/admin/promos', { portal: 'admin' }),
+  createCampaign: (body: CampaignDraft) => post<Promo>('/admin/promos', body, 'admin'),
+  stopCampaign: (id: string) => request<Promo>(`/operator/promos/${id}`, { method: 'DELETE', portal: 'admin' }),
   cancelSchedule: (id: string) => request<ScheduledStart>(`/sessions/schedule/${id}`, { method: 'DELETE', portal: 'driver' }),
   rateSession: (portal: Portal, id: string, stars: number) =>
     post<{ station: Station; session: Session }>(`/sessions/${id}/rating`, { stars }, portal),

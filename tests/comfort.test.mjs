@@ -102,10 +102,12 @@ describe('everyday comfort', () => {
 
   test('support chat: the driver writes with a photo, support answers, both see it', async () => {
     const token = await driver();
+    const adm = await admin();
+    // A person answering: the AI agents (tests/campaigns-ai.test.mjs) stay out of it.
+    await call('/admin/ai-agents', { method: 'PUT', token: adm, body: { on: false } });
     assert.equal((await call('/support/messages', { method: 'POST', token, body: {} })).status, 400);
     const sent = await call('/support/messages', { method: 'POST', token, body: { text: 'Станция не запускается, на экране ошибка', image: jpeg() } });
     assert.equal(sent.status, 201);
-    const adm = await admin();
     const list = (await call('/admin/support', { token: adm })).data;
     const thread = list.find(t => t.userId === 'acc-driver');
     assert.equal(thread.unreadAdmin, 1);
@@ -118,5 +120,6 @@ describe('everyday comfort', () => {
     assert.equal(mine.messages[1].from, 'support');
     assert.equal((await call('/support/messages', { token })).data.unreadUser, 0);
     assert.ok((await call('/notifications', { token })).data.some(e => e.type === 'support.message'));
+    await call('/admin/ai-agents', { method: 'PUT', token: adm, body: { on: true } });
   });
 });

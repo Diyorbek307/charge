@@ -16,6 +16,7 @@ import { networkApi } from "./server/networkApi.js";
 import { startSessionWatch } from "./server/sessionWatch.js";
 import "./server/cameras.js";
 import "./server/comfort.js";
+import "./server/aiSupport.js";
 import "./server/tts.js";
 import "./server/places.js";
 import { errorHandler } from "./server/monitoring.js";

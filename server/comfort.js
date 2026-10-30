@@ -3,6 +3,7 @@ import { db } from './db.js';
 import { api, requireAuth, emit } from './api.js';
 import { demoEnergy } from './history.js';
 import { notifyTeam } from './mail.js';
+import { aiAnswering, onDriverMessage } from './aiSupport.js';
 
 /**
  * Small things that make the app easier every day:
@@ -12,8 +13,10 @@ import { notifyTeam } from './mail.js';
  *                  station's network;
  *   share          a link to a running charge for family or colleagues:
  *                  station, progress and ready-by time, nothing personal;
- *   support chat   the driver writes (with a photo if needed), support
- *                  answers from the admin portal, both see it live.
+ *   support chat   the driver writes (with a photo if needed), the AI
+ *                  agents answer at once (aiSupport.js) and call a person
+ *                  when needed; support answers from the admin portal,
+ *                  both see it live.
  */
 
 export const AMENITIES = ['Wi-Fi', 'Кафе', 'Туалет', 'Парковка', 'Крытая парковка', 'ТЦ', 'Магазин', 'Мойка'];
@@ -118,7 +121,12 @@ api.get('/share/:token', (req, res) => {
 
 const threads = () => (db.data.supportThreads ??= []);
 const threadOf = userId => threads().find(t => t.userId === userId);
-const publicThread = t => ({ id: t.id, userId: t.userId, user: t.user, phone: t.phone, status: t.status, updatedAt: t.updatedAt, unreadAdmin: t.unreadAdmin, unreadUser: t.unreadUser, messages: t.messages.slice(-200) });
+const publicThread = t => ({
+  id: t.id, userId: t.userId, user: t.user, phone: t.phone, status: t.status, updatedAt: t.updatedAt, unreadAdmin: t.unreadAdmin, unreadUser: t.unreadUser,
+  needsHuman: !!t.needsHuman, handoffReason: t.handoffReason ?? null, aiHoldUntil: t.aiHoldUntil ?? null,
+  aiActive: aiAnswering() && !(t.aiHoldUntil && Date.parse(t.aiHoldUntil) > Date.now()),
+  messages: t.messages.slice(-200),
+});
 
 function post(thread, from, b) {
   const body = text(b.text, 2000);
@@ -141,7 +149,7 @@ api.get('/support/messages', requireAuth('driver'), (req, res) => {
     t.unreadUser = 0;
     db.save();
   }
-  res.json(t ? publicThread(t) : { messages: [], status: 'new' });
+  res.json(t ? publicThread(t) : { messages: [], status: 'new', aiActive: aiAnswering() });
 });
 
 api.post('/support/messages', requireAuth('driver'), (req, res) => {
@@ -154,7 +162,8 @@ api.post('/support/messages', requireAuth('driver'), (req, res) => {
   const r = post(t, 'user', req.body ?? {});
   if (r.error) return res.status(r.status).json({ error: r.error });
   // One letter per conversation the team has not opened yet, not one per message.
-  if (!waiting) {
+  // With the AI agents on, the letter comes when an agent calls a person.
+  if (!waiting && !aiAnswering()) {
     notifyTeam(`Поддержка: пишет ${req.account.name}`, [
       ['Обращение', t.id],
       ['Водитель', req.account.name],
@@ -163,6 +172,7 @@ api.post('/support/messages', requireAuth('driver'), (req, res) => {
     ], '/?portal=admin&page=support', 'support');
   }
   emit({ type: 'support.message', portal: 'driver', actor: req.account.name, message: `Поддержка: сообщение от ${req.account.name}`, entity: t.id, payload: { userId: req.account.id, from: 'user' } });
+  onDriverMessage(t);
   res.status(201).json(publicThread(t));
 });
 
@@ -173,14 +183,24 @@ api.get('/admin/support', requireAuth('admin'), (_req, res) => {
 api.post('/admin/support/:id', requireAuth('admin'), (req, res) => {
   const t = threads().find(x => x.id === req.params.id);
   if (!t) return res.status(404).json({ error: 'Обращение не найдено' });
+  // The agents step back into a chat, or out of it, at the admin's word.
+  if (typeof req.body?.ai === 'boolean') {
+    t.aiHoldUntil = req.body.ai ? null : new Date(Date.now() + 30 * 86_400_000).toISOString();
+    db.save();
+    return res.json(publicThread(t));
+  }
   if (req.body?.close) {
     t.status = 'closed';
+    t.needsHuman = false;
     db.save();
     return res.json(publicThread(t));
   }
   const r = post(t, 'support', req.body ?? {});
   if (r.error) return res.status(r.status).json({ error: r.error });
   t.unreadAdmin = 0;
+  // A person is in the chat now: the agents stay out of it for a while.
+  t.needsHuman = false;
+  t.aiHoldUntil = new Date(Date.now() + 12 * 3600_000).toISOString();
   db.save();
   emit({ type: 'support.message', portal: 'admin', actor: 'Поддержка', message: `Ответ поддержки: ${r.message.text.slice(0, 80) || 'фото'}`, entity: t.id, payload: { userId: t.userId, from: 'support' } });
   res.json(publicThread(t));
