@@ -9,7 +9,7 @@ import type { PlatformSettings } from './api';
 export type Feature = keyof PlatformSettings['features'];
 
 const DEFAULTS: PlatformSettings = {
-  features: { offline: true, navigator: true, battery: true, arrival: true, places: true, rewards: true, plus: true, autocharge: true, liveNotice: true, bookings: true, queue: true, sos: true },
+  features: { offline: true, navigator: true, battery: true, arrival: true, places: true, rewards: true, plus: true, autocharge: true, liveNotice: true, bookings: true, queue: true, sos: true, referral: true },
   booking: { fee: 2000, graceMin: 15 },
   topup: { min: 1000, max: 10_000_000, providers: ['payme', 'click', 'uzum', 'humo'] },
   queueHoldMin: 5,

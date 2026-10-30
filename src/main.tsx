@@ -9,6 +9,13 @@ import { initMonitoring } from './lib/monitoring'
 
 initAnalytics()
 initMonitoring()
+// An invite link (?ref=CODE) keeps the friend's code for the sign-up form.
+try {
+  const ref = new URLSearchParams(window.location.search).get('ref')
+  if (ref) localStorage.setItem('pg-ref', ref.toUpperCase().slice(0, 12))
+} catch {
+  /* private mode: the code can still be typed */
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -27,6 +27,7 @@ export const SCHEMA = [
   { key: 'feature.bookings', group: 'features', label: 'Бронь разъёма', type: 'bool', def: true },
   { key: 'feature.queue', group: 'features', label: 'Очередь на станции', type: 'bool', def: true },
   { key: 'feature.sos', group: 'features', label: 'SOS водителю', hint: 'Кнопка помощи на карте', type: 'bool', def: true },
+  { key: 'feature.referral', group: 'features', label: '«Приведи друга»', hint: 'Выключено — новые приглашения не засчитываются, начисленные бонусы действуют', type: 'bool', def: true },
 
   // First launch: what a new driver goes through before and after signing in
   { key: 'onboarding.intro', group: 'onboarding', label: 'Знакомство при первом запуске', hint: 'Три экрана о том, что умеет приложение', type: 'bool', def: true },
@@ -53,6 +54,12 @@ export const SCHEMA = [
     ...(goal > 1 ? [{ key: `rewards.${id}.goal`, group: 'rewards', label: `«${label}» — сколько нужно`, type: 'int', def: goal, min: 1, max: 100_000, unit }] : []),
   ]),
   { key: 'points.valueUzs', group: 'rewards', label: 'Стоимость одного балла', hint: 'При обмене баллов на кошелёк', type: 'money', def: 10, min: 0, max: 1000, unit: 'сум' },
+
+  // Bring a friend (Voli pays, from the rewards budget)
+  { key: 'referral.percent', group: 'referral', label: 'Доля пригласившему', hint: 'От суммы каждой оплаченной зарядки друга — бонусом', type: 'percent', def: 5, min: 0, max: 30, unit: '%' },
+  { key: 'referral.months', group: 'referral', label: 'Сколько месяцев начисляется', hint: 'Со дня, когда друг зарегистрировался', type: 'int', def: 12, min: 1, max: 60, unit: 'мес.' },
+  { key: 'referral.friendBonus', group: 'referral', label: 'Бонус другу за первую зарядку', type: 'money', def: 20_000, min: 0, max: 1_000_000, unit: 'сум' },
+  { key: 'referral.monthCap', group: 'referral', label: 'Потолок для пригласившего в месяц', hint: 'Сверх него за этот месяц не начисляется', type: 'money', def: 300_000, min: 0, max: 10_000_000, unit: 'сум' },
 
   // Voli Plus
   { key: 'plus.price', group: 'plus', label: 'Цена подписки', type: 'money', def: n('PLUS_PRICE_UZS', 49_000), min: 0, max: 10_000_000, unit: 'сум' },
@@ -89,6 +96,7 @@ export const SCHEMA = [
 export const GROUPS = {
   features: 'Функции для водителей',
   rewards: 'Награды и бонусы',
+  referral: '«Приведи друга»',
   plus: 'Voli Plus',
   fleet: 'Автопарки и такси',
   charging: 'Зарядка, бронь, очередь',

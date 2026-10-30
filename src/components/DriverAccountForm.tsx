@@ -26,6 +26,14 @@ export default function DriverAccountForm({ mode, ring, grad, onCancel, onNeedsL
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
+  // A friend's code arrives in the invite link (?ref=) and waits on this device until sign-up.
+  const [ref, setRef] = useState(() => {
+    try {
+      return localStorage.getItem('pg-ref') ?? '';
+    } catch {
+      return '';
+    }
+  });
   const [demoCode, setDemoCode] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -64,8 +72,13 @@ export default function DriverAccountForm({ mode, ring, grad, onCancel, onNeedsL
       if (mode === 'register') {
         // The first-run screens come before this form, so the agreement is already accepted here.
         const accepted = readFirstRun();
-        const { token, user } = await actions.register(phone, code.trim(), name, password, { version: accepted?.version ?? 0, marketing: !!accepted?.marketing });
+        const { token, user } = await actions.register(phone, code.trim(), name, password, { version: accepted?.version ?? 0, marketing: !!accepted?.marketing }, ref.trim() || undefined);
         adoptSession('driver', token, user);
+        try {
+          localStorage.removeItem('pg-ref');
+        } catch {
+          /* nothing kept */
+        }
       } else {
         const result = await actions.resetPassword(phone, code.trim(), password);
         if (result.token && result.user) adoptSession('driver', result.token, result.user);
@@ -111,6 +124,14 @@ export default function DriverAccountForm({ mode, ring, grad, onCancel, onNeedsL
               className={inputClass(ring)}
             />
           </div>
+          {mode === 'register' && (
+            <div>
+              <label htmlFor="driver-signup-ref" className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                Код друга (если есть)
+              </label>
+              <input id="driver-signup-ref" value={ref} onChange={e => setRef(e.target.value.toUpperCase())} autoComplete="off" placeholder="Например, K7QM2X" maxLength={12} className={inputClass(ring)} />
+            </div>
+          )}
           <ErrorBox error={error} />
           <button
             type="submit"

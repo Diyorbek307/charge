@@ -8,6 +8,7 @@ import { hashPassword } from './seed.js';
 import { normalizePhone, issueCode, consumeCode, PURPOSES, smsConfigured } from './sms.js';
 import { submitLead, listLeads, updateLead, LEAD_KINDS } from './leads.js';
 import { notifyTeam, mailConfigured, mailbox } from './mail.js';
+import { joinByCode, onFriendPaid, referralFor } from './referrals.js';
 import { analyticsFor, adminUsers, setUserStatus, isBlocked, monthSpend } from './analytics.js';
 import { demoEnergy } from './history.js';
 import { riskReport, reviewFinding, cdrReport, bandFor, tariffBands, setTariffBands } from './admin.js';
@@ -777,6 +778,8 @@ api.post('/auth/register', async (req, res) => {
   };
   db.data.accounts.push(account);
   db.data.wallets[account.id] = { balance: 0, currency: 'UZS', autoTopUp: false, threshold: 0, card: null };
+  // Came by a friend's link: the friend's code ties them together.
+  joinByCode(account, req.body?.ref);
   const token = db.issueToken(account, req);
   emit({
     type: 'auth.register',
@@ -1809,8 +1812,15 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
   promoteQueue(session.stationId, session.connectorId);
   const driver = db.byId('accounts', session.userId);
   if (driver && !simulated) announceRewards(driver, syncRewards(driver));
+  // Brought by a friend: the welcome bonus, and the friend's share. A charge on credit is not paid yet.
+  if (driver && !simulated && !session.credit) {
+    for (const g of onFriendPaid(session)) announceRewards(db.byId('accounts', g.userId ?? driver.id), [g]);
+  }
   return { session, transaction };
 }
+
+/** Bring a friend: the driver's code, the rules in force, the friends and what they brought. */
+api.get('/me/referral', requireAuth('driver'), (req, res) => res.json(referralFor(req.account)));
 
 /** Tells the driver about each reward just reached. */
 function announceRewards(account, grants) {

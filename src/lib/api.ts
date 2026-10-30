@@ -25,6 +25,20 @@ export interface Account {
   consent?: Consent | null;
 }
 
+/** Bring a friend: the driver's code, the rules in force and each friend with what they brought. */
+export interface Referral {
+  on: boolean;
+  code: string;
+  percent: number;
+  months: number;
+  friendBonus: number;
+  monthCap: number;
+  earnedMonth: number;
+  earnedTotal: number;
+  friends: { name: string; since: string; charges: number; earned: number; active: boolean }[];
+  invitedBy: boolean;
+}
+
 export interface Consent {
   version: number;
   marketing: boolean;
@@ -397,7 +411,7 @@ export interface Promo {
 
 /** The admin's switches and numbers every app follows (server/settings.js publicSettings). */
 export interface PlatformSettings {
-  features: { offline: boolean; navigator: boolean; battery: boolean; arrival: boolean; places: boolean; rewards: boolean; plus: boolean; autocharge: boolean; liveNotice: boolean; bookings: boolean; queue: boolean; sos: boolean };
+  features: { offline: boolean; navigator: boolean; battery: boolean; arrival: boolean; places: boolean; rewards: boolean; plus: boolean; autocharge: boolean; liveNotice: boolean; bookings: boolean; queue: boolean; sos: boolean; referral: boolean };
   booking: { fee: number; graceMin: number };
   topup: { min: number; max: number; providers: ('payme' | 'click' | 'uzum' | 'humo')[] };
   queueHoldMin: number;
@@ -704,8 +718,9 @@ export const apiClient = {
   smsStatus: () => request<{ configured: boolean; demo: boolean }>('/auth/sms/status'),
   requestSmsCode: (phone: string, purpose: 'register' | 'reset') =>
     post<{ sent: boolean; phone: string; demoCode?: string }>('/auth/sms/request', { phone, purpose }),
-  register: (phone: string, code: string, name: string, password: string, consent: { version: number; marketing: boolean }) =>
-    post<{ token: string; user: Account }>('/auth/register', { phone, code, name, password, consent }),
+  register: (phone: string, code: string, name: string, password: string, consent: { version: number; marketing: boolean }, ref?: string) =>
+    post<{ token: string; user: Account }>('/auth/register', { phone, code, name, password, consent, ...(ref ? { ref } : {}) }),
+  referral: () => request<Referral>('/me/referral', { portal: 'driver' }),
   acceptConsent: (consent: { version: number; marketing: boolean }) => post<{ user: Account }>('/me/consent', consent, 'driver'),
   resetPassword: (phone: string, code: string, password: string) =>
     post<{ reset: true; requires2fa?: boolean; token?: string; user?: Account }>('/auth/password/reset', { phone, code, password }),

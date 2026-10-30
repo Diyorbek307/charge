@@ -7,6 +7,7 @@
  * withdrawn, and burns after BONUS_DAYS. Each reward is granted once per
  * account, and a monthly budget caps what the promotion can cost.
  */
+import crypto from 'node:crypto';
 import { db } from './db.js';
 import { setting, feature } from './settings.js';
 
@@ -123,6 +124,22 @@ export function rewardsOverview() {
     byKind: Object.fromEntries(ACHIEVEMENTS.map(a => [a.id, thisMonth.filter(g => g.kind === a.id).length])),
     recent: all.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 40).map(g => ({ ...g, user: db.byId('accounts', g.userId)?.name ?? g.userId })),
   };
+}
+
+/**
+ * A bonus earned outside the milestones (the bring-a-friend programme): once
+ * per kind, within the month's budget. Returns the grant, or null.
+ */
+export function grantBonus(userId, kind, title, amount) {
+  const sum = Math.round(amount);
+  const mine = (store()[userId] ??= { grants: [] });
+  if (sum <= 0 || mine.grants.some(g => g.kind === kind) || monthSpend() + sum > MONTH_BUDGET()) return null;
+  const at = nowIso();
+  const grant = { id: `BN-${Date.now().toString(36)}-${crypto.randomBytes(2).toString('hex')}`, kind, title, amount: sum, left: sum, at, expiresAt: new Date(Date.now() + BONUS_DAYS() * DAY).toISOString() };
+  mine.grants.push(grant);
+  ledger().unshift({ id: grant.id, userId, kind, amount: sum, ts: at, type: 'grant' });
+  db.save();
+  return grant;
 }
 
 /** Support gives a driver a bonus by hand (an apology, a goodwill gesture); it counts towards the budget. */
