@@ -3,6 +3,7 @@ import { ImagePlus, LoaderCircle, Trash2 } from 'lucide-react';
 import type { Station } from '../../data/mockData';
 import { useSync } from '../../lib/sync';
 import { shrink } from '../driver/SupportChat';
+import { API_ORIGIN } from '../../lib/site';
 
 const AMENITIES = ['Wi-Fi', 'Кафе', 'Туалет', 'Парковка', 'Крытая парковка', 'ТЦ', 'Магазин', 'Мойка'];
 
@@ -33,7 +34,7 @@ export default function StationInfo({ station }: { station: Station }) {
       setBusy(false);
     }
   };
-  const current = photo === undefined ? (station.photoAt ? `/api/stations/${station.id}/photo?v=${encodeURIComponent(station.photoAt)}` : null) : photo;
+  const current = photo === undefined ? (station.photoAt ? `${API_ORIGIN}/api/stations/${station.id}/photo?v=${encodeURIComponent(station.photoAt)}` : null) : photo;
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-4">

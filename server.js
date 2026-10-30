@@ -76,6 +76,25 @@ app.use((req, res, next) => {
   next();
 });
 
+// The landing on its own site (voli.uz) reads the live figures and sends
+// applications to this server. CORS_ORIGINS lists those sites; any other
+// origin gets no CORS headers, so browsers keep refusing it.
+const corsOrigins = new Set((process.env.CORS_ORIGINS ?? "").split(/[\s,]+/).filter(Boolean));
+app.use(["/api", "/health"], (req, res, next) => {
+  const origin = req.get("origin");
+  if (origin && corsOrigins.has(origin)) {
+    res.set({
+      "Access-Control-Allow-Origin": origin,
+      Vary: "Origin",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Max-Age": "600",
+    });
+    if (req.method === "OPTIONS") return res.sendStatus(204);
+  }
+  next();
+});
+
 // For Render and uptime monitors: 200 while the server runs and its data is
 // being saved, 503 when saving has started to fail, so an alert goes out
 // before anything is lost.

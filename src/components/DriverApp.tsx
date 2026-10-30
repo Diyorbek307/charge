@@ -47,6 +47,7 @@ import FirstRun from './driver/FirstRun';
 import Tour from './driver/Tour';
 import { readFirstRun, tourSeen, markTour } from '../lib/firstRun';
 import { subscribePush } from './PushToggle';
+import { API_ORIGIN } from '../lib/site';
 
 type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate' | 'rewards' | 'battery' | 'plus' | 'autocharge';
 type Tab = 'map' | 'charging' | 'deals' | 'profile';
@@ -262,7 +263,7 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
         <div className="rounded-2xl overflow-hidden mb-3 h-32 bg-slate-100 relative">
           {/* With no signal the photo may not load: the card keeps a calm tile instead of a broken image. */}
           <span className="absolute inset-0 grid place-items-center text-slate-300" aria-hidden="true"><Zap size={34} /></span>
-          <img src={station.photoAt ? `/api/stations/${station.id}/photo?v=${encodeURIComponent(station.photoAt)}` : station.image} alt={station.name} className="relative w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; }} />
+          <img src={station.photoAt ? `${API_ORIGIN}/api/stations/${station.id}/photo?v=${encodeURIComponent(station.photoAt)}` : station.image} alt={station.name} className="relative w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; }} />
           {!openNow(station.hours) && <span className="absolute top-2 left-2 px-2 py-1 rounded-lg bg-red-600 text-white text-xs font-semibold">{`Закрыто · ${station.hours}`}</span>}
           <span className="absolute bottom-2 left-2 flex gap-1.5">
             <span className="px-2 py-1 rounded-lg bg-black/60 backdrop-blur text-white text-xs font-semibold">{station.hours}</span>

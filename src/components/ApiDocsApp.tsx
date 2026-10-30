@@ -7,6 +7,7 @@ import WebhooksLive from './WebhooksLive';
 import { tokenStore } from '../lib/api';
 import { BRAND } from '../brand';
 import { LogoMark } from '../landing/Logo';
+import { API_ORIGIN } from '../lib/site';
 
 type Section = 'overview' | 'auth' | 'stations' | 'tariffs' | 'events' | 'webhooks' | 'ocpp' | 'errors' | 'roadmap' | 'status';
 
@@ -157,7 +158,7 @@ function EndpointCard({ ep }: { ep: Endpoint }) {
     const path = ep.path.replace('{id}', encodeURIComponent(id));
     const t0 = performance.now();
     try {
-      const res = await fetch(`/api${path}${ep.path === '/events' ? '?limit=5' : ep.path === '/partner/stations' ? '?limit=2' : ''}`, {
+      const res = await fetch(`${API_ORIGIN}/api${path}${ep.path === '/events' ? '?limit=5' : ep.path === '/partner/stations' ? '?limit=2' : ''}`, {
         headers: ep.auth === 'partner' && token ? { Authorization: `Bearer ${token}` } : {},
       });
       const text = await res.text();

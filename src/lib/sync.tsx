@@ -10,6 +10,7 @@ import {
   type Portal,
   type SyncEvent,
 } from './api';
+import { API_ORIGIN } from './site';
 
 type ConnectionState = 'connecting' | 'live' | 'offline';
 
@@ -183,7 +184,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     const open = async (portal: Portal | null) => {
       if (closed) return;
       setConnection('connecting');
-      let url = '/api/stream';
+      let url = `${API_ORIGIN}/api/stream`;
       if (portal) {
         try {
           const { ticket } = await apiClient.streamTicket(portal);

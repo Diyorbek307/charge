@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSync } from './sync';
 import { tokenStore, type Portal } from './api';
+import { API_ORIGIN } from './site';
 
 /** Mirrors server/analytics.js — every dashboard figure comes from here. */
 export interface Totals {
@@ -143,7 +144,7 @@ export function useAnalytics(portal: Portal, days = 30) {
   const load = useCallback(async () => {
     try {
       const token = tokenStore.get(portal);
-      const res = await fetch(`/api/analytics?days=${days}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const res = await fetch(`${API_ORIGIN}/api/analytics?days=${days}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
       if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? `Ошибка ${res.status}`);
       setData(await res.json());
       setError('');

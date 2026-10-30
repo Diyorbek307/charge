@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { API_ORIGIN } from './site';
 
 export type LatLng = { lat: number; lng: number };
 export type Lang = 'ru' | 'uz' | 'en';
@@ -106,7 +107,7 @@ export async function fetchCameras(route: Route): Promise<Camera[]> {
   const lats = route.line.map(p => p.lat);
   const lngs = route.line.map(p => p.lng);
   const box = [Math.min(...lats) - 0.01, Math.min(...lngs) - 0.01, Math.max(...lats) + 0.01, Math.max(...lngs) + 0.01].map(v => v.toFixed(4)).join(',');
-  const res = await fetch(`/api/cameras?bbox=${box}`);
+  const res = await fetch(`${API_ORIGIN}/api/cameras?bbox=${box}`);
   if (!res.ok) return [];
   const { cameras } = (await res.json()) as { cameras: Camera[] };
   // Only those on the route itself: within 35 m of the line.
@@ -240,7 +241,7 @@ function deviceSay(lang: Lang, text: string, urgent: boolean) {
 
 let neural: Promise<boolean> | null = null;
 const neuralReady = () =>
-  (neural ??= fetch('/api/tts/status')
+  (neural ??= fetch(`${API_ORIGIN}/api/tts/status`)
     .then(r => (r.ok ? r.json() : null))
     .then(d => !!d?.provider)
     .catch(() => false));
@@ -259,7 +260,7 @@ function clip(lang: Lang, text: string) {
     } catch {
       /* private mode */
     }
-    p = fetch(`/api/tts?lang=${lang}&text=${encodeURIComponent(text)}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    p = fetch(`${API_ORIGIN}/api/tts?lang=${lang}&text=${encodeURIComponent(text)}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then(r => (r.ok ? r.blob() : null))
       .then(b => (b ? URL.createObjectURL(b) : null))
       .catch(() => null);

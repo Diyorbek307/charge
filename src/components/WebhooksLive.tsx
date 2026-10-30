@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, Power, Send, Copy, Check, LoaderCircle, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { API_ORIGIN } from '../lib/site';
 
 interface Webhook {
   id: string;
@@ -45,7 +46,7 @@ const token = () => {
 };
 
 async function call<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${API_ORIGIN}/api${path}`, {
     ...options,
     headers: {
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),

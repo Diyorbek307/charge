@@ -19,6 +19,7 @@ const SplitView = lazy(() => import('./components/SplitView'));
 const FirstRun = lazy(() => import('./components/driver/FirstRun'));
 import { useSync } from './lib/sync';
 import { useFirstRunNeeded } from './lib/firstRun';
+import { APP_URL, LANDING_URL, appElsewhere, landingElsewhere, inNativeShell } from './lib/site';
 import type { Portal as AuthPortal } from './lib/api';
 import { inTelegram, telegramInitData } from './lib/telegram';
 import SharePage from './components/SharePage';
@@ -276,7 +277,8 @@ const VALID_PORTALS: Portal[] = ['selector', 'driver', 'operator', 'admin', 'bus
 
 /** Lets a portal be deep-linked (?portal=operator) — used by the split view. */
 function initialPortal(): Portal {
-  if (inTelegram()) return 'driver';
+  // The store app and the Telegram mini app are the driver's app.
+  if (inTelegram() || inNativeShell()) return 'driver';
   try {
     const p = new URLSearchParams(window.location.search).get('portal') as Portal | null;
     if (p && VALID_PORTALS.includes(p)) return p;
@@ -303,7 +305,10 @@ export default function App() {
 function MainApp() {
   const { t: tApp } = useI18n();
   const [portal, setPortal] = useState<Portal>(initialPortal);
-  const [splitView, setSplitView] = useState(false);
+  const [splitView, setSplitView] = useState(() => new URLSearchParams(window.location.search).has('split'));
+  // When the landing lives on its own site, its buttons open the app's site.
+  const openPortal = (p: Portal) => (p !== 'selector' && appElsewhere() ? window.location.assign(`${APP_URL}/?portal=${p}`) : setPortal(p));
+  const openSplit = () => (appElsewhere() ? window.location.assign(`${APP_URL}/?split=1`) : setSplitView(true));
   // Split view embeds the app in iframes; nested chrome there would be noise.
   const embedded = typeof window !== 'undefined' && window.self !== window.top;
   const { sessions, actions, adoptSession } = useSync();
@@ -322,6 +327,13 @@ function MainApp() {
     // Once on start; signing out inside Telegram should not sign straight back in.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // The app's own site has no landing: its front page and the legal pages are
+  // on the landing's site. The store app and Telegram stay in the app.
+  const toLanding = portal === 'selector' && !splitView && !embedded && landingElsewhere() && !inNativeShell() && !inTelegram();
+  useEffect(() => {
+    if (toLanding) window.location.replace(`${LANDING_URL}/${window.location.search}`);
+  }, [toLanding]);
   // 'light' | 'dark' | 'auto' — auto follows the phone or computer setting.
   const systemDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
   const [darkMode, setDarkMode] = useState(() => {
@@ -354,7 +366,7 @@ function MainApp() {
   return (
     <div className={`size-full overflow-hidden${darkMode ? ' dark' : ''}`}>
       <Suspense fallback={<PortalLoading />}>
-      {portal === 'selector' && <Landing onSelect={setPortal} onSplitView={() => setSplitView(true)} />}
+      {portal === 'selector' && !landingElsewhere() && <Landing onSelect={openPortal} onSplitView={openSplit} />}
       {portal === 'driver' && (
         <div className="h-full flex items-center justify-center relative overflow-clip" style={{ background: 'radial-gradient(ellipse at 50% 30%, #0f1e3a 0%, #080d19 50%, #050810 100%)' }}>
           {/* Animated ambient orbs */}

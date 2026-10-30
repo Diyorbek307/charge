@@ -1,3 +1,4 @@
+import { API_ORIGIN } from './site';
 export type Portal = 'driver' | 'operator' | 'admin' | 'business' | 'api';
 
 /** A password may buy a token outright, or only a 2FA challenge. */
@@ -663,7 +664,7 @@ async function request<T>(path: string, options: RequestInit & { portal?: Portal
   const { portal, headers, ...rest } = options;
   const token = portal ? tokenStore.get(portal) : null;
 
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${API_ORIGIN}/api${path}`, {
     ...rest,
     headers: {
       ...(rest.body ? { 'Content-Type': 'application/json' } : {}),

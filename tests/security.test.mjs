@@ -38,7 +38,7 @@ const fleet = () => login('business', 'fleet@uzauto.uz', 'Business2026');
 before(async () => {
   dataDir = mkdtempSync(join(tmpdir(), 'oc-security-'));
   server = spawn(process.execPath, ['server.js'], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, DEMO_SIMULATION: 'false', DATABASE_URL: '', OSM_PLACES: 'false' },
+    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, DEMO_SIMULATION: 'false', DATABASE_URL: '', OSM_PLACES: 'false', CORS_ORIGINS: 'https://voli.uz' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   for (let i = 0; i < 150; i++) {
@@ -79,6 +79,15 @@ describe('security', () => {
     assert.equal(body.status, 'ok');
     assert.equal(body.storage, 'file');
     assert.deepEqual(Object.keys(body).sort(), ['status', 'storage', 'time']);
+  });
+
+  test('only the landing site may call the API from another origin', async () => {
+    const ask = origin => fetch(`${BASE}/leads`, { method: 'OPTIONS', headers: { Origin: origin, 'Access-Control-Request-Method': 'POST' } });
+    const ours = await ask('https://voli.uz');
+    assert.equal(ours.status, 204);
+    assert.equal(ours.headers.get('access-control-allow-origin'), 'https://voli.uz');
+    const theirs = await ask('https://evil.example');
+    assert.equal(theirs.headers.get('access-control-allow-origin'), null);
   });
 
   test("nobody moves another driver's meter", async () => {

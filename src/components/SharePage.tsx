@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BatteryCharging, CheckCircle, Clock, MapPin } from 'lucide-react';
 import { LogoMark } from '../landing/Logo';
+import { API_ORIGIN } from '../lib/site';
 
 interface Shared {
   status: 'active' | 'completed' | 'failed';
@@ -29,7 +30,7 @@ export default function SharePage({ token }: { token: string }) {
   useEffect(() => {
     let stop = false;
     const load = () =>
-      fetch(`/api/share/${encodeURIComponent(token)}`)
+      fetch(`${API_ORIGIN}/api/share/${encodeURIComponent(token)}`)
         .then(r => (r.ok ? r.json() : Promise.reject(new Error('gone'))))
         .then((d: Shared) => !stop && setData(d))
         .catch(() => !stop && setGone(true));
