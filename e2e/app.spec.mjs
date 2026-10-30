@@ -14,9 +14,10 @@ test('landing page renders and switches language', async ({ page }) => {
   await page.getByRole('radio', { name: 'UZ' }).first().click();
   await expect(h1).toContainText('Bitta ilovada.');
 
-  // The hero's demo button opens the Driver App sign-in.
-  await page.getByRole('button', { name: /Demoni sinab ko‘ring/ }).click();
-  await expect(page.locator('#driver-login')).toBeVisible();
+  // The landing does not lead into the app: its main button goes to the sign-up form on the page.
+  await expect(page.getByRole('button', { name: /Demoni/ })).toHaveCount(0);
+  await page.getByRole('link', { name: /Ishga tushganda xabar bering/ }).first().click();
+  await expect(page.locator('#join')).toBeInViewport();
 });
 
 test('the landing feed shows a charge starting and ending on the network', async ({ page, request }) => {

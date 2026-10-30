@@ -5,5 +5,5 @@
     <string name="package_name">uz.voli.app</string>
     <string name="custom_url_scheme">uz.voli.app</string>
     <!-- The Voli server the car screen asks for stations -->
-    <string name="voli_server" translatable="false">https://charge-qogf.onrender.com</string>
+    <string name="voli_server" translatable="false">https://app.voli.uz</string>
 </resources>

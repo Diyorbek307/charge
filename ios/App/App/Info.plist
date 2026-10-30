@@ -53,14 +53,14 @@
     </dict>
 	</dict>
 	<key>VoliServer</key>
-	<string>https://charge-qogf.onrender.com</string>
+	<string>https://app.voli.uz</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Voli показывает станции рядом с вами и расстояние до них.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Камера нужна, чтобы считать QR-код на зарядной станции.</string>
 	<key>WKAppBoundDomains</key>
 	<array>
-		<string>charge-qogf.onrender.com</string>
+		<string>app.voli.uz</string>
 		<string>voli.uz</string>
 	</array>
 	<key>UILaunchStoryboardName</key>

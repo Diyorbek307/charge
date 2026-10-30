@@ -1,7 +1,7 @@
 # Приложение Voli для Google Play и App Store
 
 Нативная оболочка на Capacitor 8 (`capacitor.config.ts`). Внутри открывается
-боевой сайт Voli (`CAP_SERVER_URL`; сейчас `https://charge-qogf.onrender.com`, после запуска домена — `https://voli.uz`: поменять там же, в `voli_server` у Android и `VoliServer`/`WKAppBoundDomains` у iOS):
+боевой сайт Voli (`CAP_SERVER_URL`; сейчас `https://app.voli.uz`; при смене адреса менять там же, в `voli_server` у Android и `VoliServer`/`WKAppBoundDomains` у iOS):
 у водителей всегда последняя версия, а вход, API, офлайн-трассы и QR-сканер
 работают так же, как в вебе. Сборка сайта из `dist/` лежит в приложении
 запасным вариантом.

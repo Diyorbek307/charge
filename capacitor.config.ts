@@ -10,7 +10,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
  * android/ and ios/ (see docs/native.md).
  */
 // The site as deployed today; set CAP_SERVER_URL=https://voli.uz once that domain serves it.
-const server = process.env.CAP_SERVER_URL ?? 'https://charge-qogf.onrender.com';
+const server = process.env.CAP_SERVER_URL ?? 'https://app.voli.uz';
 
 const config: CapacitorConfig = {
   appId: 'uz.voli.app',

@@ -100,7 +100,7 @@ function LangPills() {
   );
 }
 
-function Nav({ c, scrolled, onDemo, base }: { c: LandingCopy; scrolled: boolean; onDemo: () => void; base: string }) {
+function Nav({ c, scrolled, base }: { c: LandingCopy; scrolled: boolean; base: string }) {
   const [open, setOpen] = useState(false);
   const links = [
     ['#gives', c.nav.drivers],
@@ -120,9 +120,9 @@ function Nav({ c, scrolled, onDemo, base }: { c: LandingCopy; scrolled: boolean;
         </nav>
         <div className="lp-nav-right">
           <LangPills />
-          <button className="lp-btn lp-btn-dark lp-btn-sm lp-hide-sm" onClick={onDemo}>
-            {c.nav.demo}<ArrowRight size={15} />
-          </button>
+          <a className="lp-btn lp-btn-dark lp-btn-sm lp-hide-sm" href={`${base}#join`}>
+            {c.nav.join}<ArrowRight size={15} />
+          </a>
           <button className="lp-burger" aria-label={open ? c.nav.close : c.nav.menu} aria-expanded={open} onClick={() => setOpen(o => !o)}>
             {open ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -131,9 +131,9 @@ function Nav({ c, scrolled, onDemo, base }: { c: LandingCopy; scrolled: boolean;
       {open && (
         <div className="lp-sheet">
           {links.map(([h, l], i) => <a key={i} href={h} onClick={() => setOpen(false)}>{l}</a>)}
-          <button className="lp-btn lp-btn-dark" onClick={() => { setOpen(false); onDemo(); }}>
-            {c.nav.demo}<ArrowRight size={16} />
-          </button>
+          <a className="lp-btn lp-btn-dark" href={`${base}#join`} onClick={() => setOpen(false)}>
+            {c.nav.join}<ArrowRight size={16} />
+          </a>
         </div>
       )}
     </header>
@@ -142,7 +142,7 @@ function Nav({ c, scrolled, onDemo, base }: { c: LandingCopy; scrolled: boolean;
 
 // ───────────────────────── Hero ─────────────────────────
 
-function Hero({ c, lang, onDemo, onPick }: { c: LandingCopy; lang: Lang; onDemo: () => void; onPick: () => void }) {
+function Hero({ c, lang }: { c: LandingCopy; lang: Lang }) {
   const { state } = useSync();
   const stations = useMemo<SceneStation[]>(
     () =>
@@ -202,9 +202,9 @@ function Hero({ c, lang, onDemo, onPick }: { c: LandingCopy; lang: Lang; onDemo:
           </h1>
           <p className="lp-hero-sub rv" style={delay(420)}>{c.hero.sub}</p>
           <div className="lp-hero-cta rv" style={delay(520)}>
-            <button className="lp-btn lp-btn-primary lp-btn-lg" onClick={onDemo}>
-              <Zap size={18} />{c.hero.primary}
-            </button>
+            <a className="lp-btn lp-btn-primary lp-btn-lg" href="#join">
+              <Zap size={18} />{c.cta.join}
+            </a>
             <a className="lp-btn lp-btn-ghost lp-btn-lg" href="#gives">{c.hero.secondary}<ChevronDown size={18} /></a>
           </div>
           <dl className="lp-hero-stats rv" style={delay(620)} aria-live="polite">
@@ -217,7 +217,7 @@ function Hero({ c, lang, onDemo, onPick }: { c: LandingCopy; lang: Lang; onDemo:
         <div className="lp-hero-art rv" style={delay(200)}>
           <div className="lp-map-card">
             <p className="lp-map-label"><Layers size={14} />{c.hero.map}</p>
-            <HeroMap stations={stations} cities={cities} renderTip={renderTip} onPick={onPick} />
+            <HeroMap stations={stations} cities={cities} renderTip={renderTip} onPick={() => document.getElementById('network')?.scrollIntoView({ behavior: 'smooth' })} />
           </div>
           <div className="lp-chip lp-chip-a"><span className="lp-chip-ic"><Clock size={16} /></span><span><small>{c.hero.chips.arrive}</small><b>{c.hero.chips.arriveV}</b></span></div>
           <div className="lp-chip lp-chip-b"><span className="lp-chip-ic is-dark"><Moon size={16} /></span><span><small>{c.hero.chips.night}</small><b>{c.hero.chips.nightV}</b></span></div>
@@ -440,7 +440,7 @@ const ACT_ICON: Record<ActivityKind, ReactNode> = {
   start: <Zap size={14} />, stop: <Check size={14} />, reserved: <CalendarClock size={14} />, offline: <X size={14} />,
 };
 
-function LiveNetwork({ c, lang, fc, onOpen, onSplit }: { c: LandingCopy; lang: Lang; fc: TariffForecast; onOpen: () => void; onSplit: () => void }) {
+function LiveNetwork({ c, lang, fc }: { c: LandingCopy; lang: Lang; fc: TariffForecast }) {
   const { state } = useSync();
   const stations = state?.stations;
   const feed = useActivity(stations, c.phone.kw);
@@ -465,7 +465,6 @@ function LiveNetwork({ c, lang, fc, onOpen, onSplit }: { c: LandingCopy; lang: L
                   <button key={f} aria-pressed={filter === f} onClick={() => setFilter(f)}>{c.network.filters[f]}</button>
                 ))}
               </div>
-              <button className="lp-link" onClick={onSplit}><Columns2 size={16} />{c.network.split}</button>
             </div>
             <div className="lp-net-grid">
               {shown.map(st => {
@@ -495,7 +494,6 @@ function LiveNetwork({ c, lang, fc, onOpen, onSplit }: { c: LandingCopy; lang: L
                         <b>{fmt(min * fc.current.multiplier, lang)}</b> {c.network.perKwh}
                         {fc.current.multiplier !== 1 && <small className={`is-${fc.current.band}`}>×{fc.current.multiplier}</small>}
                       </span>
-                      <button className="lp-st-open" onClick={onOpen}>{c.network.open}<ArrowUpRight size={14} /></button>
                     </div>
                   </article>
                 );
@@ -798,7 +796,7 @@ function Phone({ c }: { c: LandingCopy }) {
   );
 }
 
-function AppSection({ c, onDemo }: { c: LandingCopy; onDemo: () => void }) {
+function AppSection({ c }: { c: LandingCopy }) {
   return (
     <section className="lp-sec">
       <div className="lp-wrap">
@@ -810,7 +808,6 @@ function AppSection({ c, onDemo }: { c: LandingCopy; onDemo: () => void }) {
             <div className="lp-stores">
               <span className="lp-store" aria-disabled="true"><Apple size={22} /><span><small>{c.app.soon}</small>App Store</span></span>
               <span className="lp-store" aria-disabled="true"><Play size={20} /><span><small>{c.app.soon}</small>Google Play</span></span>
-              <button className="lp-btn lp-btn-dark" onClick={onDemo}><Smartphone size={16} />{c.app.web}</button>
             </div>
           </div>
           <div className="lp-app-phone"><Phone c={c} /></div>
@@ -842,7 +839,7 @@ function Faq({ c }: { c: LandingCopy }) {
 
 // ───────────────────────── CTA + footer ─────────────────────────
 
-function Cta({ c, onDemo }: { c: LandingCopy; onDemo: () => void }) {
+function Cta({ c }: { c: LandingCopy }) {
   return (
     <section className="lp-sec lp-cta-sec">
       <div className="lp-wrap">
@@ -853,8 +850,7 @@ function Cta({ c, onDemo }: { c: LandingCopy; onDemo: () => void }) {
           <h2 className="lp-cta-t">{c.cta.title}</h2>
           <p className="lp-cta-sub">{c.cta.sub}</p>
           <div className="lp-hero-cta">
-            <button className="lp-btn lp-btn-dark lp-btn-lg" onClick={onDemo}><Zap size={18} />{c.cta.button}</button>
-            <a className="lp-btn lp-btn-line lp-btn-lg" href="#join"><BellRing size={18} />{c.cta.join}</a>
+            <a className="lp-btn lp-btn-dark lp-btn-lg" href="#join"><BellRing size={18} />{c.cta.join}</a>
           </div>
         </div>
       </div>
@@ -862,7 +858,7 @@ function Cta({ c, onDemo }: { c: LandingCopy; onDemo: () => void }) {
   );
 }
 
-function Footer({ c, onOpen, onSplit, base }: { c: LandingCopy; onOpen: (p: LandingTarget) => void; onSplit: () => void; base: string }) {
+function Footer({ c, base }: { c: LandingCopy; base: string }) {
   const L = c.footer.links;
   return (
     <footer className="lp-footer">
@@ -874,18 +870,15 @@ function Footer({ c, onOpen, onSplit, base }: { c: LandingCopy; onOpen: (p: Land
         </div>
         <div>
           <p className="lp-footer-h">{c.footer.product}</p>
-          <button onClick={() => onOpen('driver')}><Car size={14} />{L.drivers}</button>
-          <button onClick={() => onOpen('business')}><Building2 size={14} />{L.business}</button>
-          <button onClick={() => onOpen('operator')}><Server size={14} />{L.operators}</button>
-          <button onClick={() => onOpen('api')}><Code2 size={14} />{L.api}</button>
+          <a href={`${base}#gives`}><Car size={14} />{L.drivers}</a>
+          <a href={`${base}#network`}><Server size={14} />{c.nav.map}</a>
+          <a href={`${base}#pricing`}><Wallet size={14} />{c.nav.pricing}</a>
         </div>
         <div>
           <p className="lp-footer-h">{c.footer.platform}</p>
           <a href={`${base}#partners`}><Handshake size={14} />{L.partners}</a>
           <a href={`${base}#compare`}><Wallet size={14} />{L.compare}</a>
           <a href={`${base}#faq`}><ChevronDown size={14} />{L.faq}</a>
-          <button onClick={onSplit}><Columns2 size={14} />{c.cta.compare}</button>
-          <button onClick={() => onOpen('architecture')}><Network size={14} />{L.arch}</button>
         </div>
         <div>
           <p className="lp-footer-h">{c.footer.company}</p>
@@ -915,7 +908,7 @@ function docFromUrl(): LegalDocId | null {
   }
 }
 
-export default function Landing({ onSelect, onSplitView }: { onSelect: (p: LandingTarget) => void; onSplitView: () => void }) {
+export default function Landing() {
   const { lang } = useI18n();
   const [doc] = useState(docFromUrl);
   const base = doc ? '/' : '';
@@ -965,32 +958,28 @@ export default function Landing({ onSelect, onSplitView }: { onSelect: (p: Landi
     };
   }, [c, lang]);
 
-  const open = (p: LandingTarget, from: string) => { track('portal', { portal: p, from }); onSelect(p); };
-  const demo = () => open('driver', 'cta');
-  const openFrom = (from: string) => (p: LandingTarget) => open(p, from);
-
   return (
     <div ref={setRoot} className="lp" data-no-translate>
       <div className="lp-progress" aria-hidden="true" />
-      <Nav c={c} scrolled={scrolled || !!doc} onDemo={demo} base={base} />
+      <Nav c={c} scrolled={scrolled || !!doc} base={base} />
       <main>
         {doc ? <LegalPage c={c} id={doc} /> : <>
-        <Hero c={c} lang={lang} onDemo={demo} onPick={() => open('driver', 'map')} />
+        <Hero c={c} lang={lang} />
         <Marquee c={c} />
         <Pains c={c} />
         <Gives c={c} />
         <How c={c} />
-        <LiveNetwork c={c} lang={lang} fc={fc} onOpen={demo} onSplit={onSplitView} />
+        <LiveNetwork c={c} lang={lang} fc={fc} />
         <Pricing c={c} lang={lang} fc={fc} />
         <Partners c={c} />
         <Compare c={c} />
-        <AppSection c={c} onDemo={demo} />
+        <AppSection c={c} />
         <Join c={c} lang={lang} privacyHref={legalHref('privacy')} />
         <Faq c={c} />
-        <Cta c={c} onDemo={demo} />
+        <Cta c={c} />
         </>}
       </main>
-      <Footer c={c} onOpen={openFrom('footer')} onSplit={onSplitView} base={base} />
+      <Footer c={c} base={base} />
     </div>
   );
 }

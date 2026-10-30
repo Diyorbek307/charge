@@ -277,8 +277,10 @@ const VALID_PORTALS: Portal[] = ['selector', 'driver', 'operator', 'admin', 'bus
 
 /** Lets a portal be deep-linked (?portal=operator) — used by the split view. */
 function initialPortal(): Portal {
-  // The store app and the Telegram mini app are the driver's app.
+  // The store app and the Telegram mini app are the driver's app, and so is
+  // the front page of the app's own site (app.voli.uz) when the landing has its own.
   if (inTelegram() || inNativeShell()) return 'driver';
+  if (landingElsewhere() && !new URLSearchParams(window.location.search).has('portal') && !new URLSearchParams(window.location.search).has('doc')) return 'driver';
   try {
     const p = new URLSearchParams(window.location.search).get('portal') as Portal | null;
     if (p && VALID_PORTALS.includes(p)) return p;
@@ -306,9 +308,6 @@ function MainApp() {
   const { t: tApp } = useI18n();
   const [portal, setPortal] = useState<Portal>(initialPortal);
   const [splitView, setSplitView] = useState(() => new URLSearchParams(window.location.search).has('split'));
-  // When the landing lives on its own site, its buttons open the app's site.
-  const openPortal = (p: Portal) => (p !== 'selector' && appElsewhere() ? window.location.assign(`${APP_URL}/?portal=${p}`) : setPortal(p));
-  const openSplit = () => (appElsewhere() ? window.location.assign(`${APP_URL}/?split=1`) : setSplitView(true));
   // Split view embeds the app in iframes; nested chrome there would be noise.
   const embedded = typeof window !== 'undefined' && window.self !== window.top;
   const { sessions, actions, adoptSession } = useSync();
@@ -334,6 +333,11 @@ function MainApp() {
   useEffect(() => {
     if (toLanding) window.location.replace(`${LANDING_URL}/${window.location.search}`);
   }, [toLanding]);
+  // And the landing's site has no app: links into it (a portal, a station QR) go to the app's site.
+  const toApp = portal !== 'selector' && appElsewhere() && !landingElsewhere() && !inNativeShell() && !inTelegram();
+  useEffect(() => {
+    if (toApp) window.location.replace(`${APP_URL}/${window.location.search}`);
+  }, [toApp]);
   // 'light' | 'dark' | 'auto' — auto follows the phone or computer setting.
   const systemDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
   const [darkMode, setDarkMode] = useState(() => {
@@ -366,7 +370,7 @@ function MainApp() {
   return (
     <div className={`size-full overflow-hidden${darkMode ? ' dark' : ''}`}>
       <Suspense fallback={<PortalLoading />}>
-      {portal === 'selector' && !landingElsewhere() && <Landing onSelect={openPortal} onSplitView={openSplit} />}
+      {portal === 'selector' && !landingElsewhere() && <Landing />}
       {portal === 'driver' && (
         <div className="h-full flex items-center justify-center relative overflow-clip" style={{ background: 'radial-gradient(ellipse at 50% 30%, #0f1e3a 0%, #080d19 50%, #050810 100%)' }}>
           {/* Animated ambient orbs */}
