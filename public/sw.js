@@ -4,7 +4,7 @@
  * and stay entirely out of the way of the live-sync channel.
  */
 
-const VERSION = 'oc-v7';
+const VERSION = 'oc-v8';
 /** Offline packs (map of a road, the app's code) outlive builds: only the driver deletes them. */
 const KEEP = 'pg-offline';
 const SHELL_CACHE = `${VERSION}-shell`;

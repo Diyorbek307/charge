@@ -7,6 +7,13 @@ import { useId } from 'react';
  */
 export const V_STROKE = 'M32.5 28.5 L52 64.5 L62 50';
 export const V_BLADE = 'M50.5 52 L66.5 22.5 C70 16.5 74 14.5 80 14.5 L91 14.5 C92.8 14.5 93.6 16.3 92.7 17.8 L66 63 C62 69 57.5 70 54 69 C49.5 67.5 48 58 50.5 52 Z';
+/** The letters after the V, in the same units: the o, the l, the i and its dot. */
+export const WORD = {
+  o: 'M77.3 55.5 a20.7 19.3 0 1 0 41.4 0 a20.7 19.3 0 1 0 -41.4 0 Z M89.3 55.5 a8.7 8.6 0 1 0 17.4 0 a8.7 8.6 0 1 0 -17.4 0 Z',
+  l: [121.2, 23.5, 13.6, 51],
+  i: [139.7, 37, 13.6, 37.5],
+  dot: [146.5, 28.5, 6.6],
+} as const;
 const V_SHINE = 'M58 56 L71 31 C74 25.5 78 23 84 23 L87.5 23 L66.5 59.5 C63.5 64 59.5 63 58 56 Z';
 
 /** Gradients for the blade and the dot of the i, light at the top as on the brand sheet. */
@@ -62,10 +69,9 @@ export function Logo({ size = 30, ink = '#111111' }: { size?: number; ink?: stri
       <svg height={size} viewBox="22 12 134 64" role="img" aria-label="Voli" style={{ width: 'auto', display: 'block' }}>
         <Defs id={id} />
         <V id={id} ink={ink} />
-        <path fillRule="evenodd" fill={ink} d="M77.3 55.5 a20.7 19.3 0 1 0 41.4 0 a20.7 19.3 0 1 0 -41.4 0 Z M89.3 55.5 a8.7 8.6 0 1 0 17.4 0 a8.7 8.6 0 1 0 -17.4 0 Z" />
-        <rect x="121.2" y="23.5" width="13.6" height="51" rx="5" fill={ink} />
-        <rect x="139.7" y="37" width="13.6" height="37.5" rx="5" fill={ink} />
-        <circle cx="146.5" cy="28.5" r="6.6" fill={`url(#${id}d)`} />
+        <path fillRule="evenodd" fill={ink} d={WORD.o} />
+        {[WORD.l, WORD.i].map(([x, y, w, h]) => <rect key={x} x={x} y={y} width={w} height={h} rx="5" fill={ink} />)}
+        <circle cx={WORD.dot[0]} cy={WORD.dot[1]} r={WORD.dot[2]} fill={`url(#${id}d)`} />
       </svg>
     </span>
   );

@@ -7,6 +7,7 @@
  * exports: jsPDF's built-in fonts have no Cyrillic.
  */
 import { BRAND } from '../brand';
+import { V_BLADE, V_STROKE, WORD } from '../landing/Logo';
 
 export interface StickerStation {
   id: string;
@@ -57,13 +58,40 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, 
   return text;
 }
 
-function bolt(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number, fill: string) {
-  const k = size / 24;
+/** The V of the logo centred on (cx, cy), `k` canvas pixels to a unit: white stroke, yellow blade. */
+function markV(ctx: CanvasRenderingContext2D, cx: number, cy: number, k: number, ink = '#fff') {
   ctx.save();
-  ctx.translate(cx - 12 * k, cy - 12 * k);
+  ctx.translate(cx, cy);
   ctx.scale(k, k);
-  ctx.fillStyle = fill;
-  ctx.fill(new Path2D('M13 2 3 14h9l-1 8 10-12h-9l1-8z'));
+  ctx.translate(-58.5, -44.5);
+  ctx.lineWidth = 17;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = ink;
+  ctx.stroke(new Path2D(V_STROKE));
+  ctx.fillStyle = YELLOW;
+  ctx.fill(new Path2D(V_BLADE));
+  ctx.restore();
+}
+
+/** The wordmark «Voli» in white on the black head, its top left at (x, y), `h` pixels tall. */
+function wordmark(ctx: CanvasRenderingContext2D, x: number, y: number, h: number) {
+  const k = h / 64;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(k, k);
+  ctx.translate(-22, -12);
+  markV(ctx, 58.5, 44.5, 1);
+  ctx.fillStyle = '#fff';
+  ctx.fill(new Path2D(WORD.o), 'evenodd');
+  for (const [rx, ry, rw, rh] of [WORD.l, WORD.i]) {
+    roundRect(ctx, rx, ry, rw, rh, 5);
+    ctx.fill();
+  }
+  ctx.fillStyle = YELLOW;
+  ctx.beginPath();
+  ctx.arc(WORD.dot[0], WORD.dot[1], WORD.dot[2], 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }
 
@@ -89,14 +117,9 @@ async function drawSticker(st: StickerStation, index: number, origin: string): P
   roundRect(ctx, 40, 40, W - 80, 230, 44);
   ctx.fillStyle = INK;
   ctx.fill();
-  ctx.font = '900 112px Inter, Arial, sans-serif';
   ctx.textBaseline = 'middle';
-  const [w1, w2] = BRAND.wordmark;
   const x0 = 96;
-  ctx.fillStyle = YELLOW;
-  ctx.fillText(w1, x0, 132);
-  ctx.fillStyle = '#fff';
-  ctx.fillText(w2, x0 + ctx.measureText(w1).width, 132);
+  wordmark(ctx, x0, 72, 112);
   ctx.font = '600 40px Inter, Arial, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
   ctx.fillText('Зарядка по QR-коду', x0, 216);
@@ -111,7 +134,7 @@ async function drawSticker(st: StickerStation, index: number, origin: string): P
   ctx.fillText(letter, W - 170, 160);
   ctx.textAlign = 'left';
 
-  // The code itself, on a yellow frame. High error correction leaves room for the bolt in the middle.
+  // The code itself, on a yellow frame. High error correction leaves room for the logo in the middle.
   const link = stickerLink(st.id, point?.id, origin);
   const qr = QR.create(link, { errorCorrectionLevel: 'H' });
   const n = qr.modules.size;
@@ -139,7 +162,10 @@ async function drawSticker(st: StickerStation, index: number, origin: string): P
   ctx.lineWidth = cell * 0.9;
   ctx.strokeStyle = '#fff';
   ctx.stroke();
-  bolt(ctx, qx + size / 2, qy + size / 2, badge * 0.7, INK);
+  roundRect(ctx, qx + (size - badge) / 2, qy + (size - badge) / 2, badge, badge, badge * 0.22);
+  ctx.fillStyle = INK;
+  ctx.fill();
+  markV(ctx, qx + size / 2, qy + size / 2, badge * 0.6 / 48);
 
   // What it is and where.
   let y = fy + frame + 92;
