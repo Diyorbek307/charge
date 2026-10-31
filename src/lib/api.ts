@@ -17,6 +17,12 @@ export interface Account {
   avatar: string;
   lastLogin: string | null;
   twoFactorEnabled?: boolean;
+  /** A driver who signs in by code, Google or Apple and never set a password. */
+  noPassword?: boolean;
+  email?: string | null;
+  phone?: string | null;
+  /** Google and Apple, where linked. */
+  linked?: ('google' | 'apple')[];
   /** A driver's own car, when they have told us. */
   car?: Car | null;
   /** Linked Telegram account: one-tap sign-in in the Mini App and bot notifications. */
@@ -803,7 +809,7 @@ export const apiClient = {
   setTariffBands: (portal: Portal, bands: TariffBand[]) => request<{ bands: TariffBand[] }>('/admin/tariff-bands', { method: 'PUT', body: JSON.stringify({ bands }), portal }),
   staffAccounts: (portal: Portal) => request<StaffAccount[]>('/admin/accounts', { portal }),
   systemHealth: (portal: Portal) => request<SystemHealth>('/admin/health', { portal }),
-  deleteAccount: (password: string) => post<{ ok: true }>('/me/delete', { password }, 'driver'),
+  deleteAccount: (password: string, confirm?: string) => post<{ ok: true }>('/me/delete', { password, confirm }, 'driver'),
   testMail: () => post<{ ok: boolean; to?: string; error?: string }>('/admin/mail/test', undefined, 'admin'),
   devices: (portal: Portal) => request<SignedInDevice[]>('/auth/sessions', { portal }),
   signOutOthers: (portal: Portal) => post<{ revoked: number }>('/auth/sessions/revoke-others', undefined, portal),

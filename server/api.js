@@ -566,8 +566,8 @@ api.post('/auth/login', async (req, res) => {
     return res.status(400).json({ error: 'Укажите портал, логин и пароль' });
   }
 
-  // Drivers sign in by phone, typed any which way.
-  const loginKey = portal === 'driver' ? (normalizePhone(login) ?? String(login).trim()) : String(login).trim().toLowerCase();
+  // Drivers sign in by phone, typed any which way, or by email.
+  const loginKey = portal === 'driver' ? (normalizePhone(login) ?? String(login).trim().toLowerCase()) : String(login).trim().toLowerCase();
   // Guessing is slowed by counting wrong passwords: 8 on one login in 15 minutes, 100 from one
   // address in 10 (many drivers share a mobile operator's address, so right ones are never counted).
   const failKey = `login-fail:${portal}:${loginKey}`;
@@ -3174,4 +3174,4 @@ api.delete('/operator/promos/:id', requireAuth('operator', 'admin'), (req, res) 
   res.json(p);
 });
 
-export { emit, computeStats, requireAuth };
+export { emit, computeStats, requireAuth, consentFrom, tooMany };

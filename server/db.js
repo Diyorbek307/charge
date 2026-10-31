@@ -303,7 +303,8 @@ export const db = new Database();
 /** Strips secrets before an account is sent to a client. */
 export function publicAccount(account) {
   if (!account) return null;
-  const { salt, hash, otp, twoFactor, ...safe } = account;
-  // Never ship the TOTP secret; the client only needs to know it is on.
-  return { ...safe, twoFactorEnabled: !!twoFactor?.enabled };
+  const { salt, hash, otp, twoFactor, oauth, ...safe } = account;
+  // Never ship the TOTP secret; the client only needs to know it is on. Of
+  // Google and Apple only which are linked, not the ids they gave.
+  return { ...safe, twoFactorEnabled: !!twoFactor?.enabled, linked: Object.keys(oauth ?? {}) };
 }

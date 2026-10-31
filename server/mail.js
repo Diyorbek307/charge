@@ -134,6 +134,19 @@ export function notifyTeam(subject, rows, link, box = 'info') {
   });
 }
 
+/** A sign-in code for a driver who chose email. Waits, so a failure can be told to them. */
+export async function sendCodeLetter(to, code) {
+  const text = `Ваш код для входа в Voli: ${code}\n\nКод действует 5 минут. Никому его не сообщайте — сотрудники Voli его не спрашивают.\n\nVoli’ga kirish kodi: ${code}. Hech kimga aytmang.`;
+  const html = `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;color:#111;text-align:center">
+<div style="background:#111;color:#FFC83D;padding:18px;border-radius:14px 14px 0 0;font-weight:bold;font-size:20px">Voli</div>
+<div style="background:#fff;border:1px solid #eee;border-top:0;padding:28px 20px;border-radius:0 0 14px 14px">
+<p style="margin:0 0 14px;color:#555">Ваш код для входа</p>
+<p style="margin:0;font-size:36px;font-weight:bold;letter-spacing:8px">${code}</p>
+<p style="margin:18px 0 0;color:#888;font-size:13px">Код действует 5 минут. Никому его не сообщайте.<br>Kirish kodi — hech kimga aytmang.</p>
+</div></div>`;
+  await send(to, `Voli · код для входа ${code}`, text, html);
+}
+
 /** The admin's test letter: waits for the answer, so the page can say what happened. */
 export async function sendTestLetter(to, actor) {
   if (!mailConfigured()) return { ok: false, error: 'Отправка не настроена: задайте RESEND_API_KEY или SMTP_HOST, SMTP_USER и SMTP_PASS в переменных окружения' };

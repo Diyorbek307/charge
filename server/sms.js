@@ -1,8 +1,10 @@
 import crypto from 'node:crypto';
 import { db } from './db.js';
+import { mailConfigured, sendCodeLetter } from './mail.js';
 
 /**
- * One-time SMS codes for driver sign-up and password recovery.
+ * One-time codes for driver sign-in, sign-up and password recovery, by SMS
+ * to a phone or by letter to an email address.
  *
  * Codes are stored hashed, expire, allow a handful of guesses and are rate
  * limited per phone and per client. Delivery goes through Eskiz.uz — the
@@ -26,13 +28,19 @@ const RESEND_AFTER_MS = 60_000;
 const MAX_PER_PHONE_PER_HOUR = 5;
 const MAX_PER_CLIENT_PER_HOUR = 20;
 const MAX_ATTEMPTS = 5;
-export const PURPOSES = ['register', 'reset'];
+export const PURPOSES = ['register', 'reset', 'signin'];
 
 /** "+998 90 123-45-67", "901234567" and "998901234567" all become "+998901234567". */
 export function normalizePhone(raw) {
   let digits = String(raw ?? '').replace(/\D/g, '');
   if (digits.length === 9) digits = `998${digits}`;
   return /^998\d{9}$/.test(digits) ? `+${digits}` : null;
+}
+
+/** "Name@Mail.ru " becomes "name@mail.ru"; anything that is not an address, null. */
+export function normalizeEmail(raw) {
+  const email = String(raw ?? '').trim().toLowerCase();
+  return email.length <= 120 && /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/.test(email) ? email : null;
 }
 
 const codes = () => (db.data.smsCodes ??= []);
@@ -96,7 +104,9 @@ export async function issueCode(phone, purpose, client) {
   }
   if (recent.length >= MAX_PER_PHONE_PER_HOUR) return { status: 429, error: 'Слишком много кодов на этот номер — попробуйте через час' };
   if (!clientAllowed(client)) return { status: 429, error: 'Слишком много запросов — попробуйте позже' };
-  if (!smsConfigured() && !DEMO_MODE) return { status: 503, error: 'SMS-сервис не настроен' };
+  const byMail = phone.includes('@');
+  const configured = byMail ? mailConfigured() : smsConfigured();
+  if (!configured && !DEMO_MODE) return { status: 503, error: byMail ? 'Отправка писем не настроена' : 'SMS-сервис не настроен' };
 
   const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
   // A new code replaces any earlier one for the same purpose.
@@ -104,12 +114,13 @@ export async function issueCode(phone, purpose, client) {
   codes().push({ phone, purpose, hash: hashCode(phone, purpose, code), created: now, expires: now + CODE_TTL_MS, attempts: 0, used: false });
   db.save();
 
-  if (smsConfigured()) {
+  if (configured) {
     try {
-      await eskizSend(phone, `Voli: kod ${code}. Hech kimga aytmang. / Код ${code}. Никому не сообщайте.`);
+      if (byMail) await sendCodeLetter(phone, code);
+      else await eskizSend(phone, `Voli: kod ${code}. Hech kimga aytmang. / Код ${code}. Никому не сообщайте.`);
     } catch (err) {
-      console.warn('[sms]', err.message);
-      return { status: 502, error: 'Не удалось отправить SMS — попробуйте позже' };
+      console.warn(byMail ? '[mail]' : '[sms]', err.message);
+      return { status: 502, error: byMail ? 'Не удалось отправить письмо — попробуйте позже' : 'Не удалось отправить SMS — попробуйте позже' };
     }
     return { ok: true };
   }

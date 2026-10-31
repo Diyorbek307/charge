@@ -182,7 +182,9 @@ export function ProfileScreen({ onNavigate }: { onNavigate: (s: string) => void 
 
 /** Deleting the account for good, as the app stores require: the password, a plain warning, then it is gone. */
 function DeleteAccount({ onDeleted }: { onDeleted: () => void }) {
-  const { actions } = useSync();
+  const { actions, sessions } = useSync();
+  // Signed in by code, Google or Apple: no password to ask for, the word confirms instead.
+  const noPassword = !!sessions.driver?.noPassword;
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -191,7 +193,7 @@ function DeleteAccount({ onDeleted }: { onDeleted: () => void }) {
     setBusy(true);
     setError('');
     try {
-      await actions.deleteAccount(password);
+      await actions.deleteAccount(noPassword ? '' : password, noPassword ? password : undefined);
       onDeleted();
     } catch (e) {
       setError((e as Error).message);
@@ -206,7 +208,11 @@ function DeleteAccount({ onDeleted }: { onDeleted: () => void }) {
     <div className="bg-white rounded-2xl border border-red-100 p-4 space-y-3" role="group" aria-label="Удаление аккаунта">
       <p className="text-sm font-bold text-slate-900">Удалить аккаунт навсегда?</p>
       <p className="text-xs text-slate-500 leading-relaxed">Удалятся имя, телефон, пароль, автомобиль, фото для зарядки в долг, бонусы, чат поддержки и приглашения. История зарядок и платежей останется без вашего имени — её требуется хранить для бухгалтерии. Восстановить аккаунт будет нельзя.</p>
-      <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Пароль" aria-label="Пароль для удаления аккаунта" autoComplete="current-password" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm" />
+      {noPassword ? (
+        <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Введите УДАЛИТЬ" aria-label="Введите слово УДАЛИТЬ для подтверждения" autoComplete="off" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm" />
+      ) : (
+        <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Пароль" aria-label="Пароль для удаления аккаунта" autoComplete="current-password" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm" />
+      )}
       {error && <p role="alert" className="text-xs text-red-600 bg-red-50 rounded-lg px-2 py-1.5">{error}</p>}
       <div className="grid grid-cols-2 gap-2">
         <button onClick={() => { setOpen(false); setPassword(''); setError(''); }} className="h-11 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold">Отмена</button>

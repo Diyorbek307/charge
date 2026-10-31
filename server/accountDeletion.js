@@ -69,7 +69,10 @@ export function deleteAccount(signedIn) {
 api.post('/me/delete', requireAuth('driver'), async (req, res) => {
   const tries = attempt(`delete:${req.account.id}`, 5, 15 * 60_000);
   if (!tries.ok) return res.status(429).json({ error: 'Слишком много попыток — попробуйте через 15 минут' });
-  if (!(await verifyPasswordAsync(req.account, String(req.body?.password ?? '')))) return res.status(401).json({ error: 'Пароль указан неверно' });
+  // Who signed in by code, Google or Apple has no password: typing the word is the confirmation.
+  if (req.account.noPassword) {
+    if (String(req.body?.confirm ?? '').trim().toUpperCase() !== 'УДАЛИТЬ') return res.status(400).json({ error: 'Введите слово УДАЛИТЬ, чтобы подтвердить' });
+  } else if (!(await verifyPasswordAsync(req.account, String(req.body?.password ?? '')))) return res.status(401).json({ error: 'Пароль указан неверно' });
   const why = blockers(req.account);
   if (why) return res.status(409).json({ error: why });
   const id = req.account.id;

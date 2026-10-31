@@ -18,6 +18,7 @@ import "./server/cameras.js";
 import "./server/comfort.js";
 import "./server/aiSupport.js";
 import "./server/accountDeletion.js";
+import "./server/signin.js";
 import "./server/tts.js";
 import "./server/places.js";
 import { errorHandler } from "./server/monitoring.js";
