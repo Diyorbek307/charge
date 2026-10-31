@@ -850,6 +850,8 @@ nav::-webkit-scrollbar { display: none; }
 @keyframes pg-sheet-out { to { transform: translateY(105%); } }
 .pg-toast-out { animation: pg-toast-out .25s ease-in both !important; }
 @keyframes pg-toast-out { to { opacity: 0; transform: translateY(-14px) scale(.96); } }
+/* A live charge: a shine runs through the battery's fill. */
+.pg-flow { background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.55) 50%, transparent 70%); background-size: 250% 100%; animation: pg-shine 2.2s linear infinite; }
 /* A live charge: a spark runs round the ring. */
 .pg-orbit { transform-box: view-box; transform-origin: 100px 100px; animation: pg-orbit 2.6s linear infinite; }
 @keyframes pg-orbit { to { transform: rotate(360deg); } }

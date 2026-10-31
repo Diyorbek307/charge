@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BatteryCharging, Clock, CheckCircle, Download, LoaderCircle, Moon, Building2, Wallet, ScanFace, Share2 } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle, Download, LoaderCircle, Moon, Building2, Wallet, ScanFace, Share2 } from 'lucide-react';
 import type { Session } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 import { exportPdf } from '../../lib/export';
@@ -86,7 +86,6 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
   const battery = Math.min(100, from + (energy / pack) * 100);
   const etaMin = battery < TARGET ? Math.ceil(((TARGET - battery) / 100) * pack / kw * 60) : 0;
   const band = bandOf(session.multiplier);
-  const C = 2 * Math.PI * 60;
   // A goal in km or money: how much is left at the current power.
   const leftKwh = goal && goal.kind !== 'percent' ? (goal.stopKwh ? goal.stopKwh - energy : ((goal.stopCost ?? 0) - cost) / (price || 1800)) : 0;
   const goalLine =
@@ -98,91 +97,125 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
         ? `до ${TARGET}% · ~${etaMin} мин${goal ? ' · остановим сами' : ''}`
         : `${TARGET}% достигнуто — можно отключаться`;
 
+  const payer = session.corporate ? <><Building2 size={11} />за счёт компании</> : session.credit ? <><ScanFace size={11} />в долг</> : session.familyOwner ? <><Wallet size={11} />из семейного кошелька</> : session.direct ? <><Wallet size={11} />с баланса сети</> : <><Wallet size={11} />из кошелька</>;
+  const minutes = Math.floor(seconds / 60);
+
   return (
-    <div className="h-full flex flex-col relative overflow-hidden" style={{ background: 'linear-gradient(170deg, #1a1a1a 0%, #111111 45%, #0a0a0a 100%)' }}>
-      <div className="absolute top-0 inset-x-0 h-64 opacity-40 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% -20%, rgba(52,211,153,0.18) 0%, transparent 60%)' }} />
-
-      <div className="relative px-4 pt-4 pb-1 flex items-center justify-between z-10">
-        <span className="text-white/80 font-semibold text-sm">{session.stationName}</span>
-        <span className="flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-500/25 px-2.5 py-1 rounded-full">
-          <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-          <span className="text-emerald-300 font-semibold text-[10px] tracking-wider">ИДЁТ ЗАРЯДКА</span>
-        </span>
+    <div className="h-full flex flex-col relative overflow-hidden" style={{ background: 'radial-gradient(ellipse at 50% 18%, #2a2208 0%, #141414 42%, #0a0a0a 100%)' }}>
+      <div className="relative px-3 pt-3 flex items-center justify-between z-10">
+        <button onClick={onLeave} aria-label="Свернуть" className={`w-10 h-10 rounded-full grid place-items-center text-white/85 hover:bg-white/10 ${onLeave ? '' : 'invisible'}`}>
+          <ArrowLeft size={20} />
+        </button>
+        <h1 className="text-white font-bold text-[17px]">Идёт зарядка</h1>
+        <button onClick={share} aria-label="Поделиться" className="w-10 h-10 rounded-full grid place-items-center text-white/85 hover:bg-white/10">
+          <Share2 size={19} />
+        </button>
       </div>
-      <p className="relative px-4 text-white/40 text-[11px] z-10">{`${session.operator} · ${session.connector} · ${power} кВт · ${session.id}`}</p>
+      <p className="relative text-center text-white/45 text-[11px] -mt-0.5 z-10 truncate px-12">{`${session.stationName} · ${session.connector} · ${power} кВт`}</p>
+      {shared && <p role="status" className="relative text-center text-xs text-[#FFC83D] mt-1 z-10">{shared}</p>}
 
-      <div className="flex-1 flex flex-col items-center justify-center px-4 relative z-10">
-        <div className="relative mb-3" style={{ width: 210, height: 210 }}>
-          <svg viewBox="0 0 200 200" className="w-full h-full absolute inset-0">
-            <circle cx="100" cy="100" r="60" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="9" />
-            <circle cx="100" cy="100" r="60" fill="none" stroke="rgba(52,211,153,0.12)" strokeWidth="9" strokeDasharray={`${(C * TARGET) / 100} ${C}`} style={{ transform: 'rotate(-90deg)', transformOrigin: '100px 100px' }} />
-            <circle cx="100" cy="100" r="60" fill="none" stroke="#34D399" strokeWidth="9" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - battery / 100)} style={{ transform: 'rotate(-90deg)', transformOrigin: '100px 100px', transition: 'stroke-dashoffset 1s linear', filter: 'drop-shadow(0 0 6px rgba(52,211,153,.55))' }} />
-            <g className="pg-orbit" aria-hidden="true">
-              <circle cx="100" cy="28" r="3.2" fill="#A7F3D0" />
-              <circle cx="100" cy="28" r="7" fill="#34D399" opacity=".25" />
-            </g>
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <BatteryCharging size={20} className="text-emerald-300 mb-1 animate-pulse" />
-            <span className="text-[48px] font-bold text-white leading-none tabular-nums">{Math.floor(battery)}</span>
-            <span className="text-emerald-400/70 text-xs font-semibold">% · оценка</span>
-          </div>
-        </div>
+      <div className="flex-1 overflow-y-auto no-scrollbar relative z-10 px-4">
+        <ChargeHero battery={battery} target={TARGET} />
 
-        <div className="mb-4 flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full">
-          <Clock size={11} className="text-sky-400" />
+        <p className="text-center text-white font-extrabold text-[56px] leading-none tabular-nums tracking-tight mt-3">
+          {Math.floor(battery)}<span className="text-[34px] align-top ml-0.5">%</span>
+        </p>
+        <div className="mt-2.5 mx-auto w-fit flex items-center gap-1.5 bg-white/[0.06] border border-white/10 px-3 py-1.5 rounded-full">
+          <Clock size={11} className="text-[#FFC83D]" />
           <p className="text-white/70 text-xs">{goalLine}</p>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 w-full">
+        <div className="mt-6 grid grid-cols-3 text-center">
           {[
-            { label: 'кВт·ч', value: energy.toLocaleString('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), sub: 'получено' },
-            { label: 'кВт', value: kw.toFixed(0), sub: 'мощность' },
-            { label: '', value: mmss(seconds), sub: 'прошло' },
-          ].map(s => (
-            <div key={s.sub} className="rounded-2xl p-3 text-center border" style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}>
-              <p className="text-white/40 text-[10px] mb-0.5">{s.sub}</p>
-              <p className="font-bold text-[15px] tabular-nums text-emerald-300">{s.value}</p>
-              <p className="text-white/25 text-[10px]">{s.label}</p>
+            { label: 'Мощность', value: `${kw.toFixed(0)}`, unit: 'кВт' },
+            { label: 'Энергия', value: energy.toLocaleString('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), unit: 'кВт·ч' },
+            { label: 'Время', value: minutes < 60 ? String(minutes) : mmss(seconds).slice(0, 5), unit: minutes < 60 ? 'мин' : 'ч:мин' },
+          ].map((s, i) => (
+            <div key={s.label} className={i ? 'border-l border-white/10' : ''}>
+              <p className="text-white/45 text-[11px]">{s.label}</p>
+              <p className="text-white font-bold text-[17px] tabular-nums mt-0.5">{s.value} <span className="text-[12px] font-semibold text-white/60">{s.unit}</span></p>
             </div>
           ))}
         </div>
 
-        <div className="mt-2 rounded-2xl p-3 border w-full flex items-center justify-between" style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.07)' }}>
-          <div>
-            <p className="text-white/35 text-[10px] mb-0.5">{`стоимость · ${price.toLocaleString('ru-RU')} сум/кВт·ч`}</p>
-            <p className="text-white font-bold tabular-nums">{sum(cost)}</p>
-          </div>
-          <div className="text-right">
-            {band && <p className="text-[10px] text-emerald-300 flex items-center gap-1 justify-end"><Moon size={10} />{band}</p>}
-            <p className="text-white/50 text-[11px] flex items-center gap-1 justify-end">{session.corporate ? <><Building2 size={11} />за счёт компании</> : session.credit ? <><ScanFace size={11} />в долг</> : session.familyOwner ? <><Wallet size={11} />из семейного кошелька</> : session.direct ? <><Wallet size={11} />с баланса сети</> : <><Wallet size={11} />из кошелька</>}</p>
-          </div>
+        <div className="mt-6 text-center">
+          <p className="text-white/45 text-[12px]">{metered ? 'Стоимость сейчас' : 'Ориентировочная стоимость'}</p>
+          <p className="text-white font-extrabold text-[24px] tabular-nums mt-0.5">{sum(cost)}</p>
+          <p className="text-white/40 text-[11px] mt-1 flex items-center justify-center gap-1.5 flex-wrap">
+            {`${price.toLocaleString('ru-RU')} сум/кВт·ч`}
+            {band && <span className="inline-flex items-center gap-1 text-[#FFC83D]"><Moon size={10} />{band}</span>}
+            <span className="inline-flex items-center gap-1">· {payer}</span>
+          </p>
         </div>
-        {state?.platform?.features.places !== false && <div className="mt-3 w-full max-h-[34vh] overflow-y-auto no-scrollbar"><WhileCharging stationId={session.stationId} dark minutes={goal?.kind === 'percent' || !goal ? etaMin || undefined : undefined} /></div>}
-        <p className="mt-2 text-white/30 text-[10px] text-center">{metered ? 'Энергия — по счётчику станции.' : `Процент — оценка для батареи ${pack} кВт·ч; к оплате — по энергии.`}</p>
+
+        {state?.platform?.features.places !== false && <div className="mt-5"><WhileCharging stationId={session.stationId} dark minutes={goal?.kind === 'percent' || !goal ? etaMin || undefined : undefined} /></div>}
+        <p className="mt-3 mb-2 text-white/30 text-[10px] text-center">{metered ? 'Энергия — по счётчику станции.' : `Процент — оценка для батареи ${pack} кВт·ч; к оплате — по энергии.`}</p>
       </div>
 
-      <div className="relative px-4 pb-6 pt-2 z-10 space-y-2">
-        {shared && <p role="status" className="text-center text-xs text-white/80">{shared}</p>}
-        <button onClick={share} className="w-full text-white/90 rounded-2xl py-3 font-semibold text-sm inline-flex items-center justify-center gap-2 bg-white/5 border border-white/10">
-          <Share2 size={15} />Поделиться — когда будет готово
-        </button>
+      <div className="relative px-4 pb-6 pt-3 z-10">
         {askStop && !stopping ? (
           <div className="grid grid-cols-2 gap-2 pg-reveal">
-            <button onClick={() => setAskStop(false)} className="rounded-2xl py-4 font-semibold text-[15px] text-white/85 bg-white/5 border border-white/10">Продолжить</button>
-            <button onClick={() => { setStopping(true); onStop(); }} className="rounded-2xl py-4 font-bold text-[15px] text-white bg-red-500/90">Да, остановить</button>
+            <button onClick={() => setAskStop(false)} className="rounded-2xl py-4 font-semibold text-[15px] text-white/85 bg-white/[0.06] border border-white/10">Продолжить</button>
+            <button onClick={() => { setStopping(true); onStop(); }} className="rounded-2xl py-4 font-bold text-[15px] text-white bg-red-500/90">Да, завершить</button>
           </div>
         ) : (
           <button
             onClick={() => setAskStop(true)}
             disabled={stopping}
-            className="w-full text-white rounded-2xl py-4 font-bold text-[15px] active:scale-95 disabled:opacity-60 inline-flex items-center justify-center gap-2"
-            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)' }}
+            className="w-full text-[#111] rounded-2xl py-4 font-bold text-[16px] active:scale-[0.98] transition-transform disabled:opacity-60 inline-flex items-center justify-center gap-2"
+            style={{ background: 'linear-gradient(90deg, #FFE27A, #FFC83D 55%, #F5B000)', boxShadow: '0 8px 28px rgba(255,200,61,0.28)' }}
           >
             {stopping && <LoaderCircle size={16} className="animate-spin" />}
-            {stopping ? 'Останавливаем…' : 'Остановить зарядку'}
+            {stopping ? 'Завершаем…' : 'Завершить зарядку'}
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The car in yellow light with the battery over it: the fill is the charge so
+ * far, a dashed frame marks where it will stop, and a shine runs through while
+ * energy flows.
+ */
+function ChargeHero({ battery, target }: { battery: number; target: number }) {
+  return (
+    <div className="relative mt-4 mx-auto max-w-[340px]" aria-hidden="true">
+      <svg viewBox="0 0 320 120" className="w-full block" style={{ filter: 'drop-shadow(0 0 10px rgba(255,200,61,.35))' }}>
+        <defs>
+          <linearGradient id="pg-car-body" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#FFC83D" stopOpacity=".05" />
+            <stop offset=".5" stopColor="#FFC83D" stopOpacity=".16" />
+            <stop offset="1" stopColor="#FFC83D" stopOpacity=".05" />
+          </linearGradient>
+        </defs>
+        <path d="M14 86 C12 76 22 68 44 65 L86 60 C106 42 134 30 172 28 C206 27 232 36 258 54 L292 60 C306 63 312 70 311 80 L310 88 C309 92 306 94 302 94 L284 94 A21 21 0 0 0 242 94 L96 94 A21 21 0 0 0 54 94 L22 94 C17 94 14 91 14 86 Z" fill="url(#pg-car-body)" stroke="#FFD66B" strokeOpacity=".75" strokeWidth="1.6" />
+        <path d="M98 60 C116 46 140 38 170 37 C196 37 216 43 238 57 Z" fill="none" stroke="#FFD66B" strokeOpacity=".5" strokeWidth="1.3" />
+        <path d="M168 37 L166 60" stroke="#FFD66B" strokeOpacity=".4" strokeWidth="1.2" />
+        <path d="M290 66 L306 70" stroke="#FFF3C4" strokeWidth="2.4" strokeLinecap="round" />
+        {[75, 263].map(x => (
+          <g key={x}>
+            <circle cx={x} cy="96" r="17" fill="#0d0d0d" stroke="#FFD66B" strokeOpacity=".7" strokeWidth="1.6" />
+            <circle cx={x} cy="96" r="7" fill="none" stroke="#FFD66B" strokeOpacity=".45" strokeWidth="1.2" />
+          </g>
+        ))}
+        <path d="M30 116 H290" stroke="#FFC83D" strokeOpacity=".35" strokeWidth="1" />
+      </svg>
+
+      <div className="absolute left-1/2 top-[44%] -translate-x-1/2 -translate-y-1/2 w-[62%] flex items-center">
+        <div className="relative flex-1 h-[68px] rounded-[18px] border-[3px] border-white/85 bg-black/70 p-[5px] shadow-[0_0_24px_rgba(255,200,61,.25)]">
+          <div className="absolute top-[5px] bottom-[5px] rounded-[11px] border border-dashed border-[#FFC83D]/40" style={{ left: 5, width: `calc((100% - 10px) * ${target / 100})` }} />
+          <div className="relative h-full rounded-[11px] overflow-hidden transition-[width] duration-1000 ease-linear" style={{ width: `${Math.max(4, battery)}%`, background: 'linear-gradient(90deg, #C98A00, #FFC83D 60%, #FFE27A)' }}>
+            <div className="absolute inset-0" style={{ background: 'repeating-linear-gradient(90deg, transparent 0 22%, rgba(0,0,0,.18) 22% 23%)' }} />
+            <div className="absolute inset-0 pg-flow" />
+          </div>
+        </div>
+        <span className="w-[7px] h-[24px] rounded-r-md bg-white/85 ml-[2px]" />
+      </div>
+
+      <div className="mt-3 mx-auto w-[62%] h-[5px] rounded-full bg-white/10 overflow-hidden">
+        <div className="h-full rounded-full bg-[#FFC83D] transition-[width] duration-1000 ease-linear" style={{ width: `${battery}%`, boxShadow: '0 0 10px rgba(255,200,61,.7)' }} />
       </div>
     </div>
   );
