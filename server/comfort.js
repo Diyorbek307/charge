@@ -59,6 +59,49 @@ api.patch('/stations/:id/info', requireAuth('operator', 'admin'), (req, res) => 
   res.json({ id: st.id, findHint: st.findHint ?? null, hours: st.hours, amenities: st.amenities, photoAt: st.photoAt ?? null });
 });
 
+// More photos of the site, after the cover: up to six, each stored apart like the cover.
+const GALLERY_MAX = 6;
+const galleryOf = st => (db.data.stationGallery ??= {})[st.id] ??= [];
+const galleryMeta = st => galleryOf(st).map(({ id, at }) => ({ id, at }));
+
+function ownStation(req, res) {
+  const st = db.byId('stations', req.params.id);
+  if (!st) return void res.status(404).json({ error: 'Станция не найдена' });
+  if (req.account.portal === 'operator' && st.operatorId !== req.account.orgId) return void res.status(403).json({ error: 'Это не ваша станция' });
+  return st;
+}
+
+api.post('/stations/:id/gallery', requireAuth('operator', 'admin'), (req, res) => {
+  const st = ownStation(req, res);
+  if (!st) return;
+  const photo = req.body?.photo;
+  if (typeof photo !== 'string' || !PHOTO.test(photo) || photo.length >= 600_000) return res.status(400).json({ error: 'Фото — JPEG, PNG или WebP до 400 КБ' });
+  const list = galleryOf(st);
+  if (list.length >= GALLERY_MAX) return res.status(400).json({ error: `Не больше ${GALLERY_MAX} фото — уберите одно` });
+  list.push({ id: crypto.randomBytes(5).toString('hex'), at: new Date().toISOString(), data: photo });
+  st.gallery = galleryMeta(st);
+  db.save();
+  emit({ type: 'station.info', portal: req.account.portal, actor: req.account.name, message: `Новое фото станции ${st.name}`, entity: st.id, payload: { stationId: st.id } });
+  res.status(201).json({ gallery: st.gallery });
+});
+
+api.delete('/stations/:id/gallery/:photoId', requireAuth('operator', 'admin'), (req, res) => {
+  const st = ownStation(req, res);
+  if (!st) return;
+  db.data.stationGallery[st.id] = galleryOf(st).filter(p => p.id !== req.params.photoId);
+  st.gallery = galleryMeta(st);
+  db.save();
+  emit({ type: 'station.info', portal: req.account.portal, actor: req.account.name, message: `Убрано фото станции ${st.name}`, entity: st.id, payload: { stationId: st.id } });
+  res.json({ gallery: st.gallery });
+});
+
+api.get('/stations/:id/gallery/:photoId', (req, res) => {
+  const data = db.data.stationGallery?.[req.params.id]?.find(p => p.id === req.params.photoId)?.data;
+  if (!data) return res.status(404).end();
+  const [, type, b64] = data.match(/^data:(image\/\w+);base64,(.+)$/);
+  res.set('Content-Type', type).set('Cache-Control', 'public, max-age=86400').send(Buffer.from(b64, 'base64'));
+});
+
 api.get('/stations/:id/photo', (req, res) => {
   const data = db.data.stationPhotos?.[req.params.id];
   if (!data) return res.status(404).end();

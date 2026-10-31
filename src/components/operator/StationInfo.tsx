@@ -34,6 +34,29 @@ export default function StationInfo({ station }: { station: Station }) {
       setBusy(false);
     }
   };
+  const [gallery, setGallery] = useState(station.gallery ?? []);
+  const [adding, setAdding] = useState(false);
+  const addPhoto = async (file: File) => {
+    setAdding(true);
+    setNote(null);
+    try {
+      const data = await shrink(file, 1200);
+      setGallery((await actions.addStationPhoto(station.id, data)).gallery);
+      void refresh();
+    } catch (e) {
+      setNote({ ok: false, text: (e as Error).message || 'Не удалось прочитать фото' });
+    } finally {
+      setAdding(false);
+    }
+  };
+  const removePhoto = async (photoId: string) => {
+    try {
+      setGallery((await actions.removeStationPhoto(station.id, photoId)).gallery);
+      void refresh();
+    } catch (e) {
+      setNote({ ok: false, text: (e as Error).message });
+    }
+  };
   const current = photo === undefined ? (station.photoAt ? `${API_ORIGIN}/api/stations/${station.id}/photo?v=${encodeURIComponent(station.photoAt)}` : null) : photo;
 
   return (
@@ -71,6 +94,23 @@ export default function StationInfo({ station }: { station: Station }) {
           </label>
           {current && (
             <button onClick={() => setPhoto(null)} className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-red-600"><Trash2 size={13} />Убрать</button>
+          )}
+        </div>
+      </div>
+      <div>
+        <p className="text-xs font-semibold text-slate-500">Ещё фото <span className="font-normal">· до 6, водители листают их на карточке</span></p>
+        <div className="mt-1.5 flex flex-wrap gap-2">
+          {gallery.map(g => (
+            <span key={g.id} className="relative">
+              <img src={`${API_ORIGIN}/api/stations/${station.id}/gallery/${g.id}?v=${encodeURIComponent(g.at)}`} alt="" className="w-28 h-20 object-cover rounded-xl border border-slate-100" />
+              <button onClick={() => void removePhoto(g.id)} aria-label="Убрать фото" className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-white border border-slate-200 grid place-items-center text-slate-500 hover:text-red-600 shadow-sm"><Trash2 size={12} /></button>
+            </span>
+          ))}
+          {gallery.length < 6 && (
+            <label className="w-28 h-20 rounded-xl border-2 border-dashed border-slate-200 grid place-items-center text-xs font-semibold text-slate-500 cursor-pointer hover:bg-slate-50">
+              {adding ? <LoaderCircle size={16} className="animate-spin" /> : <span className="flex flex-col items-center gap-1"><ImagePlus size={16} />Добавить</span>}
+              <input type="file" accept="image/*" className="hidden" disabled={adding} onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void addPhoto(f); }} />
+            </label>
           )}
         </div>
       </div>

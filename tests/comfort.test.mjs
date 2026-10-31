@@ -82,6 +82,27 @@ describe('everyday comfort', () => {
     assert.equal(photo.headers.get('content-type'), 'image/jpeg');
   });
 
+  test('a network adds more photos of its station, up to six', async () => {
+    const op = await operator();
+    const mine = (await call('/state', { token: op })).data.stations.find(s => s.operatorId === 'op-001');
+    const other = (await call('/state', { token: await admin() })).data.stations.find(s => s.operatorId === 'op-002');
+    assert.equal((await call(`/stations/${other.id}/gallery`, { method: 'POST', token: op, body: { photo: jpeg() } })).status, 403);
+    assert.equal((await call(`/stations/${mine.id}/gallery`, { method: 'POST', token: op, body: { photo: 'not a photo' } })).status, 400);
+    let gallery = [];
+    for (let i = 0; i < 6; i++) gallery = (await call(`/stations/${mine.id}/gallery`, { method: 'POST', token: op, body: { photo: jpeg() } })).data.gallery;
+    assert.equal(gallery.length, 6);
+    assert.equal((await call(`/stations/${mine.id}/gallery`, { method: 'POST', token: op, body: { photo: jpeg() } })).status, 400);
+    const st = (await call('/state', { token: await driver() })).data.stations.find(s => s.id === mine.id);
+    assert.deepEqual(st.gallery.map(g => g.id), gallery.map(g => g.id));
+    assert.ok(!JSON.stringify(st).includes('base64'), 'the photos themselves travel with the station data');
+    const img = await fetch(`${BASE}/stations/${mine.id}/gallery/${gallery[0].id}`);
+    assert.equal(img.status, 200);
+    assert.equal(img.headers.get('content-type'), 'image/jpeg');
+    const left = (await call(`/stations/${mine.id}/gallery/${gallery[0].id}`, { method: 'DELETE', token: op })).data.gallery;
+    assert.equal(left.length, 5);
+    assert.equal((await fetch(`${BASE}/stations/${mine.id}/gallery/${gallery[0].id}`)).status, 404);
+  });
+
   test('a shared charge shows progress, never who or how much', async () => {
     const token = await driver();
     const st = (await call('/state', { token })).data.stations.find(s => !s.id.startsWith('st-00') && s.connectors.some(c => c.status === 'available'));

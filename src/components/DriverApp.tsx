@@ -3,7 +3,7 @@ import {
   MapPin, Navigation, Search, Zap, Clock, Star, ChevronRight, Home, X, Battery, BatteryCharging,
   Scan, History, User, ArrowLeft, CheckCircle, Heart, Route, ChevronDown, Plus, Wifi, Coffee,
   ParkingCircle, Toilet, CalendarCheck, Minus, AlertTriangle, Send, Wallet, ArrowDownCircle,
-  Building2, Moon, ScanFace, Percent,
+  Building2, Moon, ScanFace, Percent, Share2,
 } from 'lucide-react';
 import { Station } from '../data/mockData';
 import { useLiveStations } from '../lib/live';
@@ -113,7 +113,7 @@ function ArrivalBlock({ station, etaMin, onBook, onOpen }: { station: Station; e
   );
 }
 
-function StationDetailSheet({ station, onClose, onStartCharging, onBook, onReviews, onReport, onNavigate, onOpenStation }: { station: Station; onClose: () => void; onStartCharging: () => void; onBook: () => void; onReviews: () => void; onReport: () => void; onNavigate: () => void; onOpenStation: (id: string) => void }) {
+function StationDetailSheet({ station, onClose, onStartCharging, onBook, onReviews, onReport, onNavigate, onOpenStation }: { station: Station; onClose: () => void; onStartCharging: (connectorId?: string) => void; onBook: () => void; onReviews: () => void; onReport: () => void; onNavigate: () => void; onOpenStation: (id: string) => void }) {
   const free = station.connectors.filter(c => c.status === 'available').length;
   const { state, actions, sessions: portalSessions, refresh } = useSync();
   const me = portalSessions.driver;
@@ -206,43 +206,77 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
     }
   };
 
+  // The operator's own photo first, then the rest; the first is the cover.
+  const photos = [...new Set([station.photoAt ? `${API_ORIGIN}/api/stations/${station.id}/photo?v=${encodeURIComponent(station.photoAt)}` : null, station.image, ...(station.gallery ?? []).map(g => `${API_ORIGIN}/api/stations/${station.id}/gallery/${g.id}?v=${encodeURIComponent(g.at)}`)].filter((u): u is string => !!u))];
+  const [shared, setShared] = useState<string | null>(null);
+  const share = async () => {
+    const url = `${window.location.origin}/?portal=driver&station=${station.id}`;
+    try {
+      if (navigator.share) await navigator.share({ title: station.name, text: `${station.name} · ${station.address}`, url });
+      else {
+        await navigator.clipboard.writeText(url);
+        setShared('Ссылка на станцию скопирована');
+        setTimeout(() => setShared(null), 2500);
+      }
+    } catch {
+      /* the driver closed the share sheet */
+    }
+  };
+  const canStart = !mapOnly && !closed;
+  const overlayBtn = 'w-10 h-10 rounded-full grid place-items-center bg-black/45 backdrop-blur-md text-white hover:bg-black/60 transition-colors';
+
   return (
-    <div ref={sheet} data-sheet className={`absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-[28px] shadow-[0_-12px_40px_rgba(15,23,42,0.18)] max-h-[82%] overflow-y-auto overscroll-contain ${leaving ? 'pg-sheet-out' : 'pg-sheet-in'}`}>
-      {/* Handle and the network it belongs to; pull it down to close */}
-      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur pt-2.5 pb-2 px-4 touch-none cursor-grab active:cursor-grabbing" onPointerDown={dragStart} onPointerMove={dragMove} onPointerUp={dragEnd} onPointerCancel={dragEnd}>
-        <div className="mx-auto w-10 h-1 bg-slate-200 rounded-full mb-2" />
-        <div className="flex items-center gap-2">
-          <button onClick={close} aria-label="Закрыть" className="w-9 h-9 -ml-1 rounded-xl grid place-items-center hover:bg-slate-100">
-            <X size={20} className="text-slate-700" />
-          </button>
-          <span className="flex-1 min-w-0 text-[15px] font-semibold text-slate-800 truncate">{station.operator}</span>
-          <button onClick={() => favorites.toggle(station.id)} aria-pressed={favorite} aria-label={favorite ? 'Убрать из избранного' : 'Добавить в избранное'} className="w-9 h-9 rounded-xl grid place-items-center hover:bg-slate-100">
-            <Heart key={String(favorite)} size={19} className={favorite ? 'fill-red-500 text-red-500 pg-pop' : 'text-slate-600'} />
-          </button>
+    <div ref={sheet} data-sheet className={`absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-[28px] shadow-[0_-12px_40px_rgba(15,23,42,0.18)] max-h-[88%] overflow-y-auto overscroll-contain ${leaving ? 'pg-sheet-out' : 'pg-sheet-in'}`}>
+      {/* The cover photo, with close, share and favourite over it; pull it down to close */}
+      <div className="relative h-52 bg-slate-800 rounded-t-[28px] overflow-hidden touch-none cursor-grab active:cursor-grabbing" onPointerDown={dragStart} onPointerMove={dragMove} onPointerUp={dragEnd} onPointerCancel={dragEnd}>
+        {/* With no signal the photo may not load: the card keeps a calm tile instead of a broken image. */}
+        <span className="absolute inset-0 grid place-items-center text-white/20" aria-hidden="true"><Zap size={40} /></span>
+        {photos[0] && <img src={photos[0]} alt={station.name} className="relative w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; }} />}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/25 pointer-events-none" />
+        <div className="absolute top-2 inset-x-0 mx-auto w-10 h-1 bg-white/70 rounded-full" />
+        <div className="absolute top-4 inset-x-3 flex items-center justify-between">
+          <button onClick={close} aria-label="Закрыть" className={overlayBtn}><X size={19} /></button>
+          <span className="flex gap-2">
+            <button onClick={share} aria-label="Поделиться станцией" className={overlayBtn}><Share2 size={17} /></button>
+            <button onClick={() => favorites.toggle(station.id)} aria-pressed={favorite} aria-label={favorite ? 'Убрать из избранного' : 'Добавить в избранное'} className={overlayBtn}>
+              <Heart key={String(favorite)} size={18} className={favorite ? 'fill-red-500 text-red-500 pg-pop' : ''} />
+            </button>
+          </span>
         </div>
+        <span className="absolute bottom-3 left-3 flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-full bg-black/55 backdrop-blur-md text-white text-xs font-semibold">
+          <NetworkBadge name={station.operator} size={22} promo={!!promo} />{station.operator}
+        </span>
       </div>
-      <div className="px-4 pb-6">
-        {/* Header */}
-        <div className="flex items-start gap-3 mb-3">
-          <NetworkBadge name={station.operator} size={52} promo={!!promo} />
-          <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-extrabold text-slate-900 leading-tight tracking-tight">{station.name}</h2>
-            <p className="text-sm text-slate-500 mt-0.5 flex items-start gap-1"><MapPin size={13} className="mt-0.5 shrink-0" />{`${station.address}, ${station.city}`}</p>
-            <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-1.5 text-sm">
-              <span className="inline-flex items-center gap-1 font-semibold text-slate-800"><Star size={14} className="fill-[#FFC83D] text-[#FFC83D]" />{station.rating.toFixed(1)}</span>
-              {dist !== null && <span key={road ? 'road' : 'crow'} className={`inline-flex items-center gap-1 text-slate-600 ${road ? 'pg-pop' : ''}`} title={road ? 'По дороге' : 'По прямой — уточняем по дорогам'}><Navigation size={13} />{`${road ? '' : '≈ '}${fmtKm(dist)}`}{road && <span className="text-[11px] text-slate-400">по дороге</span>}</span>}
-              {drive !== null && <span className="inline-flex items-center gap-1 text-slate-600"><Clock size={13} />{hm(drive)}</span>}
-              <span className="inline-flex items-center gap-1 font-semibold" style={{ color: statusColor[station.status] }}>
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: statusColor[station.status] }} />
-                {`${free}/${station.connectors.length} свободно`}
-              </span>
-            </div>
-          </div>
+
+      <div className="px-4 pt-4 pb-6">
+        {shared && <p role="status" className="mb-2 text-xs text-emerald-700">{shared}</p>}
+        {/* Name, where, how far, open or not */}
+        <h2 className="text-[26px] font-extrabold text-slate-900 leading-tight tracking-tight">{station.name}</h2>
+        <div className="mt-1 flex items-start justify-between gap-3 text-sm">
+          <p className="text-slate-500 min-w-0">{`${station.address}, ${station.city}`}</p>
+          {dist !== null && <span key={road ? 'road' : 'crow'} className={`shrink-0 inline-flex items-center gap-1 font-semibold text-slate-700 ${road ? 'pg-pop' : ''}`} title={road ? 'По дороге' : 'По прямой — уточняем по дорогам'}><Navigation size={13} className="text-[#C98A00]" />{`${road ? '' : '≈ '}${fmtKm(dist)}`}</span>}
         </div>
+        <div className="mt-2.5 flex items-center flex-wrap gap-2 text-sm">
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${closed ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'}`}>
+            <Clock size={12} />{closed ? `Закрыто · ${station.hours}` : `Открыто · ${station.hours}`}
+          </span>
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-xs font-semibold text-slate-700"><Star size={12} className="fill-[#FFC83D] text-[#FFC83D]" />{station.rating.toFixed(1)}</span>
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-xs font-semibold text-slate-700"><Zap size={12} />{`до ${maxKw} кВт`}</span>
+          {drive !== null && <span className="inline-flex items-center gap-1 text-xs text-slate-500">{`${hm(drive)} в пути`}</span>}
+        </div>
+
+        {/* More photos of the site */}
+        {photos.length > 1 && (
+          <div className="mt-4 -mx-4 px-4 flex gap-2.5 overflow-x-auto no-scrollbar snap-x">
+            {photos.slice(1).map(src => (
+              <img key={src} src={src} alt="" loading="lazy" className="snap-start shrink-0 w-[46%] h-24 rounded-2xl object-cover bg-slate-100" onError={e => { e.currentTarget.style.display = 'none'; }} />
+            ))}
+          </div>
+        )}
 
         {/* The network's own discount, now or later today */}
         {(promo || later) && (
-          <div className="mb-3 rounded-2xl px-3.5 py-3 flex items-center gap-3" style={{ background: promo ? 'linear-gradient(135deg,#FFE08A,#FFC83D)' : '#FFFBEB' }}>
+          <div className="mt-4 rounded-2xl px-3.5 py-3 flex items-center gap-3" style={{ background: promo ? 'linear-gradient(135deg,#FFE08A,#FFC83D)' : '#FFFBEB' }}>
             <span className="w-10 h-10 rounded-xl bg-[#111] text-[#FFC83D] grid place-items-center shrink-0"><Percent size={19} strokeWidth={2.6} /></span>
             {promo ? (
               <span className="flex-1 min-w-0">
@@ -258,49 +292,48 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
           </div>
         )}
 
-        {on.arrival && drive !== null && !mapOnly && <ArrivalBlock station={station} etaMin={drive} onBook={onBook} onOpen={onOpenStation} />}
-
-        {/* Photo */}
-        <div className="rounded-2xl overflow-hidden mb-3 h-32 bg-slate-100 relative">
-          {/* With no signal the photo may not load: the card keeps a calm tile instead of a broken image. */}
-          <span className="absolute inset-0 grid place-items-center text-slate-300" aria-hidden="true"><Zap size={34} /></span>
-          <img src={station.photoAt ? `${API_ORIGIN}/api/stations/${station.id}/photo?v=${encodeURIComponent(station.photoAt)}` : station.image} alt={station.name} className="relative w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; }} />
-          {!openNow(station.hours) && <span className="absolute top-2 left-2 px-2 py-1 rounded-lg bg-red-600 text-white text-xs font-semibold">{`Закрыто · ${station.hours}`}</span>}
-          <span className="absolute bottom-2 left-2 flex gap-1.5">
-            <span className="px-2 py-1 rounded-lg bg-black/60 backdrop-blur text-white text-xs font-semibold">{station.hours}</span>
-            <span className="px-2 py-1 rounded-lg bg-black/60 backdrop-blur text-white text-xs font-semibold">{`до ${maxKw} кВт`}</span>
-          </span>
-        </div>
+        {on.arrival && drive !== null && !mapOnly && <div className="mt-3"><ArrivalBlock station={station} etaMin={drive} onBook={onBook} onOpen={onOpenStation} /></div>}
 
         {/* How to find it on site */}
         {station.findHint && (
-          <div className="mb-3 flex gap-2 items-start rounded-xl bg-amber-50 border border-amber-100 px-3 py-2">
+          <div className="mt-3 flex gap-2 items-start rounded-xl bg-amber-50 border border-amber-100 px-3 py-2">
             <MapPin size={15} className="text-[#8a5b00] mt-0.5 shrink-0" />
             <p className="text-sm text-slate-700"><span className="font-semibold">Как найти: </span>{station.findHint}</p>
           </div>
         )}
 
-        {/* Charge points: each connector as a lettered point, like on the charger itself */}
-        <p className="text-xs font-semibold text-slate-500 mb-2 tracking-wide">ТОЧКИ ЗАРЯДКИ</p>
-        <div className="space-y-2 mb-4">
+        {/* Connectors: each a lettered point, like on the charger, with its own start */}
+        <div className="mt-5 mb-2.5 flex items-baseline justify-between">
+          <h3 className="text-[17px] font-bold text-slate-900">Доступные разъёмы</h3>
+          <span className="text-xs font-semibold" style={{ color: statusColor[station.status] }}>{`${free} из ${station.connectors.length} свободно`}</span>
+        </div>
+        <div className="space-y-2.5 mb-4">
           {station.connectors.map((c, i) => {
             const look = pointStatus[c.status] ?? pointStatus.unavailable;
+            const isFree = c.status === 'available';
             return (
-              <div key={c.id} className="relative overflow-hidden flex items-center gap-3 py-3 pl-3 pr-11 rounded-2xl border" style={{ borderColor: c.status === 'occupied' ? '#FDBA74' : '#F1F5F9', background: c.status === 'unavailable' ? '#F8FAFC' : '#fff' }}>
-                <span className="relative z-[1] w-10 h-10 rounded-xl grid place-items-center shrink-0" style={{ background: look.bg, color: look.color }}>
-                  {c.status === 'occupied' ? <BatteryCharging size={19} /> : <Zap size={19} />}
-                </span>
-                <div className="relative z-[1] flex-1 min-w-0">
-                  <p className="text-[15px] font-bold text-slate-900 leading-tight">{c.type} <span className="text-sm font-semibold" style={{ color: look.color }}>{look.text}</span></p>
-                  <p className="text-xs text-slate-500 mt-0.5">{`${c.power} кВт`}</p>
-                </div>
-                <div className="relative z-[1] text-right">
-                  {promo && <p className="text-[11px] text-slate-400 line-through tabular-nums">{c.price.toLocaleString('ru-RU')}</p>}
-                  <p className={`text-sm font-extrabold tabular-nums ${promo ? 'px-2 py-0.5 rounded-lg bg-[#FFC83D] text-[#111]' : 'text-slate-900'}`}>
-                    {discounted(c.price, promo).toLocaleString('ru-RU')}<span className="text-[10px] font-semibold opacity-70"> сум/кВт·ч</span>
+              <div key={c.id} className="flex items-center gap-3 p-2.5 pr-3 rounded-2xl border border-slate-100 bg-white" style={c.status === 'unavailable' ? { background: '#F8FAFC' } : undefined}>
+                <ConnectorTile letter={String.fromCharCode(65 + i)} dc={c.power >= 50} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] font-bold text-slate-900 leading-tight">{`${c.power >= 50 ? 'DC' : 'AC'} ${c.type}`}<span className="ml-1.5 text-[13px] font-semibold text-slate-600">{`${c.power} кВт`}</span></p>
+                  <p className="text-[12px] text-slate-500 tabular-nums mt-0.5 whitespace-nowrap">
+                    {promo && <span className="text-slate-400 line-through mr-1">{c.price.toLocaleString('ru-RU')}</span>}
+                    <span className={`font-semibold ${promo ? 'px-1.5 rounded-md bg-[#FFC83D] text-[#111]' : 'text-slate-700'}`}>{discounted(c.price, promo).toLocaleString('ru-RU')}</span>
+                    {' сум/кВт·ч'}
+                  </p>
+                  <p className="text-xs font-semibold inline-flex items-center gap-1 mt-0.5" style={{ color: look.color }}>
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: look.color }} />{look.text}
                   </p>
                 </div>
-                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[34px] font-black text-slate-200 leading-none select-none pointer-events-none" aria-hidden="true">{String.fromCharCode(65 + i)}</span>
+                {isFree && canStart ? (
+                  <button onClick={() => onStartCharging(c.id)} className="shrink-0 px-4 py-3 rounded-xl text-sm font-bold text-[#111] active:scale-95 transition-transform" style={{ background: 'linear-gradient(135deg,#FFD66B,#FFB000)', boxShadow: '0 4px 12px rgba(255,176,0,0.3)' }}>
+                    Зарядиться
+                  </button>
+                ) : (
+                  <span className="shrink-0 px-3.5 py-3 rounded-xl text-sm font-semibold text-slate-400 bg-slate-100">
+                    {isFree ? (closed ? 'Закрыто' : 'В приложении сети') : c.status === 'occupied' ? 'Занят' : c.status === 'reserved' ? 'Бронь' : 'Не работает'}
+                  </span>
+                )}
               </div>
             );
           })}
@@ -343,7 +376,7 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
               <span className="text-[10px] font-normal opacity-80">{queue.length} в очереди</span>
             </button>
           ) : (
-            <button onClick={onStartCharging}
+            <button onClick={() => onStartCharging()}
               className={`${myTurn ? 'bg-green-500 hover:bg-green-600 animate-pulse text-white' : 'text-[#111]'} rounded-2xl py-3.5 font-bold text-[15px] transition-transform active:scale-[0.98] flex items-center justify-center gap-2`}
               style={myTurn ? undefined : { background: 'linear-gradient(135deg,#FFD66B,#FFB000)', boxShadow: '0 6px 18px rgba(255,176,0,0.35)' }}>
               <Scan size={16} />{myTurn ? 'Ваша очередь — начать' : 'Начать зарядку'}
@@ -373,6 +406,22 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
         </div>
       </div>
     </div>
+  );
+}
+
+/** A connector as on the charger: a black tile with the socket drawn on it and its letter. */
+function ConnectorTile({ letter, dc }: { letter: string; dc: boolean }) {
+  return (
+    <span className="relative w-12 h-14 rounded-xl bg-[#111] grid place-items-center shrink-0" aria-hidden="true">
+      <svg viewBox="0 0 24 32" width="22" height="30" fill="none" stroke="#FFC83D" strokeWidth="1.8">
+        <circle cx="12" cy="11" r="8" />
+        <circle cx="9" cy="9" r="1.4" fill="#FFC83D" stroke="none" />
+        <circle cx="15" cy="9" r="1.4" fill="#FFC83D" stroke="none" />
+        <circle cx="12" cy="14" r="1.6" fill="#FFC83D" stroke="none" />
+        {dc ? <><circle cx="12" cy="25" r="5" /><circle cx="10" cy="25" r="1.2" fill="#FFC83D" stroke="none" /><circle cx="14" cy="25" r="1.2" fill="#FFC83D" stroke="none" /></> : <path d="M9 25h6" strokeLinecap="round" />}
+      </svg>
+      <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#FFC83D] text-[#111] text-[10px] font-black grid place-items-center ring-2 ring-white">{letter}</span>
+    </span>
   );
 }
 
@@ -2648,7 +2697,7 @@ export default function DriverApp() {
         <DriverMap onSelectStation={handleSelectStation} onOpenWallet={() => { walletFrom.current = 'map'; setScreen('wallet'); }} onSos={() => setSos(true)} hideChrome={screen !== 'map'} selected={screen === 'station' ? selectedStation : null} autoLocate={!showOnboarding} />
         {sos && <SosSheet onClose={() => setSos(false)} />}
         {screen === 'station' && selectedStation && (
-          <StationDetailSheet station={selectedStation} onClose={handleBack} onStartCharging={() => setScreen('charging-start')} onBook={() => setScreen('booking')} onReviews={() => setScreen('reviews')} onReport={() => { reportFrom.current = 'station'; setScreen('report'); }} onNavigate={() => setScreen('navigate')} onOpenStation={id => { const s = liveStationsById(id); if (s) handleSelectStation(s); }} />
+          <StationDetailSheet station={selectedStation} onClose={handleBack} onStartCharging={id => { preferPoint.current = id ?? null; setScreen('charging-start'); }} onBook={() => setScreen('booking')} onReviews={() => setScreen('reviews')} onReport={() => { reportFrom.current = 'station'; setScreen('report'); }} onNavigate={() => setScreen('navigate')} onOpenStation={id => { const s = liveStationsById(id); if (s) handleSelectStation(s); }} />
         )}
       </div>
     );

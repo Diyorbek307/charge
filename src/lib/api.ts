@@ -847,6 +847,8 @@ export const apiClient = {
   testAiAgents: (text: string) => post<AiAnswer>('/admin/ai-agents/test', { text }, 'admin'),
   setStationInfo: (id: string, body: { findHint?: string; hours?: string; amenities?: string[]; photo?: string | null }) =>
     request<{ id: string }>(`/stations/${id}/info`, { method: 'PATCH', body: JSON.stringify(body), portal: 'operator' }),
+  addStationPhoto: (id: string, photo: string) => post<{ gallery: { id: string; at: string }[] }>(`/stations/${id}/gallery`, { photo }, 'operator'),
+  removeStationPhoto: (id: string, photoId: string) => request<{ gallery: { id: string; at: string }[] }>(`/stations/${id}/gallery/${photoId}`, { method: 'DELETE', portal: 'operator' }),
   shareSession: (id: string) => post<{ token: string }>(`/sessions/${id}/share`, undefined, 'driver'),
   scheduleCharge: (body: { stationId: string; connectorId: string; payer: Payer; goal?: ChargeGoal; at: string }) => post<ScheduledStart>('/sessions/schedule', body, 'driver'),
   networkPromos: () => request<Promo[]>('/operator/promos', { portal: 'operator' }),

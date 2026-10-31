@@ -25,6 +25,8 @@ export interface Station {
   reviews: number;
   totalPower: number;
   image: string;
+  /** More photos of the site, after the cover, set by the network. */
+  gallery?: { id: string; at: string }[];
   hours: string;
   distance?: number;
   amenities: string[];
