@@ -12,7 +12,7 @@ import BaseMap from './BaseMap';
 import { promoNow, isNight, networkLook, discounted, useDriverPromos } from '../lib/promos';
 import { NetworkBadge } from './driver/NetworkBadge';
 import { ChargerFriend } from './driver/Illustration';
-import { V_PATH } from '../landing/Logo';
+import { V_BLADE, V_STROKE } from '../landing/Logo';
 
 const statusColor: Record<string, string> = {
   available: '#16A34A',
@@ -57,8 +57,8 @@ let askedOnce = false;
 
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
-// The Voli mark in the drop: the V-bolt on a white disc, as on the app icon.
-const MARK = `<svg class="pg-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="#fff"/><path d="${V_PATH}" fill="#111" transform="translate(24 25) scale(.76) translate(-24 -24)"/></svg>`;
+// The Voli mark in the drop: the V on a white disc, its blade amber so it reads on white.
+const MARK = `<svg class="pg-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="#fff"/><g transform="translate(24 25) scale(.42) translate(-58.5 -44.5)"><path d="${V_STROKE}" fill="none" stroke="#111" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/><path d="${V_BLADE}" fill="#F2AE00"/></g></svg>`;
 const PCT = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18"/><circle cx="7" cy="7" r="2.3"/><circle cx="17" cy="17" r="2.3"/></svg>';
 const MOON = '<svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>';
 

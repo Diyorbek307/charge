@@ -19,9 +19,11 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const pub = join(root, 'public');
 const url = process.env.URL ?? 'http://localhost:3000/';
 
-// Same drawing as LogoMark in src/landing/Logo.tsx.
-const V = 'M8 11 H17.5 L24.5 27 L31.5 9 H41 L34 24.5 H38 L27.5 39.5 H21 Z';
-const YELLOW = '#FFC83D';
+// Same drawing as LogoMark in src/landing/Logo.tsx: a white stroke and a
+// yellow blade on black.
+const STROKE = 'M32.5 28.5 L52 64.5 L62 50';
+const BLADE = 'M50.5 52 L66.5 22.5 C70 16.5 74 14.5 80 14.5 L91 14.5 C92.8 14.5 93.6 16.3 92.7 17.8 L66 63 C62 69 57.5 70 54 69 C49.5 67.5 48 58 50.5 52 Z';
+const SHINE = 'M58 56 L71 31 C74 25.5 78 23 84 23 L87.5 23 L66.5 59.5 C63.5 64 59.5 63 58 56 Z';
 const INK = '#111111';
 
 /**
@@ -30,8 +32,12 @@ const INK = '#111111';
  * zone; `bg: false` leaves the square transparent (Android's foreground layer).
  */
 const mark = ({ bleed = false, scale = 1, bg = true, size } = {}) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"${size ? ` width="${size}" height="${size}"` : ''}>
-${bg ? `<rect width="48" height="48"${bleed ? '' : ' rx="12"'} fill="${YELLOW}"/>` : ''}
-<path d="${V}" fill="${INK}" transform="translate(24 24) scale(${scale}) translate(-24 -24)"/>
+<defs><linearGradient id="b" x1="0.2" y1="1" x2="0.8" y2="0"><stop offset="0" stop-color="#E09A00"/><stop offset="0.45" stop-color="#FFC83D"/><stop offset="1" stop-color="#FFE58A"/></linearGradient></defs>
+${bg ? `<rect width="48" height="48"${bleed ? '' : ' rx="12"'} fill="${INK}"/>` : ''}
+<g transform="translate(24 24.5) scale(${0.6 * scale}) translate(-58.5 -44.5)">
+<path d="${STROKE}" fill="none" stroke="#FFFFFF" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="${BLADE}" fill="url(#b)"/><path d="${SHINE}" fill="#FFF3C4" opacity="0.45"/>
+</g>
 </svg>`;
 
 writeFileSync(join(pub, 'favicon.svg'), mark());
@@ -57,9 +63,9 @@ const pngSize = file => {
 };
 const walk = dir => readdirSync(dir).flatMap(n => (statSync(join(dir, n)).isDirectory() ? walk(join(dir, n)) : [join(dir, n)]));
 
-// Web: the yellow square with a safe margin, so the PWA icons also work as maskable icons.
+// Web: the black square with a safe margin, so the PWA icons also work as maskable icons.
 for (const [file, size] of [['icon-192.png', 192], ['icon-512.png', 512], ['apple-touch-icon.png', 180]]) {
-  await render(join(pub, file), size, size, mark({ bleed: true, scale: 0.78, size }), YELLOW);
+  await render(join(pub, file), size, size, mark({ bleed: true, scale: 0.78, size }), INK);
 }
 
 // Android: each file redrawn at the size it already has.
@@ -78,11 +84,11 @@ for (const file of walk(res).filter(f => f.endsWith('.png'))) {
   }
 }
 const bgXml = join(res, 'values/ic_launcher_background.xml');
-writeFileSync(bgXml, readFileSync(bgXml, 'utf8').replace(/#[0-9A-Fa-f]{6}/, YELLOW));
+writeFileSync(bgXml, readFileSync(bgXml, 'utf8').replace(/#[0-9A-Fa-f]{6}/, INK));
 
 // iOS: a full-bleed app icon and the splash.
 const assets = join(root, 'ios/App/App/Assets.xcassets');
-await render(join(assets, 'AppIcon.appiconset/AppIcon-512@2x.png'), 1024, 1024, mark({ bleed: true, scale: 0.78, size: 1024 }), YELLOW);
+await render(join(assets, 'AppIcon.appiconset/AppIcon-512@2x.png'), 1024, 1024, mark({ bleed: true, scale: 0.78, size: 1024 }), INK);
 for (const file of walk(join(assets, 'Splash.imageset')).filter(f => f.endsWith('.png'))) {
   const [w, h] = pngSize(file);
   await render(file, w, h, centred(w, h, Math.round(Math.min(w, h) * 0.22)), INK);
