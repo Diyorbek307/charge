@@ -16,9 +16,10 @@
  *   MAIL_FROM     the sender shown (default "Voli <SMTP_USER>", or
  *                 "Voli <info@voli.uz>" with Resend)
  *
- * Each letter goes to the mailbox of its kind: networks to partners@, fleets
- * to business@, waitlisted drivers to hello@, support and SOS to support@.
- * MAIL_TO_<BOX> (MAIL_TO_PARTNERS, …) points one of them elsewhere.
+ * Every letter goes to NOTIFY_EMAIL, the one mailbox that surely exists.
+ * MAIL_TO_<BOX> sends one kind to its own mailbox once that mailbox is made:
+ * MAIL_TO_PARTNERS (networks), MAIL_TO_BUSINESS (fleets), MAIL_TO_HELLO
+ * (waitlisted drivers), MAIL_TO_SUPPORT (support and SOS).
  *
  * The last attempt is kept in memory, so the admin's system page shows
  * whether letters leave and, if not, why in plain words.
@@ -31,8 +32,9 @@ const PASS = process.env.SMTP_PASS || '';
 const PORT = Number(process.env.SMTP_PORT || 465);
 const RESEND = process.env.RESEND_API_KEY || '';
 export const NOTIFY_TO = process.env.NOTIFY_EMAIL || 'info@voli.uz';
-const BOX = { info: NOTIFY_TO, hello: 'hello@voli.uz', partners: 'partners@voli.uz', business: 'business@voli.uz', support: 'support@voli.uz' };
-export const mailbox = box => process.env[`MAIL_TO_${box.toUpperCase()}`] || BOX[box] || NOTIFY_TO;
+// A letter to a mailbox that was never made is lost without a word, so the
+// kinds share NOTIFY_TO until MAIL_TO_<BOX> names their own.
+export const mailbox = box => process.env[`MAIL_TO_${box.toUpperCase()}`] || NOTIFY_TO;
 const FROM = process.env.MAIL_FROM || (USER ? `Voli <${USER}>` : 'Voli <info@voli.uz>');
 const SITE = (process.env.PUBLIC_URL || 'https://app.voli.uz').replace(/\/+$/, '');
 
