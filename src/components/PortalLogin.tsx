@@ -4,6 +4,7 @@ import { useSync } from '../lib/sync';
 import { useI18n } from '../lib/i18n';
 import type { Portal } from '../lib/api';
 import DriverAccountForm from './DriverAccountForm';
+import DriverAuth from './driver/DriverAuth';
 
 // Every portal signs in under the same brand: a yellow button with near-black text.
 const BRAND_THEME = { grad: 'from-[#FFC83D] to-[#FFB000]', accent: 'text-[#FFC83D]', ring: 'focus:border-[#FFC83D]/60 focus:ring-[#FFC83D]/20', glow: 'rgba(255, 200, 61,0.3)' };
@@ -34,6 +35,8 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
   // Drivers can also sign up or recover a password by SMS.
   const [mode, setMode] = useState<'login' | 'register' | 'reset'>('login');
   const [notice, setNotice] = useState<string | null>(null);
+  // Drivers start with the welcome and a code; the password form is the fallback.
+  const [withPassword, setWithPassword] = useState(false);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -74,6 +77,8 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
     setTimeout(() => setCopied(false), 1600);
   };
 
+  if (portal === 'driver' && !withPassword) return <DriverAuth onPassword={() => { setWithPassword(true); setError(null); }} />;
+
   return (
     <div
       className="min-h-full w-full flex items-center justify-center px-4 py-8 sm:py-12 relative overflow-auto"
@@ -83,11 +88,11 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
 
       <div className="relative w-full max-w-[400px]">
         <button
-          onClick={onBack}
+          onClick={portal === 'driver' ? () => setWithPassword(false) : onBack}
           className="mb-5 flex items-center gap-2 text-xs sm:text-sm text-slate-400 hover:text-white transition-colors"
         >
           <ArrowRight size={14} className="rotate-180" />
-          {t('nav.portals')}
+          {portal === 'driver' ? 'Вход по коду' : t('nav.portals')}
         </button>
 
         <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-6 sm:p-7">

@@ -43,21 +43,24 @@ const connect = [
   "https://overpass-api.de",
   "https://plausible.io",
   "https://cloud.umami.is",
+  // Sign in with Google and Apple.
+  "https://accounts.google.com",
+  "https://appleid.apple.com",
   // Error reports from the browser go to the Sentry project the DSN names.
   ...[process.env.VITE_SENTRY_DSN].filter(Boolean).map(dsn => `https://${new URL(dsn).host}`),
   ...(process.env.CSP_EXTRA_CONNECT ?? "").split(/[\s,]+/).filter(Boolean),
 ];
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' https://telegram.org https://plausible.io https://cloud.umami.is",
+  "script-src 'self' https://telegram.org https://plausible.io https://cloud.umami.is https://accounts.google.com/gsi/client https://appleid.cdn-apple.com",
   // React and Leaflet set inline style attributes.
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style",
   "font-src 'self' https://fonts.gstatic.com data:",
   "img-src 'self' data: blob: https:",
   "media-src 'self' blob: data:",
   `connect-src ${connect.join(" ")}`,
   "worker-src 'self' blob:",
-  "frame-src 'self'",
+  "frame-src 'self' https://accounts.google.com https://appleid.apple.com",
   "frame-ancestors 'self'",
   "manifest-src 'self'",
   "object-src 'none'",
@@ -70,7 +73,8 @@ app.use((req, res, next) => {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "SAMEORIGIN",
     "Referrer-Policy": "strict-origin-when-cross-origin",
-    "Cross-Origin-Opener-Policy": "same-origin",
+    // The Google and Apple sign-in popups must be able to answer the page that opened them.
+    "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
     // The camera is for the QR scanner and the location for the map — on our own pages only.
     "Permissions-Policy": "camera=(self), geolocation=(self), microphone=(), payment=(), usb=(), interest-cohort=()",
   });

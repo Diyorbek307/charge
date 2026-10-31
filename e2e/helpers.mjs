@@ -31,6 +31,11 @@ export async function pastFirstRun(page) {
 export async function signIn(page, portal) {
   await pastFirstRun(page);
   await page.goto(`/?portal=${portal}`);
+  // Drivers meet the welcome and a code first; the password is one tap further.
+  if (portal === 'driver') {
+    await page.getByRole('button', { name: 'Войти', exact: true }).click();
+    await page.getByRole('button', { name: 'Войти с паролем' }).click();
+  }
   await page.locator(`#${portal}-login`).fill(CREDS[portal].login);
   await page.locator(`#${portal}-password`).fill(CREDS[portal].password);
   await page.getByRole('button', { name: /^(Войти|Sign in|Kirish)$/ }).click();

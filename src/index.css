@@ -850,6 +850,9 @@ nav::-webkit-scrollbar { display: none; }
 @keyframes pg-sheet-out { to { transform: translateY(105%); } }
 .pg-toast-out { animation: pg-toast-out .25s ease-in both !important; }
 @keyframes pg-toast-out { to { opacity: 0; transform: translateY(-14px) scale(.96); } }
+/* The welcome photo drifts closer, slowly. */
+.pg-kenburns { animation: pg-kenburns 18s ease-out both; transform-origin: 50% 60%; }
+@keyframes pg-kenburns { from { transform: scale(1.12); } to { transform: scale(1); } }
 /* A live charge: a shine runs through the battery's fill. */
 .pg-flow { background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.55) 50%, transparent 70%); background-size: 250% 100%; animation: pg-shine 2.2s linear infinite; }
 /* A live charge: a spark runs round the ring. */

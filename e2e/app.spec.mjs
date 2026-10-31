@@ -61,8 +61,8 @@ test('a driver charges end to end and the session is billed', async ({ page, req
   const active = state.sessions.find(s => s.status === 'active');
   expect(active?.stationName).toBe('Samarqand Gateway');
 
-  await page.getByRole('button', { name: 'Остановить зарядку' }).click();
-  await page.getByRole('button', { name: 'Да, остановить' }).click();
+  await page.getByRole('button', { name: 'Завершить зарядку' }).click();
+  await page.getByRole('button', { name: 'Да, завершить' }).click();
   await expect(page.getByRole('heading', { name: 'Зарядка завершена' })).toBeVisible();
   // The receipt is the real session, and the rating reaches the station.
   await expect(page.getByText(active.id).first()).toBeVisible();
@@ -118,7 +118,7 @@ test('an operator never sees a competitor network in the browser', async ({ page
   expect(Object.keys(state.wallets)).toHaveLength(0);
 });
 
-test('a new driver goes through the first screens, signs up with an SMS code and lands in the app', async ({ page, request }) => {
+test('a new driver goes through the first screens, signs up with a code and lands in the app', async ({ page, request }) => {
   await page.goto('/?portal=driver');
   // What the app does, the language (the device's is chosen), permissions, the agreement.
   await expect(page.getByRole('heading', { name: 'Все станции — в одном приложении' })).toBeVisible();
@@ -137,21 +137,24 @@ test('a new driver goes through the first screens, signs up with an SMS code and
   await page.getByRole('checkbox', { name: /обработку моих персональных данных/ }).click();
   await accept.click();
 
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click();
-  await page.locator('#driver-signup-name').fill('Madina Karimova');
-  await page.locator('#driver-signup-phone').fill('+998 93 555 44 33');
-  await page.getByRole('button', { name: /Получить SMS-код/ }).click();
+  // The welcome, then one field for a phone or an email.
+  await expect(page.getByRole('heading', { name: /Заряжайся/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Начать' }).click();
+  await page.locator('#driver-signin-to').fill('+998 93 555 44 33');
+  await page.getByRole('button', { name: 'Получить код' }).click();
 
   // Demo mode shows the code instead of sending an SMS.
   const notice = page.getByText(/Ваш код —/);
   await expect(notice).toBeVisible();
   const code = (await notice.textContent()).match(/(\d{6})/)[1];
 
-  await page.locator('#driver-signup-code').fill(code);
-  await page.locator('#driver-signup-password').fill('Zaryad2026');
-  await page.getByRole('button', { name: 'Зарегистрироваться' }).click();
-  await expect(page.locator('#driver-signup-code')).toHaveCount(0);
-  await expect(page.locator('#driver-login')).toHaveCount(0);
+  await page.getByLabel('Код из 6 цифр').fill(code);
+  await page.getByRole('button', { name: 'Продолжить' }).click();
+  // Someone new: a name, and the account is made.
+  await page.locator('#driver-signup-name').fill('Madina Karimova');
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click();
+  await expect(page.locator('#driver-signup-name')).toHaveCount(0);
+  await expect(page.locator('#driver-signin-to')).toHaveCount(0);
 
   const token = await page.evaluate(() => localStorage.getItem('oc-token-driver'));
   const me = await request.get('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
@@ -189,7 +192,7 @@ test("a network prints a QR sticker and the driver's scanner reads it", async ({
 
   // The same link opened by the phone's own camera lands on the station card.
   await driver.goto('/?portal=driver&station=st-001&point=c1');
-  await expect(driver.getByText('ТОЧКИ ЗАРЯДКИ')).toBeVisible();
+  await expect(driver.getByRole('heading', { name: 'Доступные разъёмы' })).toBeVisible();
   expect(new URL(driver.url()).searchParams.get('station')).toBeNull();
   await driver.close();
 });

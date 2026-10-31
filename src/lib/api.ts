@@ -6,6 +6,12 @@ export type LoginResult =
   | { token: string; user: Account; requires2fa?: false }
   | { requires2fa: true; challenge: string };
 
+/** What a code or a provider sign-in answers: signed in, 2FA next, or a new driver to name. */
+export type SignInResult =
+  | { token: string; user: Account; created?: boolean; requires2fa?: undefined; newAccount?: undefined }
+  | { requires2fa: true; challenge: string; token?: undefined; newAccount?: undefined }
+  | { newAccount: true; ticket: string; channel: 'sms' | 'email'; token?: undefined; requires2fa?: undefined };
+
 export interface Account {
   id: string;
   portal: Portal;
@@ -752,6 +758,11 @@ export const apiClient = {
   smsStatus: () => request<{ configured: boolean; demo: boolean }>('/auth/sms/status'),
   requestSmsCode: (phone: string, purpose: 'register' | 'reset') =>
     post<{ sent: boolean; phone: string; demoCode?: string }>('/auth/sms/request', { phone, purpose }),
+  authProviders: () => request<{ google: string | null; apple: string | null; sms: boolean; email: boolean }>('/auth/providers'),
+  requestSignInCode: (to: string) => post<{ sent: true; to: string; channel: 'sms' | 'email'; demoCode?: string }>('/auth/code/request', { to }),
+  verifySignInCode: (to: string, code: string) => post<SignInResult>('/auth/code/verify', { to, code }),
+  finishSignUp: (ticket: string, name: string, consent: { version: number; marketing: boolean }, ref?: string) => post<{ token: string; user: Account }>('/auth/code/finish', { ticket, name, consent, ref }),
+  oauthSignIn: (provider: 'google' | 'apple', idToken: string, extra: { name?: string; consent?: { version: number; marketing: boolean }; ref?: string }) => post<SignInResult>('/auth/oauth', { provider, idToken, ...extra }),
   register: (phone: string, code: string, name: string, password: string, consent: { version: number; marketing: boolean }, ref?: string) =>
     post<{ token: string; user: Account }>('/auth/register', { phone, code, name, password, consent, ...(ref ? { ref } : {}) }),
   referral: () => request<Referral>('/me/referral', { portal: 'driver' }),
