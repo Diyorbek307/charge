@@ -2913,16 +2913,17 @@ api.post('/leads', (req, res) => {
   if (result.retryAfter) res.set('Retry-After', String(result.retryAfter));
   if (result.lead) {
     const l = result.lead;
+    const again = result.repeat ? ' (повторная)' : '';
     // Admin-only: lead.* has no rule in scopeOf, so it never goes public.
     emit({
       type: 'lead.new',
       portal: 'system',
       actor: l.name,
-      message: `Новая заявка · ${LEAD_LABEL[l.kind]}${l.company ? ` · ${l.company}` : ''}`,
+      message: `Новая заявка${again} · ${LEAD_LABEL[l.kind]}${l.company ? ` · ${l.company}` : ''}`,
       entity: l.id,
       payload: { kind: l.kind },
     });
-    notifyTeam(`Новая заявка: ${LEAD_LABEL[l.kind]}`, [
+    notifyTeam(`Новая заявка${again}: ${LEAD_LABEL[l.kind]}`, [
       ['Номер', l.id],
       ['Тип', LEAD_LABEL[l.kind]],
       ['Имя', l.name],

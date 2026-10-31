@@ -102,6 +102,8 @@ describe('leads', () => {
     const admin = await login('admin', 'admin@voli.uz', 'Admin2026');
     const { leads } = (await call('/leads', { token: admin })).data;
     assert.equal(leads.filter(l => l.phone === '+998935554433').length, 1);
+    // The repeat is counted on the same lead, so the team sees it came again.
+    assert.equal(leads.find(l => l.phone === '+998935554433').repeats, 1);
     assert.ok(!leads.some(l => l.name === 'Bot'));
   });
 

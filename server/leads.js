@@ -56,9 +56,19 @@ export function submitLead(input, client) {
   const retryAfter = limited(client);
   if (retryAfter) return { status: 429, retryAfter, body: { error: 'Слишком много заявок — попробуйте позже' } };
 
-  // The same person signing up twice for the same thing is one lead.
+  // The same person signing up twice for the same thing is one lead, brought
+  // up to date; the team still hears about it, since they may be waiting.
   const dup = leads().find(l => l.phone === phone && l.kind === kind && l.status !== 'spam');
-  if (dup) return { status: 200, body: { ok: true, duplicate: true } };
+  if (dup) {
+    dup.name = name;
+    if (kind !== 'driver') dup.company = company;
+    for (const key of ['city', 'size']) dup[key] = clean(body[key], 60) || dup[key];
+    dup.message = clean(body.message, 1000) || dup.message;
+    dup.repeats = (dup.repeats ?? 0) + 1;
+    dup.updated = new Date().toISOString();
+    db.save();
+    return { status: 200, body: { ok: true, duplicate: true }, lead: dup, repeat: true };
+  }
 
   const counters = db.data.counters;
   counters.lead ??= 1;
