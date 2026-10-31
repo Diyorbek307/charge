@@ -171,7 +171,7 @@ export interface SystemHealth {
   ocpp: { connected: number };
   webhooks: { endpoints: number; active: number; pending: number; failed: number; delivered: number; lastError: { url: string; error: string; at: string } | null };
   sms: boolean;
-  mail?: { configured: boolean; to: string };
+  mail?: { configured: boolean; to: string; via?: 'resend' | 'smtp' | null; host?: string | null; last?: { ok: boolean; to: string; subject: string; at: string; error?: string } | null };
   time: string;
 }
 
@@ -803,6 +803,7 @@ export const apiClient = {
   setTariffBands: (portal: Portal, bands: TariffBand[]) => request<{ bands: TariffBand[] }>('/admin/tariff-bands', { method: 'PUT', body: JSON.stringify({ bands }), portal }),
   staffAccounts: (portal: Portal) => request<StaffAccount[]>('/admin/accounts', { portal }),
   systemHealth: (portal: Portal) => request<SystemHealth>('/admin/health', { portal }),
+  testMail: () => post<{ ok: boolean; to?: string; error?: string }>('/admin/mail/test', undefined, 'admin'),
   devices: (portal: Portal) => request<SignedInDevice[]>('/auth/sessions', { portal }),
   signOutOthers: (portal: Portal) => post<{ revoked: number }>('/auth/sessions/revoke-others', undefined, portal),
   changePassword: (portal: Portal, current: string, next: string) => post<{ ok: boolean }>('/auth/password', { current, next }, portal),

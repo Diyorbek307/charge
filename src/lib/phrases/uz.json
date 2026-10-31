@@ -4058,5 +4058,11 @@
 "Опишите проблему и приложите фото — ИИ-помощник ответит сразу, в сложных случаях подключится специалист": "Muammoni yozing va surat biriktiring — SI-yordamchi darhol javob beradi, murakkab holatlarda mutaxassis ulanadi",
 "Зарядка и станции": "Zaryadlash va stansiyalar",
 "Оплата и бонусы": "To‘lov va bonuslar",
-"Аккаунт и приложение": "Akkaunt va ilova"
+"Аккаунт и приложение": "Akkaunt va ilova",
+"Отправить тестовое письмо": "Sinov xatini yuborish",
+"Отправка через Resend (HTTPS)": "Resend orqali yuborish (HTTPS)",
+"Отправка по SMTP: {0}": "SMTP orqali yuborish: {0}",
+"Последнее письмо ушло на {0} · {1}": "Oxirgi xat {0} manziliga ketdi · {1}",
+"Тестовое письмо отправлено на {0} — проверьте ящик (и папку «Спам»)": "Sinov xati {0} manziliga yuborildi — qutini (va «Spam» papkasini) tekshiring",
+"Не отправилось: {0}": "Yuborilmadi: {0}"
 }

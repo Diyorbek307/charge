@@ -4058,5 +4058,11 @@
 "Опишите проблему и приложите фото — ИИ-помощник ответит сразу, в сложных случаях подключится специалист": "Describe the problem and attach a photo — the AI assistant answers at once; a specialist joins for harder cases",
 "Зарядка и станции": "Charging and stations",
 "Оплата и бонусы": "Payments and bonuses",
-"Аккаунт и приложение": "Account and app"
+"Аккаунт и приложение": "Account and app",
+"Отправить тестовое письмо": "Send a test letter",
+"Отправка через Resend (HTTPS)": "Sending through Resend (HTTPS)",
+"Отправка по SMTP: {0}": "Sending over SMTP: {0}",
+"Последнее письмо ушло на {0} · {1}": "The last letter went to {0} · {1}",
+"Тестовое письмо отправлено на {0} — проверьте ящик (и папку «Спам»)": "Test letter sent to {0} — check the inbox (and the Spam folder)",
+"Не отправилось: {0}": "Not sent: {0}"
 }

@@ -7,7 +7,7 @@ import { generateSecret, verifyTotp, otpauthUri } from './totp.js';
 import { hashPassword } from './seed.js';
 import { normalizePhone, issueCode, consumeCode, PURPOSES, smsConfigured } from './sms.js';
 import { submitLead, listLeads, updateLead, LEAD_KINDS } from './leads.js';
-import { notifyTeam, mailConfigured, mailbox } from './mail.js';
+import { notifyTeam, mailConfigured, mailbox, mailStatus, sendTestLetter } from './mail.js';
 import { joinByCode, onFriendPaid, referralFor } from './referrals.js';
 import { analyticsFor, adminUsers, setUserStatus, isBlocked, monthSpend } from './analytics.js';
 import { demoEnergy } from './history.js';
@@ -3084,9 +3084,14 @@ api.get('/admin/health', requireAuth('admin'), (_req, res) => {
       lastError: lastFailed ? { url: lastFailed.url, error: lastFailed.lastError, at: lastFailed.ts } : null,
     },
     sms: smsConfigured(),
-    mail: { configured: mailConfigured(), to: ['info', 'hello', 'partners', 'business', 'support'].map(mailbox).join(', ') },
+    mail: { configured: mailConfigured(), to: ['info', 'hello', 'partners', 'business', 'support'].map(mailbox).join(', '), ...mailStatus() },
     time: new Date().toISOString(),
   });
+});
+
+// A test letter to the general mailbox: the answer says whether it left and, if not, why.
+api.post('/admin/mail/test', requireAuth('admin'), async (req, res) => {
+  res.json(await sendTestLetter(mailbox('info'), req.account.name));
 });
 
 api.get('/admin/users', requireAuth('admin'), (_req, res) => {

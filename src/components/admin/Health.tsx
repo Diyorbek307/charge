@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Server, Database, Radio, Cpu, Bell, MessageSquare, RefreshCw, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Server, Database, Radio, Cpu, Bell, MessageSquare, RefreshCw, CheckCircle, AlertTriangle, Send, LoaderCircle } from 'lucide-react';
 import type { SystemHealth } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 import { num, dateTime } from '../../lib/analytics';
@@ -18,6 +18,8 @@ export default function AdminHealth() {
   const [data, setData] = useState<SystemHealth | null>(null);
   const [error, setError] = useState('');
   const [ms, setMs] = useState<number | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [test, setTest] = useState<{ ok: boolean; to?: string; error?: string } | null>(null);
 
   const load = useCallback(() => {
     const t0 = performance.now();
@@ -32,6 +34,19 @@ export default function AdminHealth() {
     return () => clearInterval(t);
   }, [load]);
 
+  const testMail = async () => {
+    setTesting(true);
+    setTest(null);
+    try {
+      setTest(await actions.testMail());
+    } catch (e) {
+      setTest({ ok: false, error: (e as Error).message });
+    } finally {
+      setTesting(false);
+      load();
+    }
+  };
+
   if (!data) return <Page title="Состояние системы">{error ? <ErrorNote text={error} /> : <Loading />}</Page>;
   const w = data.webhooks;
 
@@ -42,7 +57,7 @@ export default function AdminHealth() {
     { icon: <Cpu size={15} />, name: 'OCPP 1.6-J', ok: true, detail: data.ocpp.connected ? `${data.ocpp.connected} станций на связи` : 'Ни одна станция сейчас не подключена по OCPP' },
     { icon: <Bell size={15} />, name: 'Вебхуки', ok: w.failed === 0, detail: `${w.active} из ${w.endpoints} endpoint’ов активны · в очереди ${w.pending} · доставлено ${w.delivered} · с ошибкой ${w.failed}` },
     { icon: <MessageSquare size={15} />, name: 'SMS-шлюз', ok: data.sms, detail: data.sms ? 'Настроен' : 'Не настроен — коды входа показываются на экране (демо-режим)' },
-    { icon: <Bell size={15} />, name: 'Письма команде', ok: !!data.mail?.configured, detail: data.mail?.configured ? `Заявки, поддержка и SOS приходят по ящикам: ${data.mail.to}` : `Не настроены — нужны SMTP_HOST, SMTP_USER и SMTP_PASS; письма пойдут на ящики @voli.uz` },
+    { icon: <Bell size={15} />, name: 'Письма команде', ok: !!data.mail?.configured && data.mail.last?.ok !== false, detail: !data.mail?.configured ? 'Не настроены — нужен RESEND_API_KEY или SMTP_HOST, SMTP_USER и SMTP_PASS; письма пойдут на ящики @voli.uz' : data.mail.last?.ok === false ? `Письма не уходят: ${data.mail.last.error}` : `Заявки, поддержка и SOS приходят по ящикам: ${data.mail.to}` },
   ];
 
   return (
@@ -71,6 +86,22 @@ export default function AdminHealth() {
             </li>
           ))}
         </ul>
+      </Card>
+
+      <Card title={<span className="inline-flex items-center gap-2"><Bell size={15} />Письма команде</span>} right={<button onClick={testMail} disabled={testing || !data.mail?.configured} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#FFC83D] text-[#111] text-xs font-semibold disabled:opacity-50">{testing ? <LoaderCircle size={13} className="animate-spin" /> : <Send size={13} />}Отправить тестовое письмо</button>}>
+        <p className="text-sm text-slate-600">
+          {data.mail?.via === 'resend' ? 'Отправка через Resend (HTTPS)' : data.mail?.via === 'smtp' ? `Отправка по SMTP: ${data.mail.host}` : 'Отправка не настроена: задайте RESEND_API_KEY или SMTP_HOST, SMTP_USER и SMTP_PASS'}
+        </p>
+        {data.mail?.last && (
+          <p className={`mt-2 text-xs rounded-xl px-3 py-2 ${data.mail.last.ok ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50'}`}>
+            {data.mail.last.ok ? `Последнее письмо ушло на ${data.mail.last.to} · ${dateTime(data.mail.last.at)}` : `Последнее письмо не ушло (${dateTime(data.mail.last.at)}): ${data.mail.last.error}`}
+          </p>
+        )}
+        {test && (
+          <p role="status" className={`mt-2 text-sm rounded-xl px-3 py-2 ${test.ok ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50'}`}>
+            {test.ok ? `Тестовое письмо отправлено на ${test.to} — проверьте ящик (и папку «Спам»)` : `Не отправилось: ${test.error}`}
+          </p>
+        )}
       </Card>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">

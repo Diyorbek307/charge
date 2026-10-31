@@ -179,7 +179,7 @@ export default function AdminApp({ onBack }: { onBack: () => void }) {
   // A link from a notification letter (?page=leads) opens that page.
   const [page, setPage] = useState<Page>(() => {
     const p = new URLSearchParams(window.location.search).get('page');
-    return p && ['leads', 'support', 'sos'].includes(p) ? (p as Page) : 'dashboard';
+    return p && ['leads', 'support', 'sos', 'system_health'].includes(p) ? (p as Page) : 'dashboard';
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
