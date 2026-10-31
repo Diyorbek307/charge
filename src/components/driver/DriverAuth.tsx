@@ -314,16 +314,16 @@ const AppleMark = () => (
 );
 
 /**
- * The first screen: Tashkent at dusk, the wordmark, three
+ * The first screen: an electric car charging in Tashkent at dusk, the wordmark, three
  * short pages about Voli, and the two ways forward.
  */
 function Welcome({ slide, onSlide, onStart, onSignIn }: { slide: number; onSlide: (n: number) => void; onStart: () => void; onSignIn: () => void }) {
   const s = SLIDES[slide];
   return (
     <div className="relative min-h-full w-full overflow-hidden flex flex-col text-white bg-[#0a0a0a]" style={{ fontFamily: 'Inter, sans-serif' }}>
-      {/* Tashkent at dusk, fading into the dark where the buttons are */}
-      <img src="/welcome/tashkent-dusk.jpg" alt="" aria-hidden="true" className="absolute inset-x-0 top-0 w-full h-[78%] object-cover object-[50%_60%] pg-kenburns" />
-      <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(8,10,18,.72) 0%, rgba(8,10,18,.25) 26%, rgba(8,10,18,.1) 44%, rgba(10,10,10,.85) 70%, #0a0a0a 80%)' }} />
+      {/* An electric car charging in Tashkent at dusk, fading into the dark where the buttons are */}
+      <img src="/welcome/welcome.jpg" alt="" aria-hidden="true" className="absolute inset-x-0 top-0 w-full h-full object-cover object-[50%_40%] pg-kenburns" />
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(8,10,18,.55) 0%, rgba(8,10,18,.1) 30%, rgba(8,10,18,0) 50%, rgba(10,10,10,.75) 72%, rgba(10,10,10,.96) 84%)' }} />
 
       <div className="relative pt-14 flex flex-col items-center px-6">
         <Logo size={64} ink="#FFFFFF" />
@@ -341,7 +341,6 @@ function Welcome({ slide, onSlide, onStart, onSignIn }: { slide: number; onSlide
         </div>
         <button onClick={onStart} className="mt-6 w-full h-[56px] rounded-2xl text-[#111] font-bold text-[17px] active:scale-[0.98] transition-transform" style={{ background: YELLOW, boxShadow: '0 10px 30px rgba(255,200,61,.3)' }}>Начать</button>
         <p className="mt-4 text-center text-sm text-white/70">Уже есть аккаунт? <button onClick={onSignIn} className="font-bold text-[#FFC83D]">Войти</button></p>
-        <a href="https://commons.wikimedia.org/wiki/File:Tashkent_city_2025y.jpg" target="_blank" rel="noreferrer" className="mt-3 block text-center text-[10px] text-white/30">Фото: Farruh Samadov · CC BY-SA 4.0</a>
       </div>
     </div>
   );
