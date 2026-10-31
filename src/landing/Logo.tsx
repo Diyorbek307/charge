@@ -62,7 +62,7 @@ export function LogoMark({ size = 32 }: { size?: number; id?: string }) {
 }
 
 /** The wordmark «Voli»: `size` is its height; `ink` its letters (white on dark). */
-export function Logo({ size = 30, ink = '#111111' }: { size?: number; ink?: string }) {
+export function Logo({ size = 36, ink = '#111111' }: { size?: number; ink?: string }) {
   const id = useId().replace(/:/g, '');
   return (
     <span className="lp-logo">

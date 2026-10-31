@@ -269,23 +269,23 @@ export function ChargingDoneScreen({ session, onClose }: { session: Session | nu
 
   return (
     <div className="h-full flex flex-col bg-slate-50">
-      <div className="bg-gradient-to-b from-emerald-500 to-emerald-600 px-4 pt-6 pb-6 text-white text-center">
-        <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 pg-pop"><CheckCircle size={30} /></div>
+      <div className="px-4 pt-6 pb-6 text-white text-center" style={{ background: 'radial-gradient(ellipse at 50% 0%, #2a2208 0%, #141414 60%, #0a0a0a 100%)' }}>
+        <div className="w-14 h-14 bg-[#FFC83D] text-[#111] rounded-full flex items-center justify-center mx-auto mb-3 pg-pop" style={{ boxShadow: '0 0 28px rgba(255,200,61,.45)' }}><CheckCircle size={30} /></div>
         <h2 className="text-xl font-bold">Зарядка завершена</h2>
-        <p className="text-emerald-100 text-sm mt-0.5">{session.stationName}</p>
+        <p className="text-white/60 text-sm mt-0.5">{session.stationName}</p>
         <div className="grid grid-cols-3 gap-2 mt-5">
           {[
             { value: String(session.energy), unit: ' кВт·ч', label: 'заряжено' },
             { value: Math.round(session.cost).toLocaleString('ru-RU'), unit: ' сум', label: 'списано' },
             { value: String(minutes), unit: ' мин', label: 'время' },
           ].map(s => (
-            <div key={s.label} className="bg-white/15 rounded-2xl py-2">
+            <div key={s.label} className="bg-white/[0.07] border border-white/10 rounded-2xl py-2">
               <p className="text-lg font-bold tabular-nums">{s.value}<span className="text-xs font-normal">{s.unit}</span></p>
-              <p className="text-emerald-100 text-xs">{s.label}</p>
+              <p className="text-white/50 text-xs">{s.label}</p>
             </div>
           ))}
         </div>
-        <p className="text-emerald-100 text-xs mt-3">{`≈ +${Math.round(session.energy / 0.18)} км запаса хода`}</p>
+        <p className="text-[#FFC83D] text-xs mt-3">{`≈ +${Math.round(session.energy / 0.18)} км запаса хода`}</p>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
@@ -306,14 +306,14 @@ export function ChargingDoneScreen({ session, onClose }: { session: Session | nu
             ))}
             <div className="flex justify-between items-center border-t border-dashed border-slate-200 pt-2 mt-1">
               <span className="text-sm font-bold text-slate-900">Итого</span>
-              <span className="text-base font-bold text-sky-600 tabular-nums">{sum(session.cost)}</span>
+              <span className="text-base font-extrabold text-slate-900 tabular-nums">{sum(session.cost)}</span>
             </div>
           </div>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-100 p-4 text-center">
           {sent ? (
-            <p className="text-sm font-semibold text-sky-700 pg-reveal">{`Спасибо! Ваша оценка ${stars}/5 учтена в рейтинге станции`}</p>
+            <p className="text-sm font-semibold text-slate-800 pg-reveal">{`Спасибо! Ваша оценка ${stars}/5 учтена в рейтинге станции`}</p>
           ) : (
             <>
               <p className="text-sm font-semibold text-slate-700 mb-2">Оцените станцию</p>
@@ -335,7 +335,7 @@ export function ChargingDoneScreen({ session, onClose }: { session: Session | nu
         >
           <Download size={14} />Чек PDF
         </button>
-        <button onClick={onClose} className="bg-sky-500 text-white rounded-2xl py-3 font-semibold text-sm">Готово</button>
+        <button onClick={onClose} className="text-[#111] rounded-2xl py-3 font-bold text-sm" style={{ background: 'linear-gradient(90deg, #FFE27A, #FFC83D 55%, #F5B000)' }}>Готово</button>
       </div>
     </div>
   );

@@ -164,7 +164,7 @@ const ru = {
     alt: 'Экран приложения Voli',
     note: 'Снимки сделаны в демо-версии приложения.',
     steps: [
-      { id: '1-signin', t: 'Зарегистрируйтесь по номеру', d: 'Введите имя и номер телефона и подтвердите его кодом из SMS. Это займёт минуту.' },
+      { id: '1-signin', t: 'Войдите за минуту', d: 'Введите номер телефона или почту — придёт код. Если вы у нас впервые, останется написать имя, и аккаунт готов. Пароль не нужен.' },
       { id: '2-map', t: 'Найдите станцию на карте', d: 'На карте станции всех сетей. Цифра на метке — сколько разъёмов свободно, а быстрые фильтры оставят свободные, со скидкой или открытые сейчас.' },
       { id: '4-qr', t: 'Отсканируйте QR-код', d: 'Нажмите жёлтую кнопку в центре и наведите камеру на код станции. Приложение покажет свободные разъёмы и цену — останется нажать «Начать зарядку».' },
       { id: '5-charging', t: 'Следите за зарядкой', d: 'Процент, мощность, энергия и сумма обновляются вживую. Ниже — кафе и предложения партнёров рядом, а ход зарядки виден и на экране блокировки.' },
@@ -549,7 +549,7 @@ const uz: LandingCopy = {
     alt: 'Voli ilovasi ekrani',
     note: 'Suratlar ilovaning demo versiyasida olingan.',
     steps: [
-      { id: '1-signin', t: 'Raqamingiz bilan ro‘yxatdan o‘ting', d: 'Ism va telefon raqamingizni kiriting va uni SMS kod bilan tasdiqlang. Bir daqiqa vaqt oladi.' },
+      { id: '1-signin', t: 'Bir daqiqada kiring', d: 'Telefon raqamingiz yoki pochtangizni kiriting — kod keladi. Birinchi marta bo‘lsangiz, ismingizni yozing va akkaunt tayyor. Parol kerak emas.' },
       { id: '2-map', t: 'Xaritada stansiyani toping', d: 'Xaritada barcha tarmoqlar stansiyalari. Belgidagi raqam — nechta ulagich bo‘shligi, tezkor filtrlar esa bo‘sh, chegirmali yoki hozir ochiq stansiyalarni qoldiradi.' },
       { id: '4-qr', t: 'QR kodni skanerlang', d: 'O‘rtadagi sariq tugmani bosing va kamerani stansiya kodiga tuting. Ilova bo‘sh ulagichlar va narxni ko‘rsatadi — «Zaryadlashni boshlash»ni bosish qoladi.' },
       { id: '5-charging', t: 'Zaryadlashni kuzating', d: 'Foiz, quvvat, energiya va summa jonli yangilanadi. Pastda — yaqin atrofdagi kafe va hamkorlar takliflari, zaryadlash jarayoni esa qulf ekranida ham ko‘rinadi.' },
@@ -932,7 +932,7 @@ const en: LandingCopy = {
     alt: 'Voli app screen',
     note: 'Screenshots taken in the demo version of the app.',
     steps: [
-      { id: '1-signin', t: 'Sign up with your number', d: 'Enter your name and phone number and confirm it with the code from a text message. It takes a minute.' },
+      { id: '1-signin', t: 'Sign in in a minute', d: 'Enter your phone number or email and a code arrives. New here? Add your name and the account is ready. No password needed.' },
       { id: '2-map', t: 'Find a charger on the map', d: 'The map shows chargers from every network. The number on a pin is how many connectors are free, and quick filters keep only free ones, deals or chargers open now.' },
       { id: '4-qr', t: 'Scan the QR code', d: 'Tap the yellow button in the middle and point your camera at the charger’s code. The app shows free connectors and the price — then just tap Start charging.' },
       { id: '5-charging', t: 'Watch your charge', d: 'Percentage, power, energy and cost update live. Below are cafés and partner offers nearby, and the progress also shows on your lock screen.' },
