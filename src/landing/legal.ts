@@ -2,8 +2,9 @@ import { BRAND } from '../brand';
 
 /**
  * Drafts of the legal documents the site needs before launch (Payme and Click
- * require a public offer on the merchant's site). Written in Russian; the
- * company details are placeholders in [brackets].
+ * require a public offer on the merchant's site). Written in Russian. The
+ * company is «ENESSES» MCHJ (to be renamed); details still missing are
+ * placeholders in [brackets].
  *
  * DRAFTS: a lawyer must review them before they are published as binding.
  */
@@ -18,11 +19,11 @@ export interface LegalDoc {
 
 const B = BRAND.name;
 const SITE = BRAND.domain;
-const CO = '[Наименование юридического лица]';
+const CO = 'ООО «ENESSES»';
 const REQ = [
-  `${CO}`,
-  'ИНН: [ИНН] · ОКЭД: [код]',
-  'Юридический адрес: [адрес], Республика Узбекистан',
+  'Общество с ограниченной ответственностью «ENESSES» («ENESSES» MCHJ)',
+  'ИНН (STIR): 308 899 884 · ОКЭД: [код]',
+  'Юридический адрес: Самаркандская область, г. Самарканд, ул. Гагарина, 48, Республика Узбекистан',
   'Расчётный счёт: [р/с] в [банк], МФО [код]',
   `Электронная почта: ${BRAND.email}`,
   'Телефон: [телефон]',

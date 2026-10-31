@@ -18,6 +18,22 @@
 | Скриншоты | `marketing/store/ios-6.9/` (1320×2868), `marketing/store/android/` (1080×1920) |
 | iOS | только iPhone, только портрет; CarPlay включим после разрешения Apple |
 
+## Данные компании для регистрации
+
+Как в свидетельстве (guvohnoma) и в D-U-N-S — латиницей, без «Voli»:
+
+| Поле | Значение |
+|---|---|
+| Юридическое название (Legal entity name) | ENESSES LLC (по-узбекски «ENESSES» MCHJ) |
+| ИНН / STIR | 308899884 |
+| Дата регистрации | 27.09.2021 |
+| Адрес | 48 Gagarin street, Samarkand, Samarkand region, Uzbekistan |
+| Сайт | https://voli.uz |
+| Почта | info@voli.uz |
+
+Компанию собираются переименовать: после переименования обновить D-U-N-S, затем
+название продавца у Apple (через поддержку) и название в платёжном профиле Google.
+
 ## Google Play
 
 1. **Аккаунт**: play.google.com/console → тип «Организация» (нужен D-U-N-S) или «Личный».
