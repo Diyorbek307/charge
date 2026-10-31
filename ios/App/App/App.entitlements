@@ -2,8 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- CarPlay EV charging: granted by Apple on request (developer.apple.com/carplay). -->
-	<key>com.apple.developer.carplay-charging</key>
-	<true/>
+	<!--
+	  CarPlay EV charging is added here once Apple grants it (developer.apple.com/carplay):
+	  <key>com.apple.developer.carplay-charging</key><true/>
+	  Until then the app is signed without it, and the CarPlay scene simply never opens.
+	-->
 </dict>
 </plist>

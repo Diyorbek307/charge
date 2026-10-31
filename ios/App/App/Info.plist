@@ -57,7 +57,9 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Voli показывает станции рядом с вами и расстояние до них.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Камера нужна, чтобы считать QR-код на зарядной станции.</string>
+	<string>Камера нужна, чтобы считать QR-код на зарядной станции, сфотографировать проблему для поддержки и подтвердить лицо для зарядки в долг.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>WKAppBoundDomains</key>
 	<array>
 		<string>app.voli.uz</string>
@@ -69,13 +71,11 @@
 	<string>Main</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>

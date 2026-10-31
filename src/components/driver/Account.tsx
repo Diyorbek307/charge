@@ -174,6 +174,45 @@ export function ProfileScreen({ onNavigate }: { onNavigate: (s: string) => void 
         <button onClick={() => void logout('driver')} className="w-full py-3 flex items-center justify-center gap-2 text-red-500 text-sm font-medium">
           <LogOut size={16} />Выйти из аккаунта
         </button>
+        <DeleteAccount onDeleted={() => void logout('driver')} />
+      </div>
+    </div>
+  );
+}
+
+/** Deleting the account for good, as the app stores require: the password, a plain warning, then it is gone. */
+function DeleteAccount({ onDeleted }: { onDeleted: () => void }) {
+  const { actions } = useSync();
+  const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const confirm = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      await actions.deleteAccount(password);
+      onDeleted();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (!open) {
+    return <button onClick={() => setOpen(true)} className="w-full pb-4 text-xs text-slate-400 underline underline-offset-2">Удалить аккаунт</button>;
+  }
+  return (
+    <div className="bg-white rounded-2xl border border-red-100 p-4 space-y-3" role="group" aria-label="Удаление аккаунта">
+      <p className="text-sm font-bold text-slate-900">Удалить аккаунт навсегда?</p>
+      <p className="text-xs text-slate-500 leading-relaxed">Удалятся имя, телефон, пароль, автомобиль, фото для зарядки в долг, бонусы, чат поддержки и приглашения. История зарядок и платежей останется без вашего имени — её требуется хранить для бухгалтерии. Восстановить аккаунт будет нельзя.</p>
+      <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Пароль" aria-label="Пароль для удаления аккаунта" autoComplete="current-password" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm" />
+      {error && <p role="alert" className="text-xs text-red-600 bg-red-50 rounded-lg px-2 py-1.5">{error}</p>}
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={() => { setOpen(false); setPassword(''); setError(''); }} className="h-11 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold">Отмена</button>
+        <button onClick={() => void confirm()} disabled={busy || !password} className="h-11 rounded-xl bg-red-600 text-white text-sm font-semibold disabled:opacity-50 inline-flex items-center justify-center gap-1.5">
+          {busy && <LoaderCircle size={14} className="animate-spin" />}Удалить
+        </button>
       </div>
     </div>
   );

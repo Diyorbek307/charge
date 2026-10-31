@@ -4064,5 +4064,12 @@
 "Отправка по SMTP: {0}": "SMTP orqali yuborish: {0}",
 "Последнее письмо ушло на {0} · {1}": "Oxirgi xat {0} manziliga ketdi · {1}",
 "Тестовое письмо отправлено на {0} — проверьте ящик (и папку «Спам»)": "Sinov xati {0} manziliga yuborildi — qutini (va «Spam» papkasini) tekshiring",
-"Не отправилось: {0}": "Yuborilmadi: {0}"
+"Не отправилось: {0}": "Yuborilmadi: {0}",
+"Удалить аккаунт": "Akkauntni o‘chirish",
+"Удалить аккаунт навсегда?": "Akkaunt butunlay o‘chirilsinmi?",
+"Удалятся имя, телефон, пароль, автомобиль, фото для зарядки в долг, бонусы, чат поддержки и приглашения. История зарядок и платежей останется без вашего имени — её требуется хранить для бухгалтерии. Восстановить аккаунт будет нельзя.": "Ism, telefon, parol, avtomobil, qarzga zaryadlash surati, bonuslar, yordam chati va takliflar o‘chiriladi. Zaryadlash va to‘lovlar tarixi ismingizsiz qoladi — u buxgalteriya uchun saqlanishi shart. Akkauntni tiklab bo‘lmaydi.",
+"Пароль для удаления аккаунта": "Akkauntni o‘chirish uchun parol",
+"Удаление аккаунта": "Akkauntni o‘chirish",
+"Пароль указан неверно": "Parol noto‘g‘ri",
+"Сначала завершите зарядку": "Avval zaryadlashni tugating"
 }

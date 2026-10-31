@@ -7,8 +7,9 @@ android {
         applicationId "uz.voli.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // Each store build needs a higher number: the build server passes BUILD_NUMBER.
+        versionCode((System.getenv("BUILD_NUMBER") ?: "1") as Integer)
+        versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +17,25 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // The upload key: from the build server (Codemagic sets CM_KEYSTORE_*), or
+    // from android/keystore.properties on a computer (never in git).
+    def keyProps = new Properties()
+    def keyFile = rootProject.file('keystore.properties')
+    if (keyFile.exists()) keyFile.withInputStream { keyProps.load(it) }
+    def keyPath = System.getenv("CM_KEYSTORE_PATH") ?: keyProps['storeFile']
+    signingConfigs {
+        release {
+            if (keyPath) {
+                storeFile file(keyPath)
+                storePassword System.getenv("CM_KEYSTORE_PASSWORD") ?: keyProps['storePassword']
+                keyAlias System.getenv("CM_KEY_ALIAS") ?: keyProps['keyAlias']
+                keyPassword System.getenv("CM_KEY_PASSWORD") ?: keyProps['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            if (keyPath) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

@@ -1,0 +1,77 @@
+# Store builds of the Voli app in the cloud — no Mac needed.
+#
+# Set up once in Codemagic (codemagic.io), see docs/stores.md:
+#   - Teams → Integrations → Developer Portal: an App Store Connect API key, named "Voli ASC".
+#   - Teams → Code signing identities → Android keystores: the upload key, reference "voli_upload".
+#   - (later) Environment variables, group "google_play": GCLOUD_SERVICE_ACCOUNT_CREDENTIALS,
+#     to upload to Google Play by itself after the first release was uploaded by hand.
+#
+# Start a build: Codemagic → the app → Start new build → choose the workflow.
+
+workflows:
+  ios-release:
+    name: iOS → TestFlight / App Store
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: Voli ASC
+    environment:
+      node: 22
+      xcode: latest
+      vars:
+        # The app's Apple ID: App Store Connect → the app → App Information → Apple ID (digits).
+        APP_STORE_APPLE_ID: "0"
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: uz.voli.app
+    scripts:
+      - name: Install and build the site
+        script: npm ci
+      - name: Copy the site into the iOS project
+        script: npx cap sync ios
+      - name: Signing profiles
+        script: xcode-project use-profiles
+      - name: Build number (one above the last in App Store Connect)
+        script: |
+          LATEST=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
+          cd ios/App && agvtool new-version -all $((LATEST + 1))
+      - name: Build the .ipa
+        script: xcode-project build-ipa --project "ios/App/App.xcodeproj" --scheme "App"
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+      email:
+        recipients:
+          - info@voli.uz
+
+  android-release:
+    name: Android → AAB for Google Play
+    instance_type: linux_x2
+    max_build_duration: 45
+    environment:
+      node: 22
+      java: 21
+      android_signing:
+        - voli_upload
+    scripts:
+      - name: Install and build the site
+        script: npm ci
+      - name: Copy the site into the Android project
+        script: npx cap sync android
+      - name: Build the signed .aab
+        script: |
+          export BUILD_NUMBER=$((PROJECT_BUILD_NUMBER + 1))
+          cd android && ./gradlew bundleRelease
+    artifacts:
+      - android/app/build/outputs/bundle/release/*.aab
+    publishing:
+      email:
+        recipients:
+          - info@voli.uz
+      # After the first release is uploaded by hand in Play Console, uncomment to upload by itself:
+      # google_play:
+      #   credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+      #   track: internal

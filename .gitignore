@@ -8,3 +8,9 @@ test-results/
 playwright-report/
 marketing/
 .data-preview
+
+# Store signing keys: never in git, keep a backup
+signing/
+android/keystore.properties
+*.jks
+*.keystore

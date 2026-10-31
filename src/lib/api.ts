@@ -803,6 +803,7 @@ export const apiClient = {
   setTariffBands: (portal: Portal, bands: TariffBand[]) => request<{ bands: TariffBand[] }>('/admin/tariff-bands', { method: 'PUT', body: JSON.stringify({ bands }), portal }),
   staffAccounts: (portal: Portal) => request<StaffAccount[]>('/admin/accounts', { portal }),
   systemHealth: (portal: Portal) => request<SystemHealth>('/admin/health', { portal }),
+  deleteAccount: (password: string) => post<{ ok: true }>('/me/delete', { password }, 'driver'),
   testMail: () => post<{ ok: boolean; to?: string; error?: string }>('/admin/mail/test', undefined, 'admin'),
   devices: (portal: Portal) => request<SignedInDevice[]>('/auth/sessions', { portal }),
   signOutOthers: (portal: Portal) => post<{ revoked: number }>('/auth/sessions/revoke-others', undefined, portal),
