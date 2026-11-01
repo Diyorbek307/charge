@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { db } from './db.js';
+import { db, REAL_SERVER, DEMO_STAFF, isDemoStaff } from './db.js';
 import { hashPasswordAsync, verifyPasswordAsync } from './guard.js';
 
 /**
@@ -21,8 +21,21 @@ const NAME = String(process.env.ADMIN_NAME ?? '').trim() || 'Администр�
 
 const strong = p => p.length >= 12 && /\d/.test(p) && /\p{L}/u.test(p);
 
+/** Sessions the demo staff opened before their logins were closed end now. */
+function closeDemoStaffSessions() {
+  if (!REAL_SERVER) return;
+  const closed = new Set(db.data.accounts.filter(a => isDemoStaff(a) && (a.portal === 'admin' || !DEMO_STAFF)).map(a => a.id));
+  const before = db.data.tokens.length;
+  db.data.tokens = db.data.tokens.filter(t => !closed.has(t.accountId));
+  if (db.data.tokens.length !== before) {
+    db.save();
+    console.log(`[admin] signed out ${before - db.data.tokens.length} demo staff session(s)`);
+  }
+}
+
 async function bootstrap() {
   await db.ready;
+  closeDemoStaffSessions();
   if (!EMAIL) return;
   if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/.test(EMAIL)) return console.warn('[admin] ADMIN_EMAIL is not an email address — skipped');
   if (!strong(PASSWORD)) return console.warn('[admin] ADMIN_PASSWORD must be 12+ characters with letters and digits — skipped');

@@ -1,6 +1,6 @@
 /**
  * A real server (NODE_ENV=production): the page anyone can open hands out no
- * staff passwords, the seeded admin opens nothing, the admin from
+ * staff passwords, the seeded staff open nothing, the admin from
  * ADMIN_EMAIL / ADMIN_PASSWORD gets into the panel only with a second factor,
  * and no sign-in token is stored in plain text.
  */
@@ -63,6 +63,12 @@ test('only the driver demo login is published', async () => {
 test('the seeded admin password opens nothing on a real server', async () => {
   const r = await call('/auth/login', { method: 'POST', body: { portal: 'admin', login: 'admin@voli.uz', password: 'Admin2026' } });
   assert.equal(r.status, 403);
+});
+
+test('the demo network, fleet and partner logins are closed too', async () => {
+  for (const [portal, login, password] of [['operator', 'operator@greencharge.uz', 'Operator2026'], ['business', 'fleet@uzauto.uz', 'Business2026'], ['api', 'partner@voli.uz', 'Partner2026']]) {
+    assert.equal((await call('/auth/login', { method: 'POST', body: { portal, login, password } })).status, 403, portal);
+  }
 });
 
 test('the real admin works only after switching on the second factor', async () => {

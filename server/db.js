@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { seed, SCHEMA_VERSION, freshDemoPhotos } from './seed.js';
+import { seed, SCHEMA_VERSION, freshDemoPhotos, DEMO_ACCOUNTS } from './seed.js';
 import { report } from './monitoring.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -131,8 +131,24 @@ const IDLE_MS = { driver: 60 * 24 * HOUR, operator: 12 * HOUR, business: 12 * HO
 const MAX_AGE_MS = { admin: 12 * HOUR };
 /** Only a hash of each sign-in token is stored: a copied database opens no session. */
 export const hashToken = raw => crypto.createHash('sha256').update(String(raw)).digest('hex');
-/** Staff of the admin portal must use a second factor on a real server. */
-export const ADMIN_2FA_REQUIRED = process.env.ADMIN_REQUIRE_2FA === 'true' || (process.env.ADMIN_REQUIRE_2FA !== 'false' && (process.env.NODE_ENV === 'production' || !!process.env.RENDER));
+/** A real server: Render, or NODE_ENV=production. */
+export const REAL_SERVER = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
+const staff2fa = process.env.STAFF_REQUIRE_2FA ?? process.env.ADMIN_REQUIRE_2FA ?? '';
+const STAFF_2FA = staff2fa === 'true' || (staff2fa !== 'false' && REAL_SERVER);
+/** DEMO_STAFF=true keeps the demo network, fleet and partner logins for showing the portals; never the admin. */
+export const DEMO_STAFF = process.env.DEMO_STAFF === 'true';
+const DEMO_STAFF_LOGINS = new Set(DEMO_ACCOUNTS.filter(a => a.portal !== 'driver').map(a => `${a.portal}:${a.login}`));
+export const isDemoStaff = account => DEMO_STAFF_LOGINS.has(`${account?.portal}:${account?.login}`);
+
+/**
+ * Everyone but drivers holds money or other people's data, so on a real
+ * server they work only with a second factor. The demo staff kept for showing
+ * the portals are spared: they could not share one phone.
+ */
+export function twoFactorRequired(account) {
+  if (!account || account.portal === 'driver' || !STAFF_2FA) return false;
+  return account.portal === 'admin' || !(DEMO_STAFF && isDemoStaff(account));
+}
 /** Devices one account may stay signed in on. */
 const TOKENS_PER_ACCOUNT = 20;
 
@@ -331,5 +347,5 @@ export function publicAccount(account) {
   const { salt, hash, otp, twoFactor, oauth, ...safe } = account;
   // Never ship the TOTP secret; the client only needs to know it is on. Of
   // Google and Apple only which are linked, not the ids they gave.
-  return { ...safe, twoFactorEnabled: !!twoFactor?.enabled, twoFactorRequired: account.portal === 'admin' && ADMIN_2FA_REQUIRED, linked: Object.keys(oauth ?? {}) };
+  return { ...safe, twoFactorEnabled: !!twoFactor?.enabled, twoFactorRequired: twoFactorRequired(account), linked: Object.keys(oauth ?? {}) };
 }
