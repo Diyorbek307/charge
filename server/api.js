@@ -1,7 +1,7 @@
 import express from 'express';
 import crypto from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { db, publicAccount } from './db.js';
+import { db, publicAccount, ADMIN_2FA_REQUIRED } from './db.js';
 import { DEMO_ACCOUNTS } from './seed.js';
 import { generateSecret, verifyTotp, otpauthUri } from './totp.js';
 import { hashPassword } from './seed.js';
@@ -531,12 +531,25 @@ function bearer(req) {
   return header.startsWith('Bearer ') ? header.slice(7) : null;
 }
 
+/** Where the admin may work from: ADMIN_ALLOWED_IPS, comma-separated; empty = anywhere. */
+const ADMIN_IPS = new Set((process.env.ADMIN_ALLOWED_IPS ?? '').split(/[\s,]+/).filter(Boolean));
+const adminIpRefused = req => ADMIN_IPS.size > 0 && !ADMIN_IPS.has(String(req.ip ?? '').replace(/^::ffff:/, ''));
+/** A real server: the demo's published staff passwords must not open anything there. */
+const PRODUCTION = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
+
 function requireAuth(...portals) {
   return (req, res, next) => {
     const resolved = db.resolveToken(bearer(req));
     if (!resolved) return res.status(401).json({ error: 'Не авторизован' });
     if (portals.length && !portals.includes(resolved.account.portal)) {
       return res.status(403).json({ error: 'Нет доступа к этому порталу' });
+    }
+    if (resolved.account.portal === 'admin') {
+      if (adminIpRefused(req)) return res.status(403).json({ error: 'Вход в админ-панель с этого адреса закрыт' });
+      // Until the second factor is on, the admin can only switch it on.
+      if (ADMIN_2FA_REQUIRED && !resolved.account.twoFactor?.enabled && !req.path.startsWith('/auth/')) {
+        return res.status(403).json({ error: 'Включите двухфакторную защиту, чтобы работать в админ-панели', needs2fa: true });
+      }
     }
     req.account = resolved.account;
     req.tokenEntry = resolved.entry;
@@ -547,8 +560,9 @@ function requireAuth(...portals) {
 /** Demo credentials are shown in the UI so the prototype stays explorable. */
 api.get('/auth/demo-credentials', (_req, res) => {
   if (!DEMO_MODE) return res.status(404).json({ error: 'Not found' });
+  // Only the driver's: staff portals are never handed out on a page anyone can open.
   res.json(
-    DEMO_ACCOUNTS.map(a => ({
+    DEMO_ACCOUNTS.filter(a => a.portal === 'driver' || !PRODUCTION).map(a => ({
       portal: a.portal,
       login: a.login,
       password: a.password,
@@ -574,7 +588,13 @@ api.post('/auth/login', async (req, res) => {
   const ipKey = `login-fail-ip:${clientKey(req)}`;
   const stop = blocked(failKey, 8, 15 * 60_000) ?? blocked(ipKey, 100, 10 * 60_000);
   if (stop) return tooMany(res, stop, 'Слишком много неверных попыток входа');
+  if (portal === 'admin' && adminIpRefused(req)) return res.status(403).json({ error: 'Вход в админ-панель с этого адреса закрыт' });
   const account = db.find('accounts', a => a.portal === portal && a.login === loginKey);
+  // The seeded admin's password is in the source code: on a real server it opens nothing.
+  if (PRODUCTION && portal === 'admin' && DEMO_ACCOUNTS.some(d => d.portal === 'admin' && d.login === loginKey && d.password === password)) {
+    attempt(ipKey, 100, 10 * 60_000);
+    return res.status(403).json({ error: 'Демо-вход в админ-панель на рабочем сервере закрыт. Войдите учётной записью из ADMIN_EMAIL и ADMIN_PASSWORD' });
+  }
   if (!(await verifyPasswordAsync(account, password))) {
     attempt(failKey, 8, 15 * 60_000);
     attempt(ipKey, 100, 10 * 60_000);
@@ -605,6 +625,7 @@ api.post('/auth/login', async (req, res) => {
     message: `${account.name} вошёл в ${portalLabel(portal)}`,
     entity: account.id,
   });
+  announceStaffLogin(account, req);
 
   res.json({ token, user: publicAccount(account) });
 });
@@ -612,6 +633,18 @@ api.post('/auth/login', async (req, res) => {
 // ---------------------------------------------------------------------------
 // Two-factor authentication (TOTP, RFC 6238)
 // ---------------------------------------------------------------------------
+
+/** Every sign-in to the admin panel is mailed to the team, so a stranger's is noticed at once. */
+function announceStaffLogin(account, req) {
+  if (account.portal !== 'admin') return;
+  notifyTeam(`Вход в админ-панель: ${account.name}`, [
+    ['Кто', `${account.name} · ${account.login}`],
+    ['Когда', new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Tashkent' })],
+    ['IP-адрес', String(req.ip ?? '').replace(/^::ffff:/, '')],
+    ['Устройство', String(req.get('user-agent') ?? '').slice(0, 160)],
+    ['Второй фактор', account.twoFactor?.enabled ? 'да' : 'нет'],
+  ], '/?portal=admin&page=system_health', 'info');
+}
 
 api.post('/auth/2fa/verify', (req, res) => {
   const { challenge, code } = req.body ?? {};
@@ -648,6 +681,7 @@ api.post('/auth/2fa/verify', (req, res) => {
     message: `${account.name} вошёл в ${portalLabel(account.portal)} (2FA)`,
     entity: account.id,
   });
+  announceStaffLogin(account, req);
 
   res.json({ token, user: publicAccount(account) });
 });

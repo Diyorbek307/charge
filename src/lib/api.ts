@@ -23,6 +23,8 @@ export interface Account {
   avatar: string;
   lastLogin: string | null;
   twoFactorEnabled?: boolean;
+  /** The admin portal on a real server: nothing works until 2FA is on. */
+  twoFactorRequired?: boolean;
   /** A driver who signs in by code, Google or Apple and never set a password. */
   noPassword?: boolean;
   email?: string | null;

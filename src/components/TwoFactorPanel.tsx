@@ -10,7 +10,7 @@ import type { Portal } from '../lib/api';
  * 2FA off until a generated code proves the authenticator app is actually
  * paired, so nobody can lock themselves out of a working account.
  */
-export default function TwoFactorPanel({ portal }: { portal: Portal }) {
+export default function TwoFactorPanel({ portal, onEnabled }: { portal: Portal; onEnabled?: () => void }) {
   const { actions, sessions } = useSync();
   const account = sessions[portal];
 
@@ -52,6 +52,7 @@ export default function TwoFactorPanel({ portal }: { portal: Portal }) {
     try {
       await actions.enable2fa(portal, code);
       setEnabled(true);
+      onEnabled?.();
       setSecret(null);
       setUri(null);
       setCode('');

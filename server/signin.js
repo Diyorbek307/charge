@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { db, publicAccount } from './db.js';
 import { api, emit, consentFrom } from './api.js';
-import { hashPasswordAsync } from './guard.js';
+import { attempt, hashPasswordAsync } from './guard.js';
 import { isBlocked } from './analytics.js';
 import { joinByCode } from './referrals.js';
 import { mailConfigured } from './mail.js';
@@ -200,6 +200,9 @@ api.post('/auth/code/request', async (req, res) => {
 });
 
 api.post('/auth/code/verify', (req, res) => {
+  // Each code allows five guesses; one address trying many codes is stopped too.
+  const tries = attempt(`code-verify-ip:${clientKey(req)}`, 30, 10 * 60_000);
+  if (!tries.ok) return res.set('Retry-After', String(tries.retryAfter)).status(429).json({ error: 'Слишком много попыток — попробуйте через 10 минут' });
   const t = targetOf(req.body?.to);
   if (!t) return res.status(400).json({ error: 'Введите номер или почту' });
   const check = consumeCode(t.target, 'signin', req.body?.code);

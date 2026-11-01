@@ -121,8 +121,18 @@ class PostgresStore {
  * debounced, serialised through a promise chain so they never overlap, and
  * snapshotted at flush time so later mutations cannot tear a write.
  */
-/** A sign-in unused for this long expires. */
-const TOKEN_DAYS = 60;
+/**
+ * A sign-in unused for this long expires. Staff portals hold money and other
+ * people's data, so theirs go quickly; the admin's also end after a working
+ * day however busy.
+ */
+const HOUR = 3_600_000;
+const IDLE_MS = { driver: 60 * 24 * HOUR, operator: 12 * HOUR, business: 12 * HOUR, api: 12 * HOUR, admin: Number(process.env.ADMIN_IDLE_MINUTES || 30) * 60_000 };
+const MAX_AGE_MS = { admin: 12 * HOUR };
+/** Only a hash of each sign-in token is stored: a copied database opens no session. */
+export const hashToken = raw => crypto.createHash('sha256').update(String(raw)).digest('hex');
+/** Staff of the admin portal must use a second factor on a real server. */
+export const ADMIN_2FA_REQUIRED = process.env.ADMIN_REQUIRE_2FA === 'true' || (process.env.ADMIN_REQUIRE_2FA !== 'false' && (process.env.NODE_ENV === 'production' || !!process.env.RENDER));
 /** Devices one account may stay signed in on. */
 const TOKENS_PER_ACCOUNT = 20;
 
@@ -254,7 +264,7 @@ class Database {
     const token = crypto.randomBytes(24).toString('hex');
     const now = new Date().toISOString();
     this.data.tokens.unshift({
-      token,
+      token: hashToken(token),
       accountId: account.id,
       portal: account.portal,
       issued: now,
@@ -262,7 +272,7 @@ class Database {
       // Shown in the account's device list, nothing else.
       agent: String(req?.get?.('user-agent') ?? '').slice(0, 200),
     });
-    // Sign-ins expire after TOKEN_DAYS idle; the cap only guards memory, per account.
+    // Sign-ins expire when idle (IDLE_MS); the cap only guards memory, per account.
     const mine = this.data.tokens.filter(t => t.accountId === account.id);
     if (mine.length > TOKENS_PER_ACCOUNT) {
       const drop = new Set(mine.slice(TOKENS_PER_ACCOUNT).map(t => t.token));
@@ -272,17 +282,30 @@ class Database {
     return token;
   }
 
+  /** The stored sign-in for a raw token; one kept in plain text from before is hashed on the way. */
+  #entryOf(raw) {
+    const hash = hashToken(raw);
+    const entry = this.data.tokens.find(t => t.token === hash) ?? this.data.tokens.find(t => t.token === raw);
+    if (entry && entry.token !== hash) {
+      entry.token = hash;
+      this.save();
+    }
+    return entry ?? null;
+  }
+
   resolveToken(token) {
     if (!token) return null;
-    const entry = this.data.tokens.find(t => t.token === token);
+    const entry = this.#entryOf(token);
     if (!entry) return null;
     const seen = Date.parse(entry.lastSeen ?? entry.issued);
-    if (Date.now() - seen > TOKEN_DAYS * 86400_000) {
+    const idle = IDLE_MS[entry.portal] ?? IDLE_MS.driver;
+    const maxAge = MAX_AGE_MS[entry.portal];
+    if (Date.now() - seen > idle || (maxAge && Date.now() - Date.parse(entry.issued) > maxAge)) {
       this.revokeToken(token);
       return null;
     }
-    // Recorded at most every few minutes, so reads do not turn into writes.
-    if (Date.now() - seen > 5 * 60_000) {
+    // Recorded at most every minute, so reads do not turn into writes.
+    if (Date.now() - seen > 60_000) {
       entry.lastSeen = new Date().toISOString();
       this.save();
     }
@@ -291,7 +314,8 @@ class Database {
   }
 
   revokeToken(token) {
-    const i = this.data.tokens.findIndex(t => t.token === token);
+    const hash = hashToken(token);
+    const i = this.data.tokens.findIndex(t => t.token === hash || t.token === token);
     if (i >= 0) {
       this.data.tokens.splice(i, 1);
       this.save();
@@ -307,5 +331,5 @@ export function publicAccount(account) {
   const { salt, hash, otp, twoFactor, oauth, ...safe } = account;
   // Never ship the TOTP secret; the client only needs to know it is on. Of
   // Google and Apple only which are linked, not the ids they gave.
-  return { ...safe, twoFactorEnabled: !!twoFactor?.enabled, linked: Object.keys(oauth ?? {}) };
+  return { ...safe, twoFactorEnabled: !!twoFactor?.enabled, twoFactorRequired: account.portal === 'admin' && ADMIN_2FA_REQUIRED, linked: Object.keys(oauth ?? {}) };
 }

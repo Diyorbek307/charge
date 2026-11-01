@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Zap, Car, Building2, Shield, ArrowRight, Briefcase, BookOpen } from 'lucide-react';
 import { lazy, Suspense } from 'react';
 import PortalLogin from './components/PortalLogin';
+import TwoFactorPanel from './components/TwoFactorPanel';
 import SyncInspector from './components/SyncInspector';
 import SyncToasts from './components/SyncToasts';
 import CommandPalette from './components/CommandPalette';
@@ -250,8 +251,24 @@ function PortalGate({
   children: React.ReactNode;
 }) {
   const { sessions } = useSync();
-  if (!sessions[portal]) {
+  const account = sessions[portal];
+  const [enrolled, setEnrolled] = useState(false);
+  if (!account) {
     return <PortalLogin portal={portal} title={title} subtitle={subtitle} icon={icon} onBack={onBack} />;
+  }
+  // A real server's admin panel opens only with the second factor on.
+  if (account.twoFactorRequired && !account.twoFactorEnabled && !enrolled) {
+    return (
+      <div className="min-h-full w-full grid place-items-center px-4 py-10" style={{ background: 'radial-gradient(ellipse at 50% 0%, #1a1a1a 0%, #0d0d0d 55%, #080808 100%)' }}>
+        <div className="w-full max-w-[460px] space-y-4">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 text-white">
+            <h1 className="text-xl font-bold">Включите двухфакторную защиту</h1>
+            <p className="text-sm text-slate-400 mt-1.5">Админ-панель открывается только со вторым фактором: даже зная пароль, без кода из вашего телефона войти нельзя. Установите Google Authenticator или любое приложение-аутентификатор и отсканируйте код ниже.</p>
+          </div>
+          <TwoFactorPanel portal={portal} onEnabled={() => setEnrolled(true)} />
+        </div>
+      </div>
+    );
   }
   return <>{children}</>;
 }
