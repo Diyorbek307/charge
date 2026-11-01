@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { ArrowLeft, KeyRound, LoaderCircle, Mail, Phone, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, KeyRound, Lock, LoaderCircle, Mail, Phone, TriangleAlert } from 'lucide-react';
 import { useSync } from '../../lib/sync';
 import { readFirstRun } from '../../lib/firstRun';
 import { inNativeShell } from '../../lib/site';
 import type { SignInResult } from '../../lib/api';
 import { Logo } from '../../landing/Logo';
 
-type Step = 'welcome' | 'start' | 'code' | 'name' | 'totp';
+type Step = 'welcome' | 'start' | 'code' | 'name' | 'totp' | 'password';
 type Providers = { google: string | null; apple: string | null };
 
 const SLIDES = [
@@ -48,8 +48,9 @@ type AppleId = { auth: { init: (o: object) => void; signIn: () => Promise<{ auth
  * everyone — Apple, Google, or a phone or email that gets a code. Someone new
  * gives a name after the code and is in; a password stays as a fallback.
  */
-export default function DriverAuth({ onPassword }: { onPassword: () => void }) {
-  const { actions, adoptSession, verify2fa } = useSync();
+export default function DriverAuth() {
+  const { actions, adoptSession, verify2fa, login, credentials } = useSync();
+  const demo = credentials.find(c => c.portal === 'driver');
   const [step, setStep] = useState<Step>('welcome');
   const [slide, setSlide] = useState(0);
   const [providers, setProviders] = useState<Providers>({ google: null, apple: null });
@@ -60,6 +61,8 @@ export default function DriverAuth({ onPassword }: { onPassword: () => void }) {
   const [ticket, setTicket] = useState('');
   const [challenge, setChallenge] = useState('');
   const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [ref, setRef] = useState(readRef);
   const [cooldown, setCooldown] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -144,6 +147,17 @@ export default function DriverAuth({ onPassword }: { onPassword: () => void }) {
   const finish = (e: FormEvent) => {
     e.preventDefault();
     return run(async () => land(await actions.finishSignUp(ticket, name.trim(), consent(), ref.trim() || undefined)));
+  };
+  const signInWithPassword = (e: FormEvent) => {
+    e.preventDefault();
+    return run(async () => {
+      const r = await login('driver', to.trim(), password);
+      if (r.requires2fa) {
+        setChallenge(r.challenge);
+        setCode('');
+        setStep('totp');
+      }
+    });
   };
   const checkTotp = (e: FormEvent) => {
     e.preventDefault();
@@ -231,7 +245,7 @@ export default function DriverAuth({ onPassword }: { onPassword: () => void }) {
               </button>
             </form>
             <p className="mt-3 text-center text-xs text-slate-400">Номер +998… — код придёт по SMS, почта — письмом. Новый аккаунт создастся сам.</p>
-            <button onClick={onPassword} className="mt-auto pt-8 mx-auto inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-slate-900"><KeyRound size={15} />Войти с паролем</button>
+            <button onClick={() => { setError(null); setStep('password'); }} className="mt-auto pt-8 mx-auto inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-slate-900"><KeyRound size={15} />Войти с паролем</button>
           </>
         )}
 
@@ -239,7 +253,7 @@ export default function DriverAuth({ onPassword }: { onPassword: () => void }) {
           <form onSubmit={checkCode} className="mt-7">
             <h1 className="text-center text-[22px] font-extrabold text-slate-900">Введите код</h1>
             <p className="mt-1.5 text-center text-sm text-slate-500">{sentTo.channel === 'email' ? 'Отправили письмо на ' : 'Отправили SMS на '}<span className="font-semibold text-slate-800">{sentTo.to}</span></p>
-            {demoCode && <p className="mt-4 text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-center">Демо-режим: {sentTo.channel === 'email' ? 'письмо' : 'SMS'} не отправляется. Ваш код — <b className="font-mono tracking-widest">{demoCode}</b></p>}
+            {demoCode && <p className="mt-4 text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-center">{sentTo.channel === 'email' ? 'Демо-режим: письмо не отправляется. Ваш код —' : 'Демо-режим: SMS не отправляется. Ваш код —'} <b className="font-mono tracking-widest">{demoCode}</b></p>}
             <CodeInput value={code} onChange={setCode} />
             <ErrorBox error={error} />
             <button type="submit" disabled={busy || code.length !== 6} className="mt-4 w-full h-[54px] rounded-2xl text-[#111] font-bold text-[16px] inline-flex items-center justify-center gap-2 disabled:opacity-40" style={{ background: YELLOW }}>
@@ -263,6 +277,39 @@ export default function DriverAuth({ onPassword }: { onPassword: () => void }) {
             <button type="submit" disabled={busy || name.trim().length < 2} className="w-full h-[54px] rounded-2xl text-[#111] font-bold text-[16px] inline-flex items-center justify-center gap-2 disabled:opacity-40" style={{ background: YELLOW }}>
               {busy && <LoaderCircle size={17} className="animate-spin" />}Создать аккаунт
             </button>
+          </form>
+        )}
+
+        {step === 'password' && (
+          <form onSubmit={signInWithPassword} className="mt-7 space-y-3">
+            <h1 className="text-center text-[22px] font-extrabold text-slate-900">Вход по паролю</h1>
+            <p className="text-center text-sm text-slate-500">Для тех, кто задал пароль в профиле</p>
+            <label className="relative mt-3 block">
+              <span className="sr-only">Телефон или почта</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">{isEmail ? <Mail size={18} /> : <Phone size={18} />}</span>
+              <input id="driver-login" value={to} onChange={e => setTo(e.target.value)} autoComplete="username" placeholder="Телефон или почта"
+                className="w-full h-[54px] rounded-2xl bg-slate-50 border border-slate-200 pl-12 pr-4 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#FFC83D] focus:ring-4 focus:ring-[#FFC83D]/25" />
+            </label>
+            <label className="relative block">
+              <span className="sr-only">Пароль</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"><Lock size={18} /></span>
+              <input id="driver-password" type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" placeholder="Пароль"
+                className="w-full h-[54px] rounded-2xl bg-slate-50 border border-slate-200 pl-12 pr-12 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#FFC83D] focus:ring-4 focus:ring-[#FFC83D]/25" />
+              <button type="button" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'} className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 grid place-items-center text-slate-400 hover:text-slate-700">
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </label>
+            <ErrorBox error={error} />
+            <button type="submit" disabled={busy || !to.trim() || !password} className="w-full h-[54px] rounded-2xl text-[#111] font-bold text-[16px] inline-flex items-center justify-center gap-2 disabled:opacity-40" style={{ background: YELLOW }}>
+              {busy && <LoaderCircle size={17} className="animate-spin" />}Войти
+            </button>
+            <button type="button" onClick={() => { setError(null); setStep('start'); }} className="w-full text-sm text-slate-500 hover:text-slate-900">Забыли пароль? Войдите по коду</button>
+            {demo && (
+              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-center justify-between gap-3 text-xs text-amber-900">
+                <span>Демо-доступ: <b className="font-mono">{demo.login}</b></span>
+                <button type="button" onClick={() => { setTo(demo.login); setPassword(demo.password); }} className="font-bold text-[#8A5B00]">Заполнить</button>
+              </div>
+            )}
           </form>
         )}
 

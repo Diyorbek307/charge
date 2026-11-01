@@ -624,7 +624,7 @@ function ChargingStartScreen({ station, preferConnector, onBack, onConfirm, onOp
             <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-xl mb-3" role="radiogroup" aria-label="Цель зарядки">
               {([['percent', 'До %'], ['sum', 'На сумму'], ['km', 'На км']] as const).map(([k, label]) => (
                 <button key={k} role="radio" aria-checked={goalKind === k} onClick={() => setGoalKind(k)}
-                  className={`py-1.5 rounded-lg text-xs font-semibold ${goalKind === k ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>{label}</button>
+                  className={`py-1.5 rounded-lg text-xs font-semibold ${goalKind === k ? 'bg-[#FFC83D] text-[#111] shadow-sm' : 'text-slate-500'}`}>{label}</button>
               ))}
             </div>
             {goalKind === 'percent' && (
@@ -1071,7 +1071,8 @@ function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: ()
       return { id: o.id, type: 'topup', amount: o.amount, label: network ? `Баланс сети ${network} — ${via}` : `Пополнение — ${via}`, at: o.paidAt ?? o.created };
     }),
     ...(state?.transactions ?? [])
-      .filter(t => t.userId === driverId && (t.method === 'Кошелёк' || t.method.startsWith('Баланс сети')))
+      // A charge that never started bills nothing: no "−0 сум" row for it.
+      .filter(t => t.userId === driverId && t.amount > 0 && (t.method === 'Кошелёк' || t.method.startsWith('Баланс сети')))
       .map(t => {
         const ses = state?.sessions.find(x => x.id === t.sessionId);
         const refunded = t.status === 'refunded';

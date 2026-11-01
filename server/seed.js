@@ -70,6 +70,22 @@ export const DEMO_ACCOUNTS = [
   },
 ];
 
+// Stock photos once used for demo stations that showed no charger at all; each
+// now points at a picture of a car at a charger.
+const STALE_PHOTOS = {
+  '1558618666-fcd25c85cd64': '/stations/ev-2.jpg',
+  '1605152276897-4f618f831968': '/stations/ev-3.jpg',
+  '1609137144813-7d9921338f24': '/stations/ev-4.jpg',
+};
+
+/** Swaps those stale photos in stations stored before the change. */
+export function freshDemoPhotos(data) {
+  for (const s of data.stations ?? []) {
+    const stale = Object.keys(STALE_PHOTOS).find(id => String(s.image ?? '').includes(id));
+    if (stale) s.image = STALE_PHOTOS[stale];
+  }
+}
+
 const station = (id, name, operator, operatorId, address, city, geoLat, geoLng, lat, lng, connectors, extra = {}) => ({
   id,
   name,
@@ -152,17 +168,17 @@ export function seed(now = Date.now()) {
       { id: 'c5', type: 'CCS2', power: 120, status: 'occupied', price: 1800 },
       { id: 'c6', type: 'CHAdeMO', power: 50, status: 'occupied', price: 1600 },
       { id: 'c7', type: 'Type2', power: 11, status: 'available', price: 1000 },
-    ], { rating: 4.5, reviews: 87, hours: '08:00–22:00', amenities: ['Wi-Fi', 'ТЦ', 'Парковка'], image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=400&fit=crop&auto=format' }),
+    ], { rating: 4.5, reviews: 87, hours: '08:00–22:00', amenities: ['Wi-Fi', 'ТЦ', 'Парковка'], image: '/stations/ev-2.jpg' }),
 
     station('st-003', 'Samarqand Gateway', 'SilkRoad EV', 'op-003', "Registon ko'chasi 45", 'Samarqand', 39.6542, 66.9597, 55, 55, [
       { id: 'c8', type: 'CCS2', power: 100, status: 'available', price: 1900 },
       { id: 'c9', type: 'CCS2', power: 100, status: 'available', price: 1900 },
-    ], { rating: 4.7, reviews: 56, amenities: ['Wi-Fi', 'Туалет'], image: 'https://images.unsplash.com/photo-1605152276897-4f618f831968?w=800&h=400&fit=crop&auto=format' }),
+    ], { rating: 4.7, reviews: 56, amenities: ['Wi-Fi', 'Туалет'], image: '/stations/ev-3.jpg' }),
 
     station('st-004', 'Buxoro Silk Hub', 'SilkRoad EV', 'op-003', 'Mustaqillik xiyoboni 12', 'Buxoro', 39.7747, 64.4286, 48, 38, [
       { id: 'c10', type: 'CCS2', power: 60, status: 'reserved', price: 1700 },
       { id: 'c11', type: 'Type2', power: 22, status: 'available', price: 1100 },
-    ], { rating: 4.3, reviews: 42, amenities: ['Парковка'], image: 'https://images.unsplash.com/photo-1609137144813-7d9921338f24?w=800&h=400&fit=crop&auto=format' }),
+    ], { rating: 4.3, reviews: 42, amenities: ['Парковка'], image: '/stations/ev-4.jpg' }),
 
     station('st-005', 'Namangan Industrial', 'GreenCharge UZ', 'op-001', "Sanoat ko'chasi 88", 'Namangan', 40.9983, 71.6726, 68, 88, [
       { id: 'c12', type: 'CCS2', power: 150, status: 'unavailable', price: 2000 },
@@ -171,7 +187,7 @@ export function seed(now = Date.now()) {
     station('st-006', 'Andijon EV Point', 'EcoVolt', 'op-002', "Navoi ko'chasi 15", 'Andijon', 40.3864, 71.7864, 71, 92, [
       { id: 'c13', type: 'CCS2', power: 120, status: 'available', price: 1850 },
       { id: 'c14', type: 'Type2', power: 22, status: 'available', price: 1100 },
-    ], { rating: 4.6, reviews: 33, amenities: ['Wi-Fi', 'Парковка'], image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=400&fit=crop&auto=format' }),
+    ], { rating: 4.6, reviews: 33, amenities: ['Wi-Fi', 'Парковка'], image: '/stations/ev-2.jpg' }),
   ];
 
   const stations = buildStations(baseStations);

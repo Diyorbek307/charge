@@ -3,7 +3,6 @@ import { ArrowRight, Lock, LoaderCircle, ShieldCheck, TriangleAlert, Copy, Check
 import { useSync } from '../lib/sync';
 import { useI18n } from '../lib/i18n';
 import type { Portal } from '../lib/api';
-import DriverAccountForm from './DriverAccountForm';
 import DriverAuth from './driver/DriverAuth';
 
 // Every portal signs in under the same brand: a yellow button with near-black text.
@@ -32,11 +31,6 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
   // Set once the password is accepted but a TOTP code is still required.
   const [challenge, setChallenge] = useState<string | null>(null);
   const [code, setCode] = useState('');
-  // Drivers can also sign up or recover a password by SMS.
-  const [mode, setMode] = useState<'login' | 'register' | 'reset'>('login');
-  const [notice, setNotice] = useState<string | null>(null);
-  // Drivers start with the welcome and a code; the password form is the fallback.
-  const [withPassword, setWithPassword] = useState(false);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -77,7 +71,8 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
     setTimeout(() => setCopied(false), 1600);
   };
 
-  if (portal === 'driver' && !withPassword) return <DriverAuth onPassword={() => { setWithPassword(true); setError(null); }} />;
+  // Drivers have their own way in: the welcome, a code, Google, Apple or a password.
+  if (portal === 'driver') return <DriverAuth />;
 
   return (
     <div
@@ -88,11 +83,11 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
 
       <div className="relative w-full max-w-[400px]">
         <button
-          onClick={portal === 'driver' ? () => setWithPassword(false) : onBack}
+          onClick={onBack}
           className="mb-5 flex items-center gap-2 text-xs sm:text-sm text-slate-400 hover:text-white transition-colors"
         >
           <ArrowRight size={14} className="rotate-180" />
-          {portal === 'driver' ? 'Вход по коду' : t('nav.portals')}
+          {t('nav.portals')}
         </button>
 
         <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-6 sm:p-7">
@@ -106,20 +101,7 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{title}</h1>
           <p className="text-sm text-slate-400 mt-1.5 mb-6">{subtitle}</p>
 
-          {mode !== 'login' ? (
-            <DriverAccountForm
-              mode={mode}
-              ring={theme.ring}
-              grad={theme.grad}
-              onCancel={() => setMode('login')}
-              onNeedsLogin={phone => {
-                setMode('login');
-                setLoginValue(phone);
-                setPassword('');
-                setNotice('Пароль изменён. Войдите с новым паролем и кодом 2FA.');
-              }}
-            />
-          ) : challenge ? (
+          {challenge ? (
             <form onSubmit={submitCode} className="space-y-3.5">
               <div className="flex items-start gap-2.5 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-2.5">
                 <KeyRound size={14} className="text-sky-400 shrink-0 mt-px" />
@@ -161,14 +143,9 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
             </form>
           ) : (
           <form onSubmit={submit} className="space-y-3.5">
-            {notice && (
-              <p role="status" className="text-xs text-emerald-200 bg-emerald-500/10 border border-emerald-500/25 rounded-xl px-3 py-2.5">
-                {notice}
-              </p>
-            )}
             <div>
               <label htmlFor={`${portal}-login`} className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-                {portal === 'driver' ? t('auth.phone') : t('auth.login')}
+                {t('auth.login')}
               </label>
               <input
                 id={`${portal}-login`}
@@ -219,18 +196,7 @@ export default function PortalLogin({ portal, title, subtitle, icon, onBack }: P
           </form>
           )}
 
-          {mode === 'login' && !challenge && portal === 'driver' && (
-            <div className="mt-4 flex items-center justify-between gap-3 text-xs">
-              <button type="button" onClick={() => { setMode('register'); setNotice(null); setError(null); }} className={`${theme.accent} font-medium hover:brightness-125`}>
-                Создать аккаунт
-              </button>
-              <button type="button" onClick={() => { setMode('reset'); setNotice(null); setError(null); }} className="text-slate-400 hover:text-white">
-                Забыли пароль?
-              </button>
-            </div>
-          )}
-
-          {mode === 'login' && !challenge && demo && (
+          {!challenge && demo && (
             <div className="mt-5 pt-5 border-t border-white/8">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">{t('auth.demoAccess')}</p>

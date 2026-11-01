@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { seed, SCHEMA_VERSION } from './seed.js';
+import { seed, SCHEMA_VERSION, freshDemoPhotos } from './seed.js';
 import { report } from './monitoring.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -148,6 +148,7 @@ class Database {
     }
     if (loaded && loaded.__v === SCHEMA_VERSION) {
       this.data = loaded;
+      freshDemoPhotos(this.data);
     } else {
       if (loaded) console.log(`[db] schema ${loaded.__v} != ${SCHEMA_VERSION}, reseeding`);
       this.data = carry(loaded, seed());
