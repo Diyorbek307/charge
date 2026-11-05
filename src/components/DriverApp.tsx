@@ -46,9 +46,11 @@ import { inTelegram, telegramInitData } from '../lib/telegram';
 import type { Booking, Session, PaymentOrder, ArrivalChance } from '../lib/api';
 import FirstRun from './driver/FirstRun';
 import Tour from './driver/Tour';
+import PriceToday from './driver/PriceToday';
 import { readFirstRun, tourSeen, markTour } from '../lib/firstRun';
 import { subscribePush } from './PushToggle';
 import { API_ORIGIN } from '../lib/site';
+import { useTariffForecast, useTariffNow, priceNow } from '../lib/tariff';
 
 type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate' | 'rewards' | 'battery' | 'plus' | 'autocharge' | 'referral';
 type Tab = 'map' | 'charging' | 'deals' | 'profile';
@@ -166,6 +168,8 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
   const opRef = { id: station.id, operatorId: (station as Station & { operatorId?: string }).operatorId };
   const driverPromos = useDriverPromos();
   const promo = promoNow(opRef, driverPromos);
+  // The time-of-day band the charge would start at, so the card shows what the driver will pay.
+  const tariffK = useTariffNow();
   const later = promo ? null : promosOf(opRef, driverPromos)[0] ?? null;
   const pointStatus: Record<string, { text: string; color: string; bg: string }> = {
     available: { text: 'Свободно', color: '#16A34A', bg: '#F0FDF4' },
@@ -335,8 +339,8 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
                 <div className="flex-1 min-w-0">
                   <p className="text-[15px] font-bold text-slate-900 leading-tight">{`${c.power >= 50 ? 'DC' : 'AC'} ${c.type}`}<span className="ml-1.5 text-[13px] font-semibold text-slate-600">{`${c.power} кВт`}</span></p>
                   <p className="text-[12px] text-slate-500 tabular-nums mt-0.5 whitespace-nowrap">
-                    {promo && <span className="text-slate-400 line-through mr-1">{c.price.toLocaleString('ru-RU')}</span>}
-                    <span className={`font-semibold ${promo ? 'px-1.5 rounded-md bg-[#FFC83D] text-[#111]' : 'text-slate-700'}`}>{discounted(c.price, promo).toLocaleString('ru-RU')}</span>
+                    {(promo || tariffK < 1) && <span className="text-slate-400 line-through mr-1">{c.price.toLocaleString('ru-RU')}</span>}
+                    <span className={`font-semibold ${promo || tariffK < 1 ? 'px-1.5 rounded-md bg-[#FFC83D] text-[#111]' : 'text-slate-700'}`}>{priceNow(c.price, tariffK, promo?.percent).toLocaleString('ru-RU')}</span>
                     {' сум/кВт·ч'}
                   </p>
                   <p className="text-xs font-semibold inline-flex items-center gap-1 mt-0.5" style={{ color: look.color }}>
@@ -357,6 +361,7 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
           })}
         </div>
 
+        {!mapOnly && <PriceToday station={opRef} basePrice={Math.min(...station.connectors.filter(c => c.status !== 'unavailable').map(c => c.price), Infinity) || 0} promos={driverPromos} />}
         <StationForecastBlock stationId={station.id} connectors={station.connectors} />
         {on.places && <div className="mb-4"><WhileCharging stationId={station.id} /></div>}
         <StationCommunityBlock stationId={station.id} />
@@ -515,13 +520,17 @@ function ChargingStartScreen({ station, preferConnector, onBack, onConfirm, onOp
   // What the network charges right now, its discount included.
   // Voli Plus takes its share off what the network charges (not on OCPI partners, who bill themselves).
   const plusOn = !!state?.plus?.active && !(station as Station & { ocpi?: unknown } | null)?.ocpi;
+  const forecast = useTariffForecast();
+  const tariffK = forecast?.hours[forecast.currentHour]?.multiplier ?? 1;
+  const nightK = forecast?.hours[23]?.multiplier ?? 0.7;
   const plusK = plusOn ? 1 - (state?.plus?.discount ?? 5) / 100 : 1;
-  const price = Math.round(discounted(selectedConnector?.price ?? 1800, promo) * plusK);
+  const price = Math.round(priceNow(selectedConnector?.price ?? 1800, tariffK, promo?.percent) * plusK);
   const kwNeeded = !selectedConnector ? 0
     : goalKind === 'percent' ? Math.max(0, ((targetPct - currentBattery) / 100) * pack)
     : goalKind === 'km' ? goalKm * 0.18
     : goalSum / price;
-  const estCost = goalKind === 'sum' ? goalSum : Math.round(kwNeeded * price * (when === 'night' ? 0.7 : 1));
+  // A night start is billed at the band of 23:00, not of now.
+  const estCost = goalKind === 'sum' ? goalSum : Math.round(kwNeeded * price * (when === 'night' ? nightK / tariffK : 1));
   const estMinutes = selectedConnector ? Math.round((kwNeeded / Math.max(3, selectedConnector.power * 0.85)) * 60) : 0;
   const goal = goalKind === 'percent' ? { kind: 'percent' as const, value: targetPct, fromPct: currentBattery } : goalKind === 'sum' ? { kind: 'sum' as const, value: goalSum } : { kind: 'km' as const, value: goalKm };
   const options = { goal, ...(when === 'night' && !nightNow ? { startAt: nextNight() } : {}) };
@@ -625,8 +634,8 @@ function ChargingStartScreen({ station, preferConnector, onBack, onConfirm, onOp
                     <p className="text-xs text-slate-400">{c.id} · {c.power} кВт</p>
                   </div>
                   <span className="text-right">
-                    {(promo || plusOn) && <span className="block text-[11px] text-slate-400 line-through tabular-nums">{c.price.toLocaleString('ru-RU')}</span>}
-                    <span className="block text-sm font-bold mono text-slate-700">{`${Math.round(discounted(c.price, promo) * plusK).toLocaleString('ru-RU')} сум/кВт·ч`}</span>
+                    {(promo || plusOn || tariffK < 1) && <span className="block text-[11px] text-slate-400 line-through tabular-nums">{c.price.toLocaleString('ru-RU')}</span>}
+                    <span className="block text-sm font-bold mono text-slate-700">{`${Math.round(priceNow(c.price, tariffK, promo?.percent) * plusK).toLocaleString('ru-RU')} сум/кВт·ч`}</span>
                     {plusOn && <span className="block text-[10px] font-bold text-[#A87100]">{`Plus −${state?.plus?.discount ?? 5}%`}</span>}
                   </span>
                 </button>

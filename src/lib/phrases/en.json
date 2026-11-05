@@ -4231,5 +4231,10 @@
 "Комиссия Voli, млн сум": "Voli commission, mln sum",
 "По месяцам": "By month",
 "МВт·ч": "MWh",
-"Ср. чек": "Avg. check"
+"Ср. чек": "Avg. check",
+"Цена сегодня": "Price today",
+"сум/кВт·ч по часам": "sum/kWh by the hour",
+"От {0} до {1} сум за кВт·ч": "From {0} to {1} sum per kWh",
+"Сейчас самая низкая цена — {0} сум до {1}": "The lowest price is now — {0} sum until {1}",
+"Дешевле с {0} до {1}: {2} сум, на {3}% меньше, чем сейчас": "Cheaper from {0} to {1}: {2} sum, {3}% less than now"
 }
