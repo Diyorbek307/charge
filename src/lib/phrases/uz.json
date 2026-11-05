@@ -4166,5 +4166,13 @@
 "Новых": "Yangi",
 "Зарегистрировались": "Ro‘yxatdan o‘tdi",
 "Указали автомобиль": "Avtomobilni ko‘rsatdi",
-"Вернулись снова": "Yana qaytdi"
+"Вернулись снова": "Yana qaytdi",
+"Спрос, который сеть не закрывает": "Tarmoq qondirmayotgan talab",
+"Не хватает разъёмов": "Ulagichlar yetishmaydi",
+"Часы за {0} дней, когда все разъёмы были заняты, и сколько раз водители открывали станцию, а свободных не было. Первые в списке — где сети стоит поставить ещё разъёмы.": "{0} kun ichida barcha ulagichlar band bo‘lgan soatlar va haydovchilar stansiyani ochganda bo‘sh joy bo‘lmagan holatlar. Ro‘yxat boshidagilar — tarmoq yana ulagich qo‘yishi kerak bo‘lgan joylar.",
+"Пока ни одна станция не была занята целиком": "Hozircha hech bir stansiya to‘liq band bo‘lmagan",
+"Искали и не нашли": "Qidirildi, topilmadi",
+"{0} поисков без единой станции за {1} дней": "{1} kun ichida {0} ta natijasiz qidiruv",
+"Пока все поиски что-то находили": "Hozircha barcha qidiruvlar natija bergan",
+"Откуда искали": "Qayerdan qidirildi"
 }

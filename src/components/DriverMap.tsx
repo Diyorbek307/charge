@@ -361,7 +361,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
   const [legend, setLegend] = useState(false);
 
   // The driver's own car, when they have told us: "only stations that fit my car".
-  const { sessions, state } = useSync();
+  const { sessions, state, actions } = useSync();
   const promos = useDriverPromos();
   const car = sessions.driver?.car ?? null;
   const balance = (sessions.driver && state?.wallets[sessions.driver.id]?.balance) ?? 0;
@@ -412,6 +412,16 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
     : [];
   const activeFilters = [status, connector, power].filter(v => v !== 'all').length;
   const quick = onlyFree || onlyMine || openOnly || onlyPromo || amen.length > 0 || network !== 'all';
+  // A search that finds no station at all is demand we do not meet; told once it settles, without filters, with no name.
+  const lost = q.length >= 3 && matches.length === 0 && !activeFilters && !quick;
+  useEffect(() => {
+    if (!lost) return;
+    const t = setTimeout(() => {
+      const at = lastKnown();
+      actions.reportDemand({ kind: 'search', q, ...(at ?? {}) }).catch(() => {});
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [lost, q, actions]);
 
   const pick = (s: Station) => {
     setSearch('');

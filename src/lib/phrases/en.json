@@ -4166,5 +4166,13 @@
 "Новых": "New",
 "Зарегистрировались": "Signed up",
 "Указали автомобиль": "Added a car",
-"Вернулись снова": "Came back"
+"Вернулись снова": "Came back",
+"Спрос, который сеть не закрывает": "Demand the network does not meet",
+"Не хватает разъёмов": "Short of connectors",
+"Часы за {0} дней, когда все разъёмы были заняты, и сколько раз водители открывали станцию, а свободных не было. Первые в списке — где сети стоит поставить ещё разъёмы.": "Hours in {0} days when every connector was taken, and how often drivers opened the station with none free. The top ones are where a network should add connectors.",
+"Пока ни одна станция не была занята целиком": "No station has been fully taken yet",
+"Искали и не нашли": "Searched, found nothing",
+"{0} поисков без единой станции за {1} дней": "{0} searches with no station in {1} days",
+"Пока все поиски что-то находили": "Every search found something so far",
+"Откуда искали": "Where they searched from"
 }

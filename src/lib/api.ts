@@ -20,6 +20,15 @@ export interface Growth {
   cohorts: { week: string; size: number; retention: number[] }[];
 }
 
+/** Demand the network does not meet: stations short of connectors and searches that found nothing. */
+export interface Demand {
+  days: number;
+  stations: { id: string; name: string; city: string; operator: string; connectors: number; fullHours: number; busyViews: number }[];
+  searches: { q: string; count: number }[];
+  areas: { lat: number; lng: number; count: number }[];
+  totals: { busyViews: number; lostSearches: number };
+}
+
 export interface Account {
   id: string;
   portal: Portal;
@@ -940,6 +949,9 @@ export const apiClient = {
     post<{ status: string }>(`/ocpp/chargepoints/${stationId}/command`, body, portal),
   adminUsers: (portal: Portal) => request<AdminUsers>('/admin/users', { portal }),
   adminGrowth: () => request<Growth>('/admin/growth', { portal: 'admin' }),
+  adminDemand: () => request<Demand>('/admin/demand', { portal: 'admin' }),
+  /** Anonymous: no account goes with it. */
+  reportDemand: (body: { kind: 'busy'; stationId: string } | { kind: 'search'; q: string; lat?: number; lng?: number }) => post<void>('/demand', body),
   setUserStatus: (portal: Portal, id: string, status: 'active' | 'blocked') =>
     post<{ id: string; status: string }>(`/admin/users/${id}/status`, { status }, portal),
   events: (portal: Portal, limit = 300) => request<SyncEvent[]>(`/events?limit=${limit}`, { portal }),

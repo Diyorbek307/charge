@@ -116,6 +116,18 @@ function ArrivalBlock({ station, etaMin, onBook, onOpen }: { station: Station; e
 function StationDetailSheet({ station, onClose, onStartCharging, onBook, onReviews, onReport, onNavigate, onOpenStation }: { station: Station; onClose: () => void; onStartCharging: (connectorId?: string) => void; onBook: () => void; onReviews: () => void; onReport: () => void; onNavigate: () => void; onOpenStation: (id: string) => void }) {
   const free = station.connectors.filter(c => c.status === 'available').length;
   const { state, actions, sessions: portalSessions, refresh } = useSync();
+  // Opened and nothing free: demand this station does not meet. Once per station per visit, with no name.
+  useEffect(() => {
+    if (free > 0) return;
+    const key = `voli-busy-${station.id}`;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, '1');
+    } catch {
+      return;
+    }
+    actions.reportDemand({ kind: 'busy', stationId: station.id }).catch(() => {});
+  }, [free, station.id, actions]);
   const me = portalSessions.driver;
   const favorites = useFavorites();
   const favorite = favorites.has(station.id);

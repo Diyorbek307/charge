@@ -5,6 +5,7 @@ import { useAnalytics, money, num, dayShort, weekdayShort } from '../../lib/anal
 import ExportButton from '../ExportButton';
 import { Page, Card, Kpi, Loading, ErrorNote, Segmented, BarList, CHART } from './ui';
 import Growth from './Growth';
+import DemandCard from './DemandCard';
 
 export default function AdminAnalytics() {
   const [days, setDays] = useState(30);
@@ -41,6 +42,8 @@ export default function AdminAnalytics() {
 
       <h2 className="pt-2 text-sm font-bold text-slate-800 uppercase tracking-wide">Рост водителей</h2>
       <Growth />
+      <h2 className="pt-2 text-sm font-bold text-slate-800 uppercase tracking-wide">Спрос, который сеть не закрывает</h2>
+      <DemandCard />
       <h2 className="pt-2 text-sm font-bold text-slate-800 uppercase tracking-wide">Зарядки и деньги</h2>
       <Card title="Энергия и сессии по дням">
         <ResponsiveContainer width="100%" height={240}>
