@@ -4149,5 +4149,22 @@
 "Отправили письмо на {0}": "Xat yuborildi: {0}",
 "Отправили SMS на {0}": "SMS yuborildi: {0}",
 "Заряжаем ваш аккаунт": "Akkauntingizni zaryadlayapmiz",
-"Заряжаем": "Zaryadlanmoqda"
+"Заряжаем": "Zaryadlanmoqda",
+"Рост водителей": "Haydovchilar o‘sishi",
+"Зарядки и деньги": "Zaryadlar va pul",
+"За сутки": "Bir kunda",
+"водителей заряжались": "haydovchi zaryadlagan",
+"За неделю": "Bir haftada",
+"За месяц": "Bir oyda",
+"Привычка": "Odat",
+"месячных заряжались за сутки": "oylikdan bir kunda zaryadlagan",
+"Воронка водителя": "Haydovchi voronkasi",
+"от регистрации до повторной зарядки": "ro‘yxatdan o‘tishdan takroriy zaryadgacha",
+"{0}% от предыдущего шага · {1}% от всех": "oldingi qadamdan {0}% · hammadan {1}%",
+"Возвращаются ли водители": "Haydovchilar qaytadimi",
+"Строка — водители, впервые зарядившиеся в эту неделю. Клетка — доля из них, кто заряжался снова через столько недель.": "Qator — shu haftada birinchi marta zaryadlagan haydovchilar. Katak — ulardan shuncha haftadan keyin yana zaryadlaganlar ulushi.",
+"Новых": "Yangi",
+"Зарегистрировались": "Ro‘yxatdan o‘tdi",
+"Указали автомобиль": "Avtomobilni ko‘rsatdi",
+"Вернулись снова": "Yana qaytdi"
 }

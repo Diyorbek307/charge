@@ -4,6 +4,7 @@ import { ComposedChart, Bar, Line, BarChart, PieChart, Pie, Cell, XAxis, YAxis, 
 import { useAnalytics, money, num, dayShort, weekdayShort } from '../../lib/analytics';
 import ExportButton from '../ExportButton';
 import { Page, Card, Kpi, Loading, ErrorNote, Segmented, BarList, CHART } from './ui';
+import Growth from './Growth';
 
 export default function AdminAnalytics() {
   const [days, setDays] = useState(30);
@@ -38,6 +39,9 @@ export default function AdminAnalytics() {
         <Kpi label="Загрузка" value={`${num(t.utilization, 1)}%`} sub="разъёмо-часов" icon={<Gauge size={14} />} tone="sky" />
       </div>
 
+      <h2 className="pt-2 text-sm font-bold text-slate-800 uppercase tracking-wide">Рост водителей</h2>
+      <Growth />
+      <h2 className="pt-2 text-sm font-bold text-slate-800 uppercase tracking-wide">Зарядки и деньги</h2>
       <Card title="Энергия и сессии по дням">
         <ResponsiveContainer width="100%" height={240}>
           <ComposedChart data={data.daily.filter(d => !d.partial)}>

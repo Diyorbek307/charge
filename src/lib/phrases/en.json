@@ -4149,5 +4149,22 @@
 "Отправили письмо на {0}": "We emailed {0}",
 "Отправили SMS на {0}": "We texted {0}",
 "Заряжаем ваш аккаунт": "Charging up your account",
-"Заряжаем": "Charging"
+"Заряжаем": "Charging",
+"Рост водителей": "Driver growth",
+"Зарядки и деньги": "Charges and money",
+"За сутки": "Last day",
+"водителей заряжались": "drivers charged",
+"За неделю": "Last week",
+"За месяц": "Last month",
+"Привычка": "Habit",
+"месячных заряжались за сутки": "of monthly drivers charged in a day",
+"Воронка водителя": "Driver funnel",
+"от регистрации до повторной зарядки": "from sign-up to a second charge",
+"{0}% от предыдущего шага · {1}% от всех": "{0}% of the previous step · {1}% of all",
+"Возвращаются ли водители": "Do drivers come back",
+"Строка — водители, впервые зарядившиеся в эту неделю. Клетка — доля из них, кто заряжался снова через столько недель.": "A row is the drivers who first charged that week. A cell is the share of them who charged again that many weeks later.",
+"Новых": "New",
+"Зарегистрировались": "Signed up",
+"Указали автомобиль": "Added a car",
+"Вернулись снова": "Came back"
 }

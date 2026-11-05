@@ -531,3 +531,59 @@ export function isBlocked(accountId) {
   if (db.data.accounts.find(a => a.id === accountId)?.blocked) return true;
   return (db.data.customers ?? []).some(c => c.id === accountId && c.status === 'blocked');
 }
+
+/** Monday 00:00 in Tashkent of the week holding `ms`. */
+const tkWeek = ms => {
+  const midnight = tkMidnight(ms);
+  const weekday = (new Date(midnight + TZ).getUTCDay() + 6) % 7;
+  return midnight - weekday * DAY;
+};
+
+/**
+ * How the driver base grows and holds: the way from sign-up to a second
+ * charge, drivers active in the last day, week and month, and weekly
+ * cohorts by the week of their first charge — the share who charged again
+ * in each week after.
+ */
+export function growthFor({ weeks = 8 } = {}) {
+  const now = Date.now();
+  const users = adminUsers().users;
+  const accounts = new Map(db.data.accounts.filter(a => a.portal === 'driver').map(a => [a.id, a]));
+  const hasCar = u => !!(u.car || accounts.get(u.id)?.car);
+
+  const funnel = [
+    { step: 'Зарегистрировались', count: users.length },
+    { step: 'Указали автомобиль', count: users.filter(hasCar).length },
+    { step: 'Первая зарядка', count: users.filter(u => u.sessions >= 1).length },
+    { step: 'Вернулись снова', count: users.filter(u => u.sessions >= 2).length },
+  ].map((row, i, all) => ({ ...row, ofFirst: all[0].count ? round((row.count / all[0].count) * 100) : 0, ofPrev: i && all[i - 1].count ? round((row.count / all[i - 1].count) * 100) : 100 }));
+
+  const done = db.data.sessions.filter(s => s.status === 'completed');
+  const activeSince = ms => new Set(done.filter(s => Date.parse(s.start) >= now - ms).map(s => s.userId)).size;
+  const dau = activeSince(DAY);
+  const wau = activeSince(7 * DAY);
+  const mau = activeSince(30 * DAY);
+
+  // Each driver's charging weeks; the first one puts them in a cohort.
+  const weeksOf = new Map();
+  for (const s of done) {
+    const set = weeksOf.get(s.userId) ?? new Set();
+    set.add(tkWeek(Date.parse(s.start)));
+    weeksOf.set(s.userId, set);
+  }
+  const thisWeek = tkWeek(now);
+  const cohorts = [];
+  for (let k = weeks - 1; k >= 0; k--) {
+    const start = thisWeek - k * 7 * DAY;
+    const members = [...weeksOf].filter(([, set]) => Math.min(...set) === start);
+    const later = [];
+    for (let w = 1; w <= k; w++) {
+      const week = start + w * 7 * DAY;
+      const back = members.filter(([, set]) => set.has(week)).length;
+      later.push(members.length ? round((back / members.length) * 100) : 0);
+    }
+    cohorts.push({ week: tkDate(start), size: members.length, retention: later });
+  }
+
+  return { funnel, active: { dau, wau, mau, stickiness: mau ? round((dau / mau) * 100) : 0 }, cohorts };
+}

@@ -12,6 +12,14 @@ export type SignInResult =
   | { requires2fa: true; challenge: string; token?: undefined; newAccount?: undefined }
   | { newAccount: true; ticket: string; channel: 'sms' | 'email'; token?: undefined; requires2fa?: undefined };
 
+/** How the driver base grows and holds: the funnel, active drivers and weekly cohorts. */
+export interface Growth {
+  funnel: { step: string; count: number; ofFirst: number; ofPrev: number }[];
+  active: { dau: number; wau: number; mau: number; stickiness: number };
+  /** By the week of the first charge; `retention[i]` is the share who charged again i+1 weeks later. */
+  cohorts: { week: string; size: number; retention: number[] }[];
+}
+
 export interface Account {
   id: string;
   portal: Portal;
@@ -931,6 +939,7 @@ export const apiClient = {
   ocppCommand: (portal: Portal, stationId: string, body: { action: string; type?: string; requestedMessage?: string; connectorId?: string }) =>
     post<{ status: string }>(`/ocpp/chargepoints/${stationId}/command`, body, portal),
   adminUsers: (portal: Portal) => request<AdminUsers>('/admin/users', { portal }),
+  adminGrowth: () => request<Growth>('/admin/growth', { portal: 'admin' }),
   setUserStatus: (portal: Portal, id: string, status: 'active' | 'blocked') =>
     post<{ id: string; status: string }>(`/admin/users/${id}/status`, { status }, portal),
   events: (portal: Portal, limit = 300) => request<SyncEvent[]>(`/events?limit=${limit}`, { portal }),
