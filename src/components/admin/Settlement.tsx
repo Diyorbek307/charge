@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Banknote, Clock, Percent, CalendarClock } from 'lucide-react';
+import { Banknote, Clock, Percent, CalendarClock, FileText } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAnalytics, money, num, monthShort, monthLong, dateShort, plural } from '../../lib/analytics';
 import ExportButton from '../ExportButton';
 import { Page, Card, Kpi, Loading, ErrorNote, Pill, Segmented, CHART, STATUS_PILL } from './ui';
+import { downloadAct } from '../../lib/act';
 
 /**
  * Monthly settlement with operators: the month is closed on the 1st and the
@@ -77,6 +78,7 @@ export default function AdminSettlement() {
                 <th className="px-5 py-2.5 font-semibold text-right">К выплате</th>
                 <th className="px-5 py-2.5 font-semibold">Выплата</th>
                 <th className="px-5 py-2.5 font-semibold">Статус</th>
+                <th className="px-5 py-2.5 font-semibold"><span className="sr-only">Акт</span></th>
               </tr>
             </thead>
             <tbody>
@@ -91,6 +93,7 @@ export default function AdminSettlement() {
                   <td className="px-5 py-2.5 text-right tabular-nums font-semibold text-emerald-700 whitespace-nowrap">{money(i.payout)}</td>
                   <td className="px-5 py-2.5 text-xs text-slate-500 whitespace-nowrap">{dateShort(i.payDate)}</td>
                   <td className="px-5 py-2.5"><Pill tone={STATUS_PILL[i.status].tone}>{STATUS_PILL[i.status].label}</Pill></td>
+                  <td className="px-5 py-2.5 text-right">{i.status !== 'accruing' && <button onClick={() => void downloadAct(i)} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 whitespace-nowrap"><FileText size={12} />Акт PDF</button>}</td>
                 </tr>
               ))}
             </tbody>

@@ -19,8 +19,9 @@ export interface LegalDoc {
 
 const B = BRAND.name;
 const SITE = BRAND.domain;
-const CO = 'ООО «VOLI ENERGY»';
-const REQ = [
+/** The company behind Voli; the network acts carry the same details. */
+export const CO = 'ООО «VOLI ENERGY»';
+export const REQ = [
   'Общество с ограниченной ответственностью «VOLI ENERGY» («VOLI ENERGY» MCHJ)',
   'ИНН (STIR): 311 902 334 · ОКЭД: [код]',
   'Адрес: Самаркандская область, г. Самарканд, МСГ Шахриобод, ул. Аль-Хорезми, дом 123 «А», Республика Узбекистан',

@@ -1,8 +1,9 @@
-import { Wallet, Percent, Banknote, CalendarClock } from 'lucide-react';
+import { Wallet, Percent, Banknote, CalendarClock, FileText } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAnalytics, money, num, monthShort, monthLong, dateShort } from '../../lib/analytics';
 import ExportButton from '../ExportButton';
 import { Page, Card, Kpi, Loading, ErrorNote, Pill, CHART, STATUS_PILL } from '../admin/ui';
+import { downloadAct } from '../../lib/act';
 
 export default function OperatorFinance() {
   const { data, error } = useAnalytics('operator', 30);
@@ -60,6 +61,7 @@ export default function OperatorFinance() {
                 <th className="px-5 py-2.5 font-semibold text-right">К выплате</th>
                 <th className="px-5 py-2.5 font-semibold">Выплата</th>
                 <th className="px-5 py-2.5 font-semibold">Статус</th>
+                <th className="px-5 py-2.5 font-semibold"><span className="sr-only">Акт</span></th>
               </tr>
             </thead>
             <tbody>
@@ -73,6 +75,7 @@ export default function OperatorFinance() {
                   <td className="px-5 py-2.5 text-right tabular-nums font-semibold text-emerald-700 whitespace-nowrap">{money(i.payout)}</td>
                   <td className="px-5 py-2.5 text-xs text-slate-500 whitespace-nowrap">{dateShort(i.payDate)}</td>
                   <td className="px-5 py-2.5"><Pill tone={STATUS_PILL[i.status].tone}>{STATUS_PILL[i.status].label}</Pill></td>
+                  <td className="px-5 py-2.5 text-right">{i.status !== 'accruing' && <button onClick={() => void downloadAct(i)} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 whitespace-nowrap"><FileText size={12} />Акт PDF</button>}</td>
                 </tr>
               ))}
             </tbody>
