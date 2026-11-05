@@ -4174,5 +4174,12 @@
 "Искали и не нашли": "Qidirildi, topilmadi",
 "{0} поисков без единой станции за {1} дней": "{1} kun ichida {0} ta natijasiz qidiruv",
 "Пока все поиски что-то находили": "Hozircha barcha qidiruvlar natija bergan",
-"Откуда искали": "Qayerdan qidirildi"
+"Откуда искали": "Qayerdan qidirildi",
+"Что принесли акции": "Aksiyalar nima berdi",
+"Акция": "Aksiya",
+"Скидка": "Chegirma",
+"На 1 сум скидки": "1 so‘m chegirmaga",
+"«На 1 сум скидки» — сколько выручки пришло на каждый сум скидки. Меньше 2 — акция дорогая, больше 5 — окупается хорошо.": "«1 so‘m chegirmaga» — har bir so‘m chegirmaga qancha tushum kelgani. 2 dan kam — aksiya qimmat, 5 dan ko‘p — yaxshi o‘zini oqlaydi.",
+"По акциям ещё не было зарядок": "Aksiyalar bo‘yicha hali zaryad bo‘lmagan",
+"сеть": "tarmoq"
 }

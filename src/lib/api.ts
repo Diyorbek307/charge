@@ -466,6 +466,11 @@ export interface Promo {
   active?: boolean;
   uses?: number;
   discount?: number;
+  /** What the promo brought: money paid, energy, drivers, and those whose first charge it was. */
+  revenue?: number;
+  energy?: number;
+  drivers?: number;
+  newDrivers?: number;
 }
 
 /** The admin's switches and numbers every app follows (server/settings.js publicSettings). */

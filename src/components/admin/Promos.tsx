@@ -4,6 +4,7 @@ import type { CampaignDraft, Promo } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 import { money, num, dateTime } from '../../lib/analytics';
 import { Page, Card, Kpi, Loading, ErrorNote, Pill, Empty, Segmented } from './ui';
+import ExportButton from '../ExportButton';
 
 type Row = Promo & { voliPaid?: number; createdBy?: string; createdAt?: string };
 type Overview = { promos: Row[]; voliPaidMonth: number; driversReachable: number };
@@ -167,7 +168,63 @@ export default function AdminPromos() {
           )}
         </div>
       </div>
+
+      <PromoResults promos={data.promos} />
     </Page>
+  );
+}
+
+/**
+ * What each promo brought, best first: charges, revenue, drivers and the new
+ * ones it won, against what it cost — the discount, and Voli's share of it.
+ */
+function PromoResults({ promos }: { promos: Row[] }) {
+  const rows = promos.filter(p => (p.uses ?? 0) > 0).sort((a, b) => (b.revenue ?? 0) - (a.revenue ?? 0));
+  const ratio = (p: Row) => ((p.discount ?? 0) > 0 ? (p.revenue ?? 0) / (p.discount ?? 1) : null);
+  return (
+    <Card
+      className="mt-4"
+      title="Что принесли акции"
+      right={<ExportButton name="promo-results" title="Результаты акций" portal="admin" headers={['Акция', 'Скидка, %', 'Зарядки', 'кВт·ч', 'Водители', 'Новые водители', 'Выручка, сум', 'Скидка, сум', 'Доплатил Voli, сум']} rows={rows.map(p => [p.title, p.percent, p.uses ?? 0, p.energy ?? 0, p.drivers ?? 0, p.newDrivers ?? 0, p.revenue ?? 0, p.discount ?? 0, p.voliPaid ?? 0])} />}
+    >
+      {rows.length ? (
+        <div className="overflow-x-auto -mx-1">
+          <table className="w-full text-sm tabular-nums">
+            <thead>
+              <tr className="text-xs text-slate-400 text-right">
+                <th className="text-left font-medium py-2 px-1">Акция</th>
+                <th className="font-medium px-2">Зарядки</th>
+                <th className="font-medium px-2">Водители</th>
+                <th className="font-medium px-2">Новые</th>
+                <th className="font-medium px-2">Выручка</th>
+                <th className="font-medium px-2">Скидка</th>
+                <th className="font-medium px-2">На 1 сум скидки</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(p => {
+                const r = ratio(p);
+                return (
+                  <tr key={p.id} className="border-t border-slate-100 text-right">
+                    <td className="text-left py-2.5 px-1">
+                      <span className="font-semibold text-slate-800">{p.title}</span>
+                      <span className="ml-2 text-xs text-slate-400">{`−${p.percent}% · ${p.operatorId ? 'сеть' : 'Voli'}`}</span>
+                    </td>
+                    <td className="px-2">{num(p.uses ?? 0)}</td>
+                    <td className="px-2">{num(p.drivers ?? 0)}</td>
+                    <td className="px-2 font-semibold text-[#8A5B00]">{(p.newDrivers ?? 0) > 0 ? `+${num(p.newDrivers ?? 0)}` : '—'}</td>
+                    <td className="px-2 font-semibold text-slate-900">{money(p.revenue ?? 0)}</td>
+                    <td className="px-2 text-slate-500">{money(p.discount ?? 0)}{p.voliPaid ? <span className="block text-[11px] text-slate-400">{`Voli: ${money(p.voliPaid)}`}</span> : null}</td>
+                    <td className={`px-2 font-semibold ${r === null ? 'text-slate-400' : r >= 5 ? 'text-emerald-700' : r >= 2 ? 'text-slate-800' : 'text-red-600'}`}>{r === null ? '—' : `${num(r, 1)} сум`}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <p className="mt-2 text-xs text-slate-400">«На 1 сум скидки» — сколько выручки пришло на каждый сум скидки. Меньше 2 — акция дорогая, больше 5 — окупается хорошо.</p>
+        </div>
+      ) : <Empty text="По акциям ещё не было зарядок" />}
+    </Card>
   );
 }
 

@@ -103,6 +103,10 @@ describe('campaigns from the admin portal', () => {
     const overview = (await call('/admin/promos', { token: admin })).data;
     const row = overview.promos.find(p => p.id === id);
     assert.equal(row.uses, 1);
+    // A new driver's first charge came with it: the promo won them.
+    assert.equal(row.drivers, 1);
+    assert.equal(row.newDrivers, 1);
+    assert.equal(row.revenue, done.cost);
     assert.ok(row.voliPaid > 0, 'Voli pays the network the difference');
     assert.equal(overview.voliPaidMonth, row.voliPaid);
     assert.ok(overview.driversReachable >= 1);

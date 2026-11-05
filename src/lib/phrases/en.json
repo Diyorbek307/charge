@@ -4174,5 +4174,12 @@
 "Искали и не нашли": "Searched, found nothing",
 "{0} поисков без единой станции за {1} дней": "{0} searches with no station in {1} days",
 "Пока все поиски что-то находили": "Every search found something so far",
-"Откуда искали": "Where they searched from"
+"Откуда искали": "Where they searched from",
+"Что принесли акции": "What the promotions brought",
+"Акция": "Promotion",
+"Скидка": "Discount",
+"На 1 сум скидки": "Per 1 sum of discount",
+"«На 1 сум скидки» — сколько выручки пришло на каждый сум скидки. Меньше 2 — акция дорогая, больше 5 — окупается хорошо.": "“Per 1 sum of discount” is the revenue each sum of discount brought. Under 2 the promotion is costly, over 5 it pays off well.",
+"По акциям ещё не было зарядок": "No charges with promotions yet",
+"сеть": "network"
 }

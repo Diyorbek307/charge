@@ -136,11 +136,20 @@ export function stopPromo(operatorId, id) {
 }
 
 /** For the network's own portal: all its promos and how many charges used each. */
+/** The id of a driver's first completed charge. */
+function firstChargeOf(userId) {
+  let first = null;
+  for (const s of db.data.sessions) if (s.userId === userId && s.status === 'completed' && (!first || s.start < first.start)) first = s;
+  return first?.id ?? null;
+}
+
 export function promosOf(operatorId) {
   return promos()
     .filter(p => operatorId === null || coversNetwork(p, operatorId))
     .map(p => {
       const used = db.data.sessions.filter(s => s.promo?.id === p.id && s.status === 'completed' && (operatorId === null || s.operatorId === operatorId));
+      // A driver whose very first charge used this promo came because of it.
+      const firsts = new Set(used.filter(s => firstChargeOf(s.userId) === s.id).map(s => s.userId));
       return {
         ...p,
         operatorIds: p.operatorIds ?? null,
@@ -148,6 +157,10 @@ export function promosOf(operatorId) {
         uses: used.length,
         discount: used.reduce((n, s) => n + Math.round((s.basePrice * (s.multiplier ?? 1) - s.price) * s.energy), 0),
         voliPaid: used.reduce((n, s) => n + (s.promoCovered ?? 0), 0),
+        revenue: used.reduce((n, s) => n + s.cost, 0),
+        energy: Math.round(used.reduce((n, s) => n + s.energy, 0)),
+        drivers: new Set(used.map(s => s.userId)).size,
+        newDrivers: firsts.size,
       };
     });
 }
