@@ -4,6 +4,7 @@ import type { CreditOverview } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 import { money, num, dateTime } from '../../lib/analytics';
 import { Page, Card, Kpi, Loading, ErrorNote, Pill, Empty } from './ui';
+import ExportButton from '../ExportButton';
 
 /**
  * Drivers charging on credit: who owes what and since when. The face photo is
@@ -33,6 +34,15 @@ export function AdminCredit() {
     <Page
       title="Зарядка в долг"
       subtitle={`Водители заряжаются сейчас и платят в течение ${data.days} дней. Каждый старт подтверждается лицом. Фото не показывается — только факт проверки.`}
+      actions={
+        <ExportButton
+          name="credit-debts"
+          title="Зарядка в долг: долги водителей"
+          portal="admin"
+          headers={['Водитель', 'Телефон', 'Статус', 'Лимит, сум', 'Долг, сум', 'Просрочен', 'Оплатить до', 'Зарядок в долг']}
+          rows={rows.map(r => [r.user, r.phone ?? '', r.status === 'active' ? 'подключён' : 'приостановлен', r.limit, r.debt, r.overdue ? 'да' : 'нет', r.nextDue ?? '', r.charges])}
+        />
+      }
     >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Kpi label="Подключили" value={num(data.totals.drivers)} sub="водителей" icon={<Users size={14} />} tone="slate" />

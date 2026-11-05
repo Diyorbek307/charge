@@ -4191,5 +4191,6 @@
 "Доля удачных запусков и время в работе за 30 дней. Счёт — меньшее из двух, взвешенное по числу зарядок.": "Share of successful starts and time in working order over 30 days. The score is the lower of the two, weighted by charges.",
 "Пока мало зарядок для оценки": "Not enough charges to rate yet",
 "Станции, которые подводят": "Stations that let drivers down",
-"Все станции надёжнее 95%": "Every station is above 95%"
+"Все станции надёжнее 95%": "Every station is above 95%",
+"подключён": "on"
 }

@@ -4191,5 +4191,6 @@
 "Доля удачных запусков и время в работе за 30 дней. Счёт — меньшее из двух, взвешенное по числу зарядок.": "30 kunlik muvaffaqiyatli ishga tushirishlar ulushi va ishlash vaqti. Ball — ikkalasining kichigi, zaryadlar soni bo‘yicha.",
 "Пока мало зарядок для оценки": "Baholash uchun zaryadlar hali kam",
 "Станции, которые подводят": "Pand beradigan stansiyalar",
-"Все станции надёжнее 95%": "Barcha stansiyalar 95% dan ishonchli"
+"Все станции надёжнее 95%": "Barcha stansiyalar 95% dan ishonchli",
+"подключён": "ulangan"
 }

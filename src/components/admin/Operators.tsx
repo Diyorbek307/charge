@@ -4,6 +4,7 @@ import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { useSync } from '../../lib/sync';
 import { useAnalytics, money, num, dateShort, plural } from '../../lib/analytics';
 import { Page, Card, Kpi, Loading, ErrorNote, Pill, CHART } from './ui';
+import ExportButton from '../ExportButton';
 import { OcpiPartners } from './OcpiPartners';
 import { OperatorSetup } from './OperatorSetup';
 
@@ -45,9 +46,18 @@ export default function AdminOperators({ onNavigate }: { onNavigate: (page: stri
       title="Операторы"
       subtitle={`${active.length} активных · ${pending.length} на ревью · показатели за 30 дней`}
       actions={
+        <>
+        <ExportButton
+          name="operators"
+          title="Сети за 30 дней"
+          portal="admin"
+          headers={['Сеть', 'Статус', 'Подключение', 'Регион', 'Станции', 'Разъёмы', 'Онлайн', 'Сессии', 'Выручка, сум', 'Загрузка, %', 'Контакт']}
+          rows={data.operators.map(o => [o.name, o.status, o.integration, o.region, o.stations, o.evse, o.online, o.completed, o.revenue, o.utilization, o.contact])}
+        />
         <button onClick={() => onNavigate('leads')} className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sky-500 text-white text-sm font-semibold hover:bg-sky-600">
           <Inbox size={15} />Заявки на подключение
         </button>
+        </>
       }
     >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
