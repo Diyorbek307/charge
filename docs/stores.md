@@ -24,15 +24,15 @@
 
 | Поле | Значение |
 |---|---|
-| Юридическое название (Legal entity name) | ENESSES LLC (по-узбекски «ENESSES» MCHJ) |
-| ИНН / STIR | 308899884 |
-| Дата регистрации | 27.09.2021 |
-| Адрес | 48 Gagarin street, Samarkand, Samarkand region, Uzbekistan |
+| Юридическое название (Legal entity name) | VOLI ENERGY LLC (по-узбекски «VOLI ENERGY» MCHJ) |
+| ИНН / STIR | 311902334 |
+| Дата регистрации | 10.02.2025 |
+| Адрес | 123A Al-Xorazmiy street, Shahriobod MFY, Samarkand, Samarkand region, 140100, Uzbekistan |
+| D-U-N-S | заявка отправлена 05.11.2026 через Apple, ждём номер на info@voli.uz |
 | Сайт | https://voli.uz |
 | Почта | info@voli.uz |
 
-Компанию собираются переименовать: после переименования обновить D-U-N-S, затем
-название продавца у Apple (через поддержку) и название в платёжном профиле Google.
+Название компании совпадает с брендом — переименовывать ничего не нужно.
 
 ## Google Play
 

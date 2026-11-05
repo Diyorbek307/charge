@@ -3,8 +3,8 @@ import { BRAND } from '../brand';
 /**
  * Drafts of the legal documents the site needs before launch (Payme and Click
  * require a public offer on the merchant's site). Written in Russian. The
- * company is «ENESSES» MCHJ (to be renamed); details still missing are
- * placeholders in [brackets].
+ * company is «VOLI ENERGY» MCHJ; details still missing are placeholders in
+ * [brackets].
  *
  * DRAFTS: a lawyer must review them before they are published as binding.
  */
@@ -19,11 +19,11 @@ export interface LegalDoc {
 
 const B = BRAND.name;
 const SITE = BRAND.domain;
-const CO = 'ООО «ENESSES»';
+const CO = 'ООО «VOLI ENERGY»';
 const REQ = [
-  'Общество с ограниченной ответственностью «ENESSES» («ENESSES» MCHJ)',
-  'ИНН (STIR): 308 899 884 · ОКЭД: [код]',
-  'Юридический адрес: Самаркандская область, г. Самарканд, ул. Гагарина, 48, Республика Узбекистан',
+  'Общество с ограниченной ответственностью «VOLI ENERGY» («VOLI ENERGY» MCHJ)',
+  'ИНН (STIR): 311 902 334 · ОКЭД: [код]',
+  'Адрес: Самаркандская область, г. Самарканд, МСГ Шахриобод, ул. Аль-Хорезми, дом 123 «А», Республика Узбекистан',
   'Расчётный счёт: [р/с] в [банк], МФО [код]',
   `Электронная почта: ${BRAND.email}`,
   'Телефон: [телефон]',
