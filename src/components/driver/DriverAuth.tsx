@@ -18,6 +18,7 @@ const SLIDES = [
 ];
 
 const YELLOW = 'linear-gradient(90deg, #FFE27A, #FFC83D 55%, #F5B000)';
+const SPARKS = Array.from({ length: 14 }, (_, i) => ({ x: (i * 37 + 11) % 100, s: 2 + (i % 3), d: (i * 0.53) % 4, t: 3.2 + (i % 4) * 0.7 }));
 const readRef = () => {
   try {
     return localStorage.getItem('pg-ref') ?? '';
@@ -233,30 +234,41 @@ export default function DriverAuth() {
   const [title, sub] = head[step];
   const signingIn = busy && step !== 'start';
   const field = (bad: boolean) =>
-    `w-full h-[54px] rounded-2xl bg-slate-50 border text-[15px] text-slate-900 placeholder:text-slate-400 outline-none transition-colors ${bad ? 'border-red-400 bg-red-50/60 focus:ring-4 focus:ring-red-200' : 'border-slate-200 focus:border-[#FFC83D] focus:ring-4 focus:ring-[#FFC83D]/25'}`;
+    `w-full h-[54px] rounded-2xl border text-[15px] text-white placeholder:text-white/35 outline-none transition-colors ${bad ? 'border-red-400/80 bg-red-500/10 focus:ring-4 focus:ring-red-500/20' : 'border-white/10 bg-white/[0.06] focus:border-[#FFC83D] focus:bg-white/[0.09] focus:ring-4 focus:ring-[#FFC83D]/15'}`;
 
   return (
-    <div className="relative min-h-full w-full flex flex-col bg-white" style={{ fontFamily: 'Inter, sans-serif' }}>
-      {/* The warm top: the wordmark, a charger feeding a car, and the greeting */}
-      <div className="relative shrink-0 overflow-hidden px-6 pt-3 pb-12" style={{ background: 'linear-gradient(180deg, #FFE9A8 0%, #FFF4D2 55%, #FFFBEF 100%)' }}>
-        <div className="absolute -top-20 -right-16 w-[320px] h-[320px] rounded-full" style={{ background: 'radial-gradient(closest-side, rgba(255,200,61,.55), rgba(255,200,61,0))' }} aria-hidden="true" />
-        <div className="relative flex items-center justify-between">
-          <button onClick={back} aria-label="Назад" className="w-10 h-10 -ml-2 rounded-full grid place-items-center text-slate-700 hover:bg-black/5"><ArrowLeft size={20} /></button>
-          <Logo size={30} />
-          <span className="w-10" />
-        </div>
-        <ChargeScene className="relative block w-full max-w-[340px] mx-auto mt-2 h-auto" />
-        <h1 key={title} className="relative mt-3 text-[30px] leading-[1.08] font-extrabold tracking-tight text-[#111] pg-reveal">{title}<span className="text-[#E09A00]">.</span></h1>
-        <p className="relative mt-1.5 text-sm text-slate-600 max-w-[330px]">{sub}</p>
+    <div className="relative min-h-full w-full flex flex-col bg-[#070707] text-white overflow-hidden" style={{ fontFamily: 'Inter, sans-serif' }}>
+      {/* The car at the charger, fading into the dark, sparks rising over it */}
+      <div className="absolute inset-x-0 top-0 h-[330px] overflow-hidden" aria-hidden="true">
+        <img src="/welcome/welcome.jpg" alt="" className="w-full h-full object-cover object-[50%_74%] pg-kenburns" />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(7,7,7,.55) 0%, rgba(7,7,7,.15) 35%, rgba(7,7,7,.75) 72%, #070707 100%)' }} />
+        {SPARKS.map((sp, i) => (
+          <span key={i} className="absolute bottom-6 rounded-full sp4-float" style={{ left: `${sp.x}%`, width: sp.s, height: sp.s, background: '#FFE27A', boxShadow: '0 0 8px 2px rgba(255,200,61,.7)', animationDelay: `${sp.d}s`, animationDuration: `${sp.t}s` }} />
+        ))}
       </div>
 
-      {/* The white card with the form, riding up over the warm top */}
-      <div className="relative flex-1 -mt-7 bg-white rounded-t-[32px] px-6 pt-6 pb-8 flex flex-col pg-card-up" style={{ boxShadow: '0 -12px 30px rgba(17,17,17,.06)' }}>
+      <div className="relative px-5 pt-3 flex items-center justify-between">
+        <button onClick={back} aria-label="Назад" className="w-10 h-10 rounded-full grid place-items-center text-white bg-white/10 border border-white/15 backdrop-blur-md hover:bg-white/20"><ArrowLeft size={19} /></button>
+        <Logo size={28} ink="#FFFFFF" />
+        <span className="w-10" />
+      </div>
+
+      {/* The greeting, a shine running through it */}
+      <div className="relative px-6 pt-[150px]">
+        <h1 key={title} className="text-[36px] leading-[1.05] font-extrabold tracking-tight pg-reveal">
+          <span className="bg-clip-text text-transparent sp4-shimmer" style={{ backgroundImage: 'linear-gradient(100deg, #FFFFFF 0%, #FFFFFF 40%, #FFE27A 50%, #FFFFFF 60%, #FFFFFF 100%)' }}>{title}</span><span className="text-[#FFC83D]">.</span>
+        </h1>
+        <p className="mt-2 text-sm text-white/60 max-w-[330px]">{sub}</p>
+      </div>
+
+      {/* The glass card with the form */}
+      <div className="relative mx-4 mt-6 mb-6 rounded-[28px] p-5 bg-white/[0.06] border border-white/10 backdrop-blur-xl pg-card-up" style={{ boxShadow: '0 24px 60px rgba(0,0,0,.55)' }}>
+        <span className="absolute inset-x-8 top-0 h-px" style={{ background: 'linear-gradient(90deg, rgba(255,200,61,0), rgba(255,200,61,.7), rgba(255,200,61,0))' }} aria-hidden="true" />
         {(step === 'start' || step === 'password') && (
-          <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-2xl mb-5" role="tablist" aria-label="Способ входа">
+          <div className="grid grid-cols-2 gap-1 p-1 bg-white/[0.06] border border-white/[0.08] rounded-2xl mb-5" role="tablist" aria-label="Способ входа">
             {([['start', 'По коду'], ['password', 'По паролю']] as const).map(([k, label]) => (
               <button key={k} role="tab" aria-selected={step === k} onClick={() => { setError(null); setTouched(false); setStep(k); }}
-                className={`h-11 rounded-xl text-sm font-bold transition-colors ${step === k ? 'bg-[#111] text-white shadow-sm' : 'text-slate-500'}`}>{label}</button>
+                className={`h-11 rounded-xl text-sm font-bold transition-colors ${step === k ? 'bg-[#FFC83D] text-[#111] shadow-[0_6px_20px_rgba(255,200,61,.35)]' : 'text-white/55 hover:text-white'}`}>{label}</button>
             ))}
           </div>
         )}
@@ -267,7 +279,7 @@ export default function DriverAuth() {
             <FieldError text={toProblem} />
             <ErrorBox error={error} />
             <YellowButton busy={busy} disabled={busy}>Получить код</YellowButton>
-            <p className="text-center text-xs text-slate-400">Номер +998… — код придёт по SMS, почта — письмом. Новый аккаунт создастся сам.</p>
+            <p className="text-center text-xs text-white/40">Номер +998… — код придёт по SMS, почта — письмом. Новый аккаунт создастся сам.</p>
           </form>
         )}
 
@@ -277,20 +289,20 @@ export default function DriverAuth() {
             <FieldError text={toProblem} />
             <label className="relative block">
               <span className="sr-only">Пароль</span>
-              <span className={`absolute left-4 top-1/2 -translate-y-1/2 ${passwordProblem ? 'text-red-400' : 'text-slate-400'}`}><Lock size={18} /></span>
+              <span className={`absolute left-4 top-1/2 -translate-y-1/2 ${passwordProblem ? 'text-red-400' : 'text-white/40'}`}><Lock size={18} /></span>
               <input id="driver-password" type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" placeholder="Пароль" className={`${field(!!passwordProblem)} pl-12 pr-12`} />
-              <button type="button" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'} className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 grid place-items-center text-slate-400 hover:text-slate-700">
+              <button type="button" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'} className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 grid place-items-center text-white/40 hover:text-white">
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </label>
             <FieldError text={passwordProblem} />
             <ErrorBox error={error} />
             <YellowButton busy={busy} disabled={busy}>Войти</YellowButton>
-            <button type="button" onClick={() => { setError(null); setTouched(false); setStep('start'); }} className="w-full text-sm text-slate-500 hover:text-slate-900">Забыли пароль? Войдите по коду</button>
+            <button type="button" onClick={() => { setError(null); setTouched(false); setStep('start'); }} className="w-full text-sm text-white/55 hover:text-white">Забыли пароль? Войдите по коду</button>
             {demo && (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-center justify-between gap-3 text-xs text-amber-900">
+              <div className="rounded-2xl border border-[#FFC83D]/25 bg-[#FFC83D]/10 px-4 py-3 flex items-center justify-between gap-3 text-xs text-[#FFE7A0]">
                 <span>Демо-доступ: <b className="font-mono">{demo.login}</b></span>
-                <button type="button" onClick={() => { setTo(demo.login); setPassword(demo.password); }} className="font-bold text-[#8A5B00]">Заполнить</button>
+                <button type="button" onClick={() => { setTo(demo.login); setPassword(demo.password); }} className="font-bold text-[#FFC83D]">Заполнить</button>
               </div>
             )}
           </form>
@@ -298,11 +310,11 @@ export default function DriverAuth() {
 
         {(step === 'start' || step === 'password') && (providers.apple || providers.google) && (
           <>
-            <div className="my-5 flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200" />или продолжить через<span className="h-px flex-1 bg-slate-200" /></div>
+            <div className="my-5 flex items-center gap-3 text-xs text-white/35"><span className="h-px flex-1 bg-white/10" />или продолжить через<span className="h-px flex-1 bg-white/10" /></div>
             <div className="grid grid-cols-2 gap-3">
               {providers.google && <div ref={googleBox} className={`flex justify-center min-h-[44px] ${providers.apple ? '' : 'col-span-2'}`} />}
               {providers.apple && (
-                <button onClick={() => void apple()} disabled={busy} className={`h-[44px] rounded-full bg-[#111] text-white font-semibold text-sm inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60 ${providers.google ? '' : 'col-span-2'}`}>
+                <button onClick={() => void apple()} disabled={busy} className={`h-[44px] rounded-full bg-white text-[#111] font-semibold text-sm inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60 ${providers.google ? '' : 'col-span-2'}`}>
                   <AppleMark />Apple
                 </button>
               )}
@@ -312,11 +324,11 @@ export default function DriverAuth() {
 
         {step === 'code' && sentTo && (
           <form onSubmit={checkCode}>
-            {demoCode && <p className="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-center">{sentTo.channel === 'email' ? 'Демо-режим: письмо не отправляется. Ваш код —' : 'Демо-режим: SMS не отправляется. Ваш код —'} <b className="font-mono tracking-widest">{demoCode}</b></p>}
+            {demoCode && <p className="text-xs text-[#FFE7A0] bg-[#FFC83D]/10 border border-[#FFC83D]/25 rounded-xl px-3 py-2.5 text-center">{sentTo.channel === 'email' ? 'Демо-режим: письмо не отправляется. Ваш код —' : 'Демо-режим: SMS не отправляется. Ваш код —'} <b className="font-mono tracking-widest">{demoCode}</b></p>}
             <CodeInput value={code} onChange={setCode} />
             <ErrorBox error={error} />
             <div className="mt-4"><YellowButton busy={busy} disabled={busy || code.length !== 6}>Продолжить</YellowButton></div>
-            <button type="button" disabled={cooldown > 0 || busy} onClick={() => void sendCode()} className="mt-4 w-full text-sm text-slate-500 hover:text-slate-900 disabled:text-slate-300">
+            <button type="button" disabled={cooldown > 0 || busy} onClick={() => void sendCode()} className="mt-4 w-full text-sm text-white/55 hover:text-white disabled:text-white/25">
               {cooldown > 0 ? `Отправить снова через ${cooldown} с` : 'Отправить код снова'}
             </button>
           </form>
@@ -326,7 +338,7 @@ export default function DriverAuth() {
           <form onSubmit={finish} className="space-y-3">
             <input id="driver-signup-name" value={name} onChange={e => setName(e.target.value)} autoComplete="name" autoFocus placeholder="Имя и фамилия" className={`${field(false)} px-4`} />
             <input value={ref} onChange={e => setRef(e.target.value.toUpperCase())} maxLength={12} autoComplete="off" placeholder="Код друга (если есть)" className={`${field(false)} px-4 h-[48px] text-sm`} />
-            <p className="text-xs text-slate-400">Имя увидят только поддержка и станция в чеке.</p>
+            <p className="text-xs text-white/40">Имя увидят только поддержка и станция в чеке.</p>
             <ErrorBox error={error} />
             <YellowButton busy={busy} disabled={busy || name.trim().length < 2}>Создать аккаунт</YellowButton>
           </form>
@@ -356,7 +368,7 @@ function TargetField({ id, value, onChange, isEmail, className }: { id: string; 
   return (
     <label className="relative block">
       <span className="sr-only">Телефон или почта</span>
-      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">{isEmail ? <Mail size={18} /> : <Phone size={18} />}</span>
+      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">{isEmail ? <Mail size={18} /> : <Phone size={18} />}</span>
       <input id={id} value={value} onChange={e => onChange(e.target.value)} autoComplete="username" inputMode={isEmail ? 'email' : 'text'} placeholder="Телефон или почта" className={`${className} pl-12 pr-4`} />
     </label>
   );
@@ -364,13 +376,14 @@ function TargetField({ id, value, onChange, isEmail, className }: { id: string; 
 
 function FieldError({ text }: { text: string | null }) {
   if (!text) return null;
-  return <p role="alert" className="-mt-1 pl-1 flex items-center gap-1.5 text-xs font-medium text-red-500"><span className="w-1.5 h-1.5 rounded-full bg-red-500" />{text}</p>;
+  return <p role="alert" className="-mt-1 pl-1 flex items-center gap-1.5 text-xs font-medium text-red-400"><span className="w-1.5 h-1.5 rounded-full bg-red-400" />{text}</p>;
 }
 
 function YellowButton({ busy, disabled, children }: { busy: boolean; disabled: boolean; children: React.ReactNode }) {
   return (
-    <button type="submit" disabled={disabled} className="w-full h-[54px] rounded-2xl text-[#111] font-bold text-[16px] inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50" style={{ background: YELLOW, boxShadow: '0 8px 24px rgba(255,200,61,.3)' }}>
-      {busy ? <LoaderCircle size={20} className="animate-spin" /> : children}
+    <button type="submit" disabled={disabled} className="relative overflow-hidden w-full h-[54px] rounded-2xl text-[#111] font-bold text-[16px] inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50" style={{ background: YELLOW, boxShadow: '0 10px 30px rgba(255,200,61,.35)' }}>
+      <span className="absolute inset-0 pg-flow opacity-70" aria-hidden="true" />
+      <span className="relative inline-flex items-center gap-2">{busy ? <LoaderCircle size={20} className="animate-spin" /> : children}</span>
     </button>
   );
 }
@@ -378,11 +391,11 @@ function YellowButton({ busy, disabled, children }: { busy: boolean; disabled: b
 /** While the server checks: the whole screen blurs, energy runs down the cable and the battery fills. */
 function SigningIn() {
   return (
-    <div className="absolute inset-0 z-20 bg-white/55 backdrop-blur-xl grid place-items-center pg-reveal" role="status" aria-live="polite">
+    <div className="absolute inset-0 z-20 bg-[#070707]/70 backdrop-blur-xl grid place-items-center pg-reveal" role="status" aria-live="polite">
       <div className="flex flex-col items-center gap-3">
-        <ChargeScene className="block w-[260px] h-auto" />
-        <p className="text-[15px] font-bold text-slate-900">Входим…</p>
-        <p className="text-xs text-slate-500">Заряжаем ваш аккаунт</p>
+        <ChargeScene dark className="block w-[260px] h-auto" />
+        <p className="text-[15px] font-bold text-white">Входим…</p>
+        <p className="text-xs text-white/50">Заряжаем ваш аккаунт</p>
       </div>
     </div>
   );
@@ -405,7 +418,7 @@ function CodeInput({ value, onChange }: { value: string; onChange: (v: string) =
         className="absolute inset-0 w-full h-full opacity-0" aria-label="Код из 6 цифр" />
       <span className="grid grid-cols-6 gap-2 pointer-events-none" aria-hidden="true">
         {Array.from({ length: 6 }, (_, i) => (
-          <span key={i} className={`h-14 rounded-2xl border-2 grid place-items-center text-[22px] font-bold text-slate-900 ${i === value.length ? 'border-[#FFC83D] bg-[#FFF8E1]' : 'border-slate-200 bg-slate-50'}`}>{value[i] ?? ''}</span>
+          <span key={i} className={`h-14 rounded-2xl border-2 grid place-items-center text-[22px] font-bold text-white transition-colors ${i === value.length ? 'border-[#FFC83D] bg-[#FFC83D]/10 shadow-[0_0_18px_rgba(255,200,61,.35)]' : 'border-white/10 bg-white/[0.06]'}`}>{value[i] ?? ''}</span>
         ))}
       </span>
     </label>
@@ -415,7 +428,7 @@ function CodeInput({ value, onChange }: { value: string; onChange: (v: string) =
 function ErrorBox({ error }: { error: string | null }) {
   if (!error) return null;
   return (
-    <div role="alert" className="mt-3 flex items-start gap-2 text-xs text-red-700 bg-red-50 border border-red-100 rounded-xl px-3 py-2.5">
+    <div role="alert" className="mt-3 flex items-start gap-2 text-xs text-red-300 bg-red-500/10 border border-red-500/25 rounded-xl px-3 py-2.5">
       <TriangleAlert size={14} className="shrink-0 mt-px" /><span>{error}</span>
     </div>
   );

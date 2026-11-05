@@ -896,6 +896,10 @@ input::-ms-reveal, input::-ms-clear { display: none; }
 @keyframes pg-card-up { from { transform: translateY(70px); opacity: 0; } }
 .pg-battery-fill { animation: pg-battery-fill 1.4s ease-in-out infinite; }
 @keyframes pg-battery-fill { 0% { width: 8%; } 80%, 100% { width: 100%; } }
+/* Sign-in: a shine running through the greeting, sparks rising over the photo. */
+.sp4-shimmer { background-size: 250% 100%; animation: pg-shine 4s linear infinite; }
+.sp4-float { opacity: 0; animation: sp4-float 3.6s ease-in infinite; }
+@keyframes sp4-float { 0% { opacity: 0; transform: translateY(0) scale(.6); } 20% { opacity: .9; } 100% { opacity: 0; transform: translateY(-190px) scale(1); } }
 /* The welcome photo drifts closer, slowly. */
 .pg-kenburns { animation: pg-kenburns 18s ease-out both; transform-origin: 50% 60%; }
 @keyframes pg-kenburns { from { transform: scale(1.12); } to { transform: scale(1); } }
