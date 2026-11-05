@@ -852,32 +852,41 @@ nav::-webkit-scrollbar { display: none; }
 @keyframes pg-toast-out { to { opacity: 0; transform: translateY(-14px) scale(.96); } }
 /* Our own eye shows the password; Edge's built-in one would be a second. */
 input::-ms-reveal, input::-ms-clear { display: none; }
-/* Splash: the V drawn as a glowing line, filled with a pulse of charge, the letters one by one, a charge bar; then the V flies at the viewer. */
-.sp-glow { animation: sp-fade 1s ease-out both; }
-.sp-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: sp-draw .85s cubic-bezier(.65,0,.35,1) .15s forwards; }
-.sp-stroke { stroke-dasharray: 1; stroke-dashoffset: 1; stroke-width: 1.8; stroke: #FFC83D; filter: drop-shadow(0 0 3px rgba(255,200,61,.9)); animation: sp-draw .85s cubic-bezier(.65,0,.35,1) .15s forwards, sp-thick .4s cubic-bezier(.3,.7,.2,1) .95s forwards, sp-away .2s ease-in 2.7s forwards; }
-.sp-fill { filter: drop-shadow(0 0 4px rgba(255,200,61,.9)); animation: sp-draw .85s cubic-bezier(.65,0,.35,1) .15s forwards, sp-fill .4s ease-out .95s forwards, sp-noglow .2s linear 2.7s forwards; }
-.sp-shine { transform: translateX(-70px) skewX(-20deg); animation: sp-shine .75s ease-in-out 1.25s forwards; }
-.sp-ring { opacity: 0; animation: sp-ring 1.2s ease-out 1.8s forwards; }
-.sp-ring-2 { animation-delay: 2.05s; }
-.sp-letter { animation: sp-letter .55s cubic-bezier(.2,.7,.2,1) both; }
-.sp-dot { transform-box: fill-box; transform-origin: center; animation: sp-dot .55s cubic-bezier(.3,1.6,.5,1) 1.72s both; }
-.sp-tag { animation: sp-letter .6s cubic-bezier(.2,.7,.2,1) 1.75s both; }
-.sp-bar { width: 0; animation: sp-bar .8s cubic-bezier(.5,0,.3,1) 1.85s forwards; }
-.sp-away { animation: sp-away .25s ease-in 2.7s forwards; }
-.sp-zoom { transform-box: view-box; transform-origin: 72px 41px; animation: sp-zoom .6s cubic-bezier(.7,0,.25,1) 2.75s forwards; }
+/* Splash as a charge: sparks gather, the V fills with liquid light while arcs crackle, a flash at 100%, the letters, then the yellow sweep. */
+.sp2-glow { animation: sp-fade 1s ease-out both; }
+.sp2-trace, .sp2-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: sp-draw .8s cubic-bezier(.65,0,.35,1) .25s forwards; }
+.sp2-wave { animation: sp2-wave .9s linear infinite; }
+.sp2-final { opacity: 0; transition: opacity .25s ease-out; }
+.sp2-final.on { opacity: 1; }
+.sp2-flash { opacity: 0; animation: sp2-flash .75s ease-out 2.15s forwards; }
+.sp2-shock { opacity: 0; animation: sp2-shock .85s cubic-bezier(.2,.7,.3,1) 2.15s forwards; }
+.sp2-spark { opacity: 0; transform-origin: 0 50%; animation: sp2-spark .7s cubic-bezier(.2,.7,.3,1) 2.15s forwards; }
+.sp2-word .sp2-letter, .sp2-word .sp2-dot { opacity: 0; }
+.sp2-word.on .sp2-letter, .sp2-word.on .sp2-dot { opacity: 1; }
+.sp2-word.on .sp2-letter { animation: sp-letter .5s cubic-bezier(.2,.7,.2,1) both; }
+.sp2-word.on .sp2-dot { transform-box: fill-box; transform-origin: center; animation: sp-dot .5s cubic-bezier(.3,1.6,.5,1) .3s both; }
+.sp2-tag { opacity: 0; }
+.sp2-tag.on { opacity: 1; animation: sp-letter .5s cubic-bezier(.2,.7,.2,1) .35s both; }
+@keyframes sp2-wave { from { transform: translateX(-40px); } to { transform: translateX(0); } }
+@keyframes sp2-flash { 0% { opacity: 0; } 12% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes sp2-shock { 0% { opacity: 1; transform: scale(.3); } 100% { opacity: 0; transform: scale(3.4); } }
+@keyframes sp2-spark { 0% { opacity: 1; transform: rotate(var(--a)) translateX(30px) scaleX(.3); } 100% { opacity: 0; transform: rotate(var(--a)) translateX(170px) scaleX(1); } }
 @keyframes sp-fade { from { opacity: 0; transform: scale(.85); } }
 @keyframes sp-draw { to { stroke-dashoffset: 0; } }
-@keyframes sp-thick { to { stroke-width: 17; stroke: #FFFFFF; } }
-@keyframes sp-fill { to { fill-opacity: 1; } }
-@keyframes sp-shine { to { transform: translateX(80px) skewX(-20deg); } }
-@keyframes sp-ring { 0% { opacity: .55; transform: scale(.9); } 100% { opacity: 0; transform: scale(2.6); } }
 @keyframes sp-letter { from { opacity: 0; transform: translateY(10px); filter: blur(6px); } }
 @keyframes sp-dot { from { opacity: 0; transform: scale(0); } }
-@keyframes sp-bar { to { width: 100%; } }
 @keyframes sp-away { to { opacity: 0; } }
-@keyframes sp-zoom { to { transform: scale(22); } }
-@keyframes sp-noglow { to { filter: none; } }
+@keyframes sp-plain { to { opacity: 1; } }
+.sp3-comet { opacity: 0; transform-origin: 0 50%; animation: sp3-comet .9s cubic-bezier(.55,0,.85,.4) both; }
+@keyframes sp3-comet { 0% { opacity: 0; transform: rotate(var(--a)) translateX(var(--r)); } 25% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--a)) translateX(10px); } }
+.sp3-bubble { transform-box: fill-box; animation: sp3-bubble 1.3s ease-in infinite; }
+@keyframes sp3-bubble { 0% { opacity: 0; transform: translateY(0); } 20% { opacity: .8; } 100% { opacity: 0; transform: translateY(-34px); } }
+.sp3-ring-in { opacity: 0; animation: sp-plain .4s ease-out .8s forwards; }
+.sp3-ring-out { animation: sp3-ring-out .45s ease-out forwards; }
+@keyframes sp3-ring-out { to { opacity: 0; transform: scale(1.2); } }
+.sp3-melt { animation: sp3-melt .7s ease .1s forwards; }
+@keyframes sp3-melt { to { opacity: 0; } }
+.sp3-fade { animation: sp3-melt .25s ease-in forwards; }
 /* Sign-in: lightning over the dark top, now and then; the card rides up from below. */
 .pg-bolt { opacity: 0; animation: pg-bolt 5.5s linear 1.2s infinite; }
 @keyframes pg-bolt { 0%, 86%, 100% { opacity: 0; } 87% { opacity: .95; } 88% { opacity: .15; } 89.5% { opacity: .85; } 92% { opacity: 0; } }

@@ -4,8 +4,9 @@ import { useSync } from '../../lib/sync';
 import { readFirstRun } from '../../lib/firstRun';
 import { inNativeShell } from '../../lib/site';
 import type { SignInResult } from '../../lib/api';
-import { Logo, V_BLADE, V_STROKE, WORD } from '../../landing/Logo';
+import { Logo } from '../../landing/Logo';
 import ChargeScene from './ChargeScene';
+import Splash from './Splash';
 
 type Step = 'welcome' | 'start' | 'code' | 'name' | 'totp' | 'password';
 type Providers = { google: string | null; apple: string | null };
@@ -203,8 +204,15 @@ export default function DriverAuth() {
       land(await actions.oauthSignIn('apple', r.authorization.id_token, { name: [n?.firstName, n?.lastName].filter(Boolean).join(' ') || undefined, consent: consent(), ref: ref.trim() || undefined }));
     });
 
-  if (splash) return <Splash onDone={() => setSplash(false)} />;
-  if (step === 'welcome') return <Welcome slide={slide} onSlide={setSlide} onStart={() => setStep('start')} onSignIn={() => setStep('start')} />;
+  // The splash plays over the welcome, so its wordmark can fly to the welcome's own; lifting it off leaves the welcome as it is.
+  if (step === 'welcome') {
+    return (
+      <div className="relative h-full min-h-full w-full">
+        <Welcome slide={slide} onSlide={setSlide} onStart={() => setStep('start')} onSignIn={() => setStep('start')} logoHidden={splash} />
+        {splash && <Splash onDone={() => setSplash(false)} />}
+      </div>
+    );
+  }
 
   const isEmail = to.includes('@');
   const back = () => {
@@ -388,71 +396,6 @@ const splashSeen = () => {
   }
 };
 
-/**
- * The first seconds of the app: the V drawn as a glowing line, filled with a
- * pulse of charge and a shine, the letters one by one, a charge bar filling;
- * then the letters fade and the V flies at the viewer to open the welcome.
- * Once per visit; a tap skips it.
- */
-function Splash({ onDone }: { onDone: () => void }) {
-  useEffect(() => {
-    try {
-      sessionStorage.setItem('voli-splash', '1');
-    } catch {
-      /* nothing kept */
-    }
-    const t = setTimeout(onDone, 3250);
-    return () => clearTimeout(t);
-  }, [onDone]);
-  return (
-    <div className="relative min-h-full w-full overflow-hidden bg-[#070707] grid place-items-center" onClick={onDone} role="img" aria-label="Voli">
-      {/* A soft warm light behind the logo, and the pulse of a charge when the V fills */}
-      <div className="absolute w-[560px] h-[560px] rounded-full sp-glow" style={{ background: 'radial-gradient(closest-side, rgba(255,200,61,.16), rgba(255,200,61,.05) 55%, rgba(255,200,61,0))' }} />
-      <div className="absolute w-[220px] h-[220px] rounded-full border-2 border-[#FFC83D] sp-ring" />
-      <div className="absolute w-[220px] h-[220px] rounded-full border border-[#FFC83D] sp-ring sp-ring-2" />
-      <div className="relative flex flex-col items-center">
-        <svg viewBox="22 12 134 64" width="260" className="block overflow-visible" aria-hidden="true">
-          <defs>
-            <linearGradient id="sp-blade" x1="0.2" y1="1" x2="0.8" y2="0">
-              <stop offset="0" stopColor="#E09A00" />
-              <stop offset="0.45" stopColor="#FFC83D" />
-              <stop offset="1" stopColor="#FFE58A" />
-            </linearGradient>
-            <linearGradient id="sp-shine" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stopColor="#FFFFFF" stopOpacity="0" />
-              <stop offset="0.5" stopColor="#FFFFFF" stopOpacity="0.75" />
-              <stop offset="1" stopColor="#FFFFFF" stopOpacity="0" />
-            </linearGradient>
-            <clipPath id="sp-clip"><path d={V_BLADE} /></clipPath>
-          </defs>
-          {/* The V: drawn as a glowing line, thickened and filled, then it flies at the viewer */}
-          <g className="sp-zoom">
-            <path d={V_STROKE} pathLength={1} fill="none" stroke="#FFFFFF" strokeWidth="17" strokeLinecap="round" strokeLinejoin="round" className="sp-stroke" />
-            <path d={V_BLADE} pathLength={1} fill="url(#sp-blade)" fillOpacity="0" stroke="#FFC83D" strokeWidth="1.4" className="sp-line sp-fill" />
-            <g clipPath="url(#sp-clip)">
-              <rect x="40" y="10" width="26" height="70" fill="url(#sp-shine)" transform="skewX(-20)" className="sp-shine" />
-            </g>
-          </g>
-          {/* The letters, one after another, and the dot over the i */}
-          <g className="sp-away">
-            <path fillRule="evenodd" fill="#FFFFFF" d={WORD.o} className="sp-letter" style={{ animationDelay: '1.3s' }} />
-            <rect x={WORD.l[0]} y={WORD.l[1]} width={WORD.l[2]} height={WORD.l[3]} rx="5" fill="#FFFFFF" className="sp-letter" style={{ animationDelay: '1.42s' }} />
-            <rect x={WORD.i[0]} y={WORD.i[1]} width={WORD.i[2]} height={WORD.i[3]} rx="5" fill="#FFFFFF" className="sp-letter" style={{ animationDelay: '1.54s' }} />
-            <circle cx={WORD.dot[0]} cy={WORD.dot[1]} r={WORD.dot[2]} fill="#FFC83D" className="sp-dot" style={{ filter: 'drop-shadow(0 0 5px rgba(255,200,61,.9))' }} />
-          </g>
-        </svg>
-        <div className="sp-away flex flex-col items-center">
-          <p className="mt-6 text-[12px] font-semibold tracking-[0.32em] uppercase text-white/60 sp-tag">Вся зарядка Узбекистана</p>
-          {/* A charge bar filling to the full */}
-          <div className="mt-5 w-[150px] h-[4px] rounded-full bg-white/10 overflow-hidden sp-tag">
-            <div className="h-full rounded-full sp-bar" style={{ background: 'linear-gradient(90deg, #E09A00, #FFC83D, #FFE58A)', boxShadow: '0 0 10px rgba(255,200,61,.8)' }} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /** Six boxes over one real input, so paste and the phone's code suggestion both work. */
 function CodeInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
@@ -488,7 +431,7 @@ const AppleMark = () => (
  * The first screen: an electric car charging in Tashkent at dusk, the wordmark, three
  * short pages about Voli, and the two ways forward.
  */
-function Welcome({ slide, onSlide, onStart, onSignIn }: { slide: number; onSlide: (n: number) => void; onStart: () => void; onSignIn: () => void }) {
+function Welcome({ slide, onSlide, onStart, onSignIn, logoHidden = false }: { slide: number; onSlide: (n: number) => void; onStart: () => void; onSignIn: () => void; logoHidden?: boolean }) {
   const s = SLIDES[slide];
   return (
     <div className="relative min-h-full w-full overflow-hidden flex flex-col text-white bg-[#0a0a0a] pg-unblur" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -497,7 +440,8 @@ function Welcome({ slide, onSlide, onStart, onSignIn }: { slide: number; onSlide
       <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(8,10,18,.55) 0%, rgba(8,10,18,.1) 30%, rgba(8,10,18,0) 50%, rgba(10,10,10,.75) 72%, rgba(10,10,10,.96) 84%)' }} />
 
       <div className="relative pt-14 flex flex-col items-center px-6">
-        <Logo size={64} ink="#FFFFFF" />
+        {/* Hidden while the splash's wordmark flies here, so the two never show at once */}
+        <div data-welcome-logo style={{ opacity: logoHidden ? 0 : 1 }}><Logo size={64} ink="#FFFFFF" /></div>
         <h1 key={slide} className="mt-6 text-center text-[34px] font-extrabold leading-[1.1] tracking-tight pg-reveal" style={{ textShadow: "0 2px 18px rgba(0,0,0,.65)" }}>
           {s.a}<br /><span className="text-[#FFC83D]">{s.b}</span>
         </h1>
