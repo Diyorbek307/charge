@@ -29,6 +29,12 @@ export interface Demand {
   totals: { busyViews: number; lostSearches: number };
 }
 
+/** Networks and stations by how dependable they are; stations weakest first. */
+export interface Reliability {
+  networks: { operatorId: string; name: string; stations: number; score: number; weakest: { id: string; name: string; score: number } | null }[];
+  stations: { id: string; name: string; city: string; operator: string; score: number; starts: number | null; uptime: number | null; charges: number }[];
+}
+
 export interface Account {
   id: string;
   portal: Portal;
@@ -955,6 +961,7 @@ export const apiClient = {
   adminUsers: (portal: Portal) => request<AdminUsers>('/admin/users', { portal }),
   adminGrowth: () => request<Growth>('/admin/growth', { portal: 'admin' }),
   adminDemand: () => request<Demand>('/admin/demand', { portal: 'admin' }),
+  adminReliability: () => request<Reliability>('/admin/reliability', { portal: 'admin' }),
   /** Anonymous: no account goes with it. */
   reportDemand: (body: { kind: 'busy'; stationId: string } | { kind: 'search'; q: string; lat?: number; lng?: number }) => post<void>('/demand', body),
   setUserStatus: (portal: Portal, id: string, status: 'active' | 'blocked') =>

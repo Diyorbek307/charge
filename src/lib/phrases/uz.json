@@ -4181,5 +4181,15 @@
 "На 1 сум скидки": "1 so‘m chegirmaga",
 "«На 1 сум скидки» — сколько выручки пришло на каждый сум скидки. Меньше 2 — акция дорогая, больше 5 — окупается хорошо.": "«1 so‘m chegirmaga» — har bir so‘m chegirmaga qancha tushum kelgani. 2 dan kam — aksiya qimmat, 5 dan ko‘p — yaxshi o‘zini oqlaydi.",
 "По акциям ещё не было зарядок": "Aksiyalar bo‘yicha hali zaryad bo‘lmagan",
-"сеть": "tarmoq"
+"сеть": "tarmoq",
+"Надёжность {0}%": "Ishonchlilik {0}%",
+"Удачных запусков за 30 дней": "30 kunda muvaffaqiyatli ishga tushirishlar",
+"Удачных запусков за 30 дней · в работе {0}% времени": "30 kunda muvaffaqiyatli ishga tushirishlar · vaqtning {0}% ishlagan",
+"Надёжность станций": "Stansiyalar ishonchliligi",
+"Надёжность": "Ishonchlilik",
+"Рейтинг сетей": "Tarmoqlar reytingi",
+"Доля удачных запусков и время в работе за 30 дней. Счёт — меньшее из двух, взвешенное по числу зарядок.": "30 kunlik muvaffaqiyatli ishga tushirishlar ulushi va ishlash vaqti. Ball — ikkalasining kichigi, zaryadlar soni bo‘yicha.",
+"Пока мало зарядок для оценки": "Baholash uchun zaryadlar hali kam",
+"Станции, которые подводят": "Pand beradigan stansiyalar",
+"Все станции надёжнее 95%": "Barcha stansiyalar 95% dan ishonchli"
 }

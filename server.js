@@ -21,6 +21,7 @@ import "./server/accountDeletion.js";
 import "./server/signin.js";
 import "./server/adminBootstrap.js";
 import "./server/demand.js";
+import { startReliability } from "./server/reliability.js";
 import "./server/tts.js";
 import "./server/places.js";
 import { errorHandler } from "./server/monitoring.js";
@@ -141,6 +142,7 @@ errorHandler(app);
 
 // Load the database before accepting traffic, so no request sees empty state.
 await db.ready;
+startReliability();
 
 const server = app.listen(PORT, () => {
   console.log(`Voli running on port ${PORT}`);

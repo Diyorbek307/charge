@@ -4181,5 +4181,15 @@
 "На 1 сум скидки": "Per 1 sum of discount",
 "«На 1 сум скидки» — сколько выручки пришло на каждый сум скидки. Меньше 2 — акция дорогая, больше 5 — окупается хорошо.": "“Per 1 sum of discount” is the revenue each sum of discount brought. Under 2 the promotion is costly, over 5 it pays off well.",
 "По акциям ещё не было зарядок": "No charges with promotions yet",
-"сеть": "network"
+"сеть": "network",
+"Надёжность {0}%": "Reliability {0}%",
+"Удачных запусков за 30 дней": "Successful starts in 30 days",
+"Удачных запусков за 30 дней · в работе {0}% времени": "Successful starts in 30 days · working {0}% of the time",
+"Надёжность станций": "Station reliability",
+"Надёжность": "Reliability",
+"Рейтинг сетей": "Network ranking",
+"Доля удачных запусков и время в работе за 30 дней. Счёт — меньшее из двух, взвешенное по числу зарядок.": "Share of successful starts and time in working order over 30 days. The score is the lower of the two, weighted by charges.",
+"Пока мало зарядок для оценки": "Not enough charges to rate yet",
+"Станции, которые подводят": "Stations that let drivers down",
+"Все станции надёжнее 95%": "Every station is above 95%"
 }

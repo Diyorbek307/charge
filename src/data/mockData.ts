@@ -27,6 +27,8 @@ export interface Station {
   image: string;
   /** More photos of the site, after the cover, set by the network. */
   gallery?: { id: string; at: string }[];
+  /** Starts that worked and time in working order over 30 days; the score is the lower. */
+  reliability?: { score: number; starts: number | null; uptime: number | null; charges: number } | null;
   hours: string;
   distance?: number;
   amenities: string[];

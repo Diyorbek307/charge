@@ -3,7 +3,7 @@ import {
   MapPin, Navigation, Search, Zap, Clock, Star, ChevronRight, Home, X, Battery, BatteryCharging,
   Scan, History, User, ArrowLeft, CheckCircle, Heart, Route, ChevronDown, Plus, Wifi, Coffee,
   ParkingCircle, Toilet, CalendarCheck, Minus, AlertTriangle, Send, Wallet, ArrowDownCircle,
-  Building2, Moon, ScanFace, Percent, Share2,
+  Building2, Moon, ScanFace, Percent, Share2, ShieldCheck,
 } from 'lucide-react';
 import { Station } from '../data/mockData';
 import { useLiveStations } from '../lib/live';
@@ -273,6 +273,12 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
             <Clock size={12} />{closed ? `Закрыто · ${station.hours}` : `Открыто · ${station.hours}`}
           </span>
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-xs font-semibold text-slate-700"><Star size={12} className="fill-[#FFC83D] text-[#FFC83D]" />{station.rating.toFixed(1)}</span>
+          {station.reliability && (
+            <span title={`Удачных запусков за 30 дней${station.reliability.uptime !== null ? ` · в работе ${Math.round(station.reliability.uptime)}% времени` : ''}`}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${station.reliability.score >= 95 ? 'bg-emerald-50 text-emerald-700' : station.reliability.score >= 85 ? 'bg-amber-50 text-amber-800' : 'bg-red-50 text-red-600'}`}>
+              <ShieldCheck size={12} />{`Надёжность ${Math.round(station.reliability.score)}%`}
+            </span>
+          )}
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-xs font-semibold text-slate-700"><Zap size={12} />{`до ${maxKw} кВт`}</span>
           {drive !== null && <span className="inline-flex items-center gap-1 text-xs text-slate-500">{`${hm(drive)} в пути`}</span>}
         </div>
