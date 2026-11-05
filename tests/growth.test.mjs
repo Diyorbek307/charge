@@ -72,3 +72,16 @@ test('a network cannot read the growth of the whole platform', async () => {
   const token = await login('operator', 'operator@greencharge.uz', 'Operator2026');
   assert.equal((await call('/admin/growth', { token })).status, 403);
 });
+
+test('the investor page shows months in order, closed ones growing from the rollups and the history', async () => {
+  const token = await login('admin', 'admin@voli.uz', 'Admin2026');
+  const r = await call('/admin/investor', { token });
+  assert.equal(r.status, 200);
+  const { months, last, yearRunRate } = r.data;
+  assert.deepEqual(months.map(m => m.month), [...months.map(m => m.month)].sort());
+  assert.equal(months.filter(m => m.partial).length, 1, 'only the current month is still running');
+  assert.ok(months.every(m => m.revenue >= 0 && m.commission <= m.revenue));
+  assert.equal(yearRunRate, last.commission * 12);
+  const op = await login('operator', 'operator@greencharge.uz', 'Operator2026');
+  assert.equal((await call('/admin/investor', { token: op })).status, 403);
+});

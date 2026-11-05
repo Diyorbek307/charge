@@ -587,3 +587,70 @@ export function growthFor({ weeks = 8 } = {}) {
 
   return { funnel, active: { dau, wau, mau, stickiness: mau ? round((dau / mau) * 100) : 0 }, cohorts };
 }
+
+/**
+ * The figures an investor asks for, month by month: turnover through Voli,
+ * our commission, charges, energy, drivers who charged, the average charge,
+ * and the growth of each on the month before. Months before the detailed
+ * history come from the monthly rollups, which carry no driver counts.
+ */
+export function investorFor() {
+  const now = Date.now();
+  const byMonth = new Map();
+  const row = month => byMonth.get(month) ?? byMonth.set(month, { month, revenue: 0, commission: 0, sessions: 0, energy: 0, drivers: new Set(), detailed: false }).get(month);
+
+  for (const r of db.data.monthly ?? []) {
+    const m = row(r.month);
+    m.revenue += r.revenue;
+    m.commission += Math.round(r.revenue * ((r.commissionRate ?? rateOf(r.operatorId)) / 100));
+    m.sessions += r.sessions;
+    m.energy += r.energy;
+  }
+  // Only a month wholly inside the detailed history replaces its rollup; one it starts in the middle of keeps it.
+  const historyFrom = Date.parse(db.data.historyStart ?? 0);
+  const fullMonth = month => byMonth.has(month) ? Date.parse(`${month}-01T00:00:00+05:00`) >= historyFrom : true;
+  for (const s of db.data.sessions) {
+    if (s.status !== 'completed') continue;
+    const month = monthKey(Date.parse(s.start));
+    if (!fullMonth(month)) continue;
+    const m = row(month);
+    // A month in the detailed history is counted from the charges themselves.
+    if (!m.detailed) Object.assign(m, { revenue: 0, commission: 0, sessions: 0, energy: 0, detailed: true });
+    m.revenue += s.cost;
+    m.commission += s.cost * (rateFor(s) / 100);
+    m.sessions += 1;
+    m.energy += s.energy;
+    m.drivers.add(s.userId);
+  }
+
+  const current = monthKey(now);
+  const months = [...byMonth.values()]
+    .sort((a, b) => a.month.localeCompare(b.month))
+    .map(m => ({
+      month: m.month,
+      partial: m.month === current,
+      revenue: Math.round(m.revenue),
+      commission: Math.round(m.commission),
+      sessions: m.sessions,
+      energy: Math.round(m.energy),
+      drivers: m.detailed ? m.drivers.size : null,
+      avgCheck: m.sessions ? Math.round(m.revenue / m.sessions) : 0,
+    }));
+  const closed = months.filter(m => !m.partial);
+  const last = closed.at(-1);
+  const prev = closed.at(-2);
+  const first = closed[0];
+  const growth = key => (last && prev && prev[key] ? round(((last[key] - prev[key]) / prev[key]) * 100, 1) : null);
+  // Compound monthly growth of turnover over the whole history.
+  const span = closed.length - 1;
+  const cmgr = span > 0 && first.revenue ? round((Math.pow(last.revenue / first.revenue, 1 / span) - 1) * 100, 1) : null;
+  const yearRunRate = last ? last.commission * 12 : 0;
+  return {
+    months,
+    last: last ?? null,
+    growth: { revenue: growth('revenue'), commission: growth('commission'), sessions: growth('sessions'), drivers: growth('drivers') },
+    cmgr,
+    yearRunRate,
+    network: { stations: db.data.stations.length, networks: db.data.operators.filter(o => o.status === 'active').length, cities: new Set(db.data.stations.map(s => s.city)).size },
+  };
+}

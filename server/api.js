@@ -9,7 +9,7 @@ import { normalizePhone, issueCode, consumeCode, PURPOSES, smsConfigured } from 
 import { submitLead, listLeads, updateLead, LEAD_KINDS } from './leads.js';
 import { notifyTeam, mailConfigured, mailbox, mailStatus, sendTestLetter } from './mail.js';
 import { joinByCode, onFriendPaid, referralFor } from './referrals.js';
-import { analyticsFor, adminUsers, setUserStatus, isBlocked, monthSpend, growthFor } from './analytics.js';
+import { analyticsFor, adminUsers, setUserStatus, isBlocked, monthSpend, growthFor, investorFor } from './analytics.js';
 import { demoEnergy } from './history.js';
 import { riskReport, reviewFinding, cdrReport, bandFor, tariffBands, setTariffBands } from './admin.js';
 import { verifyInitData, accountByTelegram, telegramConfigured } from './telegram.js';
@@ -2993,6 +2993,10 @@ api.get('/analytics', requireAuth('admin', 'operator', 'business', 'driver'), (r
 
 api.get('/admin/growth', requireAuth('admin'), (_req, res) => {
   res.json(growthFor());
+});
+
+api.get('/admin/investor', requireAuth('admin'), (_req, res) => {
+  res.json(investorFor());
 });
 
 /** Refunds a charge to the wallet it was paid from. Once per transaction. */

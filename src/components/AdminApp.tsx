@@ -11,6 +11,7 @@ import AdminPayments from './admin/Payments';
 import AdminSettlement from './admin/Settlement';
 import AdminCommissions from './admin/Commissions';
 import AdminAnalytics from './admin/Analytics';
+import Investor from './admin/Investor';
 import AdminInsights from './admin/Insights';
 import AdminAudit from './admin/Audit';
 import AdminRisk from './admin/Risk';
@@ -26,14 +27,13 @@ import { DirectSettlement } from './admin/DirectSettlement';
 import { AdminSupport } from './admin/Support';
 import {
   LayoutDashboard, MapPin, Users, Activity, DollarSign, BarChart2, Settings, LogOut, Zap, Shield,
-  Building2, Brain, ScrollText, ClipboardCheck, Percent, UserCheck, Banknote, Tag, Menu, Inbox, Siren, Home, ScanFace, Landmark, MessageCircle, Coffee, SlidersHorizontal, Megaphone
-} from 'lucide-react';
+  Building2, Brain, ScrollText, ClipboardCheck, Percent, UserCheck, Banknote, Tag, Menu, Inbox, Siren, Home, ScanFace, Landmark, MessageCircle, Coffee, SlidersHorizontal, Megaphone, TrendingUp } from 'lucide-react';
 import { useI18n } from '../lib/i18n';
 import SidebarThemeToggle from './SidebarThemeToggle';
 import AIChat from './AIChat';
 import { LogoMark } from '../landing/Logo';
 
-type Page = 'dashboard' | 'promos' | 'map' | 'sos' | 'hosts' | 'credit' | 'direct' | 'support' | 'operators' | 'leads' | 'users' | 'sessions' | 'payments' | 'settlement' | 'analytics' | 'ai' | 'fraud' | 'cdr' | 'commissions' | 'tariffs_global' | 'partners' | 'platform' | 'audit' | 'roles' | 'settings' | 'system_health';
+type Page = 'investor' | 'dashboard' | 'promos' | 'map' | 'sos' | 'hosts' | 'credit' | 'direct' | 'support' | 'operators' | 'leads' | 'users' | 'sessions' | 'payments' | 'settlement' | 'analytics' | 'ai' | 'fraud' | 'cdr' | 'commissions' | 'tariffs_global' | 'partners' | 'platform' | 'audit' | 'roles' | 'settings' | 'system_health';
 
 function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current: Page; onChange: (p: Page) => void; onBack: () => void; isOpen?: boolean; onClose?: () => void }) {
   const { t } = useI18n();
@@ -75,6 +75,7 @@ function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current:
       label: t('nav.group.analyticsAi'),
       items: [
         { id: 'analytics' as Page, label: t('nav.analytics'), icon: <BarChart2 size={14} /> },
+        { id: 'investor' as Page, label: 'Для инвестора', icon: <TrendingUp size={14} /> },
         { id: 'ai' as Page, label: 'Подсказки', icon: <Brain size={14} /> },
         { id: 'fraud' as Page, label: 'Риски и фрод', icon: <Shield size={14} /> },
         { id: 'cdr' as Page, label: 'Проверка CDR', icon: <ClipboardCheck size={14} /> },
@@ -189,7 +190,7 @@ export default function AdminApp({ onBack }: { onBack: () => void }) {
       map: <AdminNetworkMap />, sos: <AdminSos />, support: <AdminSupport />, hosts: <AdminHosts />, credit: <AdminCredit />, operators: <AdminOperators onNavigate={go} />, leads: <LeadsPage />, users: <AdminUsers />,
       settlement: <AdminSettlement />, direct: <DirectSettlement portal="admin" />, commissions: <AdminCommissions />, tariffs_global: <AdminTariffs />, partners: <AdminPartners />, platform: <AdminPlatform />, promos: <AdminPromos />,
       sessions: <AdminSessions />, payments: <AdminPayments />,
-      analytics: <AdminAnalytics />, ai: <AdminInsights onNavigate={go} />, fraud: <AdminRisk />,
+      analytics: <AdminAnalytics />, investor: <Investor />, ai: <AdminInsights onNavigate={go} />, fraud: <AdminRisk />,
       cdr: <AdminCdr />, audit: <AdminAudit />, roles: <AdminRoles />,
       settings: <AccountSettings portal="admin"><DemoReset /></AccountSettings>,
       system_health: <AdminHealth />,

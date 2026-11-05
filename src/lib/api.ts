@@ -48,6 +48,18 @@ export interface ReconcileResult {
   diffs: { kind: string; note: string; order?: ReconcileOrder; line?: { id: string | null; order: string | null; amount: number; paid: boolean } }[];
 }
 
+/** Voli month by month for an investor; `drivers` is null for months before the detailed history. */
+export interface InvestorMonth { month: string; partial: boolean; revenue: number; commission: number; sessions: number; energy: number; drivers: number | null; avgCheck: number }
+export interface Investor {
+  months: InvestorMonth[];
+  last: InvestorMonth | null;
+  growth: { revenue: number | null; commission: number | null; sessions: number | null; drivers: number | null };
+  /** Compound monthly growth of turnover, %. */
+  cmgr: number | null;
+  yearRunRate: number;
+  network: { stations: number; networks: number; cities: number };
+}
+
 export interface Account {
   id: string;
   portal: Portal;
@@ -973,6 +985,7 @@ export const apiClient = {
     post<{ status: string }>(`/ocpp/chargepoints/${stationId}/command`, body, portal),
   adminUsers: (portal: Portal) => request<AdminUsers>('/admin/users', { portal }),
   adminGrowth: () => request<Growth>('/admin/growth', { portal: 'admin' }),
+  adminInvestor: () => request<Investor>('/admin/investor', { portal: 'admin' }),
   adminDemand: () => request<Demand>('/admin/demand', { portal: 'admin' }),
   adminReliability: () => request<Reliability>('/admin/reliability', { portal: 'admin' }),
   ownPaymentProblems: () => request<{ problems: ReconcileProblem[] }>('/admin/reconcile', { portal: 'admin' }),
