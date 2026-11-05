@@ -44,6 +44,8 @@ import { openWindow, autochargeFor, unlink as unlinkAutocharge } from './autocha
 export const api = express.Router();
 // Photos (a face for credit, a station, a support message) are larger than an ordinary request.
 api.use(/^\/(credit\/|stations\/[^/]+\/info$|support\/messages$|admin\/support\/)/, express.json({ limit: '700kb' }));
+// A provider's statement for the reconciliation can run to a couple of megabytes.
+api.use('/admin/reconcile', express.json({ limit: '2.5mb' }));
 api.use(express.json());
 
 // Carries the current request through synchronous handler code so emit() can

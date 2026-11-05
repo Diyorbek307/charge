@@ -3,6 +3,7 @@ import { Wallet, ArrowDownToLine, Receipt, XCircle, RotateCcw } from 'lucide-rea
 import { useSync } from '../../lib/sync';
 import { useAnalytics, money, num, dateTime } from '../../lib/analytics';
 import ExportButton from '../ExportButton';
+import Reconcile from './Reconcile';
 import { Page, Card, Kpi, Loading, ErrorNote, Pill, Segmented, SearchBox, Empty, STATUS_PILL } from './ui';
 
 const PROVIDER = { payme: { label: 'Payme', color: '#33CCCC' }, click: { label: 'Click', color: '#0060F0' } };
@@ -173,6 +174,7 @@ export default function AdminPayments() {
           {tab === 'charges' ? `Последние ${Math.min(charges.length, 60)} оплат` : `Последние ${topups.length} пополнений`} · полный реестр — в экспорте
         </p>
       </Card>
+      <Reconcile />
     </Page>
   );
 }

@@ -35,6 +35,19 @@ export interface Reliability {
   stations: { id: string; name: string; city: string; operator: string; score: number; starts: number | null; uptime: number | null; charges: number }[];
 }
 
+/** One of our top-up orders as the reconciliation shows it. */
+export interface ReconcileOrder { id: string; provider: string; amount: number; status: string; created: string; paidAt: string | null; userId: string; theirs: string | null }
+export interface ReconcileProblem { kind: string; note: string; order: ReconcileOrder }
+/** Only the lines where our orders and the provider's statement disagree. */
+export interface ReconcileResult {
+  provider: string;
+  lines: number;
+  ourPaid: number;
+  theirPaid: number;
+  difference: number;
+  diffs: { kind: string; note: string; order?: ReconcileOrder; line?: { id: string | null; order: string | null; amount: number; paid: boolean } }[];
+}
+
 export interface Account {
   id: string;
   portal: Portal;
@@ -962,6 +975,8 @@ export const apiClient = {
   adminGrowth: () => request<Growth>('/admin/growth', { portal: 'admin' }),
   adminDemand: () => request<Demand>('/admin/demand', { portal: 'admin' }),
   adminReliability: () => request<Reliability>('/admin/reliability', { portal: 'admin' }),
+  ownPaymentProblems: () => request<{ problems: ReconcileProblem[] }>('/admin/reconcile', { portal: 'admin' }),
+  reconcile: (body: { provider: string; statement: string; from?: string; to?: string }) => post<ReconcileResult>('/admin/reconcile', body, 'admin'),
   /** Anonymous: no account goes with it. */
   reportDemand: (body: { kind: 'busy'; stationId: string } | { kind: 'search'; q: string; lat?: number; lng?: number }) => post<void>('/demand', body),
   setUserStatus: (portal: Portal, id: string, status: 'active' | 'blocked') =>
