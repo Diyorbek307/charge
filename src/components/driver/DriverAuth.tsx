@@ -56,6 +56,17 @@ export default function DriverAuth() {
   const demo = credentials.find(c => c.portal === 'driver');
   const [step, setStep] = useState<Step>('welcome');
   const [splash, setSplash] = useState(() => !splashSeen());
+  // The welcome's words leave first, then the sign-in takes the photo over; coming back, the photo opens up again.
+  const [leaving, setLeaving] = useState(false);
+  const [returning, setReturning] = useState(false);
+  const goSignIn = () => {
+    if (leaving) return;
+    setLeaving(true);
+    setTimeout(() => {
+      setLeaving(false);
+      setStep('start');
+    }, 330);
+  };
   // Field hints appear only after the first try to go on.
   const [touched, setTouched] = useState(false);
   const [slide, setSlide] = useState(0);
@@ -209,7 +220,7 @@ export default function DriverAuth() {
   if (step === 'welcome') {
     return (
       <div className="relative h-full min-h-full w-full">
-        <Welcome slide={slide} onSlide={setSlide} onStart={() => setStep('start')} onSignIn={() => setStep('start')} logoHidden={splash} />
+        <Welcome slide={slide} onSlide={setSlide} onStart={goSignIn} onSignIn={goSignIn} logoHidden={splash} leaving={leaving} returning={returning} />
         {splash && <Splash onDone={() => setSplash(false)} />}
       </div>
     );
@@ -219,6 +230,7 @@ export default function DriverAuth() {
   const back = () => {
     setError(null);
     setTouched(false);
+    if (step === 'start' || step === 'password') setReturning(true);
     setStep(step === 'start' || step === 'password' ? 'welcome' : 'start');
   };
   // Shown under the field once the driver has tried: a number or an address, said plainly.
@@ -239,22 +251,22 @@ export default function DriverAuth() {
   return (
     <div className="relative min-h-full w-full flex flex-col bg-[#070707] text-white overflow-hidden" style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* The car at the charger, fading into the dark, sparks rising over it */}
-      <div className="absolute inset-x-0 top-0 h-[330px] overflow-hidden" aria-hidden="true">
-        <img src="/welcome/welcome.jpg" alt="" className="w-full h-full object-cover object-[50%_74%] pg-kenburns" />
+      <div className="absolute inset-x-0 top-0 h-[330px] overflow-hidden sp5-hero-in" aria-hidden="true">
+        <img src="/welcome/welcome.jpg" alt="" className="w-full h-full object-cover object-[50%_74%] sp5-img-in" />
         <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(7,7,7,.55) 0%, rgba(7,7,7,.15) 35%, rgba(7,7,7,.75) 72%, #070707 100%)' }} />
         {SPARKS.map((sp, i) => (
           <span key={i} className="absolute bottom-6 rounded-full sp4-float" style={{ left: `${sp.x}%`, width: sp.s, height: sp.s, background: '#FFE27A', boxShadow: '0 0 8px 2px rgba(255,200,61,.7)', animationDelay: `${sp.d}s`, animationDuration: `${sp.t}s` }} />
         ))}
       </div>
 
-      <div className="relative px-5 pt-3 flex items-center justify-between">
+      <div className="relative px-5 pt-3 flex items-center justify-between sp5-in" style={{ animationDelay: '.3s' }}>
         <button onClick={back} aria-label="Назад" className="w-10 h-10 rounded-full grid place-items-center text-white bg-white/10 border border-white/15 backdrop-blur-md hover:bg-white/20"><ArrowLeft size={19} /></button>
         <Logo size={28} ink="#FFFFFF" />
         <span className="w-10" />
       </div>
 
       {/* The greeting, a shine running through it */}
-      <div className="relative px-6 pt-[150px]">
+      <div className="relative px-6 pt-[150px] sp5-in" style={{ animationDelay: '.4s' }}>
         <h1 key={title} className="text-[36px] leading-[1.05] font-extrabold tracking-tight pg-reveal">
           <span className="bg-clip-text text-transparent sp4-shimmer" style={{ backgroundImage: 'linear-gradient(100deg, #FFFFFF 0%, #FFFFFF 40%, #FFE27A 50%, #FFFFFF 60%, #FFFFFF 100%)' }}>{title}</span><span className="text-[#FFC83D]">.</span>
         </h1>
@@ -262,7 +274,7 @@ export default function DriverAuth() {
       </div>
 
       {/* The glass card with the form */}
-      <div className="relative mx-4 mt-6 mb-6 rounded-[28px] p-5 bg-white/[0.06] border border-white/10 backdrop-blur-xl pg-card-up" style={{ boxShadow: '0 24px 60px rgba(0,0,0,.55)' }}>
+      <div className="relative mx-4 mt-6 mb-6 rounded-[28px] p-5 bg-white/[0.06] border border-white/10 backdrop-blur-xl pg-card-up" style={{ boxShadow: '0 24px 60px rgba(0,0,0,.55)', animationDelay: '.48s' }}>
         <span className="absolute inset-x-8 top-0 h-px" style={{ background: 'linear-gradient(90deg, rgba(255,200,61,0), rgba(255,200,61,.7), rgba(255,200,61,0))' }} aria-hidden="true" />
         {(step === 'start' || step === 'password') && (
           <div className="grid grid-cols-2 gap-1 p-1 bg-white/[0.06] border border-white/[0.08] rounded-2xl mb-5" role="tablist" aria-label="Способ входа">
@@ -274,7 +286,7 @@ export default function DriverAuth() {
         )}
 
         {step === 'start' && (
-          <form onSubmit={e => { setTouched(true); if (!validTarget(to)) { e.preventDefault(); return; } void sendCode(e); }} noValidate className="space-y-3">
+          <form onSubmit={e => { setTouched(true); if (!validTarget(to)) { e.preventDefault(); return; } void sendCode(e); }} noValidate className="space-y-3 sp5-step">
             <TargetField id="driver-signin-to" value={to} onChange={setTo} isEmail={isEmail} className={field(!!toProblem)} />
             <FieldError text={toProblem} />
             <ErrorBox error={error} />
@@ -284,7 +296,7 @@ export default function DriverAuth() {
         )}
 
         {step === 'password' && (
-          <form onSubmit={e => { setTouched(true); if (!validTarget(to) || !password) { e.preventDefault(); return; } void signInWithPassword(e); }} noValidate className="space-y-3">
+          <form onSubmit={e => { setTouched(true); if (!validTarget(to) || !password) { e.preventDefault(); return; } void signInWithPassword(e); }} noValidate className="space-y-3 sp5-step">
             <TargetField id="driver-login" value={to} onChange={setTo} isEmail={isEmail} className={field(!!toProblem)} />
             <FieldError text={toProblem} />
             <label className="relative block">
@@ -323,7 +335,7 @@ export default function DriverAuth() {
         )}
 
         {step === 'code' && sentTo && (
-          <form onSubmit={checkCode}>
+          <form onSubmit={checkCode} className="sp5-step">
             {demoCode && <p className="text-xs text-[#FFE7A0] bg-[#FFC83D]/10 border border-[#FFC83D]/25 rounded-xl px-3 py-2.5 text-center">{sentTo.channel === 'email' ? 'Демо-режим: письмо не отправляется. Ваш код —' : 'Демо-режим: SMS не отправляется. Ваш код —'} <b className="font-mono tracking-widest">{demoCode}</b></p>}
             <CodeInput value={code} onChange={setCode} />
             <ErrorBox error={error} />
@@ -335,7 +347,7 @@ export default function DriverAuth() {
         )}
 
         {step === 'name' && (
-          <form onSubmit={finish} className="space-y-3">
+          <form onSubmit={finish} className="space-y-3 sp5-step">
             <input id="driver-signup-name" value={name} onChange={e => setName(e.target.value)} autoComplete="name" autoFocus placeholder="Имя и фамилия" className={`${field(false)} px-4`} />
             <input value={ref} onChange={e => setRef(e.target.value.toUpperCase())} maxLength={12} autoComplete="off" placeholder="Код друга (если есть)" className={`${field(false)} px-4 h-[48px] text-sm`} />
             <p className="text-xs text-white/40">Имя увидят только поддержка и станция в чеке.</p>
@@ -345,7 +357,7 @@ export default function DriverAuth() {
         )}
 
         {step === 'totp' && (
-          <form onSubmit={checkTotp}>
+          <form onSubmit={checkTotp} className="sp5-step">
             <CodeInput value={code} onChange={setCode} />
             <ErrorBox error={error} />
             <div className="mt-4"><YellowButton busy={busy} disabled={busy || code.length !== 6}>Войти</YellowButton></div>
@@ -444,7 +456,7 @@ const AppleMark = () => (
  * The first screen: an electric car charging in Tashkent at dusk, the wordmark, three
  * short pages about Voli, and the two ways forward.
  */
-function Welcome({ slide, onSlide, onStart, onSignIn, logoHidden = false }: { slide: number; onSlide: (n: number) => void; onStart: () => void; onSignIn: () => void; logoHidden?: boolean }) {
+function Welcome({ slide, onSlide, onStart, onSignIn, logoHidden = false, leaving = false, returning = false }: { slide: number; onSlide: (n: number) => void; onStart: () => void; onSignIn: () => void; logoHidden?: boolean; leaving?: boolean; returning?: boolean }) {
   const s = SLIDES[slide];
   return (
     <div className="relative min-h-full w-full overflow-hidden flex flex-col text-white bg-[#0a0a0a] pg-unblur" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -452,7 +464,7 @@ function Welcome({ slide, onSlide, onStart, onSignIn, logoHidden = false }: { sl
       <img src="/welcome/welcome.jpg" alt="" aria-hidden="true" className="absolute inset-x-0 top-0 w-full h-full object-cover object-[50%_40%] pg-kenburns" />
       <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(8,10,18,.55) 0%, rgba(8,10,18,.1) 30%, rgba(8,10,18,0) 50%, rgba(10,10,10,.75) 72%, rgba(10,10,10,.96) 84%)' }} />
 
-      <div className="relative pt-14 flex flex-col items-center px-6">
+      <div className={`relative pt-14 flex flex-col items-center px-6 ${leaving ? 'sp5-out' : returning ? 'sp5-in' : ''}`} style={returning && !leaving ? { animationDelay: '.3s' } : undefined}>
         {/* Hidden while the splash's wordmark flies here, so the two never show at once */}
         <div data-welcome-logo style={{ opacity: logoHidden ? 0 : 1 }}><Logo size={64} ink="#FFFFFF" /></div>
         <h1 key={slide} className="mt-6 text-center text-[34px] font-extrabold leading-[1.1] tracking-tight pg-reveal" style={{ textShadow: "0 2px 18px rgba(0,0,0,.65)" }}>
@@ -460,7 +472,7 @@ function Welcome({ slide, onSlide, onStart, onSignIn, logoHidden = false }: { sl
         </h1>
       </div>
 
-      <div className="relative mt-auto px-6 pb-8">
+      <div className={`relative mt-auto px-6 pb-8 ${leaving ? 'sp5-out' : returning ? 'sp5-in' : ''}`} style={returning && !leaving ? { animationDelay: '.38s' } : undefined}>
         <p key={`t${slide}`} className="text-center text-[15px] text-white/85 leading-snug min-h-[44px] pg-reveal">{s.text}</p>
         <div className="mt-5 flex justify-center gap-2" role="tablist" aria-label="О Voli">
           {SLIDES.map((_, i) => (

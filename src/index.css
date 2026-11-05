@@ -900,6 +900,17 @@ input::-ms-reveal, input::-ms-clear { display: none; }
 .sp4-shimmer { background-size: 250% 100%; animation: pg-shine 4s linear infinite; }
 .sp4-float { opacity: 0; animation: sp4-float 3.6s ease-in infinite; }
 @keyframes sp4-float { 0% { opacity: 0; transform: translateY(0) scale(.6); } 20% { opacity: .9; } 100% { opacity: 0; transform: translateY(-190px) scale(1); } }
+/* Between the welcome and the sign-in: the words leave, the photo shrinks into the header (on the way back the welcome comes out of a blur), the rest comes in piece by piece. */
+.sp5-out { animation: sp5-out .3s cubic-bezier(.4,0,1,1) forwards; }
+@keyframes sp5-out { to { opacity: 0; transform: translateY(18px); } }
+.sp5-hero-in { animation: sp5-hero-in .65s cubic-bezier(.65,0,.25,1) both; }
+@keyframes sp5-hero-in { from { height: 100%; } }
+.sp5-img-in { animation: sp5-img-in .65s cubic-bezier(.65,0,.25,1) both, pg-kenburns 18s ease-out both; }
+@keyframes sp5-img-in { from { object-position: 50% 40%; } }
+.sp5-in { animation: sp5-in .5s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes sp5-in { from { opacity: 0; transform: translateY(14px); } }
+.sp5-step { animation: sp5-step .38s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes sp5-step { from { opacity: 0; transform: translateX(22px); } }
 /* The welcome photo drifts closer, slowly. */
 .pg-kenburns { animation: pg-kenburns 18s ease-out both; transform-origin: 50% 60%; }
 @keyframes pg-kenburns { from { transform: scale(1.12); } to { transform: scale(1); } }
