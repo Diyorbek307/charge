@@ -850,6 +850,40 @@ nav::-webkit-scrollbar { display: none; }
 @keyframes pg-sheet-out { to { transform: translateY(105%); } }
 .pg-toast-out { animation: pg-toast-out .25s ease-in both !important; }
 @keyframes pg-toast-out { to { opacity: 0; transform: translateY(-14px) scale(.96); } }
+/* Our own eye shows the password; Edge's built-in one would be a second. */
+input::-ms-reveal, input::-ms-clear { display: none; }
+/* Splash: the V is drawn as a line, thickens and fills, the letters come out of a blur, then the V flies at the viewer. */
+.pg-sp-grid { animation: pg-sp-fade .8s ease-out both; }
+.pg-sp-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: pg-sp-draw .9s cubic-bezier(.6,0,.2,1) .15s both; }
+.pg-sp-thick { animation: pg-sp-draw .9s cubic-bezier(.6,0,.2,1) .15s both, pg-sp-thick .45s cubic-bezier(.3,.7,.2,1) 1.05s both; }
+.pg-sp-fill { animation: pg-sp-fill .45s ease-out 1.05s both; }
+.pg-sp-word { animation: pg-sp-word .6s cubic-bezier(.2,.7,.2,1) 1.35s both; }
+.pg-sp-tag { animation: pg-sp-word .6s cubic-bezier(.2,.7,.2,1) 1.6s both; }
+.pg-sp-zoom { transform-origin: 30% 50%; animation: pg-sp-zoom .7s cubic-bezier(.7,0,.3,1) 2.35s both; }
+.pg-sp-out { animation: pg-sp-out .35s ease-in 2.7s both; }
+.pg-sp-car { animation: pg-sp-car 1.5s ease-out both; }
+.pg-sp-flash { opacity: 0; animation: pg-sp-flash .5s ease-out 1.05s both; }
+@keyframes pg-sp-car { 0%, 75% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes pg-sp-flash { 0% { opacity: 0; } 20% { opacity: .35; } 35% { opacity: .05; } 50% { opacity: .22; } 100% { opacity: 0; } }
+/* After sign-in the app comes out of the blur. */
+.pg-unblur { animation: pg-unblur .55s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes pg-unblur { from { filter: blur(14px); opacity: .4; transform: scale(1.03); } }
+@keyframes pg-sp-fade { from { opacity: 0; } }
+@keyframes pg-sp-draw { to { stroke-dashoffset: 0; } }
+@keyframes pg-sp-thick { from { stroke-width: 1.6; stroke: #FFC83D; } to { stroke-width: 17; stroke: #FFFFFF; } }
+@keyframes pg-sp-fill { from { fill-opacity: 0; } to { fill-opacity: 1; } }
+@keyframes pg-sp-word { from { opacity: 0; filter: blur(8px); transform: translateX(-10px); } }
+@keyframes pg-sp-zoom { to { transform: scale(14); opacity: 0; } }
+@keyframes pg-sp-out { to { opacity: 0; visibility: hidden; } }
+/* Sign-in: lightning over the dark top, now and then; the card rides up from below. */
+.pg-bolt { opacity: 0; animation: pg-bolt 5.5s linear 1.2s infinite; }
+@keyframes pg-bolt { 0%, 86%, 100% { opacity: 0; } 87% { opacity: .95; } 88% { opacity: .15; } 89.5% { opacity: .85; } 92% { opacity: 0; } }
+.pg-flash { opacity: 0; animation: pg-flash 5.5s linear 1.2s infinite; }
+@keyframes pg-flash { 0%, 86%, 100% { opacity: 0; } 87% { opacity: .22; } 88% { opacity: 0; } 89.5% { opacity: .14; } 92% { opacity: 0; } }
+.pg-card-up { animation: pg-card-up .6s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes pg-card-up { from { transform: translateY(70px); opacity: 0; } }
+.pg-battery-fill { animation: pg-battery-fill 1.4s ease-in-out infinite; }
+@keyframes pg-battery-fill { 0% { width: 8%; } 80%, 100% { width: 100%; } }
 /* The welcome photo drifts closer, slowly. */
 .pg-kenburns { animation: pg-kenburns 18s ease-out both; transform-origin: 50% 60%; }
 @keyframes pg-kenburns { from { transform: scale(1.12); } to { transform: scale(1); } }

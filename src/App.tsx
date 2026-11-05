@@ -270,6 +270,8 @@ function PortalGate({
       </div>
     );
   }
+  // The driver's app comes out of a blur, like the sign-in it follows.
+  if (portal === 'driver') return <div className="h-full w-full pg-unblur">{children}</div>;
   return <>{children}</>;
 }
 

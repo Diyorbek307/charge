@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { ArrowLeft, Eye, EyeOff, KeyRound, Lock, LoaderCircle, Mail, Phone, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Lock, LoaderCircle, Mail, Phone, TriangleAlert } from 'lucide-react';
 import { useSync } from '../../lib/sync';
 import { readFirstRun } from '../../lib/firstRun';
 import { inNativeShell } from '../../lib/site';
 import type { SignInResult } from '../../lib/api';
-import { Logo } from '../../landing/Logo';
+import { Logo, V_BLADE, V_STROKE, WORD } from '../../landing/Logo';
+import ChargeScene from './ChargeScene';
 
 type Step = 'welcome' | 'start' | 'code' | 'name' | 'totp' | 'password';
 type Providers = { google: string | null; apple: string | null };
@@ -52,6 +53,9 @@ export default function DriverAuth() {
   const { actions, adoptSession, verify2fa, login, credentials } = useSync();
   const demo = credentials.find(c => c.portal === 'driver');
   const [step, setStep] = useState<Step>('welcome');
+  const [splash, setSplash] = useState(() => !splashSeen());
+  // Field hints appear only after the first try to go on.
+  const [touched, setTouched] = useState(false);
   const [slide, setSlide] = useState(0);
   const [providers, setProviders] = useState<Providers>({ google: null, apple: null });
   const [to, setTo] = useState('');
@@ -199,113 +203,84 @@ export default function DriverAuth() {
       land(await actions.oauthSignIn('apple', r.authorization.id_token, { name: [n?.firstName, n?.lastName].filter(Boolean).join(' ') || undefined, consent: consent(), ref: ref.trim() || undefined }));
     });
 
+  if (splash) return <Splash onDone={() => setSplash(false)} />;
   if (step === 'welcome') return <Welcome slide={slide} onSlide={setSlide} onStart={() => setStep('start')} onSignIn={() => setStep('start')} />;
 
   const isEmail = to.includes('@');
   const back = () => {
     setError(null);
-    setStep(step === 'start' ? 'welcome' : 'start');
+    setTouched(false);
+    setStep(step === 'start' || step === 'password' ? 'welcome' : 'start');
   };
+  // Shown under the field once the driver has tried: a number or an address, said plainly.
+  const toProblem = touched && !validTarget(to) ? 'Введите номер +998 XX XXX XX XX или почту' : null;
+  const passwordProblem = touched && step === 'password' && !password ? 'Введите пароль' : null;
+  const head: Record<Exclude<Step, 'welcome'>, [string, string]> = {
+    start: ['С возвращением', 'Войдите или создайте аккаунт — заряжайтесь во всех сетях'],
+    password: ['С возвращением', 'Войдите или создайте аккаунт — заряжайтесь во всех сетях'],
+    code: ['Введите код', sentTo ? `${sentTo.channel === 'email' ? 'Отправили письмо на' : 'Отправили SMS на'} ${sentTo.to}` : ''],
+    name: ['Как вас зовут?', 'Последний шаг — и аккаунт готов'],
+    totp: ['Код из приложения', 'Двухфакторная защита: 6 цифр из приложения-аутентификатора'],
+  };
+  const [title, sub] = head[step];
+  const signingIn = busy && step !== 'start';
+  const field = (bad: boolean) =>
+    `w-full h-[54px] rounded-2xl bg-slate-50 border text-[15px] text-slate-900 placeholder:text-slate-400 outline-none transition-colors ${bad ? 'border-red-400 bg-red-50/60 focus:ring-4 focus:ring-red-200' : 'border-slate-200 focus:border-[#FFC83D] focus:ring-4 focus:ring-[#FFC83D]/25'}`;
 
   return (
-    <div className="min-h-full w-full bg-white flex flex-col" style={{ fontFamily: 'Inter, sans-serif' }}>
-      <div className="px-3 pt-3">
-        <button onClick={back} aria-label="Назад" className="w-10 h-10 rounded-full grid place-items-center text-slate-600 hover:bg-slate-100"><ArrowLeft size={20} /></button>
+    <div className="relative min-h-full w-full flex flex-col bg-white" style={{ fontFamily: 'Inter, sans-serif' }}>
+      {/* The warm top: the wordmark, a charger feeding a car, and the greeting */}
+      <div className="relative shrink-0 overflow-hidden px-6 pt-3 pb-12" style={{ background: 'linear-gradient(180deg, #FFE9A8 0%, #FFF4D2 55%, #FFFBEF 100%)' }}>
+        <div className="absolute -top-20 -right-16 w-[320px] h-[320px] rounded-full" style={{ background: 'radial-gradient(closest-side, rgba(255,200,61,.55), rgba(255,200,61,0))' }} aria-hidden="true" />
+        <div className="relative flex items-center justify-between">
+          <button onClick={back} aria-label="Назад" className="w-10 h-10 -ml-2 rounded-full grid place-items-center text-slate-700 hover:bg-black/5"><ArrowLeft size={20} /></button>
+          <Logo size={30} />
+          <span className="w-10" />
+        </div>
+        <ChargeScene className="relative block w-full max-w-[340px] mx-auto mt-2 h-auto" />
+        <h1 key={title} className="relative mt-3 text-[30px] leading-[1.08] font-extrabold tracking-tight text-[#111] pg-reveal">{title}<span className="text-[#E09A00]">.</span></h1>
+        <p className="relative mt-1.5 text-sm text-slate-600 max-w-[330px]">{sub}</p>
       </div>
-      <div className="flex-1 px-6 pb-8 flex flex-col">
-        <div className="mx-auto mt-2"><Logo size={52} /></div>
+
+      {/* The white card with the form, riding up over the warm top */}
+      <div className="relative flex-1 -mt-7 bg-white rounded-t-[32px] px-6 pt-6 pb-8 flex flex-col pg-card-up" style={{ boxShadow: '0 -12px 30px rgba(17,17,17,.06)' }}>
+        {(step === 'start' || step === 'password') && (
+          <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-2xl mb-5" role="tablist" aria-label="Способ входа">
+            {([['start', 'По коду'], ['password', 'По паролю']] as const).map(([k, label]) => (
+              <button key={k} role="tab" aria-selected={step === k} onClick={() => { setError(null); setTouched(false); setStep(k); }}
+                className={`h-11 rounded-xl text-sm font-bold transition-colors ${step === k ? 'bg-[#111] text-white shadow-sm' : 'text-slate-500'}`}>{label}</button>
+            ))}
+          </div>
+        )}
 
         {step === 'start' && (
-          <>
-            <h1 className="mt-7 text-center text-[24px] font-extrabold text-slate-900">Добро пожаловать!</h1>
-            <p className="mt-1.5 text-center text-sm text-slate-500">Войдите или создайте аккаунт, чтобы заряжаться с Voli</p>
-
-            <div className="mt-7 space-y-3">
-              {providers.apple && (
-                <button onClick={() => void apple()} disabled={busy} className="w-full h-[52px] rounded-2xl bg-[#111] text-white font-semibold text-[15px] inline-flex items-center justify-center gap-2.5 active:scale-[0.98] transition-transform disabled:opacity-60">
-                  <AppleMark />Продолжить с Apple
-                </button>
-              )}
-              {providers.google && <div ref={googleBox} className="w-full flex justify-center min-h-[44px]" />}
-            </div>
-            {(providers.apple || providers.google) && (
-              <div className="my-5 flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200" />или<span className="h-px flex-1 bg-slate-200" /></div>
-            )}
-
-            <form onSubmit={sendCode} className={`space-y-3 ${providers.apple || providers.google ? '' : 'mt-7'}`}>
-              <label className="relative block">
-                <span className="sr-only">Телефон или почта</span>
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">{isEmail ? <Mail size={18} /> : <Phone size={18} />}</span>
-                <input id="driver-signin-to" value={to} onChange={e => setTo(e.target.value)} autoComplete="username" inputMode={isEmail ? 'email' : 'text'} placeholder="Телефон или почта"
-                  className="w-full h-[54px] rounded-2xl bg-slate-50 border border-slate-200 pl-12 pr-4 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#FFC83D] focus:ring-4 focus:ring-[#FFC83D]/25" />
-              </label>
-              <ErrorBox error={error} />
-              <button type="submit" disabled={busy || to.trim().length < 5} className="w-full h-[54px] rounded-2xl text-[#111] font-bold text-[16px] inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-40" style={{ background: YELLOW, boxShadow: '0 8px 24px rgba(255,200,61,.3)' }}>
-                {busy && <LoaderCircle size={17} className="animate-spin" />}Получить код
-              </button>
-            </form>
-            <p className="mt-3 text-center text-xs text-slate-400">Номер +998… — код придёт по SMS, почта — письмом. Новый аккаунт создастся сам.</p>
-            <button onClick={() => { setError(null); setStep('password'); }} className="mt-auto pt-8 mx-auto inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-slate-900"><KeyRound size={15} />Войти с паролем</button>
-          </>
-        )}
-
-        {step === 'code' && sentTo && (
-          <form onSubmit={checkCode} className="mt-7">
-            <h1 className="text-center text-[22px] font-extrabold text-slate-900">Введите код</h1>
-            <p className="mt-1.5 text-center text-sm text-slate-500">{sentTo.channel === 'email' ? 'Отправили письмо на ' : 'Отправили SMS на '}<span className="font-semibold text-slate-800">{sentTo.to}</span></p>
-            {demoCode && <p className="mt-4 text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-center">{sentTo.channel === 'email' ? 'Демо-режим: письмо не отправляется. Ваш код —' : 'Демо-режим: SMS не отправляется. Ваш код —'} <b className="font-mono tracking-widest">{demoCode}</b></p>}
-            <CodeInput value={code} onChange={setCode} />
+          <form onSubmit={e => { setTouched(true); if (!validTarget(to)) { e.preventDefault(); return; } void sendCode(e); }} noValidate className="space-y-3">
+            <TargetField id="driver-signin-to" value={to} onChange={setTo} isEmail={isEmail} className={field(!!toProblem)} />
+            <FieldError text={toProblem} />
             <ErrorBox error={error} />
-            <button type="submit" disabled={busy || code.length !== 6} className="mt-4 w-full h-[54px] rounded-2xl text-[#111] font-bold text-[16px] inline-flex items-center justify-center gap-2 disabled:opacity-40" style={{ background: YELLOW }}>
-              {busy && <LoaderCircle size={17} className="animate-spin" />}Продолжить
-            </button>
-            <button type="button" disabled={cooldown > 0 || busy} onClick={() => void sendCode()} className="mt-4 w-full text-sm text-slate-500 hover:text-slate-900 disabled:text-slate-300">
-              {cooldown > 0 ? `Отправить снова через ${cooldown} с` : 'Отправить код снова'}
-            </button>
-          </form>
-        )}
-
-        {step === 'name' && (
-          <form onSubmit={finish} className="mt-7 space-y-3">
-            <h1 className="text-center text-[22px] font-extrabold text-slate-900">Как вас зовут?</h1>
-            <p className="text-center text-sm text-slate-500">Это последний шаг — имя увидит только поддержка и станция в чеке</p>
-            <input id="driver-signup-name" value={name} onChange={e => setName(e.target.value)} autoComplete="name" autoFocus placeholder="Имя и фамилия"
-              className="mt-3 w-full h-[54px] rounded-2xl bg-slate-50 border border-slate-200 px-4 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#FFC83D] focus:ring-4 focus:ring-[#FFC83D]/25" />
-            <input value={ref} onChange={e => setRef(e.target.value.toUpperCase())} maxLength={12} autoComplete="off" placeholder="Код друга (если есть)"
-              className="w-full h-[48px] rounded-2xl bg-slate-50 border border-slate-200 px-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#FFC83D]" />
-            <ErrorBox error={error} />
-            <button type="submit" disabled={busy || name.trim().length < 2} className="w-full h-[54px] rounded-2xl text-[#111] font-bold text-[16px] inline-flex items-center justify-center gap-2 disabled:opacity-40" style={{ background: YELLOW }}>
-              {busy && <LoaderCircle size={17} className="animate-spin" />}Создать аккаунт
-            </button>
+            <YellowButton busy={busy} disabled={busy}>Получить код</YellowButton>
+            <p className="text-center text-xs text-slate-400">Номер +998… — код придёт по SMS, почта — письмом. Новый аккаунт создастся сам.</p>
           </form>
         )}
 
         {step === 'password' && (
-          <form onSubmit={signInWithPassword} className="mt-7 space-y-3">
-            <h1 className="text-center text-[22px] font-extrabold text-slate-900">Вход по паролю</h1>
-            <p className="text-center text-sm text-slate-500">Для тех, кто задал пароль в профиле</p>
-            <label className="relative mt-3 block">
-              <span className="sr-only">Телефон или почта</span>
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">{isEmail ? <Mail size={18} /> : <Phone size={18} />}</span>
-              <input id="driver-login" value={to} onChange={e => setTo(e.target.value)} autoComplete="username" placeholder="Телефон или почта"
-                className="w-full h-[54px] rounded-2xl bg-slate-50 border border-slate-200 pl-12 pr-4 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#FFC83D] focus:ring-4 focus:ring-[#FFC83D]/25" />
-            </label>
+          <form onSubmit={e => { setTouched(true); if (!validTarget(to) || !password) { e.preventDefault(); return; } void signInWithPassword(e); }} noValidate className="space-y-3">
+            <TargetField id="driver-login" value={to} onChange={setTo} isEmail={isEmail} className={field(!!toProblem)} />
+            <FieldError text={toProblem} />
             <label className="relative block">
               <span className="sr-only">Пароль</span>
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"><Lock size={18} /></span>
-              <input id="driver-password" type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" placeholder="Пароль"
-                className="w-full h-[54px] rounded-2xl bg-slate-50 border border-slate-200 pl-12 pr-12 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#FFC83D] focus:ring-4 focus:ring-[#FFC83D]/25" />
+              <span className={`absolute left-4 top-1/2 -translate-y-1/2 ${passwordProblem ? 'text-red-400' : 'text-slate-400'}`}><Lock size={18} /></span>
+              <input id="driver-password" type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" placeholder="Пароль" className={`${field(!!passwordProblem)} pl-12 pr-12`} />
               <button type="button" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'} className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 grid place-items-center text-slate-400 hover:text-slate-700">
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </label>
+            <FieldError text={passwordProblem} />
             <ErrorBox error={error} />
-            <button type="submit" disabled={busy || !to.trim() || !password} className="w-full h-[54px] rounded-2xl text-[#111] font-bold text-[16px] inline-flex items-center justify-center gap-2 disabled:opacity-40" style={{ background: YELLOW }}>
-              {busy && <LoaderCircle size={17} className="animate-spin" />}Войти
-            </button>
-            <button type="button" onClick={() => { setError(null); setStep('start'); }} className="w-full text-sm text-slate-500 hover:text-slate-900">Забыли пароль? Войдите по коду</button>
+            <YellowButton busy={busy} disabled={busy}>Войти</YellowButton>
+            <button type="button" onClick={() => { setError(null); setTouched(false); setStep('start'); }} className="w-full text-sm text-slate-500 hover:text-slate-900">Забыли пароль? Войдите по коду</button>
             {demo && (
-              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-center justify-between gap-3 text-xs text-amber-900">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-center justify-between gap-3 text-xs text-amber-900">
                 <span>Демо-доступ: <b className="font-mono">{demo.login}</b></span>
                 <button type="button" onClick={() => { setTo(demo.login); setPassword(demo.password); }} className="font-bold text-[#8A5B00]">Заполнить</button>
               </div>
@@ -313,17 +288,153 @@ export default function DriverAuth() {
           </form>
         )}
 
-        {step === 'totp' && (
-          <form onSubmit={checkTotp} className="mt-7">
-            <h1 className="text-center text-[22px] font-extrabold text-slate-900">Код из приложения</h1>
-            <p className="mt-1.5 text-center text-sm text-slate-500">У вас включена двухфакторная защита — введите 6 цифр из приложения-аутентификатора</p>
+        {(step === 'start' || step === 'password') && (providers.apple || providers.google) && (
+          <>
+            <div className="my-5 flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200" />или продолжить через<span className="h-px flex-1 bg-slate-200" /></div>
+            <div className="grid grid-cols-2 gap-3">
+              {providers.google && <div ref={googleBox} className={`flex justify-center min-h-[44px] ${providers.apple ? '' : 'col-span-2'}`} />}
+              {providers.apple && (
+                <button onClick={() => void apple()} disabled={busy} className={`h-[44px] rounded-full bg-[#111] text-white font-semibold text-sm inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60 ${providers.google ? '' : 'col-span-2'}`}>
+                  <AppleMark />Apple
+                </button>
+              )}
+            </div>
+          </>
+        )}
+
+        {step === 'code' && sentTo && (
+          <form onSubmit={checkCode}>
+            {demoCode && <p className="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-center">{sentTo.channel === 'email' ? 'Демо-режим: письмо не отправляется. Ваш код —' : 'Демо-режим: SMS не отправляется. Ваш код —'} <b className="font-mono tracking-widest">{demoCode}</b></p>}
             <CodeInput value={code} onChange={setCode} />
             <ErrorBox error={error} />
-            <button type="submit" disabled={busy || code.length !== 6} className="mt-4 w-full h-[54px] rounded-2xl text-[#111] font-bold text-[16px] inline-flex items-center justify-center gap-2 disabled:opacity-40" style={{ background: YELLOW }}>
-              {busy && <LoaderCircle size={17} className="animate-spin" />}Войти
+            <div className="mt-4"><YellowButton busy={busy} disabled={busy || code.length !== 6}>Продолжить</YellowButton></div>
+            <button type="button" disabled={cooldown > 0 || busy} onClick={() => void sendCode()} className="mt-4 w-full text-sm text-slate-500 hover:text-slate-900 disabled:text-slate-300">
+              {cooldown > 0 ? `Отправить снова через ${cooldown} с` : 'Отправить код снова'}
             </button>
           </form>
         )}
+
+        {step === 'name' && (
+          <form onSubmit={finish} className="space-y-3">
+            <input id="driver-signup-name" value={name} onChange={e => setName(e.target.value)} autoComplete="name" autoFocus placeholder="Имя и фамилия" className={`${field(false)} px-4`} />
+            <input value={ref} onChange={e => setRef(e.target.value.toUpperCase())} maxLength={12} autoComplete="off" placeholder="Код друга (если есть)" className={`${field(false)} px-4 h-[48px] text-sm`} />
+            <p className="text-xs text-slate-400">Имя увидят только поддержка и станция в чеке.</p>
+            <ErrorBox error={error} />
+            <YellowButton busy={busy} disabled={busy || name.trim().length < 2}>Создать аккаунт</YellowButton>
+          </form>
+        )}
+
+        {step === 'totp' && (
+          <form onSubmit={checkTotp}>
+            <CodeInput value={code} onChange={setCode} />
+            <ErrorBox error={error} />
+            <div className="mt-4"><YellowButton busy={busy} disabled={busy || code.length !== 6}>Войти</YellowButton></div>
+          </form>
+        )}
+
+      </div>
+      {signingIn && <SigningIn />}
+    </div>
+  );
+}
+
+/** "+998 90 123 45 67" or "name@mail.ru": the same check the server makes. */
+const validTarget = (raw: string) => {
+  const digits = raw.replace(/\D/g, '');
+  return /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(raw.trim()) || (!raw.includes('@') && (digits.length === 9 || (digits.length === 12 && digits.startsWith('998'))));
+};
+
+function TargetField({ id, value, onChange, isEmail, className }: { id: string; value: string; onChange: (v: string) => void; isEmail: boolean; className: string }) {
+  return (
+    <label className="relative block">
+      <span className="sr-only">Телефон или почта</span>
+      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">{isEmail ? <Mail size={18} /> : <Phone size={18} />}</span>
+      <input id={id} value={value} onChange={e => onChange(e.target.value)} autoComplete="username" inputMode={isEmail ? 'email' : 'text'} placeholder="Телефон или почта" className={`${className} pl-12 pr-4`} />
+    </label>
+  );
+}
+
+function FieldError({ text }: { text: string | null }) {
+  if (!text) return null;
+  return <p role="alert" className="-mt-1 pl-1 flex items-center gap-1.5 text-xs font-medium text-red-500"><span className="w-1.5 h-1.5 rounded-full bg-red-500" />{text}</p>;
+}
+
+function YellowButton({ busy, disabled, children }: { busy: boolean; disabled: boolean; children: React.ReactNode }) {
+  return (
+    <button type="submit" disabled={disabled} className="w-full h-[54px] rounded-2xl text-[#111] font-bold text-[16px] inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50" style={{ background: YELLOW, boxShadow: '0 8px 24px rgba(255,200,61,.3)' }}>
+      {busy ? <LoaderCircle size={20} className="animate-spin" /> : children}
+    </button>
+  );
+}
+
+/** While the server checks: the whole screen blurs, energy runs down the cable and the battery fills. */
+function SigningIn() {
+  return (
+    <div className="absolute inset-0 z-20 bg-white/55 backdrop-blur-xl grid place-items-center pg-reveal" role="status" aria-live="polite">
+      <div className="flex flex-col items-center gap-3">
+        <ChargeScene className="block w-[260px] h-auto" />
+        <p className="text-[15px] font-bold text-slate-900">Входим…</p>
+        <p className="text-xs text-slate-500">Заряжаем ваш аккаунт</p>
+      </div>
+    </div>
+  );
+}
+
+const splashSeen = () => {
+  try {
+    return sessionStorage.getItem('voli-splash') === '1' || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return true;
+  }
+};
+
+/**
+ * The first second of the app: the V drawn as a line on a dark grid, thickened
+ * and filled, the letters out of a blur, then the V flies at the viewer and
+ * opens the welcome. Once per visit; a tap skips it.
+ */
+function Splash({ onDone }: { onDone: () => void }) {
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('voli-splash', '1');
+    } catch {
+      /* nothing kept */
+    }
+    const t = setTimeout(onDone, 3050);
+    return () => clearTimeout(t);
+  }, [onDone]);
+  return (
+    <div className="relative min-h-full w-full overflow-hidden bg-[#0b0b0b] grid place-items-center pg-sp-out" onClick={onDone} role="img" aria-label="Voli">
+      <div className="absolute inset-0 opacity-[0.08] pg-sp-grid" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+      <div className="absolute w-[460px] h-[460px] rounded-full pg-sp-grid" style={{ background: 'radial-gradient(closest-side, rgba(255,200,61,.18), rgba(255,200,61,0))' }} />
+      {/* Streets drawn in, and a car of light driving to where the logo appears */}
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        {['M-20 620 C 80 560, 140 520, 195 420', 'M410 700 C 330 640, 260 560, 195 420', 'M195 -20 V 300', 'M-20 300 H 410', 'M60 -20 L 120 900', 'M330 -20 L 270 900'].map((d, i) => (
+          <path key={d} d={d} pathLength={1} fill="none" stroke={i < 2 ? '#FFC83D' : '#FFFFFF'} strokeOpacity={i < 2 ? 0.55 : 0.12} strokeWidth={i < 2 ? 2 : 1.2} className="pg-sp-draw" style={{ animationDelay: `${i * 0.08}s` }} />
+        ))}
+        <circle r="5" fill="#FFE27A" style={{ filter: 'drop-shadow(0 0 8px #FFC83D)' }} className="pg-sp-car">
+          <animateMotion dur="1.1s" begin="0.2s" fill="freeze" keyPoints="0;1" keyTimes="0;1" calcMode="spline" keySplines=".5 0 .3 1" path="M-20 620 C 80 560, 140 520, 195 420" />
+        </circle>
+      </svg>
+      <div className="absolute inset-0 bg-[#FFE7A0] pg-sp-flash pointer-events-none" />
+      <div className="relative flex flex-col items-center">
+        <svg viewBox="22 12 134 64" width="250" className="block pg-sp-zoom overflow-visible" aria-hidden="true">
+          <defs>
+            <linearGradient id="pg-sp-b" x1="0.2" y1="1" x2="0.8" y2="0">
+              <stop offset="0" stopColor="#E09A00" />
+              <stop offset="0.45" stopColor="#FFC83D" />
+              <stop offset="1" stopColor="#FFE58A" />
+            </linearGradient>
+          </defs>
+          <path d={V_STROKE} pathLength={1} fill="none" stroke="#FFFFFF" strokeWidth="17" strokeLinecap="round" strokeLinejoin="round" className="pg-sp-thick" />
+          <path d={V_BLADE} pathLength={1} fill="url(#pg-sp-b)" fillOpacity="0" stroke="#FFC83D" strokeWidth="1.2" className="pg-sp-draw pg-sp-fill" />
+          <g className="pg-sp-word">
+            <path fillRule="evenodd" fill="#FFFFFF" d={WORD.o} />
+            {[WORD.l, WORD.i].map(([x, y, w, h]) => <rect key={x} x={x} y={y} width={w} height={h} rx="5" fill="#FFFFFF" />)}
+            <circle cx={WORD.dot[0]} cy={WORD.dot[1]} r={WORD.dot[2]} fill="#FFC83D" />
+          </g>
+        </svg>
+        <p className="mt-5 text-[13px] font-semibold tracking-[0.28em] uppercase text-white/55 pg-sp-tag">Вся зарядка Узбекистана</p>
       </div>
     </div>
   );
