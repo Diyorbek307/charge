@@ -8,14 +8,14 @@
 | Что | Где |
 |---|---|
 | ID приложения | `uz.voli.app` (Android и iOS) |
-| Иконка | Voli: чёрная V на жёлтом |
-| Подписанный AAB для Google Play | `marketing/store/voli-1.0.0.aab` (собран локально) |
+| Иконка | Voli: белая и жёлтая V на чёрном (новый логотип) |
+| Подписанный AAB для Google Play | `marketing/store/voli-1.0.0.aab` (пересобран 05.11.2026 с новыми иконками, ключ `voli-upload`) |
 | Ключ загрузки Android | `signing/voli-upload.jks`, пароль в `signing/README.txt` — **сделайте резервную копию** |
 | Облачные сборки | `codemagic.yaml`: `ios-release` (→ TestFlight) и `android-release` (→ AAB) |
 | Удаление аккаунта в приложении | Профиль → внизу «Удалить аккаунт» |
 | Страница удаления для Google | https://app.voli.uz/delete-account.html |
 | Политика конфиденциальности | https://voli.uz/?doc=privacy |
-| Скриншоты | `marketing/store/ios-6.9/` (1320×2868), `marketing/store/android/` (1080×1920) |
+| Скриншоты | `marketing/store/ios-6.9/` (1320×2868), `marketing/store/android/` (1080×1920) — 7 штук на новом дизайне: приветствие, карта, станция, зарядка, скидки, «Приведи друга», поддержка |
 | iOS | только iPhone, только портрет; CarPlay включим после разрешения Apple |
 
 ## Данные компании для регистрации
@@ -74,9 +74,11 @@
 
 ## Тестовый аккаунт для проверяющих
 
-Создайте в приложении отдельного водителя (например, `+998 90 000 00 01`) с паролем,
-пополните ему кошелёк в админке на 50 000 сум. Номер и пароль впишите в Play Console
-(App access) и App Store Connect (Sign-in required). В чат пароль не присылайте.
+Проверяющие входят по паролю: на первом экране «Войти» → «Войти с паролем».
+Демо-водитель рабочего сервера: `+998901234567` / `Driver2026` — у него есть баланс.
+Надёжнее завести отдельного водителя для проверки и пополнить ему кошелёк в админке
+на 50 000 сум. Номер и пароль впишите в Play Console (App access) и App Store Connect
+(Sign-in required). В чат пароль не присылайте.
 
 **Заметка для проверяющих (Review notes):**
 
@@ -85,7 +87,8 @@
 > the Voli wallet (Payme / Click — payment for a physical charging service, not digital
 > content). Location is used to show nearby stations; the camera scans the QR code on a
 > charger. The demo account above has a wallet balance so a charge can be started at any
-> station marked "Свободно". Account deletion: Profile → "Удалить аккаунт" at the bottom.
+> station marked "Свободно". Sign in: on the first screen tap "Войти", then "Войти с паролем".
+> Account deletion: Profile → "Удалить аккаунт" at the bottom.
 
 ## Тексты карточки
 
@@ -171,6 +174,7 @@ No more separate apps for every network. Voli gathers the stations of partner ne
 |---|---|---|---|
 | Имя | да | работа приложения, аккаунт | да |
 | Номер телефона | да | вход, аккаунт | да |
+| Адрес электронной почты | да, если входят по почте | вход по коду, аккаунт | да |
 | Точное местоположение | да, только когда приложение открыто | станции рядом | нет (не сохраняется) |
 | Фото | да, по желанию | фото проблемы для поддержки, лицо для зарядки в долг | да |
 | История покупок | да | зарядки и платежи | да |
@@ -179,7 +183,7 @@ No more separate apps for every network. Voli gathers the stations of partner ne
 | Сведения об автомобиле | да, по желанию | подбор разъёмов | да |
 | Диагностика (ошибки) | да | стабильность (Sentry) | нет |
 
-Apple App Privacy: «Data Used to Track You» — нет; «Data Linked to You» — Contact Info (Name, Phone), Purchases, User Content (Photos, Customer Support), Identifiers (User ID); «Data Not Linked to You» — Location (Precise), Diagnostics.
+Apple App Privacy: «Data Used to Track You» — нет; «Data Linked to You» — Contact Info (Name, Phone, Email), Purchases, User Content (Photos, Customer Support), Identifiers (User ID); «Data Not Linked to You» — Location (Precise), Diagnostics.
 
 ## Что дальше (после первой версии)
 
