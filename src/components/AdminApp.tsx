@@ -29,6 +29,7 @@ import {
   LayoutDashboard, MapPin, Users, Activity, DollarSign, BarChart2, Settings, LogOut, Zap, Shield,
   Building2, Brain, ScrollText, ClipboardCheck, Percent, UserCheck, Banknote, Tag, Menu, Inbox, Siren, Home, ScanFace, Landmark, MessageCircle, Coffee, SlidersHorizontal, Megaphone, TrendingUp } from 'lucide-react';
 import { useI18n } from '../lib/i18n';
+import { useAdminInbox } from '../lib/inbox';
 import SidebarThemeToggle from './SidebarThemeToggle';
 import AIChat from './AIChat';
 import { LogoMark } from '../landing/Logo';
@@ -37,6 +38,9 @@ type Page = 'investor' | 'dashboard' | 'promos' | 'map' | 'sos' | 'hosts' | 'cre
 
 function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current: Page; onChange: (p: Page) => void; onBack: () => void; isOpen?: boolean; onClose?: () => void }) {
   const { t } = useI18n();
+  // A red count next to every page where something waits.
+  const inbox = useAdminInbox();
+  const waiting = (page: string) => inbox?.items.filter(i => i.page === page && i.key !== 'alerts').reduce((n, i) => n + i.count, 0) || 0;
   const groups = [
     {
       label: t('nav.group.overview'),
@@ -141,6 +145,9 @@ function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current:
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${item.badge === '●' ? 'text-emerald-400' : 'bg-red-500/90 text-white'}`}>
                         {item.badge}
                       </span>
+                    )}
+                    {!item.badge && waiting(item.id) > 0 && (
+                      <span className="text-[10px] min-w-[18px] text-center px-1.5 py-0.5 rounded-full font-bold bg-red-500 text-white tabular-nums">{waiting(item.id) > 99 ? '99+' : waiting(item.id)}</span>
                     )}
                   </button>
                 );

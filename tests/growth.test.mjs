@@ -85,3 +85,14 @@ test('the investor page shows months in order, closed ones growing from the roll
   const op = await login('operator', 'operator@greencharge.uz', 'Operator2026');
   assert.equal((await call('/admin/investor', { token: op })).status, 403);
 });
+
+test('the admin inbox counts what waits, each with the page that deals with it', async () => {
+  const token = await login('admin', 'admin@voli.uz', 'Admin2026');
+  const r = await call('/admin/inbox', { token });
+  assert.equal(r.status, 200);
+  const keys = r.data.items.map(i => i.key);
+  for (const k of ['sos', 'support', 'alerts', 'leads', 'operators', 'credit', 'payments']) assert.ok(keys.includes(k), k);
+  for (const i of r.data.items) assert.ok(i.count >= 0 && typeof i.page === 'string');
+  const driver = await login('driver', '+998901234567', 'Driver2026');
+  assert.equal((await call('/admin/inbox', { token: driver })).status, 403);
+});

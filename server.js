@@ -23,6 +23,7 @@ import "./server/adminBootstrap.js";
 import "./server/demand.js";
 import { startReliability } from "./server/reliability.js";
 import "./server/reconcile.js";
+import "./server/inbox.js";
 import "./server/tts.js";
 import "./server/places.js";
 import { errorHandler } from "./server/monitoring.js";

@@ -1,12 +1,14 @@
 import { MapPin, Zap, Users, Activity, Wallet, Percent, Receipt, CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useSync } from '../../lib/sync';
+import { useAdminInbox } from '../../lib/inbox';
 import { useAnalytics, money, num, dayShort, todayLong, time, duration, plural } from '../../lib/analytics';
 import { Page, Card, Kpi, Loading, ErrorNote, Pill, CHART } from './ui';
 
 export default function AdminOverview({ onNavigate }: { onNavigate: (page: string) => void }) {
   const { data, error } = useAnalytics('admin', 30);
   const { state } = useSync();
+  const inbox = useAdminInbox();
   if (!data) return <Page title="Национальный обзор" subtitle={todayLong()}>{error ? <ErrorNote text={error} /> : <Loading />}</Page>;
 
   const t = data.totals;
@@ -26,6 +28,8 @@ export default function AdminOverview({ onNavigate }: { onNavigate: (page: strin
         )
       }
     >
+      <NeedsAttention items={inbox?.items ?? null} onNavigate={onNavigate} />
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Kpi label="Станции" value={num(data.network.stations)} sub={`${data.network.cities} ${plural(data.network.cities, ['город', 'города', 'городов'])} · ${data.operators.filter(o => o.status === 'active').length} ${plural(data.operators.filter(o => o.status === 'active').length, ['оператор', 'оператора', 'операторов'])}`} icon={<MapPin size={14} />} tone="sky" />
         <Kpi label="Разъёмы онлайн" value={`${data.network.online}/${data.network.connectors}`} sub={`${data.network.busy} заряжают сейчас`} icon={<Zap size={14} />} tone="amber" />
@@ -157,5 +161,32 @@ export default function AdminOverview({ onNavigate }: { onNavigate: (page: strin
         )}
       </Card>
     </Page>
+  );
+}
+
+/**
+ * Everything waiting for someone, one tap from the page that deals with it:
+ * urgent ones (SOS, chats, critical faults) first and in red.
+ */
+function NeedsAttention({ items, onNavigate }: { items: { key: string; page: string; count: number; label: string; urgent: boolean }[] | null; onNavigate: (page: string) => void }) {
+  if (!items) return null;
+  const waiting = items.filter(i => i.count > 0).sort((a, b) => Number(b.urgent) - Number(a.urgent));
+  if (!waiting.length) {
+    return <p className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-3"><CheckCircle2 size={16} />Всё разобрано: ни заявок, ни чатов, ни SOS не ждут</p>;
+  }
+  return (
+    <div>
+      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Требует внимания</p>
+      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+        {waiting.map(i => (
+          <button key={i.key} onClick={() => onNavigate(i.page)}
+            className={`shrink-0 inline-flex items-center gap-2.5 pl-3 pr-2 py-2 rounded-2xl border text-sm font-semibold transition-colors ${i.urgent ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+            <span className={`min-w-[26px] h-[26px] px-1.5 rounded-full grid place-items-center text-xs font-bold tabular-nums ${i.urgent ? 'bg-red-600 text-white' : 'bg-[#FFC83D] text-[#111]'}`}>{i.count}</span>
+            {i.label}
+            <ArrowRight size={14} className="opacity-60" />
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }

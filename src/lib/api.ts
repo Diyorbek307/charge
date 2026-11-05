@@ -60,6 +60,9 @@ export interface Investor {
   network: { stations: number; networks: number; cities: number };
 }
 
+/** What waits for the admin, each count with the page that deals with it. */
+export interface AdminInbox { items: { key: string; page: string; count: number; label: string; urgent: boolean }[] }
+
 export interface Account {
   id: string;
   portal: Portal;
@@ -986,6 +989,7 @@ export const apiClient = {
   adminUsers: (portal: Portal) => request<AdminUsers>('/admin/users', { portal }),
   adminGrowth: () => request<Growth>('/admin/growth', { portal: 'admin' }),
   adminInvestor: () => request<Investor>('/admin/investor', { portal: 'admin' }),
+  adminInbox: () => request<AdminInbox>('/admin/inbox', { portal: 'admin' }),
   adminDemand: () => request<Demand>('/admin/demand', { portal: 'admin' }),
   adminReliability: () => request<Reliability>('/admin/reliability', { portal: 'admin' }),
   ownPaymentProblems: () => request<{ problems: ReconcileProblem[] }>('/admin/reconcile', { portal: 'admin' }),

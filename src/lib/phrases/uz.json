@@ -4236,5 +4236,14 @@
 "сум/кВт·ч по часам": "soatlar bo‘yicha so‘m/kVt·soat",
 "От {0} до {1} сум за кВт·ч": "kVt·soat uchun {0} dan {1} so‘mgacha",
 "Сейчас самая низкая цена — {0} сум до {1}": "Hozir eng past narx — {1} gacha {0} so‘m",
-"Дешевле с {0} до {1}: {2} сум, на {3}% меньше, чем сейчас": "{0} dan {1} gacha arzonroq: {2} so‘m, hozirgidan {3}% kam"
+"Дешевле с {0} до {1}: {2} сум, на {3}% меньше, чем сейчас": "{0} dan {1} gacha arzonroq: {2} so‘m, hozirgidan {3}% kam",
+"Требует внимания": "E’tibor talab qiladi",
+"Всё разобрано: ни заявок, ни чатов, ни SOS не ждут": "Hammasi hal qilingan: arizalar, chatlar va SOS kutmayapti",
+"Чаты ждут ответа": "Chatlar javob kutmoqda",
+"Сбои станций": "Stansiyalardagi nosozliklar",
+"Сбои станций, {0} критич.": "Stansiyalardagi nosozliklar, {0} ta jiddiy",
+"Новые заявки": "Yangi arizalar",
+"Сети на проверке": "Tekshiruvdagi tarmoqlar",
+"Просрочены долги": "Muddati o‘tgan qarzlar",
+"Зависшие платежи": "Osilib qolgan to‘lovlar"
 }

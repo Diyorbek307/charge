@@ -4236,5 +4236,14 @@
 "сум/кВт·ч по часам": "sum/kWh by the hour",
 "От {0} до {1} сум за кВт·ч": "From {0} to {1} sum per kWh",
 "Сейчас самая низкая цена — {0} сум до {1}": "The lowest price is now — {0} sum until {1}",
-"Дешевле с {0} до {1}: {2} сум, на {3}% меньше, чем сейчас": "Cheaper from {0} to {1}: {2} sum, {3}% less than now"
+"Дешевле с {0} до {1}: {2} сум, на {3}% меньше, чем сейчас": "Cheaper from {0} to {1}: {2} sum, {3}% less than now",
+"Требует внимания": "Needs attention",
+"Всё разобрано: ни заявок, ни чатов, ни SOS не ждут": "All clear: no applications, chats or SOS waiting",
+"Чаты ждут ответа": "Chats awaiting reply",
+"Сбои станций": "Station faults",
+"Сбои станций, {0} критич.": "Station faults, {0} critical",
+"Новые заявки": "New applications",
+"Сети на проверке": "Networks under review",
+"Просрочены долги": "Overdue debts",
+"Зависшие платежи": "Stuck payments"
 }
