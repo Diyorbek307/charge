@@ -25,6 +25,7 @@ import { AdminSos, AdminHosts } from './admin/SosHosts';
 import { AdminCredit } from './admin/Credit';
 import { DirectSettlement } from './admin/DirectSettlement';
 import { AdminSupport } from './admin/Support';
+import AdminSearch, { SearchButton } from './admin/AdminSearch';
 import {
   LayoutDashboard, MapPin, Users, Activity, DollarSign, BarChart2, Settings, LogOut, Zap, Shield,
   Building2, Brain, ScrollText, ClipboardCheck, Percent, UserCheck, Banknote, Tag, Menu, Inbox, Siren, Home, ScanFace, Landmark, MessageCircle, Coffee, SlidersHorizontal, Megaphone, TrendingUp } from 'lucide-react';
@@ -115,6 +116,7 @@ function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current:
           </div>
           <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
         </div>
+        <SearchButton className="mt-2 w-full px-2.5 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 border border-white/[0.07]" />
       </div>
 
       {/* Nav groups */}
@@ -217,6 +219,8 @@ export default function AdminApp({ onBack }: { onBack: () => void }) {
         <button onClick={() => setSidebarOpen(true)} aria-label="Открыть меню" className="md:hidden absolute top-3 left-3 z-10 p-2 bg-white rounded-xl border border-slate-200 shadow-sm text-slate-600">
           <Menu size={18} />
         </button>
+        <SearchButton label={false} className="md:hidden absolute top-3 left-[60px] z-10 p-2 bg-white rounded-xl border border-slate-200 shadow-sm text-slate-600" />
+        <AdminSearch onOpen={go} />
         {renderPage()}
       </div>
       <AIChat portalType="admin" />

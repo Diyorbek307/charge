@@ -5,6 +5,7 @@ import type { AdminUsers as Directory } from '../../lib/api';
 import { money, num, dateShort, dateTime } from '../../lib/analytics';
 import ExportButton from '../ExportButton';
 import { Page, Card, Kpi, Loading, ErrorNote, Pill, Pagination, SearchBox, Segmented, Empty } from './ui';
+import { takeSearch } from './AdminSearch';
 
 const PER_PAGE = 20;
 const formatPhone = (p: string) => (p.startsWith('+998') && p.length === 13 ? `${p.slice(0, 4)} ${p.slice(4, 6)} ${p.slice(6, 9)} ${p.slice(9, 11)} ${p.slice(11)}` : p);
@@ -14,7 +15,7 @@ export default function AdminUsers() {
   const { actions, events } = useSync();
   const [dir, setDir] = useState<Directory | null>(null);
   const [error, setError] = useState('');
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(takeSearch);
   const [filter, setFilter] = useState<'all' | 'active' | 'idle' | 'blocked'>('all');
   const [page, setPage] = useState(1);
   const [confirm, setConfirm] = useState<string | null>(null);

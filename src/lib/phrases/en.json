@@ -4245,5 +4245,10 @@
 "Новые заявки": "New applications",
 "Сети на проверке": "Networks under review",
 "Просрочены долги": "Overdue debts",
-"Зависшие платежи": "Stuck payments"
+"Зависшие платежи": "Stuck payments",
+"Поиск по админке (Ctrl+K)": "Search the admin panel (Ctrl+K)",
+"Поиск (Ctrl+K)": "Search (Ctrl+K)",
+"Поиск": "Search",
+"Водитель, телефон, станция, сеть, номер зарядки или заявки": "Driver, phone, station, network, charge or application number",
+"Начните вводить — ищем по всей платформе": "Start typing — we search the whole platform"
 }

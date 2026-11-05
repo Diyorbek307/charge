@@ -5,6 +5,7 @@ import type { Session } from '../../lib/api';
 import { useAnalytics, money, num, dateTime, duration } from '../../lib/analytics';
 import ExportButton from '../ExportButton';
 import { Page, Card, Kpi, Pill, Pagination, SearchBox, Segmented, Empty, STATUS_PILL } from './ui';
+import { takeSearch } from './AdminSearch';
 
 const PER_PAGE = 20;
 type S = Session & { basePrice?: number; multiplier?: number };
@@ -15,7 +16,7 @@ const minutesOf = (s: Session) => ((s.end ? Date.parse(s.end) : Date.now()) - Da
 export default function AdminSessions({ portal = 'admin' }: { portal?: 'admin' | 'operator' }) {
   const { state, actions } = useSync();
   const { data } = useAnalytics(portal, 30);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(takeSearch);
   const [status, setStatus] = useState<'all' | 'active' | 'completed' | 'failed'>('all');
   const [operator, setOperator] = useState('all');
   const [page, setPage] = useState(1);

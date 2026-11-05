@@ -96,3 +96,14 @@ test('the admin inbox counts what waits, each with the page that deals with it',
   const driver = await login('driver', '+998901234567', 'Driver2026');
   assert.equal((await call('/admin/inbox', { token: driver })).status, 403);
 });
+
+test('the admin search finds a driver by part of the phone and a station by name', async () => {
+  const token = await login('admin', 'admin@voli.uz', 'Admin2026');
+  const byPhone = (await call(`/admin/search?q=${encodeURIComponent('90 123 45')}`, { token })).data.hits;
+  assert.ok(byPhone.some(h => h.kind === 'user' && h.page === 'users' && h.query === '+998901234567'));
+  const byName = (await call('/admin/search?q=toshkent', { token })).data.hits;
+  assert.ok(byName.some(h => h.kind === 'station' && h.page === 'map'));
+  assert.deepEqual((await call('/admin/search?q=a', { token })).data.hits, []);
+  const driver = await login('driver', '+998901234567', 'Driver2026');
+  assert.equal((await call('/admin/search?q=ali', { token: driver })).status, 403);
+});

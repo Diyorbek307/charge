@@ -1,5 +1,6 @@
 import { db } from './db.js';
 import { api, requireAuth } from './api.js';
+import { adminUsers } from './analytics.js';
 
 /**
  * What waits for the admin, counted in one place: the red marks in the menu
@@ -31,4 +32,30 @@ export function inboxFor(now = Date.now()) {
 
 api.get('/admin/inbox', requireAuth('admin'), (_req, res) => {
   res.json(inboxFor());
+});
+
+const norm = v => String(v ?? '').toLowerCase().replace(/[\s()+-]/g, '');
+
+/**
+ * One box for everything in the admin: drivers by name or phone, stations,
+ * networks, charges by their id, applications. Each hit says which page
+ * opens it and what to search there.
+ */
+export function searchAll(raw, limit = 6) {
+  const q = norm(raw);
+  if (q.length < 2) return [];
+  const has = (...fields) => fields.some(f => norm(f).includes(q));
+  const d = db.data;
+  const hits = [];
+  const users = adminUsers().users;
+  for (const u of users.filter(u => has(u.name, u.phone)).slice(0, limit)) hits.push({ kind: 'user', id: u.id, title: u.name, sub: [u.phone, u.city].filter(Boolean).join(' · '), page: 'users', query: u.phone || u.name });
+  for (const s of d.stations.filter(s => has(s.name, s.city, s.address, s.id)).slice(0, limit)) hits.push({ kind: 'station', id: s.id, title: s.name, sub: `${s.city} · ${s.operator}`, page: 'map', query: s.name });
+  for (const o of d.operators.filter(o => has(o.name, o.contact)).slice(0, limit)) hits.push({ kind: 'operator', id: o.id, title: o.name, sub: o.contact ?? '', page: 'operators', query: o.name });
+  for (const s of d.sessions.filter(s => has(s.id)).slice(0, limit)) hits.push({ kind: 'session', id: s.id, title: s.id, sub: `${s.user} · ${s.stationName}`, page: 'sessions', query: s.id });
+  for (const l of (d.leads ?? []).filter(l => has(l.name, l.phone, l.company, l.id)).slice(0, limit)) hits.push({ kind: 'lead', id: l.id, title: l.company || l.name, sub: `${l.id} · ${l.phone}`, page: 'leads', query: l.phone });
+  return hits;
+}
+
+api.get('/admin/search', requireAuth('admin'), (req, res) => {
+  res.json({ hits: searchAll(String(req.query.q ?? '').slice(0, 60)) });
 });

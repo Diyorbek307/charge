@@ -63,6 +63,9 @@ export interface Investor {
 /** What waits for the admin, each count with the page that deals with it. */
 export interface AdminInbox { items: { key: string; page: string; count: number; label: string; urgent: boolean }[] }
 
+/** A hit of the admin's search: what it is and which page, with what query, opens it. */
+export interface SearchHit { kind: 'user' | 'station' | 'operator' | 'session' | 'lead'; id: string; title: string; sub: string; page: string; query: string }
+
 export interface Account {
   id: string;
   portal: Portal;
@@ -990,6 +993,7 @@ export const apiClient = {
   adminGrowth: () => request<Growth>('/admin/growth', { portal: 'admin' }),
   adminInvestor: () => request<Investor>('/admin/investor', { portal: 'admin' }),
   adminInbox: () => request<AdminInbox>('/admin/inbox', { portal: 'admin' }),
+  adminSearch: (q: string) => request<{ hits: SearchHit[] }>(`/admin/search?q=${encodeURIComponent(q)}`, { portal: 'admin' }),
   adminDemand: () => request<Demand>('/admin/demand', { portal: 'admin' }),
   adminReliability: () => request<Reliability>('/admin/reliability', { portal: 'admin' }),
   ownPaymentProblems: () => request<{ problems: ReconcileProblem[] }>('/admin/reconcile', { portal: 'admin' }),

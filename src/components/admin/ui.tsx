@@ -11,7 +11,7 @@ import { delta } from '../../lib/analytics';
 export function Page({ title, subtitle, actions, children }: { title: string; subtitle?: ReactNode; actions?: ReactNode; children: ReactNode }) {
   return (
     <div className="p-4 md:p-6 pb-28 space-y-5 overflow-y-auto h-full">
-      <div className="flex flex-wrap items-start justify-between gap-3 pl-10 md:pl-0">
+      <div className="flex flex-wrap items-start justify-between gap-3 pl-[100px] md:pl-0">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{title}</h1>
           {subtitle && <p className="text-sm text-slate-500 mt-0.5">{subtitle}</p>}

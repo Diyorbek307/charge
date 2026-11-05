@@ -4245,5 +4245,10 @@
 "Новые заявки": "Yangi arizalar",
 "Сети на проверке": "Tekshiruvdagi tarmoqlar",
 "Просрочены долги": "Muddati o‘tgan qarzlar",
-"Зависшие платежи": "Osilib qolgan to‘lovlar"
+"Зависшие платежи": "Osilib qolgan to‘lovlar",
+"Поиск по админке (Ctrl+K)": "Admin panelda qidiruv (Ctrl+K)",
+"Поиск (Ctrl+K)": "Qidiruv (Ctrl+K)",
+"Поиск": "Qidiruv",
+"Водитель, телефон, станция, сеть, номер зарядки или заявки": "Haydovchi, telefon, stansiya, tarmoq, zaryad yoki ariza raqami",
+"Начните вводить — ищем по всей платформе": "Yozishni boshlang — butun platforma bo‘yicha qidiramiz"
 }
