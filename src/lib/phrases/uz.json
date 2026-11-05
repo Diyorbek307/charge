@@ -4250,5 +4250,9 @@
 "Поиск (Ctrl+K)": "Qidiruv (Ctrl+K)",
 "Поиск": "Qidiruv",
 "Водитель, телефон, станция, сеть, номер зарядки или заявки": "Haydovchi, telefon, stansiya, tarmoq, zaryad yoki ariza raqami",
-"Начните вводить — ищем по всей платформе": "Yozishni boshlang — butun platforma bo‘yicha qidiramiz"
+"Начните вводить — ищем по всей платформе": "Yozishni boshlang — butun platforma bo‘yicha qidiramiz",
+"Быстро": "Tezkor",
+"Ближайшая свободная · ≈ {0}": "Eng yaqin bo‘sh · ≈ {0}",
+"Дешевле рядом · {0} сум": "Yaqinda arzonroq · {0} so‘m",
+"Как в прошлый раз · {0}": "O‘tgan safargidek · {0}"
 }

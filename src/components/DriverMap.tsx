@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
-import { Search, SlidersHorizontal, Navigation, X, Wallet, List, Map as MapIcon, Clock, Info, Percent } from 'lucide-react';
+import { Search, SlidersHorizontal, Navigation, X, Wallet, List, Map as MapIcon, Clock, Info, Percent, Zap, History } from 'lucide-react';
 import type { Station } from '../data/mockData';
 import type { Promo } from '../lib/api';
 import { useLiveStations } from '../lib/live';
@@ -10,6 +10,7 @@ import { locate as askLocation, samePort, openNow, km, fmtKm, useMyLocation, las
 import { plural } from '../lib/analytics';
 import BaseMap from './BaseMap';
 import { promoNow, isNight, networkLook, discounted, useDriverPromos } from '../lib/promos';
+import { useTariffNow, priceNow } from '../lib/tariff';
 import { NetworkBadge } from './driver/NetworkBadge';
 import { ChargerFriend } from './driver/Illustration';
 import { V_BLADE, V_STROKE } from '../landing/Logo';
@@ -423,6 +424,22 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
     return () => clearTimeout(t);
   }, [lost, q, actions]);
 
+  // One tap to a station: the nearest with a free connector that fits the car, the cheapest now within 15 km, the last one charged at.
+  const tariffK = useTariffNow();
+  const from = here ?? lastKnown();
+  const fits = (type: string) => !car || samePort(type, car.port) || (car.port === 'CCS2' && samePort(type, 'Type 2'));
+  const freeFor = (s: Station) => openNow(s.hours) && s.connectors.some(c => c.status === 'available' && fits(c.type));
+  const away = (s: Station) => (from ? km(from, { lat: s.geoLat, lng: s.geoLng }) : 0);
+  const nearestFree = from ? [...stations].filter(freeFor).sort((a, b) => away(a) - away(b))[0] ?? null : null;
+  const cheapestNear = from
+    ? [...stations]
+        .filter(s => freeFor(s) && away(s) <= 15)
+        .map(s => ({ s, price: Math.min(...s.connectors.filter(c => c.status === 'available' && fits(c.type)).map(c => priceNow(c.price, tariffK, promoNow({ id: s.id, operatorId: opId(s) }, promos)?.percent))) }))
+        .sort((a, b) => a.price - b.price)[0] ?? null
+    : null;
+  const lastId = (state?.sessions ?? []).filter(x => x.userId === sessions.driver?.id && x.status === 'completed').sort((a, b) => b.start.localeCompare(a.start))[0]?.stationId;
+  const lastStation = lastId ? stations.find(s => s.id === lastId) ?? null : null;
+
   const pick = (s: Station) => {
     setSearch('');
     // The map moves to it once its card is open (FocusStation), so the pin stays above the card.
@@ -705,6 +722,29 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
                     </button>
                   ))}
                 </div>
+
+                {(nearestFree || cheapestNear || lastStation) && (
+                  <div className="mt-2.5 px-3 flex gap-2 overflow-x-auto no-scrollbar" role="group" aria-label="Быстро">
+                    {nearestFree && (
+                      <button onClick={() => pick(nearestFree)} className="shrink-0 h-10 pl-2 pr-3.5 rounded-2xl bg-[#111] text-white text-sm font-semibold inline-flex items-center gap-2 active:scale-[0.97] transition-transform">
+                        <span className="w-6 h-6 rounded-lg bg-[#FFC83D] text-[#111] grid place-items-center"><Zap size={14} /></span>
+                        {`Ближайшая свободная · ≈ ${fmtKm(away(nearestFree))}`}
+                      </button>
+                    )}
+                    {cheapestNear && cheapestNear.s.id !== nearestFree?.id && (
+                      <button onClick={() => pick(cheapestNear.s)} className="shrink-0 h-10 pl-2 pr-3.5 rounded-2xl bg-[#FFF4D2] text-[#111] text-sm font-semibold inline-flex items-center gap-2 border border-[#FFC83D]/50 active:scale-[0.97] transition-transform">
+                        <span className="w-6 h-6 rounded-lg bg-[#FFC83D] grid place-items-center"><Percent size={13} /></span>
+                        {`Дешевле рядом · ${cheapestNear.price.toLocaleString('ru-RU')} сум`}
+                      </button>
+                    )}
+                    {lastStation && (
+                      <button onClick={() => pick(lastStation)} className="shrink-0 h-10 pl-2 pr-3.5 rounded-2xl bg-slate-100 text-slate-800 text-sm font-semibold inline-flex items-center gap-2 active:scale-[0.97] transition-transform">
+                        <span className="w-6 h-6 rounded-lg bg-white grid place-items-center"><History size={13} /></span>
+                        <span className="max-w-[170px] truncate">{`Как в прошлый раз · ${lastStation.name}`}</span>
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 <div className="mt-2 px-3 flex gap-1.5 overflow-x-auto no-scrollbar" role="group" aria-label="Быстрые фильтры">
                   <button onClick={() => setOnlyPromo(v => !v)} aria-pressed={onlyPromo} className={chip(onlyPromo, 'yellow')}><Percent size={13} />Скидки</button>

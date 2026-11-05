@@ -4250,5 +4250,9 @@
 "Поиск (Ctrl+K)": "Search (Ctrl+K)",
 "Поиск": "Search",
 "Водитель, телефон, станция, сеть, номер зарядки или заявки": "Driver, phone, station, network, charge or application number",
-"Начните вводить — ищем по всей платформе": "Start typing — we search the whole platform"
+"Начните вводить — ищем по всей платформе": "Start typing — we search the whole platform",
+"Быстро": "Quick",
+"Ближайшая свободная · ≈ {0}": "Nearest free · ≈ {0}",
+"Дешевле рядом · {0} сум": "Cheaper nearby · {0} sum",
+"Как в прошлый раз · {0}": "Like last time · {0}"
 }
