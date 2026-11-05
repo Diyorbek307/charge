@@ -852,29 +852,32 @@ nav::-webkit-scrollbar { display: none; }
 @keyframes pg-toast-out { to { opacity: 0; transform: translateY(-14px) scale(.96); } }
 /* Our own eye shows the password; Edge's built-in one would be a second. */
 input::-ms-reveal, input::-ms-clear { display: none; }
-/* Splash: the V is drawn as a line, thickens and fills, the letters come out of a blur, then the V flies at the viewer. */
-.pg-sp-grid { animation: pg-sp-fade .8s ease-out both; }
-.pg-sp-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: pg-sp-draw .9s cubic-bezier(.6,0,.2,1) .15s both; }
-.pg-sp-thick { animation: pg-sp-draw .9s cubic-bezier(.6,0,.2,1) .15s both, pg-sp-thick .45s cubic-bezier(.3,.7,.2,1) 1.05s both; }
-.pg-sp-fill { animation: pg-sp-fill .45s ease-out 1.05s both; }
-.pg-sp-word { animation: pg-sp-word .6s cubic-bezier(.2,.7,.2,1) 1.35s both; }
-.pg-sp-tag { animation: pg-sp-word .6s cubic-bezier(.2,.7,.2,1) 1.6s both; }
-.pg-sp-zoom { transform-origin: 30% 50%; animation: pg-sp-zoom .7s cubic-bezier(.7,0,.3,1) 2.35s both; }
-.pg-sp-out { animation: pg-sp-out .35s ease-in 2.7s both; }
-.pg-sp-car { animation: pg-sp-car 1.5s ease-out both; }
-.pg-sp-flash { opacity: 0; animation: pg-sp-flash .5s ease-out 1.05s both; }
-@keyframes pg-sp-car { 0%, 75% { opacity: 1; } 100% { opacity: 0; } }
-@keyframes pg-sp-flash { 0% { opacity: 0; } 20% { opacity: .35; } 35% { opacity: .05; } 50% { opacity: .22; } 100% { opacity: 0; } }
-/* After sign-in the app comes out of the blur. */
-.pg-unblur { animation: pg-unblur .55s cubic-bezier(.2,.7,.2,1) both; }
-@keyframes pg-unblur { from { filter: blur(14px); opacity: .4; transform: scale(1.03); } }
-@keyframes pg-sp-fade { from { opacity: 0; } }
-@keyframes pg-sp-draw { to { stroke-dashoffset: 0; } }
-@keyframes pg-sp-thick { from { stroke-width: 1.6; stroke: #FFC83D; } to { stroke-width: 17; stroke: #FFFFFF; } }
-@keyframes pg-sp-fill { from { fill-opacity: 0; } to { fill-opacity: 1; } }
-@keyframes pg-sp-word { from { opacity: 0; filter: blur(8px); transform: translateX(-10px); } }
-@keyframes pg-sp-zoom { to { transform: scale(14); opacity: 0; } }
-@keyframes pg-sp-out { to { opacity: 0; visibility: hidden; } }
+/* Splash: the V drawn as a glowing line, filled with a pulse of charge, the letters one by one, a charge bar; then the V flies at the viewer. */
+.sp-glow { animation: sp-fade 1s ease-out both; }
+.sp-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: sp-draw .85s cubic-bezier(.65,0,.35,1) .15s forwards; }
+.sp-stroke { stroke-dasharray: 1; stroke-dashoffset: 1; stroke-width: 1.8; stroke: #FFC83D; filter: drop-shadow(0 0 3px rgba(255,200,61,.9)); animation: sp-draw .85s cubic-bezier(.65,0,.35,1) .15s forwards, sp-thick .4s cubic-bezier(.3,.7,.2,1) .95s forwards, sp-away .2s ease-in 2.7s forwards; }
+.sp-fill { filter: drop-shadow(0 0 4px rgba(255,200,61,.9)); animation: sp-draw .85s cubic-bezier(.65,0,.35,1) .15s forwards, sp-fill .4s ease-out .95s forwards, sp-noglow .2s linear 2.7s forwards; }
+.sp-shine { transform: translateX(-70px) skewX(-20deg); animation: sp-shine .75s ease-in-out 1.25s forwards; }
+.sp-ring { opacity: 0; animation: sp-ring 1.2s ease-out 1.8s forwards; }
+.sp-ring-2 { animation-delay: 2.05s; }
+.sp-letter { animation: sp-letter .55s cubic-bezier(.2,.7,.2,1) both; }
+.sp-dot { transform-box: fill-box; transform-origin: center; animation: sp-dot .55s cubic-bezier(.3,1.6,.5,1) 1.72s both; }
+.sp-tag { animation: sp-letter .6s cubic-bezier(.2,.7,.2,1) 1.75s both; }
+.sp-bar { width: 0; animation: sp-bar .8s cubic-bezier(.5,0,.3,1) 1.85s forwards; }
+.sp-away { animation: sp-away .25s ease-in 2.7s forwards; }
+.sp-zoom { transform-box: view-box; transform-origin: 72px 41px; animation: sp-zoom .6s cubic-bezier(.7,0,.25,1) 2.75s forwards; }
+@keyframes sp-fade { from { opacity: 0; transform: scale(.85); } }
+@keyframes sp-draw { to { stroke-dashoffset: 0; } }
+@keyframes sp-thick { to { stroke-width: 17; stroke: #FFFFFF; } }
+@keyframes sp-fill { to { fill-opacity: 1; } }
+@keyframes sp-shine { to { transform: translateX(80px) skewX(-20deg); } }
+@keyframes sp-ring { 0% { opacity: .55; transform: scale(.9); } 100% { opacity: 0; transform: scale(2.6); } }
+@keyframes sp-letter { from { opacity: 0; transform: translateY(10px); filter: blur(6px); } }
+@keyframes sp-dot { from { opacity: 0; transform: scale(0); } }
+@keyframes sp-bar { to { width: 100%; } }
+@keyframes sp-away { to { opacity: 0; } }
+@keyframes sp-zoom { to { transform: scale(22); } }
+@keyframes sp-noglow { to { filter: none; } }
 /* Sign-in: lightning over the dark top, now and then; the card rides up from below. */
 .pg-bolt { opacity: 0; animation: pg-bolt 5.5s linear 1.2s infinite; }
 @keyframes pg-bolt { 0%, 86%, 100% { opacity: 0; } 87% { opacity: .95; } 88% { opacity: .15; } 89.5% { opacity: .85; } 92% { opacity: 0; } }
