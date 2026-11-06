@@ -34,7 +34,12 @@ export async function signIn(page, portal) {
   // Drivers meet the welcome and a code first; the password is one tap further.
   if (portal === 'driver') {
     await page.getByRole('button', { name: 'Войти', exact: true }).click();
-    await page.getByRole('tab', { name: 'По паролю' }).click();
+    // On a busy machine a tap can land while the card is still sliding in: tap again until the tab is on.
+    const tab = page.getByRole('tab', { name: 'По паролю' });
+    await expect(async () => {
+      if ((await tab.getAttribute('aria-selected')) !== 'true') await tab.click();
+      await expect(tab).toHaveAttribute('aria-selected', 'true', { timeout: 1500 });
+    }).toPass({ timeout: 15_000 });
   }
   await page.locator(`#${portal}-login`).fill(CREDS[portal].login);
   await page.locator(`#${portal}-password`).fill(CREDS[portal].password);
