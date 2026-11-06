@@ -114,6 +114,39 @@ export async function fetchCameras(route: Route): Promise<Camera[]> {
   return cameras.filter(c => project(route, c).off < 35);
 }
 
+/** A traffic light on the route; `along` is metres from the start. */
+export interface Signal { id: string; lat: number; lng: number; along: number }
+
+/**
+ * Traffic lights along the route. Asked per 0.25° tile the route passes
+ * through (the server caches the same tiles), kept within 20 m of the line,
+ * and the several lights of one crossing counted as one.
+ */
+export async function fetchSignals(route: Route): Promise<Signal[]> {
+  const tiles = new Set<string>();
+  for (const p of route.line) tiles.add(`${Math.floor(p.lat * 4) / 4},${Math.floor(p.lng * 4) / 4}`);
+  if (tiles.size > 24) return []; // a long trip across the country: lights matter in town, not on the whole road
+  const found = await Promise.all([...tiles].map(async t => {
+    const [s, w] = t.split(',').map(Number);
+    try {
+      const res = await fetch(`${API_ORIGIN}/api/signals?bbox=${s},${w},${s + 0.25},${w + 0.25}`);
+      return res.ok ? ((await res.json()) as { signals: Omit<Signal, 'along'>[] }).signals : [];
+    } catch {
+      return [];
+    }
+  }));
+  const on = found.flat()
+    .map(x => ({ ...x, ...project(route, x) }))
+    .filter(x => x.off < 20)
+    .sort((a, b) => a.along - b.along);
+  const out: Signal[] = [];
+  for (const x of on) {
+    if (out.length && x.along - out[out.length - 1].along < 60) continue;
+    out.push({ id: x.id, lat: x.lat, lng: x.lng, along: x.along });
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Words: what to do next, on screen and spoken
 // ---------------------------------------------------------------------------
@@ -125,6 +158,7 @@ const WORDS: Record<Lang, Record<string, string>> = {
     roundabout: 'На круговом движении — съезд {n}', arrive: 'Вы приехали', depart: 'Поехали', in: 'Через {d}', onto: 'на {name}',
     camera: 'Камера через {d}', limit: 'ограничение {v}', over: 'Снизьте скорость', reroute: 'Перестраиваем маршрут', m: 'м', km: 'км',
     now: 'Сейчас', then: 'затем', camAhead: 'Впереди камера', limitSay: 'Ограничение скорости {v}', overSay: 'Вы превышаете скорость. Ограничение {v}',
+    signal: 'Светофор через {d}', signalSay: 'Впереди светофор', signals: 'Светофоров на пути: {n}',
     arriveSay: 'Вы приехали. Зарядная станция {name}', departSay: 'Маршрут построен. Ехать {d}, примерно {t}',
   },
   uz: {
@@ -133,6 +167,7 @@ const WORDS: Record<Lang, Record<string, string>> = {
     roundabout: 'Aylanma yo‘lda — {n}-chiqish', arrive: 'Yetib keldingiz', depart: 'Yo‘lga chiqdik', in: '{d} dan keyin', onto: '{name} ga',
     camera: '{d} dan keyin kamera', limit: 'cheklov {v}', over: 'Tezlikni pasaytiring', reroute: 'Yo‘nalish qayta tuzilmoqda', m: 'm', km: 'km',
     now: 'Hozir', then: 'keyin', camAhead: 'Oldinda kamera', limitSay: 'Tezlik cheklovi {v}', overSay: 'Tezlikni oshiryapsiz. Cheklov {v}',
+    signal: '{d} dan keyin svetofor', signalSay: 'Oldinda svetofor', signals: 'Yo‘lda {n} ta svetofor',
     arriveSay: 'Yetib keldingiz. Quvvatlash stansiyasi {name}', departSay: 'Yo‘nalish tayyor. {d}, taxminan {t}',
   },
   en: {
@@ -141,6 +176,7 @@ const WORDS: Record<Lang, Record<string, string>> = {
     roundabout: 'At the roundabout take exit {n}', arrive: 'You have arrived', depart: 'Let’s go', in: 'In {d}', onto: 'onto {name}',
     camera: 'Camera in {d}', limit: 'limit {v}', over: 'Slow down', reroute: 'Rerouting', m: 'm', km: 'km',
     now: 'Now', then: 'then', camAhead: 'Speed camera ahead', limitSay: 'Speed limit {v}', overSay: 'You are speeding. Limit {v}',
+    signal: 'Traffic light in {d}', signalSay: 'Traffic light ahead', signals: 'Traffic lights on the way: {n}',
     arriveSay: 'You have arrived at {name}', departSay: 'Route ready. {d}, about {t}',
   },
 };

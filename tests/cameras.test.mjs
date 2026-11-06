@@ -81,4 +81,12 @@ describe('speed cameras', () => {
     const area = (await call('/cameras?bbox=41.2,69.15,41.3,69.25')).data.cameras;
     assert.equal(area.length, 0);
   });
+
+  test('traffic lights: an area answers, a country-sized box is refused', async () => {
+    const ok = await call('/signals?bbox=41.25,69.25,41.5,69.5');
+    assert.equal(ok.status, 200);
+    assert.ok(Array.isArray(ok.data.signals));
+    assert.equal((await call('/signals?bbox=40,60,43,70')).status, 400);
+    assert.equal((await call('/signals?bbox=x')).status, 400);
+  });
 });

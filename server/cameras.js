@@ -13,11 +13,14 @@ import { api, requireAuth } from './api.js';
  *                   hidden after repeated "it is not here".
  *
  * Nothing is invented: an area without data shows no cameras.
+ *
+ * Traffic lights come the same way (highway=traffic_signals), so the
+ * navigator can show them on the route and say "впереди светофор".
  */
 
-const MIRRORS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
+const MIRRORS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
 const DAY = 86400_000;
-const cache = new Map(); // key -> { at, cameras }
+const cache = new Map(); // key -> { at, cameras } for cameras, 'tl:' + key for traffic lights
 const reports = () => (db.data.cameraReports ??= []);
 
 /** Areas snap to a 0.25° grid so nearby routes share a cache entry. */
@@ -30,19 +33,33 @@ const loading = new Map(); // key -> Promise
  * within a few seconds, and a slow public server fills the cache for the
  * next route instead of holding this one up.
  */
-async function fromOsm(s, w, n, e) {
+async function fromOsm(s, w, n, e, layer = CAMERAS) {
   // Tests and offline installs switch the public source off.
   if (process.env.OSM_CAMERAS === 'false') return [];
-  const key = `${snap(s)},${snap(w)},${snap(n) + 0.25},${snap(e) + 0.25}`;
+  const box = `${snap(s)},${snap(w)},${snap(n) + 0.25},${snap(e) + 0.25}`;
+  const key = layer.prefix + box;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < DAY) return hit.cameras;
-  if (!loading.has(key)) loading.set(key, fetchOsm(key, hit).finally(() => loading.delete(key)));
+  if (!loading.has(key)) loading.set(key, fetchOsm(key, box, layer, hit).finally(() => loading.delete(key)));
   const quick = new Promise(resolve => setTimeout(() => resolve(hit?.cameras ?? []), 3500));
   return Promise.race([loading.get(key), quick]);
 }
 
-async function fetchOsm(key, hit) {
-  const q = `[out:json][timeout:20];(node["highway"="speed_camera"](${key}););out body;`;
+const CAMERAS = {
+  prefix: '',
+  tag: 'speed_camera',
+  out: 'body',
+  map: x => ({ id: `osm-${x.id}`, lat: x.lat, lng: x.lon, maxspeed: Number.parseInt(x.tags?.maxspeed, 10) || null, kind: 'speed', source: 'osm' }),
+};
+const LIGHTS = {
+  prefix: 'tl:',
+  tag: 'traffic_signals',
+  out: 'skel',
+  map: x => ({ id: `tl-${x.id}`, lat: x.lat, lng: x.lon }),
+};
+
+async function fetchOsm(key, box, layer, hit) {
+  const q = `[out:json][timeout:20];(node["highway"="${layer.tag}"](${box}););out ${layer.out};`;
   for (const url of MIRRORS) {
     try {
       const res = await fetch(url, { method: 'POST', headers: { 'User-Agent': 'Voli/1.0 (EV charging app)' }, body: new URLSearchParams({ data: q }), signal: AbortSignal.timeout(20_000) });
@@ -50,7 +67,7 @@ async function fetchOsm(key, hit) {
       const json = await res.json();
       const cameras = (json.elements ?? [])
         .filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lon))
-        .map(x => ({ id: `osm-${x.id}`, lat: x.lat, lng: x.lon, maxspeed: Number.parseInt(x.tags?.maxspeed, 10) || null, kind: 'speed', source: 'osm' }));
+        .map(layer.map);
       cache.set(key, { at: Date.now(), cameras });
       if (cache.size > 500) cache.delete(cache.keys().next().value);
       return cameras;
@@ -75,6 +92,16 @@ api.get('/cameras', async (req, res) => {
     .filter(r => visible(r) && inBox(r, s, w, n, e))
     .map(r => ({ id: r.id, lat: r.lat, lng: r.lng, maxspeed: r.maxspeed, kind: r.kind, source: 'drivers', confirmed: r.confirmed }));
   res.json({ cameras: [...osm.filter(c => inBox(c, s, w, n, e)), ...drivers] });
+});
+
+/** Traffic lights in an area, for the navigator: only where OpenStreetMap has them. */
+api.get('/signals', async (req, res) => {
+  const [s, w, n, e] = String(req.query.bbox ?? '').split(',').map(Number);
+  if (![s, w, n, e].every(Number.isFinite) || n <= s || e <= w || n - s > 1 || e - w > 1) {
+    return res.status(400).json({ error: 'bbox=юг,запад,север,восток, не больше 1° по стороне' });
+  }
+  const lights = await fromOsm(s, w, n, e, LIGHTS);
+  res.json({ signals: lights.filter(c => inBox(c, s, w, n, e)) });
 });
 
 api.post('/cameras', requireAuth('driver'), (req, res) => {

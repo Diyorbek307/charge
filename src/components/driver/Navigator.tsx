@@ -9,9 +9,10 @@ import type { Station } from '../../data/mockData';
 import { useI18n } from '../../lib/i18n';
 import { useSync } from '../../lib/sync';
 import {
-  type Camera, type LatLng, type Lang, type Route, type Step, fetchRoute, fetchCameras, project, pointAt, bearing, word, fmtDist, action, say, voiceLang, dist, spokenDist, spokenTime, prefetchSpeech,
+  type Camera, type LatLng, type Lang, type Route, type Signal, type Step, fetchRoute, fetchCameras, fetchSignals, project, pointAt, bearing, word, fmtDist, action, say, voiceLang, dist, spokenDist, spokenTime, prefetchSpeech,
 } from '../../lib/nav';
 import BaseMap from '../BaseMap';
+import { openInYandex } from '../../lib/externalNav';
 
 const CITY_CENTER: LatLng = { lat: 41.3111, lng: 69.2797 };
 
@@ -37,6 +38,11 @@ function ManeuverIcon({ s, size = 34 }: { s: Step | null; size?: number }) {
   }
 }
 
+/** A small red "Я" so the button reads as Yandex at a glance. */
+function YandexMark() {
+  return <span aria-hidden="true" className="w-5 h-5 rounded-full bg-[#FC3F1D] text-white text-[11px] font-black grid place-items-center">Я</span>;
+}
+
 /** Keeps the map on the car, pointing where it drives. */
 function Follow({ at, zoom }: { at: LatLng | null; zoom: number }) {
   const map = useMap();
@@ -60,6 +66,12 @@ const camIcon = (driver: boolean) =>
     iconAnchor: [13, 13],
     html: `<div style="width:26px;height:26px;border-radius:8px;background:${driver ? '#F59E0B' : '#DC2626'};border:2px solid white;display:grid;place-items:center;box-shadow:0 1px 6px rgba(0,0,0,.3)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></div>`,
   });
+const lightIcon = L.divIcon({
+  className: '',
+  iconSize: [14, 26],
+  iconAnchor: [7, 13],
+  html: '<div style="width:14px;height:26px;border-radius:5px;background:#111;border:1.5px solid white;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;box-shadow:0 1px 4px rgba(0,0,0,.35)"><i style="width:6px;height:6px;border-radius:50%;background:#EF4444"></i><i style="width:6px;height:6px;border-radius:50%;background:#FFC83D"></i><i style="width:6px;height:6px;border-radius:50%;background:#22C55E"></i></div>',
+});
 const flagIcon = L.divIcon({
   className: '',
   iconSize: [34, 34],
@@ -100,6 +112,7 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
   const [noGps, setNoGps] = useState(false);
   const [route, setRoute] = useState<Route | null>(null);
   const [cameras, setCameras] = useState<Camera[]>([]);
+  const [signals, setSignals] = useState<Signal[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const [sim, setSim] = useState(false);
@@ -152,6 +165,9 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
       }
       setRoute(r);
       spoken.current.clear();
+      // Lights are a help, not a must: the route does not wait for them.
+      setSignals([]);
+      void fetchSignals(r).then(setSignals).catch(() => {});
       setCameras(await camerasFor(r));
     } catch (e) {
       setError((e as Error).message);
@@ -202,6 +218,9 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
         .sort((a, b) => a.at - b.at)
     : [];
   const cam = camsAhead[0] ?? null;
+  const light = route ? signals.find(x => x.along > along + 5) ?? null : null;
+  const toLight = light ? light.along - along : Infinity;
+  const lightsLeft = signals.filter(x => x.along > along + 5).length;
   const over = !!cam?.c.maxspeed && speed !== null && speed > cam.c.maxspeed + 5;
   const etaMin = route ? Math.max(1, Math.round(((route.duration * left) / Math.max(1, route.length)) / 60)) : 0;
   const etaClock = new Date(Date.now() + etaMin * 60000).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -263,9 +282,11 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
       if (toNext <= 90) speak(`${next.along}-now`, p.now, true);
     }
     if (cam && cam.at <= 550) speak(`cam-${cam.c.id}`, `${word(vl, 'camAhead')}, ${spokenDist(vl, cam.at)}${cam.c.maxspeed ? `. ${word(vl, 'limitSay', { v: cam.c.maxspeed })}` : ''}`, false, true);
+    // A light is said once at ~200 m, unless a turn or a camera is being spoken about right there.
+    if (light && toLight <= 260 && toLight > 120 && (!next || toNext > 400) && (!cam || cam.at > 600)) speak(`tl-${light.id}`, word(vl, 'signalSay'));
     if (over) speak(`over-${cam?.c.id}`, word(vl, 'overSay', { v: cam?.c.maxspeed ?? '' }), true, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route, along, next, toNext, cam, over, arrived, muted, lang]);
+  }, [route, along, next, toNext, cam, light, toLight, over, arrived, muted, lang]);
 
   const reportCamera = async () => {
     if (!origin) return;
@@ -290,6 +311,9 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
           <BaseMap />
           {passed.length > 1 && <Polyline positions={passed.map(p => [p.lat, p.lng])} pathOptions={{ color: '#9CA3AF', weight: 7, opacity: 0.8 }} />}
           {ahead.length > 1 && <Polyline positions={ahead.map(p => [p.lat, p.lng])} pathOptions={{ color: '#2563EB', weight: 8, opacity: 0.9 }} />}
+          {signals.map(x => (
+            <Marker key={x.id} position={[x.lat, x.lng]} icon={lightIcon} />
+          ))}
           {cameras.map(c => (
             <Marker key={c.id} position={[c.lat, c.lng]} icon={camIcon(c.source === 'drivers')} />
           ))}
@@ -329,6 +353,12 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
               {cam.c.maxspeed && <span className="w-9 h-9 rounded-full bg-white text-[#111] border-4 border-red-500 grid place-items-center text-xs font-black">{cam.c.maxspeed}</span>}
             </div>
           )}
+          {light && toLight <= 300 && !(cam && cam.at <= 500) && !arrived && (
+            <div className="rounded-2xl px-3 py-2 flex items-center gap-2 bg-[#111]/90 text-white shadow-lg w-max max-w-full">
+              <span aria-hidden="true" className="w-3 h-6 rounded bg-black border border-white/40 flex flex-col items-center justify-evenly"><i className="w-1.5 h-1.5 rounded-full bg-red-500" /><i className="w-1.5 h-1.5 rounded-full bg-[#FFC83D]" /><i className="w-1.5 h-1.5 rounded-full bg-green-500" /></span>
+              <span className="text-sm font-semibold">{word(lang, 'signal', { d: fmtDist(lang, toLight) })}</span>
+            </div>
+          )}
           {over && <p className="rounded-xl bg-red-600 text-white text-sm font-bold px-3 py-2 text-center">{word(lang, 'over')}</p>}
           {note && <p className="rounded-xl bg-white/95 text-slate-800 text-sm px-3 py-2 shadow">{note}</p>}
         </div>
@@ -356,7 +386,9 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
             <div className="flex-1 min-w-0">
               <p className="text-xl font-bold text-slate-900 tabular-nums">{route ? `${etaMin} мин · ${fmtDist(lang, left)}` : '—'}</p>
               <p className="text-xs text-slate-500 truncate">{route ? `Прибытие в ${etaClock} · ${station.name}` : station.name}</p>
+              {lightsLeft > 0 && <p className="text-xs text-slate-500">{word(lang, 'signals', { n: lightsLeft })}</p>}
             </div>
+            <button onClick={() => openInYandex(dest, station.name)} aria-label="Открыть в Яндекс Навигаторе" title="Открыть в Яндекс Навигаторе" className="w-11 h-11 rounded-xl bg-slate-100 grid place-items-center shrink-0"><YandexMark /></button>
             <button onClick={reportCamera} aria-label="Здесь камера" className="w-11 h-11 rounded-xl bg-slate-100 grid place-items-center"><CameraIcon size={18} className="text-slate-700" /></button>
             <button onClick={onClose} aria-label="Завершить навигацию" className="w-11 h-11 rounded-xl bg-red-50 grid place-items-center"><X size={20} className="text-red-600" /></button>
           </div>

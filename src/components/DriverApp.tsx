@@ -23,6 +23,7 @@ import { FinanceScreen, LoyaltyScreen, FamilyScreen, HostScreen, SosSheet } from
 import { CreditScreen, FaceCheck } from './driver/Credit';
 import { NetworkTopUp, NetworkWalletList } from './driver/NetworkWallets';
 import Navigator from './driver/Navigator';
+import { openInYandex } from '../lib/externalNav';
 import { useRoadDistance } from '../lib/nav';
 import DealsScreen from './driver/Deals';
 import QRScanScreen from './driver/QRScan';
@@ -414,9 +415,16 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
           <p role="alert" className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-2">{queueError}</p>
         )}
         {/* Navigation inside the app: route, voice, cameras. */}
-        {on.navigator && <button onClick={onNavigate} className="w-full mb-2 bg-[#111] text-white rounded-2xl py-3.5 font-bold text-[15px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-          <Navigation size={17} className="text-[#FFC83D] fill-[#FFC83D]" />{dist !== null && drive !== null ? `Маршрут · ${road ? '' : '≈ '}${fmtKm(dist)} · ${hm(drive)}` : 'Маршрут'}
-        </button>}
+        <div className="flex gap-2 mb-2">
+          {on.navigator && <button onClick={onNavigate} className="flex-1 min-w-0 bg-[#111] text-white rounded-2xl py-3.5 font-bold text-[15px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+            <Navigation size={17} className="text-[#FFC83D] fill-[#FFC83D] shrink-0" /><span className="truncate">{dist !== null && drive !== null ? `Маршрут · ${road ? '' : '≈ '}${fmtKm(dist)} · ${hm(drive)}` : 'Маршрут'}</span>
+          </button>}
+          {/* The same route in Yandex Navigator, for those who drive with it. */}
+          <button onClick={() => openInYandex({ lat: station.geoLat, lng: station.geoLng }, station.name)} aria-label="Открыть в Яндекс Навигаторе" title="Открыть в Яндекс Навигаторе"
+            className={`${on.navigator ? 'px-3.5' : 'flex-1'} bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl py-3.5 font-bold text-sm flex items-center justify-center gap-2`}>
+            <span aria-hidden="true" className="w-5 h-5 rounded-full bg-[#FC3F1D] text-white text-[11px] font-black grid place-items-center">Я</span>{on.navigator ? 'Яндекс' : 'Маршрут в Яндекс Навигаторе'}
+          </button>
+        </div>
         <div className="grid grid-cols-2 gap-2">
           <button onClick={onReviews} className="bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl py-2.5 font-medium text-sm transition-colors flex items-center justify-center gap-1.5">
             <Star size={14} />{`Отзывы · ${station.reviews}`}
