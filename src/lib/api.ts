@@ -808,6 +808,29 @@ export interface AdminUsers {
   users: AdminUser[];
 }
 
+/** A nightly copy of the database (server/backup.js). */
+export interface BackupInfo {
+  name: string;
+  takenAt: string;
+  by: string;
+  bytes: number;
+  sha256: string;
+  counts: Record<string, number>;
+  verified: boolean;
+  offsite: { to: string; at: string } | null;
+}
+
+/** Saves a backup copy to the admin's computer. */
+export async function downloadBackup(name: string) {
+  const res = await fetch(`${API_ORIGIN}/api/admin/backups/${encodeURIComponent(name)}`, { headers: authHeaders('admin') });
+  if (!res.ok) throw new ApiError((await res.json().catch(() => null))?.error ?? `Ошибка ${res.status}`, res.status);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(await res.blob());
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -923,6 +946,8 @@ export const apiClient = {
   systemHealth: (portal: Portal) => request<SystemHealth>('/admin/health', { portal }),
   deleteAccount: (password: string, confirm?: string) => post<{ ok: true }>('/me/delete', { password, confirm }, 'driver'),
   testMail: () => post<{ ok: boolean; to?: string; error?: string }>('/admin/mail/test', undefined, 'admin'),
+  adminBackups: () => request<{ backups: BackupInfo[]; offsite: boolean; keep: number }>('/admin/backups', { portal: 'admin' }),
+  takeBackup: () => post<{ backup: BackupInfo }>('/admin/backups', undefined, 'admin'),
   devices: (portal: Portal) => request<SignedInDevice[]>('/auth/sessions', { portal }),
   signOutOthers: (portal: Portal) => post<{ revoked: number }>('/auth/sessions/revoke-others', undefined, portal),
   changePassword: (portal: Portal, current: string, next: string) => post<{ ok: boolean }>('/auth/password', { current, next }, portal),

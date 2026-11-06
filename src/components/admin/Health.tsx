@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Server, Database, Radio, Cpu, Bell, MessageSquare, RefreshCw, CheckCircle, AlertTriangle, Send, LoaderCircle, Siren } from 'lucide-react';
 import type { SystemHealth } from '../../lib/api';
 import { useSync } from '../../lib/sync';
+import Backups from './Backups';
 import { num, dateTime } from '../../lib/analytics';
 import { Page, Card, Kpi, Loading, ErrorNote, Pill } from './ui';
 
@@ -104,6 +105,8 @@ export default function AdminHealth() {
           </p>
         )}
       </Card>
+
+      <Backups />
 
       {!!data.alerts?.recent.length && (
         <Card pad={false} title={<span className="inline-flex items-center gap-2"><Siren size={15} />Последние сигналы о сбоях</span>} right={<span className="text-xs text-slate-400">с последнего запуска сервера</span>}>

@@ -57,12 +57,12 @@ async function transporter() {
   return transport;
 }
 
-async function viaResend({ to, subject, text, html }) {
+async function viaResend({ to, subject, text, html, attachments = [] }) {
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${RESEND}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: FROM, to: [to], subject, text, html }),
-    signal: AbortSignal.timeout(15_000),
+    body: JSON.stringify({ from: FROM, to: [to], subject, text, html, ...(attachments.length ? { attachments: attachments.map(a => ({ filename: a.filename, content: a.content.toString('base64') })) } : {}) }),
+    signal: AbortSignal.timeout(attachments.length ? 60_000 : 15_000),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -96,11 +96,11 @@ export function explain(err) {
   return msg;
 }
 
-async function send(to, subject, text, html) {
+async function send(to, subject, text, html, attachments = []) {
   const via = mailVia();
   try {
-    if (via === 'resend') await viaResend({ to, subject, text, html });
-    else await (await transporter()).sendMail({ from: FROM, to, subject, text, html });
+    if (via === 'resend') await viaResend({ to, subject, text, html, attachments });
+    else await (await transporter()).sendMail({ from: FROM, to, subject, text, html, attachments });
     last = { ok: true, to, subject, at: new Date().toISOString() };
   } catch (err) {
     last = { ok: false, to, subject, at: new Date().toISOString(), error: explain(err) };
@@ -132,6 +132,12 @@ export function notifyTeam(subject, rows, link, box = 'info') {
     console.warn('[mail]', explain(err));
     report(err, 'mail');
   });
+}
+
+/** A backup copy as an attachment (server/backup.js); waits, so the backup knows whether it left. */
+export async function sendBackupLetter(to, subject, rows, filename, content) {
+  const { text, html } = letter(subject, rows, '/?portal=admin&page=system_health');
+  await send(to, `Voli · ${subject}`, text, html, [{ filename, content }]);
 }
 
 /** A sign-in code for a driver who chose email. Waits, so a failure can be told to them. */

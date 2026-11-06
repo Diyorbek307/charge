@@ -42,6 +42,32 @@ class FileStore {
     fs.renameSync(tmp, DB_FILE);
   }
 
+  // Backups (server/backup.js): gzipped copies in DATA_DIR/backups.
+  #backupDir() {
+    return path.join(DATA_DIR, 'backups');
+  }
+  async saveBackup(name, gz, meta) {
+    fs.mkdirSync(this.#backupDir(), { recursive: true });
+    fs.writeFileSync(path.join(this.#backupDir(), name), gz);
+    fs.writeFileSync(path.join(this.#backupDir(), `${name}.meta.json`), JSON.stringify(meta));
+  }
+  async listBackups() {
+    if (!fs.existsSync(this.#backupDir())) return [];
+    return fs.readdirSync(this.#backupDir())
+      .filter(f => f.endsWith('.meta.json'))
+      .map(f => JSON.parse(fs.readFileSync(path.join(this.#backupDir(), f), 'utf8')))
+      .sort((a, b) => b.takenAt.localeCompare(a.takenAt));
+  }
+  async readBackup(name) {
+    const file = path.join(this.#backupDir(), path.basename(name));
+    return fs.existsSync(file) ? fs.readFileSync(file) : null;
+  }
+  async pruneBackups(keep) {
+    for (const old of (await this.listBackups()).slice(keep)) {
+      for (const f of [old.name, `${old.name}.meta.json`]) fs.rmSync(path.join(this.#backupDir(), f), { force: true });
+    }
+  }
+
   async close() {}
 }
 
@@ -106,6 +132,38 @@ class PostgresStore {
        ON CONFLICT (id) DO UPDATE SET doc = EXCLUDED.doc, updated_at = now()`,
       [json],
     );
+  }
+
+  // Backups (server/backup.js): gzipped copies in their own table.
+  async #backups() {
+    const client = await this.#connect();
+    await client.query(
+      `CREATE TABLE IF NOT EXISTS onecharge_backups (
+         name text PRIMARY KEY,
+         taken_at timestamptz NOT NULL,
+         meta jsonb NOT NULL,
+         gz bytea NOT NULL
+       )`,
+    );
+    return client;
+  }
+  async saveBackup(name, gz, meta) {
+    const client = await this.#backups();
+    await client.query('INSERT INTO onecharge_backups (name, taken_at, meta, gz) VALUES ($1, $2, $3::jsonb, $4) ON CONFLICT (name) DO UPDATE SET meta = EXCLUDED.meta, gz = EXCLUDED.gz', [name, meta.takenAt, JSON.stringify(meta), gz]);
+  }
+  async listBackups() {
+    const client = await this.#backups();
+    const { rows } = await client.query('SELECT meta FROM onecharge_backups ORDER BY taken_at DESC');
+    return rows.map(r => r.meta);
+  }
+  async readBackup(name) {
+    const client = await this.#backups();
+    const { rows } = await client.query('SELECT gz FROM onecharge_backups WHERE name = $1', [name]);
+    return rows[0] ? Buffer.from(rows[0].gz) : null;
+  }
+  async pruneBackups(keep) {
+    const client = await this.#backups();
+    await client.query('DELETE FROM onecharge_backups WHERE name NOT IN (SELECT name FROM onecharge_backups ORDER BY taken_at DESC LIMIT $1)', [keep]);
   }
 
   async close() {

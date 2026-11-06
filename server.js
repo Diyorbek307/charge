@@ -23,6 +23,7 @@ import "./server/signin.js";
 import "./server/adminBootstrap.js";
 import "./server/demand.js";
 import { startReliability } from "./server/reliability.js";
+import { startBackups } from "./server/backup.js";
 import "./server/reconcile.js";
 import "./server/inbox.js";
 import "./server/tts.js";
@@ -153,6 +154,8 @@ errorHandler(app);
 // Load the database before accepting traffic, so no request sees empty state.
 await db.ready;
 startReliability();
+// A checked copy of the database every night (server/backup.js).
+startBackups();
 
 const server = app.listen(PORT, () => {
   console.log(`Voli running on port ${PORT}`);
