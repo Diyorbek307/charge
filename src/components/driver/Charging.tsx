@@ -39,6 +39,7 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
   }, [askStop]);
   const [shared, setShared] = useState<string | null>(null);
   const { actions, state } = useSync();
+  const idleRule = state?.platform?.idle;
   /** The phone's share sheet where there is one; otherwise the link is copied. */
   const share = async () => {
     if (!session) return;
@@ -121,6 +122,9 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
           <Clock size={11} className="text-[#FFC83D]" />
           <p className="text-white/70 text-xs">{goalLine}</p>
         </div>
+        {idleRule?.on && (
+          <p className="mt-2 text-center text-[11px] text-white/45">{`После зарядки ${idleRule.freeMin} мин бесплатно, затем ${idleRule.perMin.toLocaleString('ru-RU')} сум/мин — освободите разъём`}</p>
+        )}
 
         <div className="mt-6 grid grid-cols-3 text-center">
           {[

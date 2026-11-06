@@ -4308,5 +4308,13 @@
 "{0} · водителей и сотрудников {1} · зарядок {2} · сделал {3}": "{0} · drivers and staff {1} · charges {2} · by {3}",
 "проверена": "checked",
 "в ящике {0}": "in {0}",
-"Скачать копию за {0}": "Download the copy of {0}"
+"Скачать копию за {0}": "Download the copy of {0}",
+"После зарядки {0} мин бесплатно, затем {1} сум/мин — освободите разъём": "{0} min free after charging, then {1} UZS/min — please free the connector",
+"Простой после зарядки": "Idle after charging",
+"Плата за простой после зарядки": "Idle fee after charging",
+"Машина зарядилась, но стоит у разъёма: после бесплатных минут — поминутная плата. Считается по сигналу станции «кабель отключён»": "The car is charged but still at the connector: after the free minutes, a per-minute fee. Counted from the station's 'cable unplugged' signal",
+"Бесплатно после зарядки": "Free after charging",
+"Плата за минуту простоя": "Fee per idle minute",
+"Не больше минут за раз": "At most minutes per charge",
+"Предел, чтобы забытая машина не обнулила кошелёк": "A cap so a forgotten car does not empty the wallet"
 }

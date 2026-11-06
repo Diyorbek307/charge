@@ -324,6 +324,8 @@ export interface Session {
   promo?: { id: string; title: string; percent: number };
   /** The driver's 1–5 rating, once given. */
   rating?: number;
+  /** Stayed plugged in after the charge: minutes in all, minutes billed and what was taken. */
+  idle?: { minutes: number; billed: number; fee: number; at: string };
 }
 
 export interface Transaction {
@@ -518,6 +520,8 @@ export interface Promo {
 export interface PlatformSettings {
   features: { offline: boolean; navigator: boolean; battery: boolean; arrival: boolean; places: boolean; rewards: boolean; plus: boolean; autocharge: boolean; liveNotice: boolean; bookings: boolean; queue: boolean; sos: boolean; referral: boolean };
   booking: { fee: number; graceMin: number };
+  /** The fee for staying plugged in after the charge (server/idle.js). */
+  idle?: { on: boolean; freeMin: number; perMin: number };
   topup: { min: number; max: number; providers: ('payme' | 'click' | 'uzum' | 'humo')[] };
   queueHoldMin: number;
   minPrepaidKwh: number;

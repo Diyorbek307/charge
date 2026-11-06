@@ -70,6 +70,10 @@ export const SCHEMA = [
 
   // Charging, bookings, queue
   { key: 'charge.minPrepaidKwh', group: 'charging', label: 'Минимум на балансе для старта', hint: 'Сколько кВт·ч по цене разъёма должно быть на счёте', type: 'int', def: 5, min: 0, max: 100, unit: 'кВт·ч' },
+  { key: 'idle.enabled', group: 'charging', label: 'Плата за простой после зарядки', hint: 'Машина зарядилась, но стоит у разъёма: после бесплатных минут — поминутная плата. Считается по сигналу станции «кабель отключён»', type: 'bool', def: false },
+  { key: 'idle.freeMin', group: 'charging', label: 'Бесплатно после зарядки', type: 'int', def: 15, min: 0, max: 180, unit: 'мин' },
+  { key: 'idle.perMin', group: 'charging', label: 'Плата за минуту простоя', type: 'money', def: 500, min: 0, max: 50_000, unit: 'сум' },
+  { key: 'idle.maxMin', group: 'charging', label: 'Не больше минут за раз', hint: 'Предел, чтобы забытая машина не обнулила кошелёк', type: 'int', def: 120, min: 1, max: 1440, unit: 'мин' },
   { key: 'booking.fee', group: 'charging', label: 'Плата за бронь', type: 'money', def: 2000, min: 0, max: 500_000, unit: 'сум' },
   { key: 'booking.graceMin', group: 'charging', label: 'Бронь держится после начала', type: 'int', def: 15, min: 1, max: 120, unit: 'мин' },
   { key: 'booking.leadMin', group: 'charging', label: 'Разъём придерживается до начала брони', hint: 'Другие водители не могут занять его за это время', type: 'int', def: 10, min: 0, max: 240, unit: 'мин' },
@@ -183,6 +187,7 @@ export function publicSettings() {
   return {
     features: Object.fromEntries(SCHEMA.filter(s => s.key.startsWith('feature.')).map(s => [s.key.slice(8), setting(s.key)])),
     booking: { fee: setting('booking.fee'), graceMin: setting('booking.graceMin') },
+    idle: { on: setting('idle.enabled'), freeMin: setting('idle.freeMin'), perMin: setting('idle.perMin') },
     topup: { min: setting('topup.min'), max: setting('topup.max'), providers: ['payme', 'click', 'uzum', 'humo'].filter(p => setting(`payments.${p}`)) },
     queueHoldMin: setting('queue.holdMin'),
     minPrepaidKwh: setting('charge.minPrepaidKwh'),

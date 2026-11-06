@@ -24,6 +24,7 @@ import "./server/adminBootstrap.js";
 import "./server/demand.js";
 import { startReliability } from "./server/reliability.js";
 import { startBackups } from "./server/backup.js";
+import { startIdleFees } from "./server/idle.js";
 import "./server/reconcile.js";
 import "./server/inbox.js";
 import "./server/tts.js";
@@ -156,6 +157,8 @@ await db.ready;
 startReliability();
 // A checked copy of the database every night (server/backup.js).
 startBackups();
+// The fee for staying plugged in after the charge, when the admin turns it on (server/idle.js).
+startIdleFees();
 
 const server = app.listen(PORT, () => {
   console.log(`Voli running on port ${PORT}`);

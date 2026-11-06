@@ -115,6 +115,8 @@ function scopeOf({ type, entity, payload = {} }) {
     case 'session.tick':
     case 'session.progress':
     case 'session.goal':
+    case 'session.idle.warn':
+    case 'session.idle':
       return { ...sessionScope(entity), public: false };
     case 'support.message':
     case 'session.failed':
@@ -433,7 +435,21 @@ function emit({ type, portal, actor, message, entity = null, payload = {} }) {
   db.save();
   broadcast(event);
   pushHook?.(event);
+  for (const fn of eventListeners) {
+    try {
+      fn(event);
+    } catch (err) {
+      console.warn('[events]', err.message);
+    }
+  }
   return event;
+}
+
+/** Other parts of the server that act on what happens (server/idle.js). */
+const eventListeners = new Set();
+export function onEvent(fn) {
+  eventListeners.add(fn);
+  return () => eventListeners.delete(fn);
 }
 
 /**

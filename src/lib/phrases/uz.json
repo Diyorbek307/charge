@@ -4308,5 +4308,13 @@
 "{0} · водителей и сотрудников {1} · зарядок {2} · сделал {3}": "{0} · haydovchi va xodimlar {1} · quvvatlashlar {2} · olgan {3}",
 "проверена": "tekshirilgan",
 "в ящике {0}": "{0} qutisida",
-"Скачать копию за {0}": "{0} nusxasini yuklab olish"
+"Скачать копию за {0}": "{0} nusxasini yuklab olish",
+"После зарядки {0} мин бесплатно, затем {1} сум/мин — освободите разъём": "Quvvatlashdan keyin {0} daq bepul, keyin {1} so‘m/daq — ulagichni bo‘shating",
+"Простой после зарядки": "Quvvatlashdan keyin turish",
+"Плата за простой после зарядки": "Quvvatlashdan keyin turish uchun to‘lov",
+"Машина зарядилась, но стоит у разъёма: после бесплатных минут — поминутная плата. Считается по сигналу станции «кабель отключён»": "Mashina quvvatlandi, lekin ulagichda turibdi: bepul daqiqalardan keyin — daqiqabay to‘lov. Stansiyaning «kabel uzildi» signali bo‘yicha hisoblanadi",
+"Бесплатно после зарядки": "Quvvatlashdan keyin bepul",
+"Плата за минуту простоя": "Bir daqiqa turish narxi",
+"Не больше минут за раз": "Bir martada ko‘pi bilan daqiqa",
+"Предел, чтобы забытая машина не обнулила кошелёк": "Unutilgan mashina hamyonni bo‘shatib qo‘ymasligi uchun chegara"
 }

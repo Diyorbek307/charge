@@ -55,6 +55,7 @@ export default function HistoryScreen({ onBack }: { onBack?: () => void } = {}) 
     ['Оплата', s.corporate ? 'Корпоративный счёт' : s.credit ? 'В долг' : s.familyOwner ? 'Семейный кошелёк' : s.direct ? `Баланс сети ${s.operator}` : 'Кошелёк'],
     ...(s.bonusUsed ? [['Бонусом Voli', `−${sum(s.bonusUsed)}`] as [string, string]] : []),
     ['Итого', sum(s.cost)],
+    ...(s.idle?.fee ? [['Простой после зарядки', `${s.idle.billed} мин · ${sum(s.idle.fee)}`] as [string, string]] : []),
   ];
 
   const rate = async (s: Session, stars: number) => {
