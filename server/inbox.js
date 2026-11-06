@@ -1,6 +1,7 @@
 import { db } from './db.js';
 import { api, requireAuth } from './api.js';
 import { adminUsers } from './analytics.js';
+import { demandFor } from './demand.js';
 
 /**
  * What waits for the admin, counted in one place: the red marks in the menu
@@ -58,4 +59,31 @@ export function searchAll(raw, limit = 6) {
 
 api.get('/admin/search', requireAuth('admin'), (req, res) => {
   res.json({ hits: searchAll(String(req.query.q ?? '').slice(0, 60)) });
+});
+
+/**
+ * What waits for a network in its own portal, about its own stations only:
+ * faults not yet acknowledged, connectors out of order, stations that let
+ * drivers down, and stations short of connectors.
+ */
+export function networkInboxFor(operatorId) {
+  const d = db.data;
+  const mine = d.stations.filter(s => s.operatorId === operatorId);
+  const ids = new Set(mine.map(s => s.id));
+  const alerts = (d.alerts ?? []).filter(a => !a.ack && (a.operatorId === operatorId || ids.has(a.stationId))).length;
+  const down = mine.reduce((n, s) => n + s.connectors.filter(c => c.status === 'unavailable').length, 0);
+  const weak = mine.filter(s => s.reliability && s.reliability.score < 90).length;
+  const short = demandFor().stations.filter(s => ids.has(s.id) && s.fullHours >= 5).length;
+  return {
+    items: [
+      { key: 'alerts', page: 'alerts', count: alerts, label: 'Оповещения без ответа', urgent: true },
+      { key: 'down', page: 'stations', count: down, label: 'Разъёмы не работают', urgent: down > 0 },
+      { key: 'weak', page: 'stations', count: weak, label: 'Станции с надёжностью ниже 90%', urgent: false },
+      { key: 'short', page: 'stations', count: short, label: 'Не хватает разъёмов', urgent: false },
+    ],
+  };
+}
+
+api.get('/operator/inbox', requireAuth('operator'), (req, res) => {
+  res.json(networkInboxFor(req.account.orgId));
 });

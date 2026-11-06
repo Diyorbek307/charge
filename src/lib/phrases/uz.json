@@ -4254,5 +4254,10 @@
 "Быстро": "Tezkor",
 "Ближайшая свободная · ≈ {0}": "Eng yaqin bo‘sh · ≈ {0}",
 "Дешевле рядом · {0} сум": "Yaqinda arzonroq · {0} so‘m",
-"Как в прошлый раз · {0}": "O‘tgan safargidek · {0}"
+"Как в прошлый раз · {0}": "O‘tgan safargidek · {0}",
+"Оповещения без ответа": "Javobsiz ogohlantirishlar",
+"Разъёмы не работают": "Ulagichlar ishlamayapti",
+"Станции с надёжностью ниже 90%": "Ishonchliligi 90% dan past stansiyalar",
+"Всё в порядке: сбоев и неработающих разъёмов нет": "Hammasi joyida: nosozliklar va ishlamaydigan ulagichlar yo‘q",
+"Удачные запуски и время в работе за 30 дней": "30 kunda muvaffaqiyatli ishga tushirishlar va ishlash vaqti"
 }

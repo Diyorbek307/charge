@@ -158,6 +158,7 @@ export default function OperatorStations({ onOpen }: { onOpen: (stationId: strin
                   <th className="px-5 py-2.5 font-semibold text-right">Сессии</th>
                   <th className="px-5 py-2.5 font-semibold text-right">Выручка</th>
                   <th className="px-5 py-2.5 font-semibold text-right">Загрузка</th>
+                  <th className="px-5 py-2.5 font-semibold text-right" title="Удачные запуски и время в работе за 30 дней">Надёжность</th>
                   <th className="px-5 py-2.5 font-semibold text-right">Рейтинг</th>
                   <th className="px-3 py-2.5"><span className="sr-only">Наклейка QR</span></th>
                 </tr>
@@ -185,6 +186,7 @@ export default function OperatorStations({ onOpen }: { onOpen: (stationId: strin
                       <td className="px-5 py-3 text-right tabular-nums text-slate-700">{st ? num(st.sessions) : '—'}</td>
                       <td className="px-5 py-3 text-right tabular-nums font-semibold text-slate-800 whitespace-nowrap">{st ? money(st.revenue) : '—'}</td>
                       <td className="px-5 py-3 text-right tabular-nums text-slate-700">{st ? `${num(st.utilization, 1)}%` : '—'}</td>
+                      <td className={`px-5 py-3 text-right tabular-nums font-semibold ${!s.reliability ? 'text-slate-400' : s.reliability.score >= 95 ? 'text-emerald-700' : s.reliability.score >= 85 ? 'text-amber-700' : 'text-red-600'}`}>{s.reliability ? `${num(s.reliability.score, 1)}%` : '—'}</td>
                       <td className="px-5 py-3 text-right tabular-nums text-slate-600">{s.reviews ? `★ ${num(s.rating, 1)}` : 'нет отзывов'}</td>
                       <td className="px-3 py-3 text-right" onClick={e => e.stopPropagation()}>
                         <StickerButton stations={[s]} fileName={`qr-${s.id}.pdf`} compact icon={<QrCode size={15} />} label={`Наклейка QR · ${s.name}`} />

@@ -71,3 +71,12 @@ test('the admin sees networks ranked, stations weakest first; others may not', a
   const op = await login('operator', 'operator@greencharge.uz', 'Operator2026');
   assert.equal((await call('/admin/reliability', { token: op })).status, 403);
 });
+
+test('a network sees what waits about its own stations only', async () => {
+  const op = await login('operator', 'operator@greencharge.uz', 'Operator2026');
+  const r = await call('/operator/inbox', { token: op });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.data.items.map(i => i.key), ['alerts', 'down', 'weak', 'short']);
+  const admin = await login('admin', 'admin@voli.uz', 'Admin2026');
+  assert.equal((await call('/operator/inbox', { token: admin })).status, 403);
+});

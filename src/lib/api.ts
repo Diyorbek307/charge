@@ -279,6 +279,8 @@ export interface Station {
   image: string;
   /** Set once a charger has connected over OCPP, or while a new station awaits it. */
   ocpp?: { online?: boolean; awaiting?: boolean; lastSeen?: string; connectedAt?: string };
+  /** Starts that worked and time in working order over 30 days; the score is the lower. */
+  reliability?: { score: number; starts: number | null; uptime: number | null; charges: number } | null;
 }
 
 export interface Session {
@@ -993,6 +995,7 @@ export const apiClient = {
   adminGrowth: () => request<Growth>('/admin/growth', { portal: 'admin' }),
   adminInvestor: () => request<Investor>('/admin/investor', { portal: 'admin' }),
   adminInbox: () => request<AdminInbox>('/admin/inbox', { portal: 'admin' }),
+  networkInbox: () => request<AdminInbox>('/operator/inbox', { portal: 'operator' }),
   adminSearch: (q: string) => request<{ hits: SearchHit[] }>(`/admin/search?q=${encodeURIComponent(q)}`, { portal: 'admin' }),
   adminDemand: () => request<Demand>('/admin/demand', { portal: 'admin' }),
   adminReliability: () => request<Reliability>('/admin/reliability', { portal: 'admin' }),

@@ -3,6 +3,8 @@ import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { useSync } from '../../lib/sync';
 import { useAnalytics, money, num, dayShort, todayLong, duration, plural } from '../../lib/analytics';
 import { Page, Card, Kpi, Loading, ErrorNote, BarList, CHART } from '../admin/ui';
+import { useAdminInbox } from '../../lib/inbox';
+import NeedsAttention from '../NeedsAttention';
 
 function greeting() {
   const h = new Date(Date.now() + 5 * 3600_000).getUTCHours();
@@ -13,6 +15,7 @@ export default function OperatorDashboard({ onNavigate }: { onNavigate: (page: s
   const { data, error } = useAnalytics('operator', 30);
   const { state, sessions } = useSync();
   const me = sessions.operator;
+  const inbox = useAdminInbox('operator');
   if (!data) return <Page title={greeting()}>{error ? <ErrorNote text={error} /> : <Loading />}</Page>;
 
   const own = new Set(data.stations.map(s => s.id));
@@ -24,6 +27,7 @@ export default function OperatorDashboard({ onNavigate }: { onNavigate: (page: s
 
   return (
     <Page title={`${greeting()}, ${me?.org ?? 'оператор'}`} subtitle={<>{todayLong()} · ваша сеть, показатели за 30 дней</>}>
+      <NeedsAttention items={inbox?.items ?? null} onNavigate={onNavigate} allClear="Всё в порядке: сбоев и неработающих разъёмов нет" />
       <div className="relative overflow-hidden rounded-2xl px-5 py-4 flex flex-wrap items-center justify-between gap-4 text-[#111] bg-gradient-to-r from-[#FFC83D] to-[#FFB000]" style={{ boxShadow: '0 4px 24px rgba(255,176,0,0.25)' }}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-black/10 rounded-xl flex items-center justify-center"><Zap size={20} /></div>

@@ -4254,5 +4254,10 @@
 "Быстро": "Quick",
 "Ближайшая свободная · ≈ {0}": "Nearest free · ≈ {0}",
 "Дешевле рядом · {0} сум": "Cheaper nearby · {0} sum",
-"Как в прошлый раз · {0}": "Like last time · {0}"
+"Как в прошлый раз · {0}": "Like last time · {0}",
+"Оповещения без ответа": "Unanswered alerts",
+"Разъёмы не работают": "Connectors out of order",
+"Станции с надёжностью ниже 90%": "Stations below 90% reliability",
+"Всё в порядке: сбоев и неработающих разъёмов нет": "All good: no faults or broken connectors",
+"Удачные запуски и время в работе за 30 дней": "Successful starts and time in working order over 30 days"
 }
