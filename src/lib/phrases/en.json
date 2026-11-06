@@ -4344,5 +4344,9 @@
 "По-узбекски (необязательно)": "In Uzbek (optional)",
 "По-английски (необязательно)": "In English (optional)",
 "По-узбекски": "In Uzbek",
-"По-английски": "In English"
+"По-английски": "In English",
+"Уведомления в приложении из магазина": "Notifications in the store app",
+"Firebase подключён · телефонов: {0}": "Firebase connected · phones: {0}",
+"Не настроены — нужен FIREBASE_SERVICE_ACCOUNT (ключ сервисного аккаунта Firebase)": "Not set up — FIREBASE_SERVICE_ACCOUNT is needed (the Firebase service account key)",
+"Зарядка, очередь, бронь и оплата": "Charging, queue, booking and payment"
 }

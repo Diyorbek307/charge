@@ -4,6 +4,7 @@ import { db } from './db.js';
 import { tokenOf } from './session.js';
 import { setPushHook } from './api.js';
 import { notifyTelegram } from './telegram.js';
+import { sendFcm, fcmConfigured } from './fcm.js';
 
 /**
  * Web Push notifications, so a driver hears "your turn" with the app closed.
@@ -50,6 +51,27 @@ function vapidKeys() {
 }
 
 const subs = () => (db.data.pushSubs ??= []);
+/** The store app's devices: Firebase tokens, one per install (server/fcm.js). */
+const devices = () => (db.data.nativePush ??= []);
+const FCM_TOKEN = /^[A-Za-z0-9:_-]{20,4096}$/;
+
+/** The same notice to the store app on each of these accounts' phones. */
+async function sendNative(accountIds, { title, body, url, tag }) {
+  if (!fcmConfigured()) return 0;
+  const targets = devices().filter(d => accountIds.has(d.accountId));
+  let sent = 0;
+  const gone = new Set();
+  await Promise.all(targets.map(async d => {
+    const r = await sendFcm(d.token, { title, body, url, tag });
+    if (r === 'sent') sent++;
+    else if (r === 'gone') gone.add(d.token);
+  }));
+  if (gone.size) {
+    db.data.nativePush = devices().filter(d => !gone.has(d.token));
+    db.save();
+  }
+  return sent;
+}
 
 function removeSub(endpoint) {
   const before = subs().length;
@@ -158,10 +180,11 @@ async function deliver(event) {
   if (ids.size === 0) return;
   // Accounts linked to Telegram get the same notice from the bot.
   void notifyTelegram(ids, kind.title, event.message);
-  const targets = subs().filter(s => ids.has(s.accountId));
-  if (targets.length === 0) return;
   // The end of a charge replaces its live notification on the lock screen.
   const charge = ['session.stop', 'session.goal', 'session.progress'].includes(event.type) && event.entity ? `charge-${event.entity}` : null;
+  void sendNative(ids, { title: kind.title, body: event.message, tag: charge ?? event.type, url: charge ? '/?portal=driver&go=charging' : kind.url });
+  const targets = subs().filter(s => ids.has(s.accountId));
+  if (targets.length === 0) return;
   await sendTo(targets, { title: kind.title, body: event.message, tag: charge ?? event.type, url: charge ? '/?portal=driver&go=charging' : kind.url, ...(charge ? { renotify: true } : {}) });
 }
 
@@ -171,6 +194,8 @@ async function deliver(event) {
  * Sent straight to the driver's devices, not through events or Telegram.
  */
 export async function pushLiveCharge(session, { title, body, first, final = false }) {
+  // The store app hears the start and the end; the minute-by-minute updates stay on the web's notification.
+  if (first || final) void sendNative(new Set([session.userId]), { title, body, tag: `charge-${session.id}`, url: final ? '/?portal=driver' : '/?portal=driver&go=charging' });
   const targets = subs().filter(s => s.accountId === session.userId);
   if (!targets.length) return 0;
   // The closing notice no longer sticks: the driver can swipe it away.
@@ -193,7 +218,31 @@ pushApi.use(express.json());
 pushApi.get('/vapid-key', (_req, res) => res.json({ publicKey: vapidKeys().publicKey }));
 
 pushApi.get('/status', requireViewer, (req, res) => {
-  res.json({ subscriptions: subs().filter(s => s.accountId === req.account.id).length });
+  res.json({ subscriptions: subs().filter(s => s.accountId === req.account.id).length, devices: devices().filter(d => d.accountId === req.account.id).length });
+});
+
+/** The store app registers its Firebase token after the driver allows notifications. */
+pushApi.post('/native', requireViewer, (req, res) => {
+  const token = String(req.body?.token ?? '');
+  const platform = req.body?.platform === 'ios' ? 'ios' : 'android';
+  if (!FCM_TOKEN.test(token)) return res.status(400).json({ error: 'Некорректный токен устройства' });
+  db.data.nativePush = devices().filter(d => d.token !== token);
+  devices().push({ token, platform, accountId: req.account.id, portal: req.account.portal, created: new Date().toISOString() });
+  const mine = devices().filter(d => d.accountId === req.account.id);
+  if (mine.length > MAX_SUBS_PER_ACCOUNT) {
+    const drop = new Set(mine.slice(0, mine.length - MAX_SUBS_PER_ACCOUNT).map(d => d.token));
+    db.data.nativePush = devices().filter(d => !drop.has(d.token));
+  }
+  db.save();
+  res.json({ registered: true, delivery: fcmConfigured() });
+});
+
+/** Signing out of the store app stops its notifications. */
+pushApi.post('/native/remove', requireViewer, (req, res) => {
+  const token = String(req.body?.token ?? '');
+  db.data.nativePush = devices().filter(d => !(d.token === token && d.accountId === req.account.id));
+  db.save();
+  res.json({ registered: false });
 });
 
 pushApi.post('/subscribe', requireViewer, (req, res) => {
@@ -227,13 +276,10 @@ pushApi.post('/unsubscribe', requireViewer, (req, res) => {
 
 pushApi.post('/test', requireViewer, async (req, res) => {
   const targets = subs().filter(s => s.accountId === req.account.id);
-  if (targets.length === 0) return res.status(404).json({ error: 'Уведомления не включены на этом устройстве' });
-  const sent = await sendTo(targets, {
-    title: 'Voli',
-    body: 'Уведомления работают — сообщим, когда подойдёт очередь или закончится зарядка.',
-    tag: 'test',
-    url: '/',
-  });
+  const phones = devices().filter(d => d.accountId === req.account.id).length;
+  if (targets.length === 0 && phones === 0) return res.status(404).json({ error: 'Уведомления не включены на этом устройстве' });
+  const notice = { title: 'Voli', body: 'Уведомления работают — сообщим, когда подойдёт очередь или закончится зарядка.', tag: 'test', url: '/' };
+  const sent = (targets.length ? await sendTo(targets, notice) : 0) + (await sendNative(new Set([req.account.id]), notice));
   res.json({ sent });
 });
 

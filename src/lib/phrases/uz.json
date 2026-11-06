@@ -4344,5 +4344,9 @@
 "По-узбекски (необязательно)": "O‘zbekcha (ixtiyoriy)",
 "По-английски (необязательно)": "Inglizcha (ixtiyoriy)",
 "По-узбекски": "O‘zbekcha",
-"По-английски": "Inglizcha"
+"По-английски": "Inglizcha",
+"Уведомления в приложении из магазина": "Do‘kondagi ilovada bildirishnomalar",
+"Firebase подключён · телефонов: {0}": "Firebase ulangan · telefonlar: {0}",
+"Не настроены — нужен FIREBASE_SERVICE_ACCOUNT (ключ сервисного аккаунта Firebase)": "Sozlanmagan — FIREBASE_SERVICE_ACCOUNT kerak (Firebase xizmat akkaunti kaliti)",
+"Зарядка, очередь, бронь и оплата": "Quvvatlash, navbat, bron va to‘lov"
 }

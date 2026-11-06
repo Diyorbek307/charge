@@ -5,6 +5,7 @@ import { usePlatform } from '../../lib/platform';
 import { geoPermission, locate } from '../../lib/geo';
 import { readFirstRun, saveFirstRun } from '../../lib/firstRun';
 import { LegalSheet } from './Agreement';
+import { enableNativePush, nativePushAvailable, nativePushGranted } from '../../lib/nativePush';
 
 type Step = 'location' | 'notify' | 'consent';
 
@@ -31,8 +32,11 @@ export default function FirstRun({ only, agreedVersion = 0, marketing: wasMarket
     let alive = true;
     void (async () => {
       const geo = onboarding.askLocation && 'geolocation' in navigator ? await geoPermission() : 'denied';
-      const canPush = onboarding.askPush && pushSupported() && Notification.permission === 'default';
-      if (pushSupported() && Notification.permission === 'granted') setPush(true);
+      // The store app asks through the phone (Firebase); a browser asks for Web Push.
+      const native = nativePushAvailable();
+      const granted = native ? await nativePushGranted() : pushSupported() && Notification.permission === 'granted';
+      const canPush = onboarding.askPush && !granted && (native || (pushSupported() && Notification.permission === 'default'));
+      if (granted) setPush(true);
       if (!alive) return;
       setSteps(s => s.filter(x => (x !== 'location' || geo === 'prompt' || geo === 'unknown') && (x !== 'notify' || canPush)));
     })();
@@ -162,6 +166,7 @@ function Notify({ onDone }: { onDone: (yes: boolean) => void }) {
   const allow = async () => {
     if (busy) return;
     setBusy(true);
+    if (nativePushAvailable()) return onDone(await enableNativePush().catch(() => false));
     const answer = await Notification.requestPermission().catch(() => 'denied' as NotificationPermission);
     onDone(answer === 'granted');
   };

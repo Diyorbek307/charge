@@ -49,6 +49,7 @@ import Tour from './driver/Tour';
 import PriceToday from './driver/PriceToday';
 import { readFirstRun, tourSeen, markTour } from '../lib/firstRun';
 import { subscribePush } from './PushToggle';
+import { enableNativePush, nativePushAvailable } from '../lib/nativePush';
 import { API_ORIGIN } from '../lib/site';
 import { useTariffForecast, useTariffNow, priceNow } from '../lib/tariff';
 
@@ -2506,6 +2507,11 @@ export default function DriverApp() {
 
   // Notifications allowed on the first screens: subscribe the account once it exists.
   useEffect(() => {
+    // The store app: the phone's token is sent on every start, as Firebase may change it.
+    if (driverAccount && readFirstRun()?.push && nativePushAvailable()) {
+      void enableNativePush().catch(() => {});
+      return;
+    }
     if (!driverAccount || !readFirstRun()?.push || !('Notification' in window) || Notification.permission !== 'granted') return;
     const key = `pg-push-${driverAccount.id}`;
     try {
