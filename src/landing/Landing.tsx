@@ -370,6 +370,55 @@ function HowTo({ c }: { c: LandingCopy }) {
   );
 }
 
+/**
+ * The app itself on the home page: a phone with the real screens (the same
+ * shots as the guide), turning by themselves until a tab is picked.
+ */
+function Showcase({ c, lang }: { c: LandingCopy; lang: Lang }) {
+  const sc = c.showcase;
+  const [on, setOn] = useState(0);
+  const [held, setHeld] = useState(false);
+  const [seen, setSeen] = useState(false);
+  const box = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = box.current;
+    if (!el || !('IntersectionObserver' in window)) return setSeen(true);
+    const io = new IntersectionObserver(([e]) => setSeen(e.isIntersecting), { root: el.closest('.lp'), threshold: 0.2 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  useEffect(() => {
+    if (held || !seen || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const t = setInterval(() => setOn(i => (i + 1) % sc.tabs.length), 3200);
+    return () => clearInterval(t);
+  }, [held, seen, sc.tabs.length]);
+  return (
+    <section className="lp-sec lp-show" ref={box}>
+      <div className="lp-wrap lp-show-in">
+        <div className="lp-show-copy">
+          <SectionHead kicker={sc.kicker} title={sc.title} sub={sc.sub} />
+          <div className="lp-show-tabs rv" role="tablist" aria-label={sc.kicker}>
+            {sc.tabs.map((tab, i) => (
+              <button key={tab.id} role="tab" aria-selected={i === on} className={i === on ? 'is-on' : ''} onClick={() => { setOn(i); setHeld(true); }}>
+                {tab.t}
+                {i === on && !held && <i key={on} className="lp-show-timer" />}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="lp-show-stage rv" style={delay(120)}>
+          <span className="lp-show-glow" aria-hidden="true" />
+          <div className="lp-shot lp-show-phone">
+            {sc.tabs.map((tab, i) => (
+              <img key={tab.id} src={shot(lang, tab.id)} alt={i === on ? `${sc.kicker}: ${tab.t}` : ''} width={540} height={1169} className={i === on ? 'is-on' : ''} loading={i < 2 ? 'eager' : 'lazy'} decoding="async" />
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /** Big typographic links to the inner pages. */
 function NextPages({ c }: { c: LandingCopy }) {
   const items = ['drivers', 'networks', 'prices', 'guide'] as const;
@@ -402,6 +451,7 @@ function HomePage({ c, lang }: { c: LandingCopy; lang: Lang }) {
       <Marquee c={c} />
       <Pains c={c} />
       <HowTo c={c} />
+      <Showcase c={c} lang={lang} />
       <NextPages c={c} />
       <Cta c={c} />
     </>
@@ -1083,12 +1133,23 @@ function AndroidLock({ c }: { c: LandingCopy }) {
         <p className="lp-lock-time lp-lock-time-a">21:47</p>
         <p className="lp-lock-date">{d.date}</p>
         <div className="lp-n-stack">
+          {/* The live card exactly as the app draws it (android …/push/ChargeNotice.java) */}
           <div className="lp-n lp-n-a lp-n-live" style={delay(200)}>
-            <div className="lp-n-head"><AppIcon /><span>Voli</span><em>· {d.now}</em></div>
-            <b>{a.live.title}</b>
-            <p>{a.live.body}</p>
-            <div className="lp-n-bar"><i style={{ width: '72%' }} /></div>
-            <div className="lp-n-actions"><span>{a.live.action}</span></div>
+            <div className="lp-n-head"><AppIcon /><span>Voli</span></div>
+            <div className="lp-lc">
+              <div className="lp-lc-top">
+                <span className="lp-lc-bolt"><Zap size={15} fill="currentColor" strokeWidth={0} /></span>
+                <div className="lp-lc-name"><b>{a.card.station}</b><small>{a.card.sub}</small></div>
+                <strong className="lp-lc-pct">72%</strong>
+              </div>
+              <div className="lp-lc-bar"><i /></div>
+              <div className="lp-lc-nums">
+                <span><small>{a.card.lEnergy}</small>{a.card.energy}</span>
+                <span><small>{a.card.lCost}</small>{a.card.cost}</span>
+                <span><small>{a.card.lPower}</small>{a.card.power}</span>
+              </div>
+              <p className="lp-lc-status">{a.card.status}</p>
+            </div>
           </div>
           <div className="lp-n lp-n-a" style={delay(700)}>
             <div className="lp-n-head"><AppIcon /><span>Voli</span><em>· {d.ago}</em></div>
