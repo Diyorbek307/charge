@@ -28,6 +28,11 @@ import "./server/inbox.js";
 import "./server/tts.js";
 import "./server/places.js";
 import { errorHandler } from "./server/monitoring.js";
+import "./server/clientErrors.js";
+import { watchProcess } from "./server/alerts.js";
+
+// A crash or a forgotten promise error reaches the team before the process goes down.
+watchProcess();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();

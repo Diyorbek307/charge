@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { db, publicAccount, twoFactorRequired, REAL_SERVER as PRODUCTION, DEMO_STAFF } from './db.js';
 import { tokenOf, clearSessionCookie } from './session.js';
+import { alertsStatus } from './alerts.js';
 import { DEMO_ACCOUNTS } from './seed.js';
 import { generateSecret, verifyTotp, otpauthUri } from './totp.js';
 import { hashPassword } from './seed.js';
@@ -3127,6 +3128,7 @@ api.get('/admin/health', requireAuth('admin'), (_req, res) => {
       lastError: lastFailed ? { url: lastFailed.url, error: lastFailed.lastError, at: lastFailed.ts } : null,
     },
     sms: smsConfigured(),
+    alerts: alertsStatus(),
     mail: { configured: mailConfigured(), to: ['info', 'hello', 'partners', 'business', 'support'].map(mailbox).join(', '), ...mailStatus() },
     time: new Date().toISOString(),
   });

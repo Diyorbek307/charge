@@ -3,6 +3,11 @@ import { setting } from './settings.js';
 import express from 'express';
 import { db } from './db.js';
 import { tokenOf } from './session.js';
+import { alertTeam } from './alerts.js';
+
+/** A callback from a payment system that does not prove itself: someone may be faking payments. */
+const badSignature = (provider, operatorId) =>
+  void alertTeam(`pay-sign:${provider}:${operatorId ?? 'voli'}`, 'Платёж: запрос с неверной подписью', [['Система', provider], ['Касса', operatorId ?? 'Voli']]);
 import { emit } from './api.js';
 import { isDirect, creditNetwork, reverseTopUp, netBalance } from './direct.js';
 
@@ -431,6 +436,7 @@ function paymeEndpoint(req, res) {
   const header = req.get('authorization') || '';
   const expected = `Basic ${Buffer.from(`Paycom:${key}`).toString('base64')}`;
   if (!key || !safeEqual(header, expected)) {
+    if (key) badSignature('Payme', operatorId);
     return reply({ error: { code: -32504, message: paymeMessage('Недостаточно прав', 'Insufficient privileges') } });
   }
   try {
@@ -473,6 +479,7 @@ const clickReply = (f, error, note, extra = {}) => ({
 function clickCommon(f, action, withPrepare, operatorId) {
   const click = merchantFor(operatorId)?.click ?? { secret: '' };
   if (!click.secret || !safeEqual(String(f.sign_string ?? ''), clickSign(f, withPrepare, click.secret))) {
+    if (click.secret) badSignature('Click', operatorId);
     return { fail: clickReply(f, -1, 'SIGN CHECK FAILED') };
   }
   if (String(f.service_id) !== String(click.serviceId)) return { fail: clickReply(f, -8, 'Error in request from click') };
@@ -523,7 +530,10 @@ paymentsApi.post('/click/:operatorId/complete', (req, res) => res.json(clickComp
 
 export function acquirerNotify(provider, f) {
   const a = ACQUIRERS[provider];
-  if (!a?.secret || !safeEqual(String(f.sign ?? ''), acquirerSign(provider, f))) return { status: 401, body: { ok: false, error: 'SIGN CHECK FAILED' } };
+  if (!a?.secret || !safeEqual(String(f.sign ?? ''), acquirerSign(provider, f))) {
+    if (a?.secret) badSignature(provider, null);
+    return { status: 401, body: { ok: false, error: 'SIGN CHECK FAILED' } };
+  }
   const order = findOrder(String(f.order_id ?? ''));
   if (!order || order.provider !== provider) return { status: 404, body: { ok: false, error: 'ORDER NOT FOUND' } };
   if (Math.abs(Number(f.amount) - order.amount) > 0.001) return { status: 400, body: { ok: false, error: 'AMOUNT MISMATCH' } };

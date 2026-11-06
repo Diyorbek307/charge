@@ -4,6 +4,7 @@
  * phone numbers, names, tokens or request bodies.
  */
 import * as Sentry from '@sentry/node';
+import { alertTeam, describe } from './alerts.js';
 
 const DSN = process.env.SENTRY_DSN || '';
 export const monitoring = !!DSN;
@@ -27,16 +28,24 @@ if (DSN) {
   });
 }
 
-/** Sends an error that was caught and handled, so it is still seen. */
+/** Sends an error that was caught and handled, so it is still seen, and tells the team. */
 export function report(err, where) {
   if (DSN) Sentry.captureException(err, { tags: { where } });
+  const d = describe(err);
+  void alertTeam(`report:${where}:${d.message}`, WHAT[where] ?? `Ошибка: ${where}`, [['Ошибка', d.message], ...(d.at ? [['Где', d.at]] : [])]);
 }
+const WHAT = { db: 'База данных не сохраняется', mail: 'Почта не отправляется' };
 
 /** Reports what the routes throw, then lets Express answer as before; added after every route. */
 export function errorHandler(app) {
-  if (!DSN) return;
   app.use((err, req, _res, next) => {
-    Sentry.captureException(err, { tags: { where: `${req.method} ${req.route?.path ?? 'route'}` } });
+    const route = `${req.method} ${req.baseUrl ?? ''}${req.route?.path ?? ''}`;
+    if (DSN) Sentry.captureException(err, { tags: { where: route } });
+    // A client's malformed request is not a breakdown.
+    if (!(err.status >= 400 && err.status < 500)) {
+      const d = describe(err);
+      void alertTeam(`route:${route}:${d.message}`, 'Сервер ответил ошибкой 500', [['Запрос', route], ['Ошибка', d.message], ...(d.at ? [['Где', d.at]] : [])]);
+    }
     next(err);
   });
 }

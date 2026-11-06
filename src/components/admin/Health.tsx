@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Server, Database, Radio, Cpu, Bell, MessageSquare, RefreshCw, CheckCircle, AlertTriangle, Send, LoaderCircle } from 'lucide-react';
+import { Server, Database, Radio, Cpu, Bell, MessageSquare, RefreshCw, CheckCircle, AlertTriangle, Send, LoaderCircle, Siren } from 'lucide-react';
 import type { SystemHealth } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 import { num, dateTime } from '../../lib/analytics';
@@ -57,6 +57,7 @@ export default function AdminHealth() {
     { icon: <Cpu size={15} />, name: 'OCPP 1.6-J', ok: true, detail: data.ocpp.connected ? `${data.ocpp.connected} станций на связи` : 'Ни одна станция сейчас не подключена по OCPP' },
     { icon: <Bell size={15} />, name: 'Вебхуки', ok: w.failed === 0, detail: `${w.active} из ${w.endpoints} endpoint’ов активны · в очереди ${w.pending} · доставлено ${w.delivered} · с ошибкой ${w.failed}` },
     { icon: <MessageSquare size={15} />, name: 'SMS-шлюз', ok: data.sms, detail: data.sms ? 'Настроен' : 'Не настроен — коды входа показываются на экране (демо-режим)' },
+    { icon: <Siren size={15} />, name: 'Сигналы о сбоях', ok: !!data.alerts?.telegram || !!data.mail?.configured, detail: data.alerts?.telegram ? `В Telegram и на почту команды${data.mail?.configured ? '' : ' (почта не настроена)'}` : data.mail?.configured ? 'Только на почту — для Telegram задайте ALERT_TELEGRAM_CHAT' : 'Не уходят никуда: задайте ALERT_TELEGRAM_CHAT (и TELEGRAM_BOT_TOKEN) или почту' },
     { icon: <Bell size={15} />, name: 'Письма команде', ok: !!data.mail?.configured && data.mail.last?.ok !== false, detail: !data.mail?.configured ? 'Не настроены — нужен RESEND_API_KEY или SMTP_HOST, SMTP_USER и SMTP_PASS; письма пойдут на ящики @voli.uz' : data.mail.last?.ok === false ? `Письма не уходят: ${data.mail.last.error}` : `Заявки, поддержка и SOS приходят по ящикам: ${data.mail.to}` },
   ];
 
@@ -103,6 +104,20 @@ export default function AdminHealth() {
           </p>
         )}
       </Card>
+
+      {!!data.alerts?.recent.length && (
+        <Card pad={false} title={<span className="inline-flex items-center gap-2"><Siren size={15} />Последние сигналы о сбоях</span>} right={<span className="text-xs text-slate-400">с последнего запуска сервера</span>}>
+          <ul className="divide-y divide-slate-50">
+            {data.alerts.recent.map((a, i) => (
+              <li key={`${a.at}-${i}`} className="px-5 py-3">
+                <p className="text-sm font-semibold text-slate-800 flex items-center gap-2">{a.title}{!a.sent && <span className="text-[11px] font-normal text-slate-400">повтор — не отправлялся</span>}</p>
+                <p className="text-xs text-slate-500 mt-0.5 break-words">{a.lines.map(([k, v]) => `${k}: ${v}`).join(' · ')}</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">{dateTime(a.at)}</p>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <Card title="Данные в базе">

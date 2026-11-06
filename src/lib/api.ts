@@ -239,6 +239,8 @@ export interface SystemHealth {
   ocpp: { connected: number };
   webhooks: { endpoints: number; active: number; pending: number; failed: number; delivered: number; lastError: { url: string; error: string; at: string } | null };
   sms: boolean;
+  /** Alerts to the team (server/alerts.js): whether Telegram is set, and the last ones. */
+  alerts?: { telegram: boolean; recent: { at: string; title: string; lines: [string, string][]; sent: boolean }[] };
   mail?: { configured: boolean; to: string; via?: 'resend' | 'smtp' | null; host?: string | null; last?: { ok: boolean; to: string; subject: string; at: string; error?: string } | null };
   time: string;
 }
