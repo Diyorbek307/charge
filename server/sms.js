@@ -117,7 +117,9 @@ export async function issueCode(phone, purpose, client) {
   if (configured) {
     try {
       if (byMail) await sendCodeLetter(phone, code);
-      else await eskizSend(phone, `Voli: kod ${code}. Hech kimga aytmang. / Код ${code}. Никому не сообщайте.`);
+      // Exactly the template approved in Eskiz; with Cyrillic in it one SMS holds
+      // 70 characters, and this is 62, so a code costs one SMS, not two.
+      else await eskizSend(phone, `Voli: kod ${code}. Hech kimga aytmang. Никому не сообщайте код.`);
     } catch (err) {
       console.warn(byMail ? '[mail]' : '[sms]', err.message);
       return { status: 502, error: byMail ? 'Не удалось отправить письмо — попробуйте позже' : 'Не удалось отправить SMS — попробуйте позже' };

@@ -124,7 +124,7 @@ VK WorkSpace), `ADMIN_EMAIL`, `ADMIN_PASSWORD`. **Не заданы**: Payme/Cli
 3. **Оплата**: договоры Payme и Click, ключи в Render; `DEMO_MODE=false` на рабочем сервере
    (тогда выключатся демо-коды SMS и песочница оплаты).
 4. **SMS (Eskiz)**: начато. Eskiz работает только с юрлицами: добавить реквизиты VOLI ENERGY,
-   «Запрос договора», шаблон `Voli: kod %d. Hech kimga aytmang. / Код %d. Никому не сообщайте.`,
+   «Запрос договора», шаблон `Voli: kod %d. Hech kimga aytmang. Никому не сообщайте код.` (62 знака — одна SMS),
    ник «Voli», затем `ESKIZ_EMAIL`, `ESKIZ_PASSWORD`, `ESKIZ_FROM` в Render — **только после**
    одобрения договора и шаблона.
 5. **Нативные уведомления** (Firebase FCM + APNs) — в приложении из магазина пуш пока не приходит.
