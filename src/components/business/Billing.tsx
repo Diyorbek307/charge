@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Wallet, CalendarClock, Landmark, CheckCircle, LoaderCircle } from 'lucide-react';
+import { Wallet, CalendarClock, Landmark, CheckCircle, LoaderCircle, FileText } from 'lucide-react';
 import { useSync } from '../../lib/sync';
 import type { PaymentOrder } from '../../lib/api';
 import { useAnalytics, money, num, monthLong, dateTime } from '../../lib/analytics';
 import { Page, Card, Kpi, Loading, ErrorNote, Pill, Empty, STATUS_PILL } from '../admin/ui';
 import ExportButton from '../ExportButton';
 import TaxiPlan from './TaxiPlan';
+import { downloadVatInvoice } from '../../lib/vatInvoice';
+import { VAT_RATE } from '../../landing/legal';
 
 const PRESETS = [2_000_000, 5_000_000, 10_000_000];
 const thisMonth = () => new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 7);
@@ -13,7 +15,7 @@ const thisMonth = () => new Date(Date.now() + 5 * 3600_000).toISOString().slice(
 /** The company account: balance, top-ups through Payme or Click, and monthly statements. */
 export default function BusinessBilling() {
   const { data, error } = useAnalytics('business', 30);
-  const { actions, refresh } = useSync();
+  const { actions, refresh, sessions } = useSync();
   const [amount, setAmount] = useState(PRESETS[1]);
   const [provider, setProvider] = useState<'payme' | 'click'>('payme');
   const [busy, setBusy] = useState(false);
@@ -142,6 +144,7 @@ export default function BusinessBilling() {
         {months.length === 0 ? (
           <Empty text="Актов пока нет" />
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-50">
@@ -150,6 +153,7 @@ export default function BusinessBilling() {
                 <th className="px-5 py-3 font-semibold text-right">кВт·ч</th>
                 <th className="px-5 py-3 font-semibold text-right">Сумма</th>
                 <th className="px-5 py-3 font-semibold text-right">Статус</th>
+                <th className="px-5 py-3 font-semibold text-right"><span className="sr-only">Документы</span></th>
               </tr>
             </thead>
             <tbody>
@@ -160,12 +164,21 @@ export default function BusinessBilling() {
                   <td className="px-5 py-2.5 text-right tabular-nums text-slate-700">{num(m.energy, 0)}</td>
                   <td className="px-5 py-2.5 text-right tabular-nums font-semibold text-slate-800">{money(m.revenue)}</td>
                   <td className="px-5 py-2.5 text-right">{m.month === thisMonth() ? <Pill tone="sky">Начисляется</Pill> : <Pill tone="green">Закрыт</Pill>}</td>
+                  <td className="px-5 py-2.5 text-right">
+                    {m.month !== thisMonth() && m.revenue > 0 && (
+                      <button onClick={() => void downloadVatInvoice({ month: m.month, buyer: sessions.business?.org ?? 'Компания', sessions: m.sessions, energy: m.energy, total: m.revenue })}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 whitespace-nowrap">
+                        <FileText size={12} />Счёт-фактура
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         )}
-        <p className="px-5 py-3 text-xs text-slate-400 border-t border-slate-50">Месяц закрывается 1-го числа следующего месяца; текущий ещё начисляется.</p>
+        <p className="px-5 py-3 text-xs text-slate-400 border-t border-slate-50">{`Месяц закрывается 1-го числа следующего месяца; текущий ещё начисляется. Счёт-фактура — для сверки и бухгалтерии (${VAT_RATE ? `НДС ${VAT_RATE}% выделен из суммы` : 'без НДС'}); налоговая ЭСФ выставляется через Didox по тем же данным.`}</p>
       </Card>
     </Page>
   );

@@ -30,6 +30,13 @@ export const REQ = [
   'Телефон: [телефон]',
 ];
 
+/**
+ * VAT the company charges, %. 12 is the rate in Uzbekistan for a VAT payer;
+ * a company on the turnover tax charges none — then set 0 and the invoices
+ * say "Без НДС". To be confirmed by the accountant.
+ */
+export const VAT_RATE = 12;
+
 export const LEGAL: Record<LegalDocId, LegalDoc> = {
   privacy: {
     title: 'Политика конфиденциальности',

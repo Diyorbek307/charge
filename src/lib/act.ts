@@ -14,22 +14,22 @@ export interface ActInvoice {
   iban?: string;
 }
 
-const W = 1240;
-const H = 1754;
-const M = 110;
-const INK = '#111111';
-const MUTED = '#5b5b66';
-const FONT = '"Inter", "Segoe UI", Arial, sans-serif';
+export const W = 1240;
+export const H = 1754;
+export const M = 110;
+export const INK = '#111111';
+export const MUTED = '#5b5b66';
+export const FONT = '"Inter", "Segoe UI", Arial, sans-serif';
 
-const sum = (n: number) => `${Math.round(n).toLocaleString('ru-RU')} сум`;
-const monthName = (month: string) => new Date(`${month}-01T00:00:00+05:00`).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric', timeZone: 'Asia/Tashkent' });
-const lastDay = (month: string) => {
+export const sum = (n: number) => `${Math.round(n).toLocaleString('ru-RU')} сум`;
+export const monthName = (month: string) => new Date(`${month}-01T00:00:00+05:00`).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric', timeZone: 'Asia/Tashkent' });
+export const lastDay = (month: string) => {
   const [y, m] = month.split('-').map(Number);
   return new Date(Date.UTC(y, m, 0)).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 };
 
 /** Writes `text` wrapped to `width`, returns where the next line goes. */
-function wrap(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, width: number, lineH: number) {
+export function wrap(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, width: number, lineH: number) {
   let line = '';
   for (const word of text.split(' ')) {
     const next = line ? `${line} ${word}` : word;
