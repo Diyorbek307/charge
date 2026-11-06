@@ -4330,5 +4330,15 @@
 "Счёт-фактура": "Hisob-faktura",
 "Документы": "Hujjatlar",
 "Месяц закрывается 1-го числа следующего месяца; текущий ещё начисляется. Счёт-фактура — для сверки и бухгалтерии (НДС {0}% выделен из суммы); налоговая ЭСФ выставляется через Didox по тем же данным.": "Oy keyingi oyning 1-sanasida yopiladi; joriy oy hali hisoblanmoqda. Hisob-faktura — solishtirish va buxgalteriya uchun (QQS {0}% summadan ajratilgan); soliq ESF Didox orqali shu ma’lumotlar bo‘yicha beriladi.",
-"Месяц закрывается 1-го числа следующего месяца; текущий ещё начисляется. Счёт-фактура — для сверки и бухгалтерии (без НДС); налоговая ЭСФ выставляется через Didox по тем же данным.": "Oy keyingi oyning 1-sanasida yopiladi; joriy oy hali hisoblanmoqda. Hisob-faktura — solishtirish va buxgalteriya uchun (QQSsiz); soliq ESF Didox orqali shu ma’lumotlar bo‘yicha beriladi."
+"Месяц закрывается 1-го числа следующего месяца; текущий ещё начисляется. Счёт-фактура — для сверки и бухгалтерии (без НДС); налоговая ЭСФ выставляется через Didox по тем же данным.": "Oy keyingi oyning 1-sanasida yopiladi; joriy oy hali hisoblanmoqda. Hisob-faktura — solishtirish va buxgalteriya uchun (QQSsiz); soliq ESF Didox orqali shu ma’lumotlar bo‘yicha beriladi.",
+"Фото от водителей": "Haydovchilardan suratlar",
+"Публикуйте снимки, где видно станцию или подъезд к ней; остальное отклоняйте — фото удалится, водитель получит ответ": "Stansiya yoki unga yo‘l ko‘rinadigan suratlarni e’lon qiling; qolganini rad eting — surat o‘chiriladi, haydovchi javob oladi",
+"Ждут проверки": "Tekshiruvni kutmoqda",
+"Новых фото нет": "Yangi suratlar yo‘q",
+"Уже опубликованы": "E’lon qilinganlar",
+"Опубликовать": "E’lon qilish",
+"Фото станции {0}": "{0} stansiyasi surati",
+"Добавить фото станции": "Stansiya suratini qo‘shish",
+"Спасибо! Фото появится в карточке после проверки": "Rahmat! Surat tekshiruvdan so‘ng kartochkada paydo bo‘ladi",
+"Не удалось отправить фото": "Suratni yuborib bo‘lmadi"
 }

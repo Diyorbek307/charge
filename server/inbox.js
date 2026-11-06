@@ -18,6 +18,7 @@ export function inboxFor(now = Date.now()) {
   const overdue = new Set((d.creditDebts ?? []).filter(x => !x.paidAt && Date.parse(x.dueAt) < now).map(x => x.userId)).size;
   const stuckPayments = (d.payments ?? []).filter(p => p.status === 'pending' && now - Date.parse(p.created) > 86400_000).length;
   const operators = (d.operators ?? []).filter(o => o.status === 'pending').length;
+  const photos = (d.driverPhotos ?? []).filter(p => p.status === 'pending').length;
   return {
     items: [
       { key: 'sos', page: 'sos', count: sos, label: 'SOS водителей', urgent: true },
@@ -25,6 +26,7 @@ export function inboxFor(now = Date.now()) {
       { key: 'alerts', page: 'map', count: alerts, label: critical ? `Сбои станций, ${critical} критич.` : 'Сбои станций', urgent: critical > 0 },
       { key: 'leads', page: 'leads', count: leads, label: 'Новые заявки', urgent: false },
       { key: 'operators', page: 'operators', count: operators, label: 'Сети на проверке', urgent: false },
+      { key: 'photos', page: 'photos', count: photos, label: 'Фото от водителей', urgent: false },
       { key: 'credit', page: 'credit', count: overdue, label: 'Просрочены долги', urgent: false },
       { key: 'payments', page: 'payments', count: stuckPayments, label: 'Зависшие платежи', urgent: false },
     ],

@@ -4330,5 +4330,15 @@
 "Счёт-фактура": "Invoice",
 "Документы": "Documents",
 "Месяц закрывается 1-го числа следующего месяца; текущий ещё начисляется. Счёт-фактура — для сверки и бухгалтерии (НДС {0}% выделен из суммы); налоговая ЭСФ выставляется через Didox по тем же данным.": "A month closes on the 1st of the next; the current one is still accruing. The invoice is for checking and the books (VAT {0}% shown within the amount); the tax e-invoice (ESF) is issued in Didox from the same data.",
-"Месяц закрывается 1-го числа следующего месяца; текущий ещё начисляется. Счёт-фактура — для сверки и бухгалтерии (без НДС); налоговая ЭСФ выставляется через Didox по тем же данным.": "A month closes on the 1st of the next; the current one is still accruing. The invoice is for checking and the books (no VAT); the tax e-invoice (ESF) is issued in Didox from the same data."
+"Месяц закрывается 1-го числа следующего месяца; текущий ещё начисляется. Счёт-фактура — для сверки и бухгалтерии (без НДС); налоговая ЭСФ выставляется через Didox по тем же данным.": "A month closes on the 1st of the next; the current one is still accruing. The invoice is for checking and the books (no VAT); the tax e-invoice (ESF) is issued in Didox from the same data.",
+"Фото от водителей": "Photos from drivers",
+"Публикуйте снимки, где видно станцию или подъезд к ней; остальное отклоняйте — фото удалится, водитель получит ответ": "Publish shots that show the station or the way to it; reject the rest — the photo is deleted and the driver is told",
+"Ждут проверки": "Waiting for review",
+"Новых фото нет": "No new photos",
+"Уже опубликованы": "Already published",
+"Опубликовать": "Publish",
+"Фото станции {0}": "Photo of {0}",
+"Добавить фото станции": "Add a photo of the station",
+"Спасибо! Фото появится в карточке после проверки": "Thank you! The photo will appear on the card after review",
+"Не удалось отправить фото": "Could not send the photo"
 }

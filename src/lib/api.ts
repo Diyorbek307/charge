@@ -812,6 +812,16 @@ export interface AdminUsers {
   users: AdminUser[];
 }
 
+/** A station photo a driver sent, waiting for the admin (server/driverPhotos.js). */
+export interface DriverPhoto { id: string; stationId: string; stationName: string; user: string; at: string; status: 'pending' | 'approved' | 'rejected'; note: string | null }
+
+/** A driver's photo for the admin to look at; it needs the admin's sign-in, so it comes as a blob. */
+export async function driverPhotoUrl(id: string) {
+  const res = await fetch(`${API_ORIGIN}/api/admin/driver-photos/${encodeURIComponent(id)}`, { headers: authHeaders('admin') });
+  if (!res.ok) throw new ApiError(`Ошибка ${res.status}`, res.status);
+  return URL.createObjectURL(await res.blob());
+}
+
 /** A nightly copy of the database (server/backup.js). */
 export interface BackupInfo {
   name: string;
@@ -952,6 +962,9 @@ export const apiClient = {
   testMail: () => post<{ ok: boolean; to?: string; error?: string }>('/admin/mail/test', undefined, 'admin'),
   adminBackups: () => request<{ backups: BackupInfo[]; offsite: boolean; keep: number }>('/admin/backups', { portal: 'admin' }),
   takeBackup: () => post<{ backup: BackupInfo }>('/admin/backups', undefined, 'admin'),
+  addDriverPhoto: (stationId: string, photo: string) => post<{ photo: DriverPhoto }>(`/stations/${stationId}/driver-photos`, { photo }, 'driver'),
+  adminDriverPhotos: (status: 'pending' | 'approved' | 'rejected' = 'pending') => request<{ photos: DriverPhoto[]; pending: number }>(`/admin/driver-photos?status=${status}`, { portal: 'admin' }),
+  decideDriverPhoto: (id: string, decision: 'approve' | 'reject') => post<{ photo: DriverPhoto }>(`/admin/driver-photos/${id}`, { decision }, 'admin'),
   devices: (portal: Portal) => request<SignedInDevice[]>('/auth/sessions', { portal }),
   signOutOthers: (portal: Portal) => post<{ revoked: number }>('/auth/sessions/revoke-others', undefined, portal),
   changePassword: (portal: Portal, current: string, next: string) => post<{ ok: boolean }>('/auth/password', { current, next }, portal),

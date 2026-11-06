@@ -31,6 +31,7 @@ import "./server/tts.js";
 import "./server/places.js";
 import { errorHandler } from "./server/monitoring.js";
 import "./server/clientErrors.js";
+import "./server/driverPhotos.js";
 import { watchProcess } from "./server/alerts.js";
 
 // A crash or a forgotten promise error reaches the team before the process goes down.

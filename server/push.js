@@ -69,6 +69,7 @@ const KINDS = {
   'session.goal': { title: 'Зарядка завершена — освободите место', url: '/?portal=driver' },
   'session.idle.warn': { title: 'Освободите разъём', url: '/?portal=driver' },
   'session.idle': { title: 'Плата за простой', url: '/?portal=driver&go=history' },
+  'photo.decision': { title: 'Ваше фото станции', url: '/?portal=driver' },
   'session.progress': { title: 'Зарядка почти готова', url: '/?portal=driver' },
   'session.failed': { title: 'Зарядка не началась', url: '/?portal=driver' },
   // The driver hears back from support; support sees new messages in the admin portal.

@@ -24,6 +24,7 @@ import { CreditScreen, FaceCheck } from './driver/Credit';
 import { NetworkTopUp, NetworkWalletList } from './driver/NetworkWallets';
 import Navigator from './driver/Navigator';
 import { openInYandex } from '../lib/externalNav';
+import AddStationPhoto from './driver/AddStationPhoto';
 import { useRoadDistance } from '../lib/nav';
 import DealsScreen from './driver/Deals';
 import QRScanScreen from './driver/QRScan';
@@ -260,6 +261,7 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
         <div className="absolute top-4 inset-x-3 flex items-center justify-between">
           <button onClick={close} aria-label="Закрыть" className={overlayBtn}><X size={19} /></button>
           <span className="flex gap-2">
+            <AddStationPhoto stationId={station.id} className={overlayBtn} onNote={t => { setShared(t); setTimeout(() => setShared(null), 3500); }} />
             <button onClick={share} aria-label="Поделиться станцией" className={overlayBtn}><Share2 size={17} /></button>
             <button onClick={() => favorites.toggle(station.id)} aria-pressed={favorite} aria-label={favorite ? 'Убрать из избранного' : 'Добавить в избранное'} className={overlayBtn}>
               <Heart key={String(favorite)} size={18} className={favorite ? 'fill-red-500 text-red-500 pg-pop' : ''} />

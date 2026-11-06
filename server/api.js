@@ -118,6 +118,10 @@ function scopeOf({ type, entity, payload = {} }) {
     case 'session.idle.warn':
     case 'session.idle':
       return { ...sessionScope(entity), public: false };
+    case 'photo.new':
+      return { admin: true };
+    case 'photo.decision':
+      return { userId: payload.userId };
     case 'support.message':
     case 'session.failed':
     case 'schedule.started':
