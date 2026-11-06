@@ -44,6 +44,18 @@ const ru = {
     namangan: 'Наманган', andijan: 'Андижан', fergana: 'Фергана', navoi: 'Навои', karshi: 'Карши',
     termez: 'Термез', jizzakh: 'Джизак', gulistan: 'Гулистан', kokand: 'Коканд', urgench: 'Ургенч',
   },
+  stage: {
+    word: 'Зарядка',
+    kicker: 'Voli · Узбекистан',
+    line: 'Пока вы листаете, слово заряжается. Машина у станции — так же: вы видите каждый процент, каждый кВт·ч и каждый сум.',
+    hud: ['01 / СЕТИ НА ОДНОЙ КАРТЕ', 'OCPP 1.6 · OCPI 2.2.1', 'UZ · RU · EN', '41.31° N · 69.28° E'],
+    facts: [
+      { value: '1', label: 'приложение для всех сетей' },
+      { value: '×0,7', label: 'ночной тариф' },
+      { value: '24/7', label: 'поддержка и SOS' },
+      { value: '0 сум', label: 'за подписку' },
+    ],
+  },
   marquee: ['Все зарядки', 'Одно приложение', 'Подключайся и поехали!', 'Payme', 'Click', 'Uzum', 'Humo', 'Ночью ×0,7', 'UZ · RU · EN'],
   pains: {
     kicker: 'Как сейчас',
@@ -429,6 +441,18 @@ const uz: LandingCopy = {
     namangan: 'Namangan', andijan: 'Andijon', fergana: 'Farg‘ona', navoi: 'Navoiy', karshi: 'Qarshi',
     termez: 'Termiz', jizzakh: 'Jizzax', gulistan: 'Guliston', kokand: 'Qo‘qon', urgench: 'Urganch',
   },
+  stage: {
+    word: 'Quvvat',
+    kicker: 'Voli · O‘zbekiston',
+    line: 'Siz sahifani aylantirganingizda so‘z quvvatlanadi. Stansiyadagi mashina ham shunday: har bir foiz, har bir kVt·soat va har bir so‘m ko‘rinib turadi.',
+    hud: ['01 / BARCHA TARMOQLAR BITTA XARITADA', 'OCPP 1.6 · OCPI 2.2.1', 'UZ · RU · EN', '41.31° N · 69.28° E'],
+    facts: [
+      { value: '1', label: 'barcha tarmoqlar uchun ilova' },
+      { value: '×0,7', label: 'tungi tarif' },
+      { value: '24/7', label: 'yordam va SOS' },
+      { value: '0 so‘m', label: 'obuna uchun' },
+    ],
+  },
   marquee: ['Barcha zaryadlash', 'Bitta ilova', 'Ulan va yo‘lga chiq!', 'Payme', 'Click', 'Uzum', 'Humo', 'Tunda ×0,7', 'UZ · RU · EN'],
   pains: {
     kicker: 'Hozir qanday',
@@ -811,6 +835,18 @@ const en: LandingCopy = {
     tashkent: 'Tashkent', samarkand: 'Samarkand', bukhara: 'Bukhara', khiva: 'Khiva', nukus: 'Nukus',
     namangan: 'Namangan', andijan: 'Andijan', fergana: 'Fergana', navoi: 'Navoi', karshi: 'Karshi',
     termez: 'Termez', jizzakh: 'Jizzakh', gulistan: 'Gulistan', kokand: 'Kokand', urgench: 'Urgench',
+  },
+  stage: {
+    word: 'Charge',
+    kicker: 'Voli · Uzbekistan',
+    line: 'As you scroll, the word charges. A car at the station does the same, and you see every percent, every kWh and every sum.',
+    hud: ['01 / EVERY NETWORK ON ONE MAP', 'OCPP 1.6 · OCPI 2.2.1', 'UZ · RU · EN', '41.31° N · 69.28° E'],
+    facts: [
+      { value: '1', label: 'app for every network' },
+      { value: '×0.7', label: 'night rate' },
+      { value: '24/7', label: 'support and SOS' },
+      { value: '0 UZS', label: 'subscription' },
+    ],
   },
   marquee: ['Every charger', 'One app', 'Plug in and go!', 'Payme', 'Click', 'Uzum', 'Humo', '×0.7 at night', 'UZ · RU · EN'],
   pains: {

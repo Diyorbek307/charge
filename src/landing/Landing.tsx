@@ -20,6 +20,7 @@ import LegalPage, { LEGAL_IDS, legalHref } from './LegalPage';
 import type { LegalDocId } from './legal';
 import { track } from './analytics';
 import './landing.css';
+import Stage, { type StageCopy } from './Stage';
 
 const fmt = (n: number, lang: Lang) =>
   Math.round(n).toLocaleString(lang === 'en' ? 'en-US' : 'ru-RU').replace(/,/g, lang === 'en' ? ',' : ' ');
@@ -396,6 +397,7 @@ function HomePage({ c, lang }: { c: LandingCopy; lang: Lang }) {
   return (
     <>
       <Hero c={c} lang={lang} />
+      <Stage copy={c.stage as StageCopy} />
       <Marquee c={c} />
       <Pains c={c} />
       <HowTo c={c} />
