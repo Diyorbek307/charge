@@ -2,25 +2,7 @@ import { useEffect, useState } from 'react';
 import { Wallet, Zap, MapPin } from 'lucide-react';
 import { useSync } from '../../lib/sync';
 import { useLiveStations } from '../../lib/live';
-
-const KEY = 'voli-greet';
-
-/** Set right after a driver signs in, so the next screen greets them once. */
-export function greetNext() {
-  try {
-    sessionStorage.setItem(KEY, '1');
-  } catch {
-    /* no greeting, nothing worse */
-  }
-}
-
-export function greetingDue() {
-  try {
-    return sessionStorage.getItem(KEY) === '1';
-  } catch {
-    return false;
-  }
-}
+import { greeted } from '../../lib/greeting';
 
 const partOfDay = () => {
   const h = new Date(Date.now() + 5 * 3600_000).getUTCHours(); // Tashkent
@@ -42,11 +24,7 @@ export default function Greeting({ onDone }: { onDone: () => void }) {
   const close = () => {
     if (leaving) return;
     setLeaving(true);
-    try {
-      sessionStorage.removeItem(KEY);
-    } catch {
-      /* ignore */
-    }
+    greeted();
     setTimeout(onDone, 520);
   };
   useEffect(() => {

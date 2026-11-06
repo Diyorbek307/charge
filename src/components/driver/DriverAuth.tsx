@@ -4,7 +4,7 @@ import { useSync } from '../../lib/sync';
 import { readFirstRun } from '../../lib/firstRun';
 import { usePlatform } from '../../lib/platform';
 import { LANGS, useI18n } from '../../lib/i18n';
-import { greetNext } from './Greeting';
+import { greetNext } from '../../lib/greeting';
 import { AgreementChecks, NOTHING_AGREED, agreedEnough, type Agreed } from './Agreement';
 import { inNativeShell } from '../../lib/site';
 import type { SignInResult } from '../../lib/api';
