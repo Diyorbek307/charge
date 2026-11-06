@@ -4348,5 +4348,12 @@
 "Уведомления в приложении из магазина": "Do‘kondagi ilovada bildirishnomalar",
 "Firebase подключён · телефонов: {0}": "Firebase ulangan · telefonlar: {0}",
 "Не настроены — нужен FIREBASE_SERVICE_ACCOUNT (ключ сервисного аккаунта Firebase)": "Sozlanmagan — FIREBASE_SERVICE_ACCOUNT kerak (Firebase xizmat akkaunti kaliti)",
-"Зарядка, очередь, бронь и оплата": "Quvvatlash, navbat, bron va to‘lov"
+"Зарядка, очередь, бронь и оплата": "Quvvatlash, navbat, bron va to‘lov",
+"Сигналы о сбоях в Telegram": "Telegram’dagi nosozlik signallari",
+"Проверить сигнал": "Signalni tekshirish",
+"Бот и чат заданы. Кнопка отправит тестовое сообщение и покажет ответ Telegram.": "Bot va chat berilgan. Tugma sinov xabarini yuboradi va Telegram javobini ko‘rsatadi.",
+"Не настроено: задайте ALERT_TELEGRAM_TOKEN (токен бота) и ALERT_TELEGRAM_CHAT (номер группы, с минусом).": "Sozlanmagan: ALERT_TELEGRAM_TOKEN (bot tokeni) va ALERT_TELEGRAM_CHAT (guruh raqami, minus bilan) ni kiriting.",
+"Отправлено в чат {0} — проверьте Telegram": "{0} chatiga yuborildi — Telegramni tekshiring",
+"Telegram не принял: {0}": "Telegram qabul qilmadi: {0}",
+"«chat not found» — неверный номер группы или бот не в группе; «Unauthorized» — неверный токен; «bot was kicked» — бота удалили из группы.": "«chat not found» — guruh raqami noto‘g‘ri yoki bot guruhda emas; «Unauthorized» — token noto‘g‘ri; «bot was kicked» — bot guruhdan chiqarilgan."
 }

@@ -4348,5 +4348,12 @@
 "Уведомления в приложении из магазина": "Notifications in the store app",
 "Firebase подключён · телефонов: {0}": "Firebase connected · phones: {0}",
 "Не настроены — нужен FIREBASE_SERVICE_ACCOUNT (ключ сервисного аккаунта Firebase)": "Not set up — FIREBASE_SERVICE_ACCOUNT is needed (the Firebase service account key)",
-"Зарядка, очередь, бронь и оплата": "Charging, queue, booking and payment"
+"Зарядка, очередь, бронь и оплата": "Charging, queue, booking and payment",
+"Сигналы о сбоях в Telegram": "Failure alerts in Telegram",
+"Проверить сигнал": "Test the alert",
+"Бот и чат заданы. Кнопка отправит тестовое сообщение и покажет ответ Telegram.": "The bot and chat are set. The button sends a test message and shows Telegram's answer.",
+"Не настроено: задайте ALERT_TELEGRAM_TOKEN (токен бота) и ALERT_TELEGRAM_CHAT (номер группы, с минусом).": "Not set up: set ALERT_TELEGRAM_TOKEN (the bot's token) and ALERT_TELEGRAM_CHAT (the group's number, with the minus).",
+"Отправлено в чат {0} — проверьте Telegram": "Sent to chat {0} — check Telegram",
+"Telegram не принял: {0}": "Telegram refused: {0}",
+"«chat not found» — неверный номер группы или бот не в группе; «Unauthorized» — неверный токен; «bot was kicked» — бота удалили из группы.": "'chat not found' — wrong group number or the bot is not in the group; 'Unauthorized' — wrong token; 'bot was kicked' — the bot was removed from the group."
 }

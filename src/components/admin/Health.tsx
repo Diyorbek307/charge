@@ -21,6 +21,16 @@ export default function AdminHealth() {
   const [ms, setMs] = useState<number | null>(null);
   const [testing, setTesting] = useState(false);
   const [test, setTest] = useState<{ ok: boolean; to?: string; error?: string } | null>(null);
+  const [alertTest, setAlertTest] = useState<{ busy: boolean; result?: string } | null>(null);
+  const testAlert = async () => {
+    setAlertTest({ busy: true });
+    try {
+      const r = await actions.testAlert();
+      setAlertTest({ busy: false, result: r.telegram === 'ok' ? `Отправлено в чат ${r.chat} — проверьте Telegram` : `Telegram не принял: ${r.telegram}` });
+    } catch (e) {
+      setAlertTest({ busy: false, result: (e as Error).message });
+    }
+  };
 
   const load = useCallback(() => {
     const t0 = performance.now();
@@ -105,6 +115,12 @@ export default function AdminHealth() {
             {test.ok ? `Тестовое письмо отправлено на ${test.to} — проверьте ящик (и папку «Спам»)` : `Не отправилось: ${test.error}`}
           </p>
         )}
+      </Card>
+
+      <Card title={<span className="inline-flex items-center gap-2"><Siren size={15} />Сигналы о сбоях в Telegram</span>} right={<button onClick={() => void testAlert()} disabled={alertTest?.busy} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#FFC83D] text-[#111] text-xs font-semibold disabled:opacity-50">{alertTest?.busy ? <LoaderCircle size={13} className="animate-spin" /> : <Send size={13} />}Проверить сигнал</button>}>
+        <p className="text-sm text-slate-600">{data.alerts?.telegram ? 'Бот и чат заданы. Кнопка отправит тестовое сообщение и покажет ответ Telegram.' : 'Не настроено: задайте ALERT_TELEGRAM_TOKEN (токен бота) и ALERT_TELEGRAM_CHAT (номер группы, с минусом).'}</p>
+        {alertTest?.result && <p role="status" className={`mt-2 text-sm rounded-xl px-3 py-2 ${alertTest.result.startsWith('Отправлено') ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50'}`}>{alertTest.result}</p>}
+        {alertTest?.result && !alertTest.result.startsWith('Отправлено') && <p className="mt-2 text-xs text-slate-500">«chat not found» — неверный номер группы или бот не в группе; «Unauthorized» — неверный токен; «bot was kicked» — бота удалили из группы.</p>}
       </Card>
 
       <Backups />

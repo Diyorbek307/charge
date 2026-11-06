@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { db, publicAccount, twoFactorRequired, REAL_SERVER as PRODUCTION, DEMO_STAFF } from './db.js';
 import { tokenOf, clearSessionCookie } from './session.js';
-import { alertsStatus } from './alerts.js';
+import { alertsStatus, testAlert } from './alerts.js';
 import { fcmConfigured } from './fcm.js';
 import { DEMO_ACCOUNTS } from './seed.js';
 import { generateSecret, verifyTotp, otpauthUri } from './totp.js';
@@ -3154,6 +3154,11 @@ api.get('/admin/health', requireAuth('admin'), (_req, res) => {
     mail: { configured: mailConfigured(), to: ['info', 'hello', 'partners', 'business', 'support'].map(mailbox).join(', '), ...mailStatus() },
     time: new Date().toISOString(),
   });
+});
+
+// A test alert to the team's Telegram chat, with Telegram's own answer.
+api.post('/admin/alerts/test', requireAuth('admin'), async (req, res) => {
+  res.json(await testAlert(req.account.name));
 });
 
 // A test letter to the general mailbox: the answer says whether it left and, if not, why.

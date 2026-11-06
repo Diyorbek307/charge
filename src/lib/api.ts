@@ -966,6 +966,7 @@ export const apiClient = {
   systemHealth: (portal: Portal) => request<SystemHealth>('/admin/health', { portal }),
   deleteAccount: (password: string, confirm?: string) => post<{ ok: true }>('/me/delete', { password, confirm }, 'driver'),
   testMail: () => post<{ ok: boolean; to?: string; error?: string }>('/admin/mail/test', undefined, 'admin'),
+  testAlert: () => post<{ telegram: string; chat: string | null }>('/admin/alerts/test', undefined, 'admin'),
   adminBackups: () => request<{ backups: BackupInfo[]; offsite: boolean; keep: number }>('/admin/backups', { portal: 'admin' }),
   takeBackup: () => post<{ backup: BackupInfo }>('/admin/backups', undefined, 'admin'),
   addDriverPhoto: (stationId: string, photo: string) => post<{ photo: DriverPhoto }>(`/stations/${stationId}/driver-photos`, { photo }, 'driver'),
