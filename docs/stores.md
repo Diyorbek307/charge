@@ -74,7 +74,7 @@
 
 ## Тестовый аккаунт для проверяющих
 
-Проверяющие входят по паролю: на первом экране «Войти» → «Войти с паролем».
+Проверяющие входят по паролю: на первом экране «Войти» → вкладка «По паролю».
 Демо-водитель рабочего сервера: `+998901234567` / `Driver2026` — у него есть баланс.
 Надёжнее завести отдельного водителя для проверки и пополнить ему кошелёк в админке
 на 50 000 сум. Номер и пароль впишите в Play Console (App access) и App Store Connect
@@ -87,7 +87,7 @@
 > the Voli wallet (Payme / Click — payment for a physical charging service, not digital
 > content). Location is used to show nearby stations; the camera scans the QR code on a
 > charger. The demo account above has a wallet balance so a charge can be started at any
-> station marked "Свободно". Sign in: on the first screen tap "Войти", then "Войти с паролем".
+> station marked "Свободно". Sign in: on the first screen tap "Войти", then the "По паролю" tab.
 > Account deletion: Profile → "Удалить аккаунт" at the bottom.
 
 ## Тексты карточки
