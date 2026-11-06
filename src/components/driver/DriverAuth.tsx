@@ -4,6 +4,7 @@ import { useSync } from '../../lib/sync';
 import { readFirstRun } from '../../lib/firstRun';
 import { usePlatform } from '../../lib/platform';
 import { LANGS, useI18n } from '../../lib/i18n';
+import { greetNext } from './Greeting';
 import { AgreementChecks, NOTHING_AGREED, agreedEnough, type Agreed } from './Agreement';
 import { inNativeShell } from '../../lib/site';
 import type { SignInResult } from '../../lib/api';
@@ -146,6 +147,7 @@ export default function DriverAuth() {
   const land = (r: SignInResult) => {
     if (r.token) {
       forget();
+      greetNext();
       adoptSession('driver', r.token, r.user);
     } else if (r.requires2fa) {
       setChallenge(r.challenge);
@@ -193,6 +195,7 @@ export default function DriverAuth() {
   const signInWithPassword = (e: FormEvent) => {
     e.preventDefault();
     return run(async () => {
+      greetNext();
       const r = await login('driver', to.trim(), password);
       if (r.requires2fa) {
         setChallenge(r.challenge);

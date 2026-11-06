@@ -4280,5 +4280,14 @@
 "Яндекс": "Yandex",
 "Маршрут в Яндекс Навигаторе": "Route in Yandex Navigator",
 "Почти готово": "Almost there",
-"Примите соглашение — и аккаунт готов": "Accept the agreement and your account is ready"
+"Примите соглашение — и аккаунт готов": "Accept the agreement and your account is ready",
+"Доброй ночи,": "Good night,",
+"Доброе утро,": "Good morning,",
+"Добрый день,": "Good afternoon,",
+"Добрый вечер,": "Good evening,",
+"водитель": "driver",
+"на кошельке": "in the wallet",
+"последняя зарядка": "last charge",
+"зарядок пока нет": "no charges yet",
+"разъёмов свободно": "connectors free"
 }

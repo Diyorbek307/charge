@@ -978,3 +978,18 @@ input::-ms-reveal, input::-ms-clear { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .pg-wave, .pg-bubble { animation: none; }
 }
+
+/* The greeting after sign-in */
+.gr-in { opacity: 0; animation: gr-in .6s cubic-bezier(.2,.8,.2,1) forwards; }
+@keyframes gr-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.gr-car { animation: gr-car 1.1s cubic-bezier(.16,.9,.25,1) .3s both; }
+@keyframes gr-car { from { opacity: 0; transform: translateX(70%); } to { opacity: 1; transform: none; } }
+.gr-wheel { animation: gr-wheel 1.1s cubic-bezier(.16,.9,.25,1) .3s both; }
+@keyframes gr-wheel { from { transform: rotate(-540deg); } to { transform: none; } }
+.gr-line { width: 0; animation: gr-line 1.6s ease-out .9s forwards; }
+@keyframes gr-line { to { width: 100%; } }
+.gr-out { animation: gr-out .52s ease-in forwards; }
+@keyframes gr-out { to { opacity: 0; transform: scale(1.06); filter: blur(6px); } }
+@media (prefers-reduced-motion: reduce) {
+  .gr-in, .gr-car, .gr-wheel, .gr-line, .gr-out { animation-duration: .01s; animation-delay: 0s; }
+}

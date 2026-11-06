@@ -20,6 +20,7 @@ const SplitView = lazy(() => import('./components/SplitView'));
 const FirstRun = lazy(() => import('./components/driver/FirstRun'));
 import { useSync } from './lib/sync';
 import { useFirstRunNeeded } from './lib/firstRun';
+import Greeting, { greetingDue } from './components/driver/Greeting';
 import { APP_URL, LANDING_URL, appElsewhere, landingElsewhere, inNativeShell } from './lib/site';
 import type { Portal as AuthPortal } from './lib/api';
 import { inTelegram, telegramInitData } from './lib/telegram';
@@ -332,6 +333,11 @@ function MainApp() {
   const { sessions, actions, adoptSession } = useSync();
   const driverSession = sessions.driver;
   const firstRun = useFirstRunNeeded(sessions.driver ?? null);
+  // "Добрый вечер, …" once, right after the driver signs in.
+  const [greeting, setGreeting] = useState(false);
+  useEffect(() => {
+    if (sessions.driver && greetingDue()) setGreeting(true);
+  }, [sessions.driver?.id]);
 
   // Inside Telegram a linked driver is signed in straight away.
   useEffect(() => {
@@ -407,6 +413,7 @@ function MainApp() {
             <div className="absolute inset-0 sm:rounded-[42px] sm:shadow-[0_32px_80px_rgba(0,0,0,0.6),0_0_0_2px_rgba(255,255,255,0.08)] overflow-hidden" style={{ background: 'linear-gradient(135deg, #2a2a2e 0%, #1a1a1e 100%)' }}>
               <div className="absolute inset-0 sm:inset-[2px] bg-black sm:rounded-[40px] overflow-hidden">
                 <div className="relative w-full h-full bg-white sm:rounded-[40px] overflow-hidden safe-top">
+                  {greeting && driverSession && <Greeting onDone={() => setGreeting(false)} />}
                   {firstRun && driverSession && <FirstRun only={firstRun === 'consent' ? 'consent' : undefined} agreedVersion={driverSession.consent?.version ?? 0} marketing={!!driverSession.consent?.marketing} />}
                   {driverSession ? (
                     <DriverApp />
