@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "855950956483",
+    "project_id": "voli-c7897",
+    "storage_bucket": "voli-c7897.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:855950956483:android:fbf2852394189ada570f76",
+        "android_client_info": {
+          "package_name": "uz.voli.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCnvMPTnKrloH8Ffa_KsC32HVkKXomH-HE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

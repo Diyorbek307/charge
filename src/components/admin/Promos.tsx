@@ -10,7 +10,7 @@ type Row = Promo & { voliPaid?: number; createdBy?: string; createdAt?: string }
 type Overview = { promos: Row[]; voliPaidMonth: number; driversReachable: number };
 
 const hours = (p: Promo) => (p.fromHour == null || p.toHour == null ? 'весь день' : `${String(p.fromHour).padStart(2, '0')}:00–${String(p.toHour).padStart(2, '0')}:00`);
-const blank = { title: '', note: '', percent: '15', funder: 'voli' as CampaignDraft['funder'], all: true, operatorIds: [] as string[], hoursOn: false, fromHour: '23', toHour: '7', firstOnly: false, until: '', announce: true };
+const blank = { title: '', titleUz: '', titleEn: '', note: '', percent: '15', funder: 'voli' as CampaignDraft['funder'], all: true, operatorIds: [] as string[], hoursOn: false, fromHour: '23', toHour: '7', firstOnly: false, until: '', announce: true };
 
 /**
  * Promotions: Voli's own campaigns across networks, and every network's own
@@ -42,6 +42,8 @@ export default function AdminPromos() {
     try {
       const p = await actions.createCampaign({
         title: f.title.trim(),
+        titleUz: f.titleUz.trim() || undefined,
+        titleEn: f.titleEn.trim() || undefined,
         note: f.note.trim(),
         percent: Number(f.percent),
         funder: f.funder,
@@ -92,6 +94,14 @@ export default function AdminPromos() {
             <label className="block text-xs font-semibold text-slate-600">Название
               <input value={f.title} onChange={e => set('title', e.target.value)} maxLength={60} placeholder="Например, Выходные со скидкой" className={`${field} mt-1`} />
             </label>
+            <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0">
+              <label className="block text-xs font-semibold text-slate-600">По-узбекски
+                <input value={f.titleUz} onChange={e => set('titleUz', e.target.value)} maxLength={60} placeholder="Dam olish kunlari chegirma" className={`${field} mt-1`} />
+              </label>
+              <label className="block text-xs font-semibold text-slate-600">По-английски
+                <input value={f.titleEn} onChange={e => set('titleEn', e.target.value)} maxLength={60} placeholder="Weekend discount" className={`${field} mt-1`} />
+              </label>
+            </div>
             <label className="block text-xs font-semibold text-slate-600">Описание для водителей (необязательно)
               <textarea value={f.note} onChange={e => set('note', e.target.value)} maxLength={200} rows={2} placeholder="Коротко: что и где" className={`${field} mt-1`} />
             </label>

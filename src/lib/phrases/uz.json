@@ -4340,5 +4340,9 @@
 "Фото станции {0}": "{0} stansiyasi surati",
 "Добавить фото станции": "Stansiya suratini qo‘shish",
 "Спасибо! Фото появится в карточке после проверки": "Rahmat! Surat tekshiruvdan so‘ng kartochkada paydo bo‘ladi",
-"Не удалось отправить фото": "Suratni yuborib bo‘lmadi"
+"Не удалось отправить фото": "Suratni yuborib bo‘lmadi",
+"По-узбекски (необязательно)": "O‘zbekcha (ixtiyoriy)",
+"По-английски (необязательно)": "Inglizcha (ixtiyoriy)",
+"По-узбекски": "O‘zbekcha",
+"По-английски": "Inglizcha"
 }

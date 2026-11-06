@@ -44,8 +44,8 @@ const covers = (p, station) => coversNetwork(p, station.operatorId) && (!p.stati
 export const publicPromos = (at = Date.now()) =>
   promos()
     .filter(p => live(p, at))
-    .map(({ id, operatorId, operatorIds, title, note, percent, fromHour, toHour, firstOnly, stationIds, until, funder }) => ({
-      id, operatorId: operatorId ?? null, operatorIds: operatorIds ?? null, title, note: note ?? null, percent, fromHour, toHour, firstOnly, stationIds, until, funder: funder ?? 'network',
+    .map(({ id, operatorId, operatorIds, title, titles, note, percent, fromHour, toHour, firstOnly, stationIds, until, funder }) => ({
+      id, operatorId: operatorId ?? null, operatorIds: operatorIds ?? null, title, titles: titles ?? null, note: note ?? null, percent, fromHour, toHour, firstOnly, stationIds, until, funder: funder ?? 'network',
     }));
 
 /**
@@ -117,9 +117,13 @@ export function createPromo(operatorId, b = {}, actor = '') {
   }
   const firstOnly = !!b.firstOnly;
   const title = text(b.title, 60) || (firstOnly ? `−${percent}% на первую зарядку` : fromHour !== null ? `−${percent}% с ${fromHour}:00 до ${toHour}:00` : `−${percent}% на зарядку`);
+  // The name in Uzbek and English too, when the network gives it; drivers see their language.
+  const uz = text(b.titleUz, 60);
+  const en = text(b.titleEn, 60);
+  const titles = uz || en ? { ...(uz ? { uz } : {}), ...(en ? { en } : {}) } : null;
   const promo = {
     id: `PR-${crypto.randomBytes(3).toString('hex').toUpperCase()}`,
-    operatorId, title, percent, fromHour, toHour, firstOnly, stationIds, until,
+    operatorId, title, ...(titles ? { titles } : {}), percent, fromHour, toHour, firstOnly, stationIds, until,
     active: true, createdAt: new Date().toISOString(), createdBy: actor,
   };
   promos().unshift(promo);

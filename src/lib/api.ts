@@ -478,6 +478,8 @@ export interface Stats {
 /** A discount a partner network runs at its stations and pays for itself. */
 export interface CampaignDraft {
   title: string;
+  titleUz?: string;
+  titleEn?: string;
   note?: string;
   percent: number;
   funder: 'network' | 'voli';
@@ -498,6 +500,8 @@ export interface Promo {
   funder?: 'network' | 'voli';
   note?: string | null;
   title: string;
+  /** The name in Uzbek and English, when the network gave it. */
+  titles?: { uz?: string; en?: string } | null;
   percent: number;
   /** Tashkent hours it runs, e.g. 23 → 7; null for all day. */
   fromHour: number | null;
@@ -1012,7 +1016,7 @@ export const apiClient = {
   shareSession: (id: string) => post<{ token: string }>(`/sessions/${id}/share`, undefined, 'driver'),
   scheduleCharge: (body: { stationId: string; connectorId: string; payer: Payer; goal?: ChargeGoal; at: string }) => post<ScheduledStart>('/sessions/schedule', body, 'driver'),
   networkPromos: () => request<Promo[]>('/operator/promos', { portal: 'operator' }),
-  createPromo: (body: { percent: number; title?: string; fromHour?: number | null; toHour?: number | null; firstOnly?: boolean; stationIds?: string[]; until?: string | null }) =>
+  createPromo: (body: { percent: number; title?: string; titleUz?: string; titleEn?: string; fromHour?: number | null; toHour?: number | null; firstOnly?: boolean; stationIds?: string[]; until?: string | null }) =>
     post<Promo>('/operator/promos', body, 'operator'),
   stopPromo: (id: string) => request<Promo>(`/operator/promos/${id}`, { method: 'DELETE', portal: 'operator' }),
   adminPromos: () => request<{ promos: (Promo & { voliPaid?: number; createdBy?: string })[]; voliPaidMonth: number; driversReachable: number }>('/admin/promos', { portal: 'admin' }),

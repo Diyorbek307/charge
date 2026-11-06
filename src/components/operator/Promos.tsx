@@ -21,6 +21,8 @@ export default function OperatorPromos() {
   const [busy, setBusy] = useState(false);
   const [percent, setPercent] = useState('20');
   const [title, setTitle] = useState('');
+  const [titleUz, setTitleUz] = useState('');
+  const [titleEn, setTitleEn] = useState('');
   const [timed, setTimed] = useState(false);
   const [fromHour, setFromHour] = useState('23');
   const [toHour, setToHour] = useState('7');
@@ -40,6 +42,8 @@ export default function OperatorPromos() {
       await api.createPromo({
         percent: Number(percent),
         title: title.trim() || undefined,
+        titleUz: titleUz.trim() || undefined,
+        titleEn: titleEn.trim() || undefined,
         fromHour: timed ? Number(fromHour) : null,
         toHour: timed ? Number(toHour) : null,
         firstOnly,
@@ -47,6 +51,8 @@ export default function OperatorPromos() {
         until: until ? new Date(`${until}T23:59:00+05:00`).toISOString() : null,
       });
       setTitle('');
+      setTitleUz('');
+      setTitleEn('');
       setStationIds([]);
       await Promise.all([load(), refresh()]);
     } catch (e) {
@@ -82,6 +88,14 @@ export default function OperatorPromos() {
           <label className="block text-xs text-slate-500">Название для водителей
             <input value={title} onChange={e => setTitle(e.target.value)} maxLength={60} placeholder="Например: Ночью дешевле" className={`${field} mt-1`} />
           </label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block text-xs text-slate-500">По-узбекски (необязательно)
+              <input value={titleUz} onChange={e => setTitleUz(e.target.value)} maxLength={60} placeholder="Tunda arzonroq" className={`${field} mt-1`} />
+            </label>
+            <label className="block text-xs text-slate-500">По-английски (необязательно)
+              <input value={titleEn} onChange={e => setTitleEn(e.target.value)} maxLength={60} placeholder="Cheaper at night" className={`${field} mt-1`} />
+            </label>
+          </div>
           <div className="flex flex-wrap gap-3 text-sm text-slate-700">
             <label className="inline-flex items-center gap-2"><input type="checkbox" checked={timed} onChange={e => setTimed(e.target.checked)} />Только в часы</label>
             <label className="inline-flex items-center gap-2"><input type="checkbox" checked={firstOnly} onChange={e => setFirstOnly(e.target.checked)} />Только первая зарядка в сети</label>

@@ -79,14 +79,14 @@ const TONES = {
 type PinMotion = { anim: 'enter' | 'split' | 'change' | 'none'; delay?: number; dx?: number; dy?: number; selected?: boolean; fan?: [number, number] };
 const kindOf = (s: Station, promo: Promo | null) => (promo ? 'promo' : s.status === 'unavailable' ? 'off' : freeOf(s) > 0 ? 'free' : 'busy');
 
-function stationIcon(s: Station, promo: Promo | null, labelled: boolean, m: PinMotion = { anim: 'enter' }) {
+function stationIcon(s: Station, promo: Promo | null, labelled: boolean, m: PinMotion = { anim: 'enter' }, withChip = labelled) {
   const free = freeOf(s);
   const total = s.connectors.length;
   const look = networkLook(s.operator);
   const kind = kindOf(s, promo);
   const [a, b] = TONES[kind];
   const tone = kind === 'free' ? '#059669' : kind === 'busy' ? '#DC2626' : '#64748B';
-  const chip = labelled
+  const chip = withChip
     ? `<span class="pg-chip"><i style="background:${look.color}">${look.initials}</i><span class="pg-chip-name">${esc(s.operator)}</span>${promo ? `<em>${isNight(promo) ? MOON : ''}−${promo.percent}%</em>` : ''}</span>`
     : '';
   const badge = labelled ? `<span class="pg-badge"><b style="color:${promo ? tone : b}">${free}</b>/${total}</span>` : '';
@@ -119,6 +119,10 @@ const opId = (s: Station) => (s as Station & { operatorId?: string }).operatorId
  * bubble; tapping a bubble zooms in until they separate. Small enough that a
  * clustering library is not worth the dependency.
  */
+/** The room a name chip takes above its pin, px: two chips closer than this would overlap. */
+const CHIP_W = 150;
+const CHIP_H = 34;
+
 function ClusteredMarkers({ stations, promos, onSelect, selectedId }: { stations: Station[]; promos: Promo[]; onSelect: (s: Station) => void; selectedId: string | null }) {
   const map = useMap();
   const [zoom, setZoom] = useState(map.getZoom());
@@ -150,6 +154,29 @@ function ClusteredMarkers({ stations, promos, onSelect, selectedId }: { stations
 
   const center = map.project(map.getCenter(), zoom);
   const shown = new Set<string>();
+
+  // Name chips sit above the pins and are wide; where two would overlap, the
+  // more useful station keeps its chip (the open one, then a promo, then one
+  // with free connectors) and the other shows only its "free/total" badge.
+  const chips = new Set<string>();
+  if (labelled) {
+    const singles = groups.flatMap(g => (g.stations.length === 1 || fanning ? g.stations.map((s, i) => ({ s, g, i })) : []));
+    const rank = (s: Station) => (s.id === selectedId ? 0 : promoNow({ id: s.id, operatorId: opId(s) }, promos) ? 1 : freeOf(s) > 0 ? 2 : 3);
+    const placed: { x: number; y: number }[] = [];
+    // Group bubbles stay where they are; a chip must not cover one (the chip sits ~62 px above its pin's point).
+    const bubblesAt = fanning ? [] : groups.filter(g => g.stations.length > 1).map(g => map.project([g.lat, g.lng], zoom));
+    for (const { s, g, i } of singles.sort((a, b) => rank(a.s) - rank(b.s) || b.s.connectors.length - a.s.connectors.length)) {
+      const n = g.stations.length;
+      const a = (2 * Math.PI * i) / n - Math.PI / 2;
+      const p = map.project([s.geoLat, s.geoLng], zoom);
+      const x = p.x + (n > 1 ? Math.cos(a) * (22 + n * 4) : 0);
+      const y = p.y + (n > 1 ? Math.sin(a) * (22 + n * 4) : 0);
+      if (placed.some(q => Math.abs(q.x - x) < CHIP_W && Math.abs(q.y - y) < CHIP_H)) continue;
+      if (bubblesAt.some(c => Math.abs(c.x - x) < CHIP_W / 2 + 28 && Math.abs(c.y - (y - 62)) < CHIP_H / 2 + 28)) continue;
+      placed.push({ x, y });
+      chips.add(s.id);
+    }
+  }
   const markers = groups.flatMap(g => {
     if (g.stations.length === 1 || fanning) {
       return g.stations.map((s, i) => {
@@ -161,7 +188,8 @@ function ClusteredMarkers({ stations, promos, onSelect, selectedId }: { stations
         const fan: [number, number] = n > 1 ? [Math.round(Math.cos(a) * (22 + n * 4)), Math.round(Math.sin(a) * (22 + n * 4))] : [0, 0];
         const selected = s.id === selectedId;
         const state = `${kindOf(s, promo)}|${freeOf(s)}`;
-        const look = `${state}|${s.connectors.length}|${promo ? `${promo.id}${promo.percent}${isNight(promo)}` : ''}|${labelled}|${selected}|${fan}`;
+        const chip = chips.has(s.id);
+        const look = `${state}|${s.connectors.length}|${promo ? `${promo.id}${promo.percent}${isNight(promo)}` : ''}|${labelled}|${chip}|${selected}|${fan}`;
         const prev = pins.current.get(s.id);
         let icon = prev?.icon;
         if (!prev || prev.look !== look) {
@@ -174,7 +202,7 @@ function ClusteredMarkers({ stations, promos, onSelect, selectedId }: { stations
             // The first pins ripple out from the middle of the map.
             else Object.assign(motion, { anim: 'enter', delay: Date.now() - born.current < 1500 ? Math.min(520, Math.round(own.distanceTo(center) * 0.9)) : 0 });
           } else if (prev.look.split('|').slice(0, 2).join('|') !== state) motion.anim = 'change';
-          icon = stationIcon(s, promo, labelled, motion);
+          icon = stationIcon(s, promo, labelled, motion, chip);
           pins.current.set(s.id, { look, icon });
         }
         return (

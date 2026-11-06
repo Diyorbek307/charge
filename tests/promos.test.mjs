@@ -71,6 +71,15 @@ describe('network promos', () => {
     assert.equal((await call('/operator/promos', { method: 'POST', token: await driver(), body: { percent: 20 } })).status, 403);
   });
 
+  test('a promo can carry its name in Uzbek and English for the map', async () => {
+    const op = await operator();
+    const made = await call('/operator/promos', { method: 'POST', token: op, body: { percent: 10, title: 'Утром дешевле', titleUz: 'Ertalab arzonroq', titleEn: 'Cheaper mornings' } });
+    assert.equal(made.status, 201);
+    const shown = (await call('/promos')).data.find(p => p.id === made.data.id);
+    assert.deepEqual(shown.titles, { uz: 'Ertalab arzonroq', en: 'Cheaper mornings' });
+    assert.equal((await call(`/operator/promos/${made.data.id}`, { method: 'DELETE', token: op })).status, 200);
+  });
+
   test('a charge started under a promo costs less, and the map sees the promo', async () => {
     const op = await operator();
     const token = await driver();

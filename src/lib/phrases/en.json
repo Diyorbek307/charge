@@ -4340,5 +4340,9 @@
 "Фото станции {0}": "Photo of {0}",
 "Добавить фото станции": "Add a photo of the station",
 "Спасибо! Фото появится в карточке после проверки": "Thank you! The photo will appear on the card after review",
-"Не удалось отправить фото": "Could not send the photo"
+"Не удалось отправить фото": "Could not send the photo",
+"По-узбекски (необязательно)": "In Uzbek (optional)",
+"По-английски (необязательно)": "In English (optional)",
+"По-узбекски": "In Uzbek",
+"По-английски": "In English"
 }

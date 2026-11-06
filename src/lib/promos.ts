@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { Promo } from './api';
 import { useSync } from './sync';
+import { useI18n } from './i18n';
 
 /**
  * Promos on the map and how a partner network looks there: a coloured badge
@@ -64,11 +65,15 @@ export function networkLook(name: string) {
  */
 export function useDriverPromos(): Promo[] {
   const { state, sessions } = useSync();
+  const { lang } = useI18n();
   const me = sessions.driver?.id;
   return useMemo(() => {
     const mine = (state?.sessions ?? []).filter(s => s.userId === me && s.status === 'completed');
     const charged = new Set(mine.map(s => s.operatorId));
     // A first-charge campaign of Voli's is for the first charge in Voli at all.
-    return (state?.promos ?? []).filter(p => !p.firstOnly || (p.operatorId ? !charged.has(p.operatorId) : mine.length === 0));
-  }, [state?.promos, state?.sessions, me]);
+    return (state?.promos ?? [])
+      .filter(p => !p.firstOnly || (p.operatorId ? !charged.has(p.operatorId) : mine.length === 0))
+      // The name in the driver's language, where the network gave one.
+      .map(p => (lang !== 'ru' && p.titles?.[lang] ? { ...p, title: p.titles[lang]! } : p));
+  }, [state?.promos, state?.sessions, me, lang]);
 }
