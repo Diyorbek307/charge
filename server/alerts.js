@@ -4,8 +4,11 @@
  * signature, or the app throwing errors on drivers' phones.
  *
  * Where it goes:
- *   ALERT_TELEGRAM_CHAT   a Telegram chat or group id; the Voli bot
- *                         (TELEGRAM_BOT_TOKEN) writes there;
+ *   ALERT_TELEGRAM_CHAT   a Telegram chat or group id;
+ *   ALERT_TELEGRAM_TOKEN  the bot that writes there (a bot of its own, so
+ *                         the team's alerts stay apart from the drivers'
+ *                         bot); without it the Voli bot (TELEGRAM_BOT_TOKEN)
+ *                         writes;
  *   the team mailbox      info@, through the same mail settings as the
  *                         rest of the letters.
  * Without either, alerts are only written to the log and kept for the
@@ -23,10 +26,26 @@ const sentTimes = [];
 const recent = []; // the last 50, for the admin
 
 const chat = () => process.env.ALERT_TELEGRAM_CHAT || '';
+const botToken = () => process.env.ALERT_TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN || '';
+
+/** One message to the team's chat, from the alerts bot. */
+async function toTelegram(text) {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${botToken()}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chat(), text, disable_web_page_preview: true }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) console.warn('[alert] telegram:', res.status);
+  } catch (err) {
+    console.warn('[alert] telegram:', err.message);
+  }
+}
 
 export function alertsStatus() {
   return {
-    telegram: Boolean(chat() && process.env.TELEGRAM_BOT_TOKEN),
+    telegram: Boolean(chat() && botToken()),
     recent: recent.slice(0, 20),
   };
 }
@@ -53,7 +72,7 @@ export async function alertTeam(key, title, lines = []) {
   const text = [`⚠️ Voli: ${title}`, ...lines.map(([k, v]) => `${k}: ${v}`), `Время: ${new Date(now).toLocaleString('ru-RU', { timeZone: 'Asia/Tashkent' })}`].join('\n');
   // Loaded here, not at the top: telegram.js and mail.js load the database, which reports through this file.
   const jobs = [];
-  if (chat()) jobs.push(import('./telegram.js').then(m => m.sendTelegram(chat(), text)).catch(() => false));
+  if (chat() && botToken()) jobs.push(toTelegram(text));
   jobs.push(import('./mail.js').then(m => m.notifyTeam(`Сбой: ${title}`, lines, '/?portal=admin&page=system_health', 'info')).catch(() => false));
   await Promise.all(jobs);
   return true;

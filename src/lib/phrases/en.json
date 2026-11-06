@@ -4294,7 +4294,7 @@
 "В Telegram и на почту команды": "To Telegram and the team mailbox",
 "В Telegram и на почту команды (почта не настроена)": "To Telegram and the team mailbox (mail not set up)",
 "Только на почту — для Telegram задайте ALERT_TELEGRAM_CHAT": "Mail only — set ALERT_TELEGRAM_CHAT for Telegram",
-"Не уходят никуда: задайте ALERT_TELEGRAM_CHAT (и TELEGRAM_BOT_TOKEN) или почту": "Going nowhere: set ALERT_TELEGRAM_CHAT (and TELEGRAM_BOT_TOKEN) or mail",
+"Не уходят никуда: задайте ALERT_TELEGRAM_CHAT (и ALERT_TELEGRAM_TOKEN) или почту": "Going nowhere: set ALERT_TELEGRAM_CHAT (and TELEGRAM_BOT_TOKEN) or mail",
 "Последние сигналы о сбоях": "Latest failure alerts",
 "с последнего запуска сервера": "since the server last started",
 "повтор — не отправлялся": "repeat — not sent",

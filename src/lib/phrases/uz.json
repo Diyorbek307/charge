@@ -4294,7 +4294,7 @@
 "В Telegram и на почту команды": "Telegram va jamoa pochtasiga",
 "В Telegram и на почту команды (почта не настроена)": "Telegram va jamoa pochtasiga (pochta sozlanmagan)",
 "Только на почту — для Telegram задайте ALERT_TELEGRAM_CHAT": "Faqat pochtaga — Telegram uchun ALERT_TELEGRAM_CHAT ni kiriting",
-"Не уходят никуда: задайте ALERT_TELEGRAM_CHAT (и TELEGRAM_BOT_TOKEN) или почту": "Hech qayerga yuborilmaydi: ALERT_TELEGRAM_CHAT (va TELEGRAM_BOT_TOKEN) yoki pochtani sozlang",
+"Не уходят никуда: задайте ALERT_TELEGRAM_CHAT (и ALERT_TELEGRAM_TOKEN) или почту": "Hech qayerga yuborilmaydi: ALERT_TELEGRAM_CHAT (va TELEGRAM_BOT_TOKEN) yoki pochtani sozlang",
 "Последние сигналы о сбоях": "Oxirgi nosozlik signallari",
 "с последнего запуска сервера": "server oxirgi ishga tushganidan beri",
 "повтор — не отправлялся": "takror — yuborilmadi",
