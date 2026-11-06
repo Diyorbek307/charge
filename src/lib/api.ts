@@ -519,7 +519,7 @@ export interface PlatformSettings {
   topup: { min: number; max: number; providers: ('payme' | 'click' | 'uzum' | 'humo')[] };
   queueHoldMin: number;
   minPrepaidKwh: number;
-  onboarding: { intro: boolean; askLocation: boolean; askPush: boolean; tour: boolean; consentVersion: number };
+  onboarding: { askLocation: boolean; askPush: boolean; tour: boolean; consentVersion: number };
 }
 /** One setting in the admin's Platform control. */
 export interface SettingItem { key: string; group: string; label: string; hint?: string; type: 'bool' | 'int' | 'money' | 'percent' | 'tiers'; def: unknown; min?: number; max?: number; unit?: string; value: unknown; changed: boolean }

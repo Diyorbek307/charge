@@ -2,13 +2,16 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ArrowLeft, Eye, EyeOff, Lock, LoaderCircle, Mail, Phone, TriangleAlert } from 'lucide-react';
 import { useSync } from '../../lib/sync';
 import { readFirstRun } from '../../lib/firstRun';
+import { usePlatform } from '../../lib/platform';
+import { LANGS, useI18n } from '../../lib/i18n';
+import { AgreementChecks, NOTHING_AGREED, agreedEnough, type Agreed } from './Agreement';
 import { inNativeShell } from '../../lib/site';
 import type { SignInResult } from '../../lib/api';
 import { Logo } from '../../landing/Logo';
 import ChargeScene from './ChargeScene';
 import Splash from './Splash';
 
-type Step = 'welcome' | 'start' | 'code' | 'name' | 'totp' | 'password';
+type Step = 'welcome' | 'start' | 'code' | 'name' | 'agree' | 'totp' | 'password';
 type Providers = { google: string | null; apple: string | null };
 
 const SLIDES = [
@@ -85,6 +88,10 @@ export default function DriverAuth() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const googleBox = useRef<HTMLDivElement>(null);
+  const { onboarding } = usePlatform();
+  // The agreement is accepted where an account is made: on the name step, or before a new Google/Apple account.
+  const [agreed, setAgreed] = useState<Agreed>(NOTHING_AGREED);
+  const [pendingOauth, setPendingOauth] = useState<{ provider: 'google' | 'apple'; token: string; name?: string } | null>(null);
 
   // The welcome turns its pages by itself.
   useEffect(() => {
@@ -106,8 +113,26 @@ export default function DriverAuth() {
   }, [actions]);
 
   const consent = () => {
+    if (agreedEnough(agreed)) return { version: onboarding.consentVersion, marketing: agreed.marketing };
     const accepted = readFirstRun();
     return { version: accepted?.version ?? 0, marketing: !!accepted?.marketing };
+  };
+  /**
+   * Google or Apple: an existing account is simply in. A new one needs the
+   * agreement first, so the server's refusal turns into the agreement step,
+   * and the same ID token is sent again once it is accepted.
+   */
+  const oauth = async (provider: 'google' | 'apple', token: string, name?: string) => {
+    try {
+      land(await actions.oauthSignIn(provider, token, { name, consent: consent(), ref: ref.trim() || undefined }));
+    } catch (e) {
+      if (/соглашени/i.test((e as Error).message) && !agreedEnough(agreed)) {
+        setPendingOauth({ provider, token, name });
+        setStep('agree');
+        return;
+      }
+      throw e;
+    }
   };
   const forget = () => {
     try {
@@ -193,7 +218,7 @@ export default function DriverAuth() {
       g.accounts.id.initialize({
         client_id: providers.google,
         ux_mode: 'popup',
-        callback: (r: { credential: string }) => void run(async () => land(await actions.oauthSignIn('google', r.credential, { consent: consent(), ref: ref.trim() || undefined }))),
+        callback: (r: { credential: string }) => void run(() => oauth('google', r.credential)),
       });
       g.accounts.id.renderButton(box, { theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill', width: Math.min(box.offsetWidth, 400), locale: 'ru' });
     }).catch(() => setProviders(p => ({ ...p, google: null })));
@@ -213,7 +238,7 @@ export default function DriverAuth() {
         return; // closed the window
       }
       const n = r.user?.name;
-      land(await actions.oauthSignIn('apple', r.authorization.id_token, { name: [n?.firstName, n?.lastName].filter(Boolean).join(' ') || undefined, consent: consent(), ref: ref.trim() || undefined }));
+      await oauth('apple', r.authorization.id_token, [n?.firstName, n?.lastName].filter(Boolean).join(' ') || undefined);
     });
 
   // The splash plays over the welcome, so its wordmark can fly to the welcome's own; lifting it off leaves the welcome as it is.
@@ -241,6 +266,7 @@ export default function DriverAuth() {
     password: ['С возвращением', 'Войдите или создайте аккаунт — заряжайтесь во всех сетях'],
     code: ['Введите код', sentTo ? `${sentTo.channel === 'email' ? 'Отправили письмо на' : 'Отправили SMS на'} ${sentTo.to}` : ''],
     name: ['Как вас зовут?', 'Последний шаг — и аккаунт готов'],
+    agree: ['Почти готово', 'Примите соглашение — и аккаунт готов'],
     totp: ['Код из приложения', 'Двухфакторная защита: 6 цифр из приложения-аутентификатора'],
   };
   const [title, sub] = head[step];
@@ -351,8 +377,17 @@ export default function DriverAuth() {
             <input id="driver-signup-name" value={name} onChange={e => setName(e.target.value)} autoComplete="name" autoFocus placeholder="Имя и фамилия" className={`${field(false)} px-4`} />
             <input value={ref} onChange={e => setRef(e.target.value.toUpperCase())} maxLength={12} autoComplete="off" placeholder="Код друга (если есть)" className={`${field(false)} px-4 h-[48px] text-sm`} />
             <p className="text-xs text-white/40">Имя увидят только поддержка и станция в чеке.</p>
+            <AgreementChecks value={agreed} onChange={setAgreed} />
             <ErrorBox error={error} />
-            <YellowButton busy={busy} disabled={busy || name.trim().length < 2}>Создать аккаунт</YellowButton>
+            <YellowButton busy={busy} disabled={busy || name.trim().length < 2 || !agreedEnough(agreed)}>Создать аккаунт</YellowButton>
+          </form>
+        )}
+
+        {step === 'agree' && pendingOauth && (
+          <form onSubmit={e => { e.preventDefault(); void run(() => oauth(pendingOauth.provider, pendingOauth.token, pendingOauth.name)); }} className="space-y-3 sp5-step">
+            <AgreementChecks value={agreed} onChange={setAgreed} />
+            <ErrorBox error={error} />
+            <YellowButton busy={busy} disabled={busy || !agreedEnough(agreed)}>Создать аккаунт</YellowButton>
           </form>
         )}
 
@@ -446,6 +481,21 @@ function ErrorBox({ error }: { error: string | null }) {
   );
 }
 
+/** The language, right on the welcome: the device's is already on, one tap changes it. */
+function LangChips() {
+  const { lang, setLang } = useI18n();
+  return (
+    <div className="absolute top-3 right-3 z-10 flex gap-1 p-1 rounded-full bg-black/35 border border-white/15 backdrop-blur-md" role="radiogroup" aria-label="Язык приложения">
+      {LANGS.map(l => (
+        <button key={l.id} role="radio" aria-checked={lang === l.id} aria-label={l.full} onClick={() => setLang(l.id)}
+          className={`h-7 min-w-[34px] px-2 rounded-full text-[11px] font-bold transition-colors ${lang === l.id ? 'bg-[#FFC83D] text-[#111]' : 'text-white/75 hover:text-white'}`}>
+          {l.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 const AppleMark = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <path d="M16.37 12.6c-.02-2.2 1.8-3.26 1.88-3.31-1.02-1.5-2.62-1.7-3.19-1.72-1.36-.14-2.65.8-3.34.8-.7 0-1.75-.78-2.88-.76-1.48.02-2.85.86-3.61 2.19-1.54 2.67-.39 6.62 1.11 8.79.73 1.06 1.6 2.25 2.75 2.2 1.1-.04 1.52-.71 2.85-.71 1.33 0 1.71.71 2.88.69 1.19-.02 1.94-1.08 2.66-2.14.84-1.23 1.19-2.42 1.2-2.48-.03-.01-2.3-.88-2.31-3.55zM14.18 6.13c.6-.74 1.01-1.76.9-2.78-.87.04-1.93.58-2.55 1.31-.56.65-1.05 1.69-.92 2.69.97.08 1.97-.49 2.57-1.22z" />
@@ -464,6 +514,7 @@ function Welcome({ slide, onSlide, onStart, onSignIn, logoHidden = false, leavin
       <img src="/welcome/welcome.jpg" alt="" aria-hidden="true" className="absolute inset-x-0 top-0 w-full h-full object-cover object-[50%_40%] pg-kenburns" />
       <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(8,10,18,.55) 0%, rgba(8,10,18,.1) 30%, rgba(8,10,18,0) 50%, rgba(10,10,10,.75) 72%, rgba(10,10,10,.96) 84%)' }} />
 
+      {!logoHidden && <LangChips />}
       <div className={`relative pt-14 flex flex-col items-center px-6 ${leaving ? 'sp5-out' : returning ? 'sp5-in' : ''}`} style={returning && !leaving ? { animationDelay: '.3s' } : undefined}>
         {/* Hidden while the splash's wordmark flies here, so the two never show at once */}
         <div data-welcome-logo style={{ opacity: logoHidden ? 0 : 1 }}><Logo size={64} ink="#FFFFFF" /></div>

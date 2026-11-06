@@ -116,27 +116,11 @@ test('an operator never sees a competitor network in the browser', async ({ page
   expect(Object.keys(state.wallets)).toHaveLength(0);
 });
 
-test('a new driver goes through the first screens, signs up with a code and lands in the app', async ({ page, request }) => {
+test('a new driver opens on the welcome, signs up with a code, accepts the agreement there and is asked for permissions after', async ({ page }) => {
   await page.goto('/?portal=driver');
-  // What the app does, the language (the device's is chosen), permissions, the agreement.
-  await expect(page.getByRole('heading', { name: 'Все станции — в одном приложении' })).toBeVisible();
-  await page.getByRole('button', { name: 'Пропустить' }).click();
-  await expect(page.getByRole('radio', { name: /Русский/ })).toHaveAttribute('aria-checked', 'true');
-  await page.getByRole('button', { name: /^Продолжить/ }).click();
-  for (const title of ['Станции рядом с вами', 'Не пропустите главное']) {
-    if (await page.getByRole('heading', { name: title }).isVisible({ timeout: 1500 }).catch(() => false)) await page.getByRole('button', { name: 'Не сейчас' }).click();
-  }
-  const accept = page.getByRole('button', { name: /^Принимаю и продолжаю/ });
-  await expect(accept).toBeDisabled();
-  await page.getByRole('button', { name: 'Читать соглашение полностью' }).click();
-  await expect(page.getByRole('heading', { name: 'Пользовательское соглашение и согласие на обработку данных' })).toBeVisible();
-  await page.getByRole('button', { name: 'Понятно' }).click();
-  await page.getByRole('checkbox', { name: /Мне есть 18 лет/ }).click();
-  await page.getByRole('checkbox', { name: /обработку моих персональных данных/ }).click();
-  await accept.click();
-
-  // The welcome, then one field for a phone or an email.
+  // No screens before the welcome: it opens with the device's language already on.
   await expect(page.getByRole('heading', { name: /Заряжайся/ })).toBeVisible();
+  await expect(page.getByRole('radio', { name: 'Русский' })).toHaveAttribute('aria-checked', 'true');
   await page.getByRole('button', { name: 'Начать' }).click();
   await page.locator('#driver-signin-to').fill('+998 93 555 44 33');
   await page.getByRole('button', { name: 'Получить код' }).click();
@@ -148,9 +132,22 @@ test('a new driver goes through the first screens, signs up with a code and land
 
   await page.getByLabel('Код из 6 цифр').fill(code);
   await page.getByRole('button', { name: 'Продолжить' }).click();
-  // Someone new: a name, and the account is made.
+  // Someone new: a name and the agreement, and the account is made.
   await page.locator('#driver-signup-name').fill('Madina Karimova');
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click();
+  const create = page.getByRole('button', { name: 'Создать аккаунт' });
+  await expect(create).toBeDisabled();
+  await page.getByRole('button', { name: 'Читать соглашение полностью' }).click();
+  await expect(page.getByRole('heading', { name: 'Пользовательское соглашение и согласие на обработку данных' })).toBeVisible();
+  await page.getByRole('button', { name: 'Понятно' }).click();
+  await page.getByRole('checkbox', { name: /Мне есть 18 лет/ }).click();
+  await page.getByRole('checkbox', { name: /обработку моих персональных данных/ }).click();
+  await create.click();
+  // Only now, signed in: location and notifications, each may be put off.
+  await expect(page.getByRole('heading', { name: 'Станции рядом с вами' })).toBeVisible();
+  await page.getByRole('button', { name: 'Не сейчас' }).click();
+  // Notifications are asked only where the browser can still ask.
+  if (await page.getByRole('heading', { name: 'Не пропустите главное' }).isVisible({ timeout: 3000 }).catch(() => false)) await page.getByRole('button', { name: 'Не сейчас' }).click();
+  await expect(page.getByRole('dialog', { name: /Добро пожаловать/ })).toHaveCount(0);
   await expect(page.locator('#driver-signup-name')).toHaveCount(0);
   await expect(page.locator('#driver-signin-to')).toHaveCount(0);
 

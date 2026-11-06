@@ -1,25 +1,26 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ArrowLeft, Bell, Check, ChevronRight, CreditCard, FileText, Globe, MapPin, Navigation, Shield, UserCheck, X, Zap } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { ArrowLeft, Bell, Check, ChevronRight, CreditCard, FileText, MapPin, Navigation, Shield, UserCheck, Zap } from 'lucide-react';
 import { BRAND } from '../../brand';
-import { LANGS, useI18n, type Lang } from '../../lib/i18n';
 import { usePlatform } from '../../lib/platform';
 import { geoPermission, locate } from '../../lib/geo';
 import { readFirstRun, saveFirstRun } from '../../lib/firstRun';
-import { LEGAL } from '../../landing/legal';
+import { LegalSheet } from './Agreement';
 
-type Step = 'intro' | 'language' | 'location' | 'notify' | 'consent';
+type Step = 'location' | 'notify' | 'consent';
 
 const pushSupported = () => typeof window !== 'undefined' && 'Notification' in window && 'serviceWorker' in navigator;
 
 /**
- * The first launch of the driver app, before any account: what the app does,
- * the language (the device's, unless the driver picks another), location and
- * notifications — each asked on its own screen that says why — and the user
- * agreement. A new edition of the agreement brings back only its screen.
+ * Right after the first sign-in on a device: location and notifications, each
+ * on its own screen that says why, and the agreement only if the account
+ * accepted an older edition. A new edition later brings back only its screen.
+ * The app's tour, language and the agreement for new accounts come before,
+ * on the welcome and in sign-up.
  */
-export default function FirstRun({ only }: { only?: 'consent' }) {
+export default function FirstRun({ only, agreedVersion = 0, marketing: wasMarketing = false }: { only?: 'consent'; agreedVersion?: number; marketing?: boolean }) {
   const { onboarding } = usePlatform();
-  const [steps, setSteps] = useState<Step[]>(() => (only ? ['consent'] : [...(onboarding.intro ? ['intro' as const] : []), 'language', 'location', 'notify', 'consent']));
+  const oldTerms = agreedVersion < onboarding.consentVersion;
+  const [steps, setSteps] = useState<Step[]>(() => (only ? ['consent'] : ['location', 'notify', ...(oldTerms ? ['consent' as const] : [])]));
   const [i, setI] = useState(0);
   const [push, setPush] = useState(false);
   const step = steps[i];
@@ -40,12 +41,21 @@ export default function FirstRun({ only }: { only?: 'consent' }) {
     };
   }, [only, onboarding.askLocation, onboarding.askPush]);
 
-  const next = () => setI(n => Math.min(n + 1, steps.length - 1));
   const back = () => setI(n => Math.max(n - 1, 0));
-  const finish = (marketing: boolean) => {
+  /** Saved once the last screen is through; `marketing` comes from the agreement screen when there is one. */
+  const finish = (marketing = wasMarketing, said = push) => {
     const prev = readFirstRun();
-    saveFirstRun({ version: onboarding.consentVersion, marketing, push: push || !!prev?.push, at: new Date().toISOString() });
+    const accepted = steps.includes('consent') ? onboarding.consentVersion : Math.max(agreedVersion, prev?.version ?? 0);
+    saveFirstRun({ version: accepted, marketing, push: said || !!prev?.push, at: new Date().toISOString() });
   };
+  const next = (said = push) => (i >= steps.length - 1 ? finish(wasMarketing, said) : setI(n => n + 1));
+
+  // Every permission already decided and the agreement current: nothing to show.
+  useEffect(() => {
+    if (!steps.length) finish();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [steps.length]);
+  if (!step) return null;
 
   return (
     <div className="absolute inset-0 z-[10000] bg-white flex flex-col pg-fr" role="dialog" aria-modal="true" aria-label={`Добро пожаловать в ${BRAND.name}`} style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -65,10 +75,8 @@ export default function FirstRun({ only }: { only?: 'consent' }) {
         </div>
       )}
       <div key={step} className="flex-1 min-h-0 flex flex-col pg-fr-step">
-        {step === 'intro' && <Intro onDone={next} />}
-        {step === 'language' && <Language onDone={next} />}
-        {step === 'location' && <Location onDone={next} />}
-        {step === 'notify' && <Notify onDone={yes => { setPush(yes); next(); }} />}
+        {step === 'location' && <Location onDone={() => next()} />}
+        {step === 'notify' && <Notify onDone={yes => { setPush(yes); next(yes); }} />}
         {step === 'consent' && <Consent renewed={!!only} onAccept={finish} />}
       </div>
     </div>
@@ -88,218 +96,7 @@ function Footer({ children }: { children: ReactNode }) {
   return <div className="px-5 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] shrink-0 space-y-2">{children}</div>;
 }
 
-// ── 1. What the app does ──
-
-const SLIDES = [
-  {
-    scene: <MapScene />,
-    title: 'Все станции — в одном приложении',
-    text: 'Сети разных операторов на одной карте: свободные разъёмы, цены и мощность в реальном времени.',
-  },
-  {
-    scene: <QrScene />,
-    title: 'QR — и зарядка пошла',
-    text: 'Наведите камеру на код на станции. Ход зарядки, кВт·ч и сумма — на экране, даже на заблокированном.',
-  },
-  {
-    scene: <WalletScene />,
-    title: 'Честная цена, один кошелёк',
-    text: 'Платите только за полученные кВт·ч. Ночью дешевле, бонусы за поездки, пополнение через Payme, Click, Uzum и Humo.',
-  },
-];
-
-function Intro({ onDone }: { onDone: () => void }) {
-  const [k, setK] = useState(0);
-  const touch = useRef<number | null>(null);
-  const last = k === SLIDES.length - 1;
-  const go = (n: number) => setK(Math.max(0, Math.min(SLIDES.length - 1, n)));
-  // Slides move on by themselves, until the driver touches them.
-  const [auto, setAuto] = useState(true);
-  useEffect(() => {
-    if (!auto || last) return;
-    const t = setTimeout(() => setK(n => n + 1), 5200);
-    return () => clearTimeout(t);
-  }, [auto, k, last]);
-
-  return (
-    <>
-      <div className="px-5 flex justify-end shrink-0">
-        <button onClick={onDone} className="text-sm text-slate-400 font-medium px-3 py-1.5 rounded-xl hover:bg-slate-100">Пропустить</button>
-      </div>
-      <div
-        className="flex-1 min-h-0 overflow-hidden"
-        onPointerDown={e => { touch.current = e.clientX; setAuto(false); }}
-        onPointerUp={e => {
-          if (touch.current === null) return;
-          const dx = e.clientX - touch.current;
-          touch.current = null;
-          if (Math.abs(dx) > 40) go(k + (dx < 0 ? 1 : -1));
-        }}
-      >
-        <div className="h-full flex transition-transform duration-500 ease-[cubic-bezier(.32,.72,0,1)]" style={{ transform: `translateX(-${k * 100}%)` }}>
-          {SLIDES.map((s, n) => (
-            <div key={s.title} className="w-full h-full shrink-0 flex flex-col items-center justify-center px-7 text-center" aria-hidden={n !== k}>
-              <div className={`mb-8 ${n === k ? 'pg-fr-scene' : ''}`}>{s.scene}</div>
-              <h1 className="text-[26px] font-extrabold text-[#111] leading-tight tracking-tight mb-3">{s.title}</h1>
-              <p className="text-[15px] text-slate-500 leading-relaxed max-w-[300px]">{s.text}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-      <Footer>
-        <div className="flex justify-center gap-1.5 pb-3" role="tablist" aria-label="Слайды">
-          {SLIDES.map((s, n) => (
-            <button key={s.title} role="tab" aria-selected={n === k} aria-label={`Слайд ${n + 1}`} onClick={() => { setAuto(false); go(n); }}
-              className={`h-2 rounded-full transition-all duration-300 ${n === k ? 'w-6 bg-[#111]' : 'w-2 bg-slate-200'}`} />
-          ))}
-        </div>
-        <PrimaryButton onClick={() => (last ? onDone() : (setAuto(false), go(k + 1)))}>
-          {last ? 'Начать' : 'Далее'}<ChevronRight size={18} />
-        </PrimaryButton>
-      </Footer>
-    </>
-  );
-}
-
-function MapScene() {
-  return (
-    <svg width="230" height="190" viewBox="0 0 230 190" fill="none" aria-hidden="true">
-      <rect x="15" y="10" width="200" height="170" rx="28" fill="#F5F5F0" />
-      <path d="M15 120c40-18 70 10 110-6s60-40 90-30" stroke="#E4E4DD" strokeWidth="14" strokeLinecap="round" />
-      <path d="M70 10v170M15 70h200" stroke="#ECECE6" strokeWidth="6" />
-      {[
-        [60, 64, '#16A34A', 0],
-        [150, 52, '#16A34A', 0.15],
-        [112, 112, '#FFC83D', 0.3],
-        [176, 128, '#EF4444', 0.45],
-        [44, 136, '#16A34A', 0.6],
-      ].map(([x, y, c, d]) => (
-        <g key={`${x}`} className="pg-fr-pin" style={{ animationDelay: `${d}s`, transformOrigin: `${x}px ${Number(y) + 18}px` }}>
-          <path d={`M${x} ${Number(y) + 18}c-10-12-14-18-14-25a14 14 0 0 1 28 0c0 7-4 13-14 25z`} fill={String(c)} />
-          <circle cx={Number(x)} cy={Number(y) - 7} r="5.5" fill="#fff" />
-        </g>
-      ))}
-      <g className="pg-fr-me">
-        <circle cx="100" cy="76" r="22" fill="#2563EB" opacity=".14" className="pg-fr-me-halo" />
-        <circle cx="100" cy="76" r="8" fill="#2563EB" stroke="#fff" strokeWidth="3" />
-      </g>
-    </svg>
-  );
-}
-
-function QrScene() {
-  return (
-    <svg width="230" height="190" viewBox="0 0 230 190" fill="none" aria-hidden="true">
-      <rect x="24" y="30" width="62" height="130" rx="14" fill="#16161A" />
-      <rect x="32" y="40" width="46" height="38" rx="8" fill="#FFC83D" />
-      <path d="M57 48l-8 12h6l-2 10 9-13h-6z" fill="#16161A" />
-      <rect x="38" y="92" width="34" height="34" rx="4" fill="#fff" />
-      {[0, 1, 2].flatMap(r => [0, 1, 2].map(c => ((r + c) % 2 === 0 ? <rect key={`${r}${c}`} x={41 + c * 10} y={95 + r * 10} width="8" height="8" rx="1.5" fill="#16161A" /> : null)))}
-      <g className="pg-fr-phone">
-        <rect x="118" y="22" width="88" height="150" rx="20" fill="#111" />
-        <rect x="124" y="30" width="76" height="134" rx="15" fill="#fff" />
-        <rect x="140" y="58" width="44" height="44" rx="8" stroke="#FFC83D" strokeWidth="3" strokeDasharray="10 8" />
-        <rect x="140" y="62" width="44" height="3" rx="1.5" fill="#FFB000" className="pg-fr-scan" />
-        <circle cx="162" cy="134" r="16" stroke="#F0F0EA" strokeWidth="5" />
-        <circle cx="162" cy="134" r="16" stroke="#16A34A" strokeWidth="5" strokeLinecap="round" strokeDasharray="100" className="pg-fr-ring" transform="rotate(-90 162 134)" />
-        <path d="M164 126l-6 9h5l-2 7 7-10h-5z" fill="#16A34A" />
-      </g>
-    </svg>
-  );
-}
-
-function WalletScene() {
-  return (
-    <svg width="230" height="190" viewBox="0 0 230 190" fill="none" aria-hidden="true">
-      {[0, 1, 2].map(n => (
-        <g key={n} className="pg-fr-coin" style={{ animationDelay: `${n * 0.35}s` }}>
-          <circle cx={92 + n * 24} cy="52" r="15" fill="#FFC83D" stroke="#E3A400" strokeWidth="3" />
-          <path d={`M${94 + n * 24} 44l-6 9h5l-2 7 7-10h-5z`} fill="#8A5B00" />
-        </g>
-      ))}
-      <rect x="40" y="70" width="150" height="96" rx="20" fill="#16161A" />
-      <rect x="40" y="70" width="150" height="26" rx="13" fill="#2A2A30" />
-      <rect x="146" y="108" width="44" height="30" rx="10" fill="#FFC83D" />
-      <circle cx="160" cy="123" r="5" fill="#16161A" />
-      <rect x="56" y="112" width="58" height="8" rx="4" fill="#3A3A42" />
-      <rect x="56" y="128" width="38" height="8" rx="4" fill="#3A3A42" />
-      <g className="pg-fr-moon">
-        <circle cx="190" cy="40" r="16" fill="#EDE9FE" />
-        <path d="M196 30a12 12 0 1 0 2 20 10 10 0 0 1-2-20z" fill="#7C3AED" />
-      </g>
-    </svg>
-  );
-}
-
-// ── 2. Language ──
-
-/** Drawn, not emoji: Windows and many Android skins show flag emoji as two letters. */
-const FLAGS: Record<Lang, ReactNode> = {
-  uz: (
-    <>
-      <rect width="30" height="20" fill="#fff" />
-      <rect width="30" height="6.4" fill="#0099B5" />
-      <rect y="13.6" width="30" height="6.4" fill="#1EB53A" />
-      <rect y="6.4" width="30" height=".6" fill="#CE1126" />
-      <rect y="13" width="30" height=".6" fill="#CE1126" />
-      <circle cx="5.6" cy="3.2" r="2.2" fill="#fff" />
-      <circle cx="6.5" cy="3.2" r="2" fill="#0099B5" />
-    </>
-  ),
-  ru: (
-    <>
-      <rect width="30" height="20" fill="#fff" />
-      <rect y="6.67" width="30" height="6.67" fill="#0039A6" />
-      <rect y="13.33" width="30" height="6.67" fill="#D52B1E" />
-    </>
-  ),
-  en: (
-    <>
-      <rect width="30" height="20" fill="#012169" />
-      <path d="M0 0l30 20M30 0L0 20" stroke="#fff" strokeWidth="4" />
-      <path d="M0 0l30 20M30 0L0 20" stroke="#C8102E" strokeWidth="1.4" />
-      <path d="M15 0v20M0 10h30" stroke="#fff" strokeWidth="6" />
-      <path d="M15 0v20M0 10h30" stroke="#C8102E" strokeWidth="3.4" />
-    </>
-  ),
-};
-
-function Language({ onDone }: { onDone: () => void }) {
-  const { lang, setLang } = useI18n();
-  const device = (typeof navigator !== 'undefined' ? navigator.language : 'ru').slice(0, 2).toLowerCase();
-  return (
-    <>
-      <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-6">
-        <div className="w-14 h-14 rounded-2xl bg-[#FFF4D1] text-[#8A5B00] grid place-items-center mb-5 pg-fr-pop"><Globe size={26} /></div>
-        <h1 className="text-[26px] font-extrabold text-[#111] leading-tight tracking-tight">Язык приложения</h1>
-        <p className="text-[15px] text-slate-500 mt-2 mb-6 leading-relaxed">Мы выбрали язык вашего устройства. Его можно сменить в любой момент в настройках.</p>
-        <div className="space-y-2.5 pg-stagger" role="radiogroup" aria-label="Язык">
-          {LANGS.map(l => {
-            const on = lang === l.id;
-            return (
-              <button key={l.id} role="radio" aria-checked={on} onClick={() => setLang(l.id)}
-                className={`w-full flex items-center gap-4 px-4 h-[68px] rounded-2xl border-2 text-left transition-all active:scale-[0.99] ${on ? 'border-[#111] bg-white shadow-[0_6px_18px_rgba(17,17,17,0.08)]' : 'border-slate-100 bg-slate-50'}`}>
-                <svg width="34" height="23" viewBox="0 0 30 20" aria-hidden="true" className="rounded-[5px] shadow-[0_0_0_1px_rgba(0,0,0,0.08)] shrink-0">{FLAGS[l.id]}</svg>
-                <span className="flex-1 min-w-0">
-                  <span className="block text-base font-bold text-[#111]" data-no-translate>{l.full}</span>
-                  {device === l.id && <span className="block text-xs text-slate-500">Язык устройства</span>}
-                </span>
-                <span className={`w-6 h-6 rounded-full grid place-items-center transition-all ${on ? 'bg-[#FFC83D] text-[#111] scale-100' : 'border-2 border-slate-200 scale-90'}`}>
-                  {on && <Check size={14} strokeWidth={3} />}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-      <Footer>
-        <PrimaryButton onClick={onDone}>Продолжить<ChevronRight size={18} /></PrimaryButton>
-      </Footer>
-    </>
-  );
-}
-
-// ── 3. Location ──
+// ── Location ──
 
 function Permission({ icon, title, text, points, allow, onAllow, onLater, note }: {
   icon: ReactNode; title: string; text: string; points: string[]; allow: string; onAllow: () => void; onLater: () => void; note?: string | null;
@@ -358,7 +155,7 @@ function Location({ onDone }: { onDone: () => void }) {
   );
 }
 
-// ── 4. Notifications ──
+// ── Notifications ──
 
 function Notify({ onDone }: { onDone: (yes: boolean) => void }) {
   const [busy, setBusy] = useState(false);
@@ -381,7 +178,7 @@ function Notify({ onDone }: { onDone: (yes: boolean) => void }) {
   );
 }
 
-// ── 5. The user agreement ──
+// ── A new edition of the user agreement ──
 
 const POINTS = [
   { icon: <Zap size={17} />, title: 'Агрегатор сетей', text: 'Станции принадлежат сетям-партнёрам, мы запускаем зарядку и считаем оплату.' },
@@ -456,36 +253,5 @@ function Check3({ checked, onChange, children, required, strong }: { checked: bo
         {children}{required && <span className="text-[#C2410C]"> *</span>}
       </span>
     </button>
-  );
-}
-
-/** The whole agreement, readable without leaving the screens. */
-function LegalSheet({ onClose }: { onClose: () => void }) {
-  const doc = LEGAL.consent;
-  const { lang } = useI18n();
-  return (
-    <div className="absolute inset-0 z-10 bg-white flex flex-col pg-sheet-in" role="dialog" aria-modal="true" aria-label={doc.title}>
-      <div className="px-4 h-14 flex items-center gap-2 border-b border-slate-100 shrink-0">
-        <span className="flex-1 text-sm font-bold text-[#111] truncate">Пользовательское соглашение</span>
-        <button onClick={onClose} aria-label="Закрыть" className="w-9 h-9 rounded-xl grid place-items-center hover:bg-slate-100"><X size={18} /></button>
-      </div>
-      <div className="flex-1 overflow-y-auto px-5 py-5">
-        {lang !== 'ru' && <p className="text-xs text-[#8A5B00] bg-[#FFF4D1] rounded-xl px-3 py-2.5 mb-4">Юридически значимый текст — на русском языке. Перевод на узбекский и английский готовится.</p>}
-        <article lang="ru" data-no-translate className="text-[13px] leading-relaxed text-slate-700">
-          <h1 className="text-lg font-extrabold text-[#111] leading-snug">{doc.title}</h1>
-          <p className="text-xs text-slate-400 mt-1">Редакция от {doc.updated}</p>
-          <p className="mt-3">{doc.intro}</p>
-          {doc.sections.map(s => (
-            <section key={s.h} className="mt-4">
-              <h2 className="text-sm font-bold text-[#111] mb-1.5">{s.h}</h2>
-              {s.p.map((t, n) => <p key={n} className="mb-1.5">{t}</p>)}
-            </section>
-          ))}
-        </article>
-      </div>
-      <Footer>
-        <PrimaryButton onClick={onClose}>Понятно</PrimaryButton>
-      </Footer>
-    </div>
   );
 }

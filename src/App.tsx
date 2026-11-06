@@ -331,7 +331,7 @@ function MainApp() {
   const embedded = typeof window !== 'undefined' && window.self !== window.top;
   const { sessions, actions, adoptSession } = useSync();
   const driverSession = sessions.driver;
-  const firstRun = useFirstRunNeeded();
+  const firstRun = useFirstRunNeeded(sessions.driver ?? null);
 
   // Inside Telegram a linked driver is signed in straight away.
   useEffect(() => {
@@ -407,7 +407,7 @@ function MainApp() {
             <div className="absolute inset-0 sm:rounded-[42px] sm:shadow-[0_32px_80px_rgba(0,0,0,0.6),0_0_0_2px_rgba(255,255,255,0.08)] overflow-hidden" style={{ background: 'linear-gradient(135deg, #2a2a2e 0%, #1a1a1e 100%)' }}>
               <div className="absolute inset-0 sm:inset-[2px] bg-black sm:rounded-[40px] overflow-hidden">
                 <div className="relative w-full h-full bg-white sm:rounded-[40px] overflow-hidden safe-top">
-                  {firstRun && <FirstRun only={firstRun === 'consent' ? 'consent' : undefined} />}
+                  {firstRun && driverSession && <FirstRun only={firstRun === 'consent' ? 'consent' : undefined} agreedVersion={driverSession.consent?.version ?? 0} marketing={!!driverSession.consent?.marketing} />}
                   {driverSession ? (
                     <DriverApp />
                   ) : (

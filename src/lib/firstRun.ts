@@ -1,9 +1,9 @@
 /**
- * What this device went through on the first launch: which edition of the
- * user agreement was accepted, whether promotions are welcome and whether
- * notifications were allowed. Kept on the device so the welcome screens come
- * before any account exists; the agreement is then recorded on the account
- * (POST /me/consent), which is what counts legally.
+ * What this device went through after the first sign-in: which edition of
+ * the user agreement was accepted, whether promotions are welcome and whether
+ * notifications were allowed. The agreement itself is accepted where the
+ * account is made and recorded on it (that is what counts legally); a newer
+ * edition is accepted here and sent to the account (POST /me/consent).
  */
 import { useEffect, useState } from 'react';
 import { usePlatform } from './platform';
@@ -38,10 +38,12 @@ export function saveFirstRun(r: FirstRunRecord) {
 }
 
 /**
- * Whether this device still has to go through the welcome screens: never
- * did, or accepted an agreement edition older than the one in force.
+ * What a signed-in driver still has to go through on this device: the
+ * permission screens once ('after', with the agreement too if the account's
+ * edition is old), or only a newer edition of the agreement ('consent').
+ * Nothing before sign-in: the app opens on the splash and the welcome.
  */
-export function useFirstRunNeeded() {
+export function useFirstRunNeeded(account: { consent?: { version: number } | null } | null) {
   const { onboarding } = usePlatform();
   const [record, setRecord] = useState(readFirstRun);
   useEffect(() => {
@@ -49,8 +51,10 @@ export function useFirstRunNeeded() {
     window.addEventListener('pg-first-run', on);
     return () => window.removeEventListener('pg-first-run', on);
   }, []);
-  if (!record) return 'full' as const;
-  return record.version < onboarding.consentVersion ? ('consent' as const) : null;
+  if (!account) return null;
+  const agreed = Math.max(account.consent?.version ?? 0, record?.version ?? 0);
+  if (!record) return 'after' as const;
+  return agreed < onboarding.consentVersion ? ('consent' as const) : null;
 }
 
 /** The one-time tour over the map, per account on this device. */

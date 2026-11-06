@@ -30,7 +30,6 @@ export const SCHEMA = [
   { key: 'feature.referral', group: 'features', label: '«Приведи друга»', hint: 'Выключено — новые приглашения не засчитываются, начисленные бонусы действуют', type: 'bool', def: true },
 
   // First launch: what a new driver goes through before and after signing in
-  { key: 'onboarding.intro', group: 'onboarding', label: 'Знакомство при первом запуске', hint: 'Три экрана о том, что умеет приложение', type: 'bool', def: true },
   { key: 'onboarding.askLocation', group: 'onboarding', label: 'Просить доступ к геолокации', hint: 'Отдельный экран с объяснением, зачем она нужна', type: 'bool', def: true },
   { key: 'onboarding.askPush', group: 'onboarding', label: 'Просить разрешение на уведомления', type: 'bool', def: true },
   { key: 'onboarding.tour', group: 'onboarding', label: 'Обучение после первого входа', hint: 'Подсказки поверх карты: баланс, поиск, QR, разделы', type: 'bool', def: true },
@@ -188,7 +187,6 @@ export function publicSettings() {
     queueHoldMin: setting('queue.holdMin'),
     minPrepaidKwh: setting('charge.minPrepaidKwh'),
     onboarding: {
-      intro: setting('onboarding.intro'),
       askLocation: setting('onboarding.askLocation'),
       askPush: setting('onboarding.askPush'),
       tour: setting('onboarding.tour'),
