@@ -113,7 +113,7 @@ export function AdminHosts() {
   if (!list) return <Page title="Частные зарядки">{error ? <ErrorNote text={error} /> : <Loading />}</Page>;
   return (
     <Page title="Частные зарядки" subtitle="Дома, гостиницы, офисы и парковки, которые хотят открыть свою зарядку водителям. После одобрения станция ждёт подключения по OCPP">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <Kpi label="На проверке" value={list.filter(a => a.status === 'pending').length} icon={<Home size={14} />} tone="amber" />
         <Kpi label="Одобрено" value={list.filter(a => a.status === 'approved').length} icon={<Home size={14} />} tone="emerald" />
         <Kpi label="Отклонено" value={list.filter(a => a.status === 'rejected').length} icon={<Home size={14} />} tone="slate" />

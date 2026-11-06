@@ -59,7 +59,7 @@ export default function Investor() {
 
       <Card pad={false} title="По месяцам">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm tabular-nums min-w-[720px]">
+          <table className="w-full text-sm tabular-nums min-w-[720px] [&_td]:whitespace-nowrap">
             <thead>
               <tr className="text-right text-[11px] uppercase tracking-wide text-slate-400 border-y border-slate-50">
                 <th className="text-left px-5 py-2.5 font-semibold">Месяц</th>

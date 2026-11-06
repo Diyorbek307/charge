@@ -67,8 +67,8 @@ export default function LeadsPage() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      <div className="flex-1 p-6 space-y-5 overflow-y-auto">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex-1 p-4 md:p-6 pb-28 space-y-5 overflow-y-auto">
+        <div className="flex flex-wrap items-center justify-between gap-3 pl-[100px] md:pl-0">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Заявки</h1>
             <p className="text-sm text-slate-500 inter">

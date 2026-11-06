@@ -74,7 +74,7 @@ export default function AdminPromos() {
   if (!data) return <Page title="Акции">{error ? <ErrorNote text={error} /> : <Loading />}</Page>;
   const live = data.promos.filter(p => p.active !== false && (!p.until || Date.parse(p.until) > Date.now()));
   const past = data.promos.filter(p => !live.includes(p));
-  const field = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm';
+  const field = 'w-full min-w-0 border border-slate-200 rounded-xl px-3 py-2 text-sm';
 
   return (
     <Page title="Акции" subtitle="Скидки Voli и сетей: появляются на карте, в «Скидках» и на станции сразу после запуска">
@@ -86,7 +86,7 @@ export default function AdminPromos() {
         <Kpi label="Получат уведомление" value={num(data.driversReachable)} sub="водители, согласные на предложения" tone="slate" />
       </div>
 
-      <div className="grid xl:grid-cols-[420px_1fr] gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-4 [&>*]:min-w-0">
         <Card title={<span className="inline-flex items-center gap-2"><Megaphone size={16} />Новая акция</span>}>
           <div className="space-y-3">
             <label className="block text-xs font-semibold text-slate-600">Название
@@ -95,7 +95,7 @@ export default function AdminPromos() {
             <label className="block text-xs font-semibold text-slate-600">Описание для водителей (необязательно)
               <textarea value={f.note} onChange={e => set('note', e.target.value)} maxLength={200} rows={2} placeholder="Коротко: что и где" className={`${field} mt-1`} />
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0">
               <label className="block text-xs font-semibold text-slate-600">Скидка, %
                 <input type="number" min={5} max={100} value={f.percent} onChange={e => set('percent', e.target.value)} className={`${field} mt-1`} />
               </label>
@@ -129,7 +129,7 @@ export default function AdminPromos() {
               <input type="checkbox" checked={f.hoursOn} onChange={e => set('hoursOn', e.target.checked)} />Только в определённые часы
             </label>
             {f.hoursOn && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0">
                 <label className="block text-xs font-semibold text-slate-600">С (час)
                   <input type="number" min={0} max={23} value={f.fromHour} onChange={e => set('fromHour', e.target.value)} className={`${field} mt-1`} />
                 </label>

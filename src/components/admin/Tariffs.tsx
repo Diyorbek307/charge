@@ -114,7 +114,8 @@ export default function AdminTariffs() {
       </div>
 
       <Card pad={false} title="Цены операторов по типам разъёмов" right={<span className="text-xs text-slate-400">базовые, сум/кВт·ч</span>}>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[420px]">
           <thead>
             <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-50">
               <th className="px-5 py-3 font-semibold">Разъём</th>
@@ -136,6 +137,7 @@ export default function AdminTariffs() {
             ))}
           </tbody>
         </table>
+        </div>
       </Card>
     </Page>
   );

@@ -82,12 +82,12 @@ export default function AdminPartners() {
             {list.map(p => {
               const on = p.active && Date.parse(p.until) > Date.now();
               return (
-                <div key={p.id} className="px-5 py-3 flex items-center gap-4">
-                  <div className="flex-1 min-w-0">
+                <div key={p.id} className="px-5 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <div className="w-full sm:w-auto sm:flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-800">{`${p.name} · ${KIND[p.kind]}`}</p>
                     <p className="text-xs text-slate-500 truncate">{p.offer}</p>
                   </div>
-                  <div className="text-right text-xs text-slate-500 tabular-nums">
+                  <div className="mr-auto sm:mr-0 sm:text-right text-xs text-slate-500 tabular-nums">
                     <p>{`${num(p.shows)} показов · ${num(p.taps)} нажатий`}</p>
                     <p className="font-semibold text-slate-800">{money(p.bill)}</p>
                   </div>
