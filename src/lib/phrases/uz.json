@@ -4259,5 +4259,21 @@
 "Разъёмы не работают": "Ulagichlar ishlamayapti",
 "Станции с надёжностью ниже 90%": "Ishonchliligi 90% dan past stansiyalar",
 "Всё в порядке: сбоев и неработающих разъёмов нет": "Hammasi joyida: nosozliklar va ishlamaydigan ulagichlar yo‘q",
-"Удачные запуски и время в работе за 30 дней": "30 kunda muvaffaqiyatli ishga tushirishlar va ishlash vaqti"
+"Удачные запуски и время в работе за 30 дней": "30 kunda muvaffaqiyatli ishga tushirishlar va ishlash vaqti",
+"Итоги месяца": "Oy yakunlari",
+"Итоги месяца · {0}": "Oy yakunlari · {0}",
+"км на электричестве": "km elektrda",
+"Поделиться итогами месяца": "Oy yakunlarini ulashish",
+"Готовим…": "Tayyorlanmoqda…",
+"Сэкономили": "Tejaldi",
+"{0} кВт·ч · {1} сум": "{0} kVt·soat · {1} so‘m",
+"{0} сум на ночном и дневном тарифе, {1} сум на скидках и бонусах": "{0} so‘m tungi va kunduzgi tarifda, {1} so‘m chegirma va bonuslarda",
+"На бензине те же {0} км обошлись бы дороже на {1} сум": "Benzinda o‘sha {0} km {1} so‘m qimmatroq tushardi",
+"Сэкономлено на тарифе и скидках": "Tarif va chegirmalarda tejaldi",
+"Меньше, чем на бензине": "Benzindan arzonroq",
+"на {0} сум": "{0} so‘mga",
+"Мой месяц с Voli: {0} км на электричестве": "Voli bilan oyim: {0} km elektrda",
+"на скидках и бонусах": "chegirma va bonuslarda",
+"на ночном и дневном тарифе": "tungi va kunduzgi tarifda",
+"на тарифе и скидках": "tarif va chegirmalarda"
 }

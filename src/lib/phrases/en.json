@@ -4259,5 +4259,21 @@
 "Разъёмы не работают": "Connectors out of order",
 "Станции с надёжностью ниже 90%": "Stations below 90% reliability",
 "Всё в порядке: сбоев и неработающих разъёмов нет": "All good: no faults or broken connectors",
-"Удачные запуски и время в работе за 30 дней": "Successful starts and time in working order over 30 days"
+"Удачные запуски и время в работе за 30 дней": "Successful starts and time in working order over 30 days",
+"Итоги месяца": "Your month",
+"Итоги месяца · {0}": "Your month · {0}",
+"км на электричестве": "km on electricity",
+"Поделиться итогами месяца": "Share your month",
+"Готовим…": "Preparing…",
+"Сэкономили": "Saved",
+"{0} кВт·ч · {1} сум": "{0} kWh · {1} UZS",
+"{0} сум на ночном и дневном тарифе, {1} сум на скидках и бонусах": "{0} UZS on night and day rates, {1} UZS on discounts and bonuses",
+"На бензине те же {0} км обошлись бы дороже на {1} сум": "The same {0} km on petrol would have cost {1} UZS more",
+"Сэкономлено на тарифе и скидках": "Saved on rates and discounts",
+"Меньше, чем на бензине": "Less than on petrol",
+"на {0} сум": "by {0} UZS",
+"Мой месяц с Voli: {0} км на электричестве": "My month with Voli: {0} km on electricity",
+"на скидках и бонусах": "on discounts and bonuses",
+"на ночном и дневном тарифе": "on night and day rates",
+"на тарифе и скидках": "on rates and discounts"
 }

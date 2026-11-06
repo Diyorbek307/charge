@@ -5,6 +5,7 @@ import type { Session } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 import { exportPdf, exportCsv } from '../../lib/export';
 import { plural } from '../../lib/analytics';
+import MonthRecap from './MonthRecap';
 
 type Period = 'week' | 'month' | 'all';
 const DAY = 86400_000;
@@ -99,6 +100,7 @@ export default function HistoryScreen({ onBack }: { onBack?: () => void } = {}) 
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        <MonthRecap sessions={mine} name={me?.name?.split(' ')[0]} />
         <div className="grid grid-cols-3 gap-2">
           {[
             { label: 'кВт·ч', value: String(Math.round(energy)), color: 'text-sky-600' },
