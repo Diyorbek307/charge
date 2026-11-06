@@ -21,6 +21,8 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY package.json server.js ./
 COPY server ./server
+# Notifications are translated with the screens' phrase dictionary (server/phrases.js).
+COPY src/lib/phrases ./src/lib/phrases
 # The demo partner network (OCPI) is served from the app itself.
 COPY scripts/ocpi-cpo-mock.mjs ./scripts/
 USER node

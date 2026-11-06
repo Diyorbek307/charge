@@ -5,6 +5,7 @@ import { tokenOf } from './session.js';
 import { setPushHook } from './api.js';
 import { notifyTelegram } from './telegram.js';
 import { sendFcm, fcmConfigured } from './fcm.js';
+import { translate, pushLang } from './phrases.js';
 
 /**
  * Web Push notifications, so a driver hears "your turn" with the app closed.
@@ -55,6 +56,22 @@ const subs = () => (db.data.pushSubs ??= []);
 const devices = () => (db.data.nativePush ??= []);
 const FCM_TOKEN = /^[A-Za-z0-9:_-]{20,4096}$/;
 
+/** The language the account's app is in, for its notifications. */
+const langOf = accountId => db.byId('accounts', accountId)?.lang ?? 'ru';
+function inLang(notice, lang) {
+  if (lang === 'ru') return notice;
+  const out = { ...notice, title: translate(notice.title, lang), body: translate(notice.body, lang) };
+  if (notice.actions) out.actions = notice.actions.map(a => ({ ...a, title: translate(a.title, lang) }));
+  return out;
+}
+/** The app tells its language when it registers and when the driver changes it. */
+function rememberLang(account, value) {
+  const lang = pushLang(value);
+  if (!lang || account.lang === lang) return;
+  account.lang = lang;
+  db.save();
+}
+
 /** The same notice to the store app on each of these accounts' phones. */
 async function sendNative(accountIds, { title, body, url, tag }) {
   if (!fcmConfigured()) return 0;
@@ -62,7 +79,7 @@ async function sendNative(accountIds, { title, body, url, tag }) {
   let sent = 0;
   const gone = new Set();
   await Promise.all(targets.map(async d => {
-    const r = await sendFcm(d.token, { title, body, url, tag });
+    const r = await sendFcm(d.token, inLang({ title, body, url, tag }, langOf(d.accountId)));
     if (r === 'sent') sent++;
     else if (r === 'gone') gone.add(d.token);
   }));
@@ -148,7 +165,7 @@ async function sendTo(targets, payload) {
     targets.map(async sub => {
       if (!endpointAllowed(sub.endpoint)) return removeSub(sub.endpoint);
       try {
-        const details = webpush.generateRequestDetails({ endpoint: sub.endpoint, keys: sub.keys }, JSON.stringify(payload), {
+        const details = webpush.generateRequestDetails({ endpoint: sub.endpoint, keys: sub.keys }, JSON.stringify(inLang(payload, langOf(sub.accountId))), {
           TTL: 3600,
           vapidDetails: { subject: SUBJECT, publicKey: keys.publicKey, privateKey: keys.privateKey },
         });
@@ -226,6 +243,7 @@ pushApi.post('/native', requireViewer, (req, res) => {
   const token = String(req.body?.token ?? '');
   const platform = req.body?.platform === 'ios' ? 'ios' : 'android';
   if (!FCM_TOKEN.test(token)) return res.status(400).json({ error: 'Некорректный токен устройства' });
+  rememberLang(req.account, req.body?.lang);
   db.data.nativePush = devices().filter(d => d.token !== token);
   devices().push({ token, platform, accountId: req.account.id, portal: req.account.portal, created: new Date().toISOString() });
   const mine = devices().filter(d => d.accountId === req.account.id);
@@ -251,6 +269,7 @@ pushApi.post('/subscribe', requireViewer, (req, res) => {
   if (typeof keys?.p256dh !== 'string' || typeof keys?.auth !== 'string') {
     return res.status(400).json({ error: 'Некорректная подписка' });
   }
+  rememberLang(req.account, req.body?.lang);
   removeSub(endpoint);
   subs().push({
     endpoint,
@@ -265,6 +284,12 @@ pushApi.post('/subscribe', requireViewer, (req, res) => {
   for (const old of mine.slice(0, Math.max(0, mine.length - MAX_SUBS_PER_ACCOUNT))) removeSub(old.endpoint);
   db.save();
   res.json({ subscribed: true });
+});
+
+pushApi.post('/lang', requireViewer, (req, res) => {
+  if (!pushLang(req.body?.lang)) return res.status(400).json({ error: 'Неизвестный язык' });
+  rememberLang(req.account, req.body.lang);
+  res.json({ lang: req.account.lang });
 });
 
 pushApi.post('/unsubscribe', requireViewer, (req, res) => {

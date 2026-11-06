@@ -1,5 +1,6 @@
 import { authHeaders } from './api';
 import { API_ORIGIN, inNativeShell } from './site';
+import { appLang } from './pushLang';
 
 /**
  * Notifications in the store app, through Firebase (server/fcm.js), where
@@ -49,7 +50,7 @@ export async function enableNativePush(): Promise<boolean> {
         const res = await fetch(`${API_ORIGIN}/api/push/native`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders('driver') },
-          body: JSON.stringify({ token: t.value, platform: 'android' }),
+          body: JSON.stringify({ token: t.value, platform: 'android', lang: appLang() }),
         });
         finish(res.ok);
       } catch {

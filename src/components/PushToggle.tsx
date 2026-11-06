@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Bell, BellOff, BellRing, LoaderCircle } from 'lucide-react';
 import { authHeaders, type Portal } from '../lib/api';
 import { API_ORIGIN } from '../lib/site';
+import { appLang } from '../lib/pushLang';
 
 type PushState = 'unsupported' | 'denied' | 'off' | 'on' | 'busy';
 
@@ -31,7 +32,7 @@ export async function subscribePush(portal: Portal) {
   await navigator.serviceWorker.ready;
   const { publicKey } = await pushCall<{ publicKey: string }>('/vapid-key', portal);
   const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
-  await pushCall('/subscribe', portal, sub.toJSON());
+  await pushCall('/subscribe', portal, { ...sub.toJSON(), lang: appLang() });
 }
 
 const COPY: Record<PushState, string> = {

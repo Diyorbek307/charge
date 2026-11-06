@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { setPageLanguage } from './domTranslate';
+import { tellPushLang } from './pushLang';
 
 export type Lang = 'ru' | 'uz' | 'en';
 
@@ -623,6 +624,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       /* private mode — the change still applies to this session */
     }
     window.dispatchEvent(new CustomEvent('oc-lang-change', { detail: { lang: next } }));
+    tellPushLang(next);
   }, []);
 
   const t = useCallback(
