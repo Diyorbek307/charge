@@ -3,7 +3,7 @@ import { Network, RefreshCw, Copy, Check, LoaderCircle, Link2 } from 'lucide-rea
 import type { OcpiOverview } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 import { dateTime } from '../../lib/analytics';
-import { Card, Pill, ErrorNote } from './ui';
+import { Card, Pill } from './ui';
 
 const STATUS = {
   connected: { tone: 'green' as const, label: 'Подключена' },

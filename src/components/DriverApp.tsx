@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import {
-  MapPin, Navigation, Search, Zap, Clock, Star, ChevronRight, Home, X, Battery, BatteryCharging,
-  Scan, History, User, ArrowLeft, CheckCircle, Heart, Route, ChevronDown, Plus, Wifi, Coffee,
-  ParkingCircle, Toilet, CalendarCheck, Minus, AlertTriangle, Send, Wallet, ArrowDownCircle,
-  Building2, Moon, ScanFace, Percent, Share2, ShieldCheck,
+  MapPin, Navigation, Search, Zap, Clock, Star, ChevronRight, Home, X, Battery, Scan, User,
+  ArrowLeft, CheckCircle, Heart, ChevronDown, Plus, Wifi, Coffee, ParkingCircle, Toilet,
+  CalendarCheck, Minus, AlertTriangle, Send, Wallet, ArrowDownCircle, Building2, Moon, ScanFace,
+  Percent, Share2, ShieldCheck,
 } from 'lucide-react';
 import { Station } from '../data/mockData';
 import { useLiveStations } from '../lib/live';
@@ -11,7 +11,6 @@ import { plural } from '../lib/analytics';
 import DriverMap from './DriverMap';
 import { useSync } from '../lib/sync';
 import EcoScreen, { GreenHourBanner } from './EcoScreen';
-import PushToggle from './PushToggle';
 import { BRAND } from '../brand';
 import { ChargingActiveScreen, ChargingDoneScreen } from './driver/Charging';
 import HistoryScreen from './driver/History';
@@ -37,14 +36,13 @@ import { useOfflinePacks, deletePack, packsBytes, savedStations } from '../lib/o
 import { usePlatform } from '../lib/platform';
 import { NetworkBadge } from './driver/NetworkBadge';
 import { ChargerFriend } from './driver/Illustration';
-import { promoNow, promosOf, promoHours, discounted, useDriverPromos, promoGiver } from '../lib/promos';
+import { promoNow, promosOf, promoHours, useDriverPromos, promoGiver } from '../lib/promos';
 import SupportChat from './driver/SupportChat';
 import { useI18n } from '../lib/i18n';
 import type { Payer, ChargeGoal } from '../lib/api';
 import { useMyLocation, km, fmtKm, driveMinutes, locate, openNow, samePort } from '../lib/geo';
 import { inTelegram, telegramInitData } from '../lib/telegram';
 import type { Booking, Session, PaymentOrder, ArrivalChance } from '../lib/api';
-import FirstRun from './driver/FirstRun';
 import Tour from './driver/Tour';
 import PriceToday from './driver/PriceToday';
 import { readFirstRun, tourSeen, markTour } from '../lib/firstRun';

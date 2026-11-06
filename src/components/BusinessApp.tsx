@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, Car, Users, DollarSign, Settings, LogOut, Building2, Menu, Wallet } from 'lucide-react';
+import { LayoutDashboard, Car, Users, DollarSign, Settings, LogOut, Menu, Wallet } from 'lucide-react';
 import { useSync } from '../lib/sync';
 import { useI18n } from '../lib/i18n';
 import { plural } from '../lib/analytics';

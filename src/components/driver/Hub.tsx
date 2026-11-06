@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BatteryMedium, MapPin, Scan, Route, Zap, Moon, Sun, Clock, Calendar, Users, Car, ChevronRight, Navigation, Wallet, RotateCcw, X, History, Heart } from 'lucide-react';
+import { BatteryMedium, Route, Zap, Moon, Sun, Clock, Calendar, Users, Car, ChevronRight, Navigation, Wallet, RotateCcw, X, History, Heart } from 'lucide-react';
 import type { Station } from '../../data/mockData';
 import type { TariffForecast, ChargeGoal } from '../../lib/api';
 import { useSync } from '../../lib/sync';

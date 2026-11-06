@@ -27,8 +27,10 @@ import { DirectSettlement } from './admin/DirectSettlement';
 import { AdminSupport } from './admin/Support';
 import AdminSearch, { SearchButton } from './admin/AdminSearch';
 import {
-  LayoutDashboard, MapPin, Users, Activity, DollarSign, BarChart2, Settings, LogOut, Zap, Shield,
-  Building2, Brain, ScrollText, ClipboardCheck, Percent, UserCheck, Banknote, Tag, Menu, Inbox, Siren, Home, ScanFace, Landmark, MessageCircle, Coffee, SlidersHorizontal, Megaphone, TrendingUp } from 'lucide-react';
+  LayoutDashboard, MapPin, Users, Activity, DollarSign, BarChart2, Settings, LogOut, Shield,
+  Building2, Brain, ScrollText, ClipboardCheck, Percent, UserCheck, Banknote, Tag, Menu, Inbox,
+  Siren, Home, ScanFace, Landmark, MessageCircle, Coffee, SlidersHorizontal, Megaphone, TrendingUp,
+} from 'lucide-react';
 import { useI18n } from '../lib/i18n';
 import { useAdminInbox } from '../lib/inbox';
 import SidebarThemeToggle from './SidebarThemeToggle';
@@ -174,15 +176,6 @@ function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current:
     </div>
   );
 }
-
-const mapStations = [
-  { x: 72, y: 65, status: 'available', name: 'Toshkent Siti Hub', city: 'Toshkent', count: 47, evse: 120, power: 150, operator: 'GreenCharge UZ', active: 31 },
-  { x: 55, y: 48, status: 'occupied', name: 'Samarqand Gateway', city: 'Samarqand', count: 22, evse: 56, power: 100, operator: 'EcoVolt', active: 18 },
-  { x: 36, y: 38, status: 'available', name: 'SilkRoad Buxoro', city: 'Buxoro', count: 18, evse: 44, power: 150, operator: 'SilkRoad EV', active: 10 },
-  { x: 76, y: 55, status: 'reserved', name: 'Namangan Station', city: 'Namangan', count: 8, evse: 20, power: 50, operator: 'GreenCharge UZ', active: 5 },
-  { x: 80, y: 59, status: 'available', name: 'Andijon EV Park', city: 'Andijon', count: 13, evse: 32, power: 100, operator: 'EcoVolt', active: 9 },
-  { x: 14, y: 30, status: 'unavailable', name: 'Nukus Power Hub', city: 'Nukus', count: 8, evse: 24, power: 50, operator: 'Nukus Power', active: 0 },
-];
 
 export default function AdminApp({ onBack }: { onBack: () => void }) {
   // Authentication is handled by the real per-portal gate in App.tsx.
