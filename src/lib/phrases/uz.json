@@ -4316,5 +4316,15 @@
 "Бесплатно после зарядки": "Quvvatlashdan keyin bepul",
 "Плата за минуту простоя": "Bir daqiqa turish narxi",
 "Не больше минут за раз": "Bir martada ko‘pi bilan daqiqa",
-"Предел, чтобы забытая машина не обнулила кошелёк": "Unutilgan mashina hamyonni bo‘shatib qo‘ymasligi uchun chegara"
+"Предел, чтобы забытая машина не обнулила кошелёк": "Unutilgan mashina hamyonni bo‘shatib qo‘ymasligi uchun chegara",
+"Погода в дороге": "Yo‘ldagi ob-havo",
+"Обычно": "Odatiy",
+"Холод": "Sovuq",
+"Жара": "Issiq",
+"Обычная погода": "Odatiy ob-havo",
+"Холод, от 0 до −15 °C": "Sovuq, 0 dan −15 °C gacha",
+"Жара, от +35 °C": "Issiq, +35 °C dan",
+"{0}: расход примерно на {1}% выше — остановки посчитаны с этим.": "{0}: sarf taxminan {1}% ko‘proq — to‘xtashlar shuni hisobga olib tuzilgan.",
+"Перевал Камчик (2 267 м): подъём съедает около {0} кВт·ч — зарядитесь перед ним с запасом.": "Qamchiq dovoni (2 267 m): ko‘tarilish taxminan {0} kVt·soat oladi — undan oldin zaxira bilan quvvatlaning.",
+"Оценка: расход 0,18 кВт·ч/км (в холод и жару — больше, см. выше), скорость 80 км/ч, запас 15% у станции и 10% в конце, зарядка до 80% (выше — только если иначе не доехать). Цена — по текущим тарифам станций, к оплате — по фактической энергии и тарифу в момент старта.": "Baho: 0,18 kVt·soat/km (sovuq va issiqda — ko‘proq, yuqoriga qarang), 80 km/soat, stansiyada 15% va oxirida 10% zaxira, 80% gacha zaryadlash (faqat zarur bo‘lsa yuqoriroq). Narx — stansiyalarning joriy tariflari bo‘yicha, to‘lov — haqiqiy energiya va boshlanishdagi tarif bo‘yicha."
 }

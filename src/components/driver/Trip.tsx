@@ -37,6 +37,34 @@ const SPEED = 80;
 const DETOUR_KM = 20;
 const effectiveKw = (power: number) => (power >= 50 ? power * 0.6 : Math.min(power, 11) * 0.95);
 
+/**
+ * Weather changes what a kilometre costs: cold batteries and the heater take
+ * about a fifth more in winter, the air conditioning a little in the summer
+ * heat. Figures are typical for EVs, not one car's.
+ */
+export type Weather = 'mild' | 'cold' | 'hot';
+const WEATHER: Record<Weather, { extra: number; label: string }> = {
+  mild: { extra: 0, label: 'Обычная погода' },
+  cold: { extra: 0.22, label: 'Холод, от 0 до −15 °C' },
+  hot: { extra: 0.08, label: 'Жара, от +35 °C' },
+};
+/** The weather to expect this month in Tashkent: winter December–February, heat June–August. */
+export const seasonNow = (d = new Date()): Weather => {
+  const m = new Date(d.getTime() + 5 * 3600_000).getUTCMonth();
+  return m === 11 || m <= 1 ? 'cold' : m >= 5 && m <= 7 ? 'hot' : 'mild';
+};
+
+/**
+ * The Kamchik pass (2 267 m) between Tashkent and the Fergana valley: about
+ * 2 000 m of climb one way. Lifting a two-tonne car that high takes ~11 kWh;
+ * regeneration wins back part of it on the descent, so ~7 kWh is counted
+ * where the road crosses the pass.
+ */
+const KAMCHIK = { lat: 41.1, lng: 70.52, kwh: 7 };
+const VALLEY = new Set(['kokand', 'fergana', 'namangan', 'andijan']);
+/** A trip between the Fergana valley and anywhere west of it goes over the pass. */
+export const crossesKamchik = (from: string, to: string) => VALLEY.has(from) !== VALLEY.has(to);
+
 type Stop = { station: Station; atKm: number; arrive: number; leave: number; kwh: number; minutes: number; cost: number; power: number; price: number };
 type Plan = { km: number; stops: Stop[]; arrive: number; chargeMin: number; cost: number } | { error: string; km: number; stops: Stop[] };
 
@@ -53,45 +81,53 @@ function project(from: { lat: number; lng: number }, to: { lat: number; lng: num
   return { along: t * len, off, len };
 }
 
-export function plan(stations: Station[], from: { lat: number; lng: number }, to: { lat: number; lng: number }, startSoc: number, pack: number, carKw: number, TARGET = DEFAULT_TARGET): Plan {
+export function plan(stations: Station[], from: { lat: number; lng: number }, to: { lat: number; lng: number }, startSoc: number, pack: number, carKw: number, TARGET = DEFAULT_TARGET, road: { weather?: Weather; pass?: boolean } = {}): Plan {
   const line = project(from, to, to);
   const total = line.len * ROAD;
+  // The battery pays in "energy km": the distance with the weather and the pass added.
+  const factor = 1 + WEATHER[road.weather ?? 'mild'].extra;
+  const passAt = road.pass ? Math.min(Math.max(project(from, to, KAMCHIK).along * ROAD, 0), total) : Infinity;
+  const passKm = road.pass ? KAMCHIK.kwh / USE : 0;
+  const energy = (km: number) => km * factor + (km >= passAt ? passKm : 0);
+  const totalE = energy(total);
   const candidates = stations
     .map(st => ({ st, ...project(from, to, { lat: st.geoLat, lng: st.geoLng }) }))
     .filter(c => c.along > 0 && c.along < line.len && c.off <= DETOUR_KM && c.st.connectors.some(k => k.status !== 'unavailable'))
     .map(c => {
       const usable = c.st.connectors.filter(k => k.status !== 'unavailable');
       const best = usable.reduce((a, b) => (b.power > a.power ? b : a));
-      return { st: c.st, km: c.along * ROAD + c.off, power: Math.min(best.power, carKw), price: best.price };
+      const km = c.along * ROAD + c.off;
+      return { st: c.st, km, e: energy(km), power: Math.min(best.power, carKw), price: best.price };
     })
     .sort((a, b) => a.km - b.km);
 
   const kmPerPct = pack / 100 / USE;
   const stops: Stop[] = [];
   let at = 0;
+  let atE = 0;
   let soc = startSoc;
   for (let guard = 0; guard < 12; guard++) {
     const reach = (soc - RESERVE) * kmPerPct;
-    if (total - at <= reach) {
-      const arrive = Math.round(soc - (total - at) / kmPerPct);
+    if (totalE - atE <= reach) {
+      const arrive = Math.round(soc - (totalE - atE) / kmPerPct);
       return { km: Math.round(total), stops, arrive, chargeMin: stops.reduce((n, s) => n + s.minutes, 0), cost: stops.reduce((n, s) => n + s.cost, 0) };
     }
     // The farthest charger we can reach, preferring fast ones close to it.
     const toCharger = (soc - STOP_RESERVE) * kmPerPct;
-    const reachable = candidates.filter(c => c.km > at + 5 && c.km - at <= toCharger);
+    const reachable = candidates.filter(c => c.km > at + 5 && c.e - atE <= toCharger);
     if (!reachable.length) {
-      return { error: `После ${Math.round(at)} км нет станции сети в пределах запаса хода (${Math.round(toCharger)} км). На этом участке сеть ещё строится.`, km: Math.round(total), stops };
+      return { error: `После ${Math.round(at)} км нет станции сети в пределах запаса хода (${Math.round(toCharger / factor)} км). На этом участке сеть ещё строится.`, km: Math.round(total), stops };
     }
     const far = reachable[reachable.length - 1].km;
     const pick = reachable.filter(c => c.km >= far - 40).sort((a, b) => b.power - a.power || b.km - a.km)[0];
-    const arrive = soc - (pick.km - at) / kmPerPct;
+    const arrive = soc - (pick.e - atE) / kmPerPct;
     // Charge only what the rest of the trip needs, up to 80%.
-    const toFinish = RESERVE + 10 + (total - pick.km) / kmPerPct;
+    const toFinish = RESERVE + 10 + (totalE - pick.e) / kmPerPct;
     let need = toFinish;
     if (toFinish > TARGET) {
       // Not enough to finish on 80%: charge at least far enough for the next charger, above 80% if it is far.
-      const ahead = candidates.filter(c => c.km > pick.km + 5 && c.km - pick.km <= (100 - STOP_RESERVE) * kmPerPct);
-      const hop = ahead.length ? STOP_RESERVE + (ahead[ahead.length - 1].km - pick.km) / kmPerPct : toFinish;
+      const ahead = candidates.filter(c => c.km > pick.km + 5 && c.e - pick.e <= (100 - STOP_RESERVE) * kmPerPct);
+      const hop = ahead.length ? STOP_RESERVE + (ahead[ahead.length - 1].e - pick.e) / kmPerPct : toFinish;
       need = Math.min(100, Math.max(TARGET, Math.min(hop, toFinish)));
     }
     const leave = Math.max(arrive, need);
@@ -99,6 +135,7 @@ export function plan(stations: Station[], from: { lat: number; lng: number }, to
     const minutes = Math.ceil((kwh / effectiveKw(pick.power)) * 60);
     stops.push({ station: pick.st, atKm: Math.round(pick.km), arrive: Math.round(arrive), leave: Math.round(leave), kwh: Math.round(kwh * 10) / 10, minutes, cost: Math.round(kwh * pick.price), power: pick.power, price: pick.price });
     at = pick.km;
+    atE = pick.e;
     soc = leave;
   }
   return { error: 'Маршрут слишком длинный для планировщика', km: Math.round(total), stops };
@@ -117,10 +154,12 @@ export default function TripPlannerScreen({ onBack, onSelectStation }: { onBack:
   const [from, setFrom] = useState('tashkent');
   const [to, setTo] = useState('samarkand');
   const [soc, setSoc] = useState(companyCar?.battery ?? 80);
+  const [weather, setWeather] = useState<Weather>(seasonNow);
 
   const a = CITIES.find(c => c.id === from)!;
   const b = CITIES.find(c => c.id === to)!;
-  const result = useMemo(() => (from === to ? null : plan(stations, a, b, soc, pack, carKw, me?.car?.chargeLimit ?? DEFAULT_TARGET)), [stations, a, b, soc, pack, carKw, from, to, me?.car?.chargeLimit]);
+  const pass = crossesKamchik(from, to);
+  const result = useMemo(() => (from === to ? null : plan(stations, a, b, soc, pack, carKw, me?.car?.chargeLimit ?? DEFAULT_TARGET, { weather, pass })), [stations, a, b, soc, pack, carKw, from, to, me?.car?.chargeLimit, weather, pass]);
   const driveMin = result ? Math.round((result.km / SPEED) * 60) : 0;
 
   return (
@@ -156,6 +195,17 @@ export default function TripPlannerScreen({ onBack, onSelectStation }: { onBack:
             <div className="flex justify-between text-xs text-slate-500 mb-1"><span>Заряд на старте</span><span className="font-semibold text-slate-800 tabular-nums">{soc}%</span></div>
             <input type="range" min={20} max={100} step={5} value={soc} onChange={e => setSoc(Number(e.target.value))} aria-label="Заряд на старте, %" className="w-full accent-sky-500" />
           </div>
+          <div>
+            <p className="text-xs text-slate-500 mb-1.5">Погода в дороге</p>
+            <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Погода в дороге">
+              {(['mild', 'cold', 'hot'] as const).map(w => (
+                <button key={w} role="radio" aria-checked={weather === w} onClick={() => setWeather(w)}
+                  className={`px-2 py-2 rounded-xl text-[11px] font-semibold leading-tight transition-colors ${weather === w ? 'bg-[#111] text-white' : 'bg-slate-100 text-slate-600'}`}>
+                  {w === 'mild' ? 'Обычно' : w === 'cold' ? 'Холод' : 'Жара'}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {!result ? (
@@ -175,6 +225,13 @@ export default function TripPlannerScreen({ onBack, onSelectStation }: { onBack:
                 </div>
               ))}
             </div>
+
+            {(weather !== 'mild' || pass) && (
+              <div className="rounded-2xl bg-[#FFF4D1] text-[#6b4600] px-4 py-3 text-xs space-y-1">
+                {weather !== 'mild' && <p>{`${WEATHER[weather].label}: расход примерно на ${Math.round(WEATHER[weather].extra * 100)}% выше — остановки посчитаны с этим.`}</p>}
+                {pass && <p>{`Перевал Камчик (2 267 м): подъём съедает около ${KAMCHIK.kwh} кВт·ч — зарядитесь перед ним с запасом.`}</p>}
+              </div>
+            )}
 
             <ol className="bg-white rounded-2xl border border-slate-100 p-4 space-y-4">
               <li className="flex gap-3">
@@ -215,7 +272,7 @@ export default function TripPlannerScreen({ onBack, onSelectStation }: { onBack:
               stations={result.stops.map(s => s.station)}
               allStations={stations}
             />}
-            <p className="text-[11px] text-slate-400 px-1">Оценка: расход 0,18 кВт·ч/км, скорость 80 км/ч, запас 15% у станции и 10% в конце, зарядка до 80% (выше — только если иначе не доехать). Цена — по текущим тарифам станций, к оплате — по фактической энергии и тарифу в момент старта.</p>
+            <p className="text-[11px] text-slate-400 px-1">Оценка: расход 0,18 кВт·ч/км (в холод и жару — больше, см. выше), скорость 80 км/ч, запас 15% у станции и 10% в конце, зарядка до 80% (выше — только если иначе не доехать). Цена — по текущим тарифам станций, к оплате — по фактической энергии и тарифу в момент старта.</p>
           </>
         )}
       </div>
