@@ -46,6 +46,12 @@ function progress(session, now) {
   return 0;
 }
 
+/** The power going into the car now, as the charger reports it, else a fair guess from its rating. */
+function livePower(session) {
+  if (typeof session.powerNow === 'number') return session.powerNow;
+  return Math.round((session.power ?? 50) * 0.6 * 10) / 10;
+}
+
 /** Minutes left at the current power, for the "nearly done" notice. */
 function minutesLeft(session, now) {
   const g = session.goal;
@@ -140,7 +146,8 @@ async function watchLive() {
     const left = session.goal && (session.goal.stopKwh || session.goal.stopCost) ? minutesLeft(session, now) : null;
     const title = pct !== null ? `⚡ ${pct}%${left ? ` · ещё ~${left} мин` : ''}` : `⚡ Идёт зарядка${left ? ` · ещё ~${left} мин` : ''}`;
     const body = `${session.stationName} · ${now.energy.toFixed(1)} кВт·ч · ${sum(now.cost)}`;
-    await pushLiveCharge(session, { title, body, first }).catch(() => 0);
+    const live = { stage: 'live', pct, energy: now.energy, cost: now.cost, power: livePower(session), left };
+    await pushLiveCharge(session, { title, body, first, live }).catch(() => 0);
   }
   // A charge that ended, however it ended, leaves a closing notice in place of the live one —
   // never a stale "62%" stuck on the lock screen.
@@ -153,6 +160,7 @@ async function watchLive() {
       body: done ? `${session.stationName} · ${(session.energy ?? 0).toFixed(1)} кВт·ч · ${sum(session.cost ?? 0)}` : session.stationName,
       first: false,
       final: true,
+      live: { stage: done ? 'done' : 'stopped', pct: session.socEnd ?? null, energy: session.energy ?? 0, cost: session.cost ?? 0, power: null, left: null },
     }).catch(() => 0);
   }
 }

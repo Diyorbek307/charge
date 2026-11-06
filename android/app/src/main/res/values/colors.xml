@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The brand's yellow, for notifications -->
+    <color name="voli_yellow">#FFC83D</color>
+</resources>

@@ -83,3 +83,28 @@ export async function sendFcm(token, { title, body, url, tag }) {
     return 'failed';
   }
 }
+
+/**
+ * A message the app draws itself (the charge's live card): data only, so
+ * Android hands it to the app even in the background, at high priority.
+ */
+export async function sendFcmData(token, data) {
+  if (!fcmConfigured()) return 'failed';
+  try {
+    const res = await fetch(`https://fcm.googleapis.com/v1/projects/${serviceAccount().project_id}/messages:send`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${await accessToken()}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: { token, data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v ?? '')])), android: { priority: 'high', ttl: '600s' } } }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (res.ok) return 'sent';
+    const err = await res.json().catch(() => ({}));
+    const code = err?.error?.details?.find?.(d => d.errorCode)?.errorCode ?? err?.error?.status;
+    if (res.status === 404 || code === 'UNREGISTERED') return 'gone';
+    console.warn('[fcm] data send failed:', res.status, code ?? '');
+    return 'failed';
+  } catch (e) {
+    console.warn('[fcm] data send failed:', e.message);
+    return 'failed';
+  }
+}

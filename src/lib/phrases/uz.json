@@ -4377,5 +4377,6 @@
 "Почти готово: осталось около {0} мин до цели {1}": "Deyarli tayyor: {1} maqsadigacha taxminan {0} daqiqa qoldi",
 "Освободите разъём на {0} в течение {1} мин — дальше {2} сум за минуту": "{0} dagi ulagichni {1} daqiqa ichida bo‘shating — keyin daqiqasiga {2} so‘m",
 "Простой после зарядки {0} мин на {1}: списано {2} сум": "{1} da quvvatlashdan keyin {0} daqiqa kutish: {2} so‘m yechildi",
-"Autocharge: зарядка началась сама": "Autocharge: quvvatlash o‘zi boshlandi"
+"Autocharge: зарядка началась сама": "Autocharge: quvvatlash o‘zi boshlandi",
+"Точка": "Nuqta"
 }

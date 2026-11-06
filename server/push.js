@@ -4,7 +4,7 @@ import { db } from './db.js';
 import { tokenOf } from './session.js';
 import { setPushHook } from './api.js';
 import { notifyTelegram } from './telegram.js';
-import { sendFcm, fcmConfigured } from './fcm.js';
+import { sendFcm, sendFcmData, fcmConfigured } from './fcm.js';
 import { translate, pushLang } from './phrases.js';
 
 /**
@@ -88,6 +88,58 @@ async function sendNative(accountIds, { title, body, url, tag }) {
     db.save();
   }
   return sent;
+}
+
+const num = (n, digits = 1) => (Math.round(n * 10 ** digits) / 10 ** digits).toLocaleString('ru-RU', { maximumFractionDigits: digits }).replace(/ /g, ' ');
+
+/** The charge's live card on Android phones; other phones get the ordinary notice at the start and the end. */
+async function sendLiveCard(session, { title, body, first, final, live }) {
+  if (!fcmConfigured()) return;
+  const station = db.byId('stations', session.stationId);
+  const idx = station?.connectors.findIndex(c => c.id === session.connectorId) ?? -1;
+  const point = idx >= 0 ? String.fromCharCode(65 + idx) : '';
+  const left = live.left ? `ещё ~${live.left} мин` : '';
+  const status = live.stage === 'done' ? '✅ Зарядка завершена' : live.stage === 'stopped' ? 'Зарядка остановлена' : 'Идёт зарядка';
+  const gone = new Set();
+  for (const d of devices().filter(x => x.accountId === session.userId)) {
+    const lang = langOf(d.accountId);
+    const t = text => translate(text, lang);
+    const tag = `charge-${session.id}`;
+    const url = final ? '/?portal=driver' : '/?portal=driver&go=charging';
+    if (d.platform !== 'android') {
+      if (!first && !final) continue;
+      const r = await sendFcm(d.token, inLang({ title, body, url, tag }, lang));
+      if (r === 'gone') gone.add(d.token);
+      continue;
+    }
+    const r = await sendFcmData(d.token, {
+      kind: 'charge',
+      stage: live.stage,
+      tag,
+      url,
+      station: session.stationName ?? '',
+      sub: [session.connector, point && `${t('Точка')} ${point}`].filter(Boolean).join(' · '),
+      pct: live.pct === null || live.pct === undefined ? '' : String(live.pct),
+      energy: num(live.energy ?? 0),
+      cost: num(live.cost ?? 0, 0),
+      power: live.power === null || live.power === undefined ? '' : num(live.power),
+      status: t(status),
+      left: left ? t(left) : '',
+      lEnergy: t('Энергия'),
+      lCost: t('Стоимость'),
+      lPower: t('Мощность'),
+      uKwh: t('кВт·ч'),
+      uKw: t('кВт'),
+      uSum: t('сум'),
+      title: t(title),
+      body: t(body),
+    });
+    if (r === 'gone') gone.add(d.token);
+  }
+  if (gone.size) {
+    db.data.nativePush = devices().filter(d => !gone.has(d.token));
+    db.save();
+  }
 }
 
 function removeSub(endpoint) {
@@ -210,9 +262,10 @@ async function deliver(event) {
  * place (same tag, silent) with the percentage, time left, energy and cost.
  * Sent straight to the driver's devices, not through events or Telegram.
  */
-export async function pushLiveCharge(session, { title, body, first, final = false }) {
-  // The store app hears the start and the end; the minute-by-minute updates stay on the web's notification.
-  if (first || final) void sendNative(new Set([session.userId]), { title, body, tag: `charge-${session.id}`, url: final ? '/?portal=driver' : '/?portal=driver&go=charging' });
+export async function pushLiveCharge(session, { title, body, first, final = false, live = null }) {
+  // The store app on Android draws its own live card (ChargeNotice.java) from the numbers, updated in place.
+  if (live) void sendLiveCard(session, { title, body, first, final, live });
+  else if (first || final) void sendNative(new Set([session.userId]), { title, body, tag: `charge-${session.id}`, url: final ? '/?portal=driver' : '/?portal=driver&go=charging' });
   const targets = subs().filter(s => s.accountId === session.userId);
   if (!targets.length) return 0;
   // The closing notice no longer sticks: the driver can swipe it away.

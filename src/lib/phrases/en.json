@@ -4377,5 +4377,6 @@
 "Почти готово: осталось около {0} мин до цели {1}": "Almost done: about {0} min to the goal {1}",
 "Освободите разъём на {0} в течение {1} мин — дальше {2} сум за минуту": "Free the connector at {0} within {1} min — after that {2} UZS a minute",
 "Простой после зарядки {0} мин на {1}: списано {2} сум": "Idle {0} min after charging at {1}: {2} UZS charged",
-"Autocharge: зарядка началась сама": "Autocharge: charging started by itself"
+"Autocharge: зарядка началась сама": "Autocharge: charging started by itself",
+"Точка": "Point"
 }

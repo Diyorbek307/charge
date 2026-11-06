@@ -73,15 +73,16 @@ export function demandFor({ days = 30 } = {}) {
   const views = new Map();
   for (const e of recent) if (e.kind === 'busy') views.set(e.stationId, (views.get(e.stationId) ?? 0) + 1);
 
-  const stations = db.data.stations
+  const ranked = db.data.stations
     .map(st => {
       const working = st.connectors.filter(c => c.status !== 'unavailable').length || st.connectors.length;
       const hours = fullMinutes(byStation.get(st.id) ?? [], working, from, now) / 60;
       return { id: st.id, name: st.name, city: st.city, operator: st.operator, connectors: st.connectors.length, fullHours: Math.round(hours * 10) / 10, busyViews: views.get(st.id) ?? 0 };
     })
     .filter(s => s.fullHours > 0 || s.busyViews > 0)
-    .sort((a, b) => b.fullHours + b.busyViews - (a.fullHours + a.busyViews))
-    .slice(0, 12);
+    .sort((a, b) => b.fullHours + b.busyViews - (a.fullHours + a.busyViews));
+  // The busiest twelve, and every station a driver found full — those are the ones people asked about.
+  const stations = ranked.filter((s, i) => i < 12 || s.busyViews > 0);
 
   const searches = new Map();
   const areas = new Map();

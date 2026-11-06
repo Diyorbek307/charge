@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The live card folded: the station, the percentage and the bar -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:orientation="vertical" android:background="@drawable/charge_card_bg"
+    android:paddingStart="14dp" android:paddingEnd="14dp" android:paddingTop="8dp" android:paddingBottom="10dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+        <TextView android:id="@+id/station" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:textColor="#FFFFFFFF" android:textSize="14sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/pct" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:textColor="#FFFFC83D" android:textSize="19sp" android:textStyle="bold" android:layout_marginStart="10dp" android:includeFontPadding="false" />
+    </LinearLayout>
+    <ProgressBar android:id="@+id/bar" style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="match_parent" android:layout_height="7dp" android:layout_marginTop="6dp"
+        android:max="100" android:progressDrawable="@drawable/charge_progress" />
+</LinearLayout>
