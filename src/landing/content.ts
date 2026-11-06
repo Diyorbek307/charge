@@ -44,6 +44,7 @@ const ru = {
     namangan: 'Наманган', andijan: 'Андижан', fergana: 'Фергана', navoi: 'Навои', karshi: 'Карши',
     termez: 'Термез', jizzakh: 'Джизак', gulistan: 'Гулистан', kokand: 'Коканд', urgench: 'Ургенч',
   },
+  intro: 'Вся зарядка Узбекистана',
   stage: {
     word: 'Зарядка',
     kicker: 'Voli · Узбекистан',
@@ -441,6 +442,7 @@ const uz: LandingCopy = {
     namangan: 'Namangan', andijan: 'Andijon', fergana: 'Farg‘ona', navoi: 'Navoiy', karshi: 'Qarshi',
     termez: 'Termiz', jizzakh: 'Jizzax', gulistan: 'Guliston', kokand: 'Qo‘qon', urgench: 'Urganch',
   },
+  intro: 'O‘zbekistonning barcha quvvatlash stansiyalari',
   stage: {
     word: 'Quvvat',
     kicker: 'Voli · O‘zbekiston',
@@ -836,6 +838,7 @@ const en: LandingCopy = {
     namangan: 'Namangan', andijan: 'Andijan', fergana: 'Fergana', navoi: 'Navoi', karshi: 'Karshi',
     termez: 'Termez', jizzakh: 'Jizzakh', gulistan: 'Gulistan', kokand: 'Kokand', urgench: 'Urgench',
   },
+  intro: 'Every charger in Uzbekistan',
   stage: {
     word: 'Charge',
     kicker: 'Voli · Uzbekistan',

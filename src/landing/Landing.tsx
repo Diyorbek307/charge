@@ -21,6 +21,7 @@ import type { LegalDocId } from './legal';
 import { track } from './analytics';
 import './landing.css';
 import Stage, { type StageCopy } from './Stage';
+import Intro, { introDue } from './Intro';
 
 const fmt = (n: number, lang: Lang) =>
   Math.round(n).toLocaleString(lang === 'en' ? 'en-US' : 'ru-RU').replace(/,/g, lang === 'en' ? ',' : ' ');
@@ -1384,6 +1385,8 @@ export default function Landing() {
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [vt] = useState(canTransition);
+  // The opening plays once a visit, on the front page only.
+  const [intro, setIntro] = useState(() => pageFromUrl() === 'home' && !docFromUrl() && introDue());
   const fc = useForecast();
   useReveal(root, `${lang}:${page}:${doc}`);
 
@@ -1469,8 +1472,9 @@ export default function Landing() {
             : page === 'faq' ? <FaqPage c={c} />
             : page === 'about' ? <AboutPage c={c} />
             : page === 'join' ? <JoinPage c={c} lang={lang} />
-            : <HomePage c={c} lang={lang} />}
+            : <HomePage key={intro ? 'behind' : 'in'} c={c} lang={lang} />}
         </main>
+        {intro && <Intro tagline={c.intro} onDone={() => setIntro(false)} />}
         <Footer c={c} />
       </div>
     </GoCtx.Provider>
