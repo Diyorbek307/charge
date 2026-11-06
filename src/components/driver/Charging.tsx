@@ -117,10 +117,7 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
       <div className="flex-1 overflow-y-auto no-scrollbar relative z-10 px-4">
         <ChargeHero battery={battery} target={TARGET} />
 
-        <p className="text-center text-white font-extrabold text-[56px] leading-none tabular-nums tracking-tight mt-3">
-          {Math.floor(battery)}<span className="text-[34px] align-top ml-0.5">%</span>
-        </p>
-        <div className="mt-2.5 mx-auto w-fit flex items-center gap-1.5 bg-white/[0.06] border border-white/10 px-3 py-1.5 rounded-full">
+        <div className="mt-3 mx-auto w-fit flex items-center gap-1.5 bg-white/[0.06] border border-white/10 px-3 py-1.5 rounded-full">
           <Clock size={11} className="text-[#FFC83D]" />
           <p className="text-white/70 text-xs">{goalLine}</p>
         </div>
@@ -174,49 +171,79 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
   );
 }
 
+/** The car from above, nose up: body, glass, wheels, mirrors (viewBox 0 0 200 340). */
+const BODY = 'M100 14 C136 14 160 30 164 62 L168 118 C171 160 171 222 168 268 C165 306 140 328 100 328 C60 328 35 306 32 268 C29 222 29 160 32 118 L36 62 C40 30 64 14 100 14 Z';
+const BOTTOM = 328;
+const TOP = 14;
+
 /**
- * The car in yellow light with the battery over it: the fill is the charge so
- * far, a dashed frame marks where it will stop, and a shine runs through while
- * energy flows.
+ * The car seen from above, filling with energy: the yellow rises from the
+ * back to the charge so far, with a moving surface and bubbles, the glass
+ * stays dark over it, and a dashed line marks where the charge will stop.
+ * The percent sits on the roof.
  */
 function ChargeHero({ battery, target }: { battery: number; target: number }) {
+  const span = BOTTOM - TOP;
+  const level = BOTTOM - (span * Math.min(100, Math.max(0, battery))) / 100;
+  const stop = BOTTOM - (span * target) / 100;
   return (
-    <div className="relative mt-4 mx-auto max-w-[340px]" aria-hidden="true">
-      <svg viewBox="0 0 320 120" className="w-full block" style={{ filter: 'drop-shadow(0 0 10px rgba(255,200,61,.35))' }}>
+    <div className="relative mt-3 mx-auto w-[200px] select-none" aria-hidden="true">
+      <div className="absolute inset-x-[-40px] top-[20%] h-[60%] rounded-full blur-3xl" style={{ background: 'radial-gradient(closest-side, rgba(255,200,61,.28), rgba(255,200,61,0))' }} />
+      <svg viewBox="0 0 200 340" className="relative w-full block overflow-visible">
         <defs>
-          <linearGradient id="pg-car-body" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="#FFC83D" stopOpacity=".05" />
-            <stop offset=".5" stopColor="#FFC83D" stopOpacity=".16" />
-            <stop offset="1" stopColor="#FFC83D" stopOpacity=".05" />
+          <clipPath id="pg-car-clip"><path d={BODY} /></clipPath>
+          <linearGradient id="pg-energy" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0" stopColor="#C98A00" />
+            <stop offset=".55" stopColor="#FFC83D" />
+            <stop offset="1" stopColor="#FFE27A" />
+          </linearGradient>
+          <linearGradient id="pg-shell" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#1d1d1d" />
+            <stop offset=".5" stopColor="#2a2a2a" />
+            <stop offset="1" stopColor="#1d1d1d" />
           </linearGradient>
         </defs>
-        <path d="M14 86 C12 76 22 68 44 65 L86 60 C106 42 134 30 172 28 C206 27 232 36 258 54 L292 60 C306 63 312 70 311 80 L310 88 C309 92 306 94 302 94 L284 94 A21 21 0 0 0 242 94 L96 94 A21 21 0 0 0 54 94 L22 94 C17 94 14 91 14 86 Z" fill="url(#pg-car-body)" stroke="#FFD66B" strokeOpacity=".75" strokeWidth="1.6" />
-        <path d="M98 60 C116 46 140 38 170 37 C196 37 216 43 238 57 Z" fill="none" stroke="#FFD66B" strokeOpacity=".5" strokeWidth="1.3" />
-        <path d="M168 37 L166 60" stroke="#FFD66B" strokeOpacity=".4" strokeWidth="1.2" />
-        <path d="M290 66 L306 70" stroke="#FFF3C4" strokeWidth="2.4" strokeLinecap="round" />
-        {[75, 263].map(x => (
-          <g key={x}>
-            <circle cx={x} cy="96" r="17" fill="#0d0d0d" stroke="#FFD66B" strokeOpacity=".7" strokeWidth="1.6" />
-            <circle cx={x} cy="96" r="7" fill="none" stroke="#FFD66B" strokeOpacity=".45" strokeWidth="1.2" />
+
+        {/* Wheels and mirrors, outside the body */}
+        {[[22, 72], [166, 72], [22, 236], [166, 236]].map(([x, y]) => <rect key={`${x}-${y}`} x={x} y={y} width="12" height="46" rx="5" fill="#0b0b0b" stroke="#3a3a3a" />)}
+        <path d="M34 112 L18 106 C14 105 13 112 17 114 L33 120 Z" fill="#232323" stroke="#3a3a3a" />
+        <path d="M166 112 L182 106 C186 105 187 112 183 114 L167 120 Z" fill="#232323" stroke="#3a3a3a" />
+
+        <path d={BODY} fill="url(#pg-shell)" />
+        <g clipPath="url(#pg-car-clip)">
+          {/* The energy, its surface moving */}
+          <g style={{ transform: `translateY(${level}px)`, transition: 'transform 1s linear' }}>
+            <path className="pg-wave" d="M-200 0 Q-175 -7 -150 0 T-100 0 T-50 0 T0 0 T50 0 T100 0 T150 0 T200 0 T250 0 T300 0 T350 0 T400 0 V400 H-200 Z" fill="url(#pg-energy)" />
+            <path className="pg-wave pg-wave-slow" d="M-200 2 Q-175 -4 -150 2 T-100 2 T-50 2 T0 2 T50 2 T100 2 T150 2 T200 2 T250 2 T300 2 T350 2 T400 2 V400 H-200 Z" fill="#FFE27A" opacity=".35" />
           </g>
-        ))}
-        <path d="M30 116 H290" stroke="#FFC83D" strokeOpacity=".35" strokeWidth="1" />
+          {battery < 99.5 && [36, 70, 104, 132, 158].map((x, i) => (
+            <circle key={x} className="pg-bubble" cx={x + 8} cy={BOTTOM - 6} r={2 + (i % 3)} fill="#FFF3C4" style={{ animationDelay: `${i * 0.55}s`, ['--rise' as string]: `${Math.max(20, BOTTOM - level - 10)}px` }} />
+          ))}
+        </g>
+
+        {/* Glass over the energy: windscreen, roof, rear window */}
+        <path d="M46 100 C66 86 134 86 154 100 L146 140 C124 132 76 132 54 140 Z" fill="#0d0d0d" fillOpacity=".78" stroke="#FFD66B" strokeOpacity=".35" />
+        <rect x="56" y="146" width="88" height="96" rx="20" fill="#0d0d0d" fillOpacity=".55" stroke="#FFD66B" strokeOpacity=".25" />
+        <path d="M54 250 C76 258 124 258 146 250 L152 280 C126 290 74 290 48 280 Z" fill="#0d0d0d" fillOpacity=".78" stroke="#FFD66B" strokeOpacity=".35" />
+        {/* Headlights and tail lights */}
+        <path d="M54 34 C64 26 78 22 88 22" stroke="#FFF3C4" strokeWidth="3" strokeLinecap="round" fill="none" />
+        <path d="M146 34 C136 26 122 22 112 22" stroke="#FFF3C4" strokeWidth="3" strokeLinecap="round" fill="none" />
+        <path d="M48 316 C70 322 130 322 152 316" stroke="#EF4444" strokeOpacity=".8" strokeWidth="3" strokeLinecap="round" fill="none" />
+
+        <path d={BODY} fill="none" stroke="#FFD66B" strokeOpacity=".7" strokeWidth="2" />
+
+        {/* Where the charge stops */}
+        {target < 100 && (
+          <g>
+            <line x1="28" x2="172" y1={stop} y2={stop} stroke="#FFFFFF" strokeOpacity=".75" strokeWidth="1.5" strokeDasharray="5 5" />
+            <text x="178" y={stop + 4} fill="#FFFFFF" fillOpacity=".75" fontSize="11" fontWeight="700" fontFamily="Inter, sans-serif">{`${target}%`}</text>
+          </g>
+        )}
       </svg>
 
-      <div className="absolute left-1/2 top-[44%] -translate-x-1/2 -translate-y-1/2 w-[62%] flex items-center">
-        <div className="relative flex-1 h-[68px] rounded-[18px] border-[3px] border-white/85 bg-black/70 p-[5px] shadow-[0_0_24px_rgba(255,200,61,.25)]">
-          <div className="absolute top-[5px] bottom-[5px] rounded-[11px] border border-dashed border-[#FFC83D]/40" style={{ left: 5, width: `calc((100% - 10px) * ${target / 100})` }} />
-          <div className="relative h-full rounded-[11px] overflow-hidden transition-[width] duration-1000 ease-linear" style={{ width: `${Math.max(4, battery)}%`, background: 'linear-gradient(90deg, #C98A00, #FFC83D 60%, #FFE27A)' }}>
-            <div className="absolute inset-0" style={{ background: 'repeating-linear-gradient(90deg, transparent 0 22%, rgba(0,0,0,.18) 22% 23%)' }} />
-            <div className="absolute inset-0 pg-flow" />
-          </div>
-        </div>
-        <span className="w-[7px] h-[24px] rounded-r-md bg-white/85 ml-[2px]" />
-      </div>
-
-      <div className="mt-3 mx-auto w-[62%] h-[5px] rounded-full bg-white/10 overflow-hidden">
-        <div className="h-full rounded-full bg-[#FFC83D] transition-[width] duration-1000 ease-linear" style={{ width: `${battery}%`, boxShadow: '0 0 10px rgba(255,200,61,.7)' }} />
-      </div>
+      <p className="absolute left-0 right-0 top-[44%] -translate-y-1/2 text-center text-white font-extrabold text-[46px] leading-none tabular-nums tracking-tight" style={{ textShadow: '0 2px 14px rgba(0,0,0,.85)' }}>
+        {Math.floor(battery)}<span className="text-[24px] align-top ml-0.5">%</span>
+      </p>
     </div>
   );
 }
