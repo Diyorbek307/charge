@@ -134,7 +134,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
     const portals: Portal[] = ['driver', 'operator', 'admin', 'business', 'api'];
     portals.forEach(portal => {
-      if (!tokenStore.get(portal)) return;
+      if (!tokenStore.has(portal)) return;
       apiClient
         .me(portal)
         .then(({ user }) => {

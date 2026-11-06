@@ -1,6 +1,7 @@
 import express from 'express';
 import webpush from 'web-push';
 import { db } from './db.js';
+import { tokenOf } from './session.js';
 import { setPushHook } from './api.js';
 import { notifyTelegram } from './telegram.js';
 
@@ -174,8 +175,7 @@ export async function pushLiveCharge(session, { title, body, first, final = fals
 }
 
 function viewerOf(req) {
-  const header = req.get('authorization') || '';
-  return header.startsWith('Bearer ') ? (db.resolveToken(header.slice(7))?.account ?? null) : null;
+  return db.resolveToken(tokenOf(req))?.account ?? null;
 }
 
 function requireViewer(req, res, next) {

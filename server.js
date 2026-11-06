@@ -3,6 +3,7 @@ import express from "express";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { api } from "./server/api.js";
+import { sessionCookies } from "./server/session.js";
 import { db } from "./server/db.js";
 import { attachOcpp } from "./server/ocpp.js";
 import { paymentsApi } from "./server/payments.js";
@@ -98,7 +99,7 @@ app.use(["/api", "/health"], (req, res, next) => {
     res.set({
       "Access-Control-Allow-Origin": origin,
       Vary: "Origin",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Voli-Portal",
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
       "Access-Control-Max-Age": "600",
     });
@@ -116,6 +117,8 @@ app.get("/health", (_req, res) => {
 });
 
 // REST API + live-синхронизация (SSE)
+// Sign-ins travel in an HttpOnly cookie as well as the old header (server/session.js).
+app.use("/api", sessionCookies);
 // Payme / Click merchant callbacks and top-up orders.
 app.use("/api/payments", paymentsApi);
 // Web Push subscriptions.

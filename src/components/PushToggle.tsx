@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Bell, BellOff, BellRing, LoaderCircle } from 'lucide-react';
-import { tokenStore, type Portal } from '../lib/api';
+import { authHeaders, type Portal } from '../lib/api';
 import { API_ORIGIN } from '../lib/site';
 
 type PushState = 'unsupported' | 'denied' | 'off' | 'on' | 'busy';
@@ -12,12 +12,11 @@ function urlBase64ToUint8Array(base64: string) {
 }
 
 async function pushCall<T>(path: string, portal: Portal, body?: unknown): Promise<T> {
-  const token = tokenStore.get(portal);
   const res = await fetch(`${API_ORIGIN}/api/push${path}`, {
     method: body === undefined ? 'GET' : 'POST',
     headers: {
       ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...authHeaders(portal),
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });

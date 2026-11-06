@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { setting } from './settings.js';
 import express from 'express';
 import { db } from './db.js';
+import { tokenOf } from './session.js';
 import { emit } from './api.js';
 import { isDirect, creditNetwork, reverseTopUp, netBalance } from './direct.js';
 
@@ -101,8 +102,7 @@ const orders = () => (db.data.payments ??= []);
 const findOrder = id => orders().find(o => o.id === id) ?? null;
 
 function viewerOf(req) {
-  const header = req.get('authorization') || '';
-  return header.startsWith('Bearer ') ? (db.resolveToken(header.slice(7))?.account ?? null) : null;
+  return db.resolveToken(tokenOf(req))?.account ?? null;
 }
 
 function safeEqual(a, b) {

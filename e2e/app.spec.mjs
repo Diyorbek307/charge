@@ -110,10 +110,8 @@ test("a driver's problem report reaches the operator's alerts", async ({ page, r
 
 test('an operator never sees a competitor network in the browser', async ({ page }) => {
   await signIn(page, 'operator'); // GreenCharge UZ, op-001
-  const state = await page.evaluate(async () => {
-    const token = localStorage.getItem('oc-token-operator');
-    return (await fetch('/api/state', { headers: { Authorization: `Bearer ${token}` } })).json();
-  });
+  // Signed in by the HttpOnly cookie: the page names its portal, the browser adds the cookie.
+  const state = await page.evaluate(async () => (await fetch('/api/state', { headers: { 'X-Voli-Portal': 'operator' } })).json());
   expect(state.sessions.every(s => s.operatorId === 'op-001')).toBeTruthy();
   expect(Object.keys(state.wallets)).toHaveLength(0);
 });
@@ -156,9 +154,9 @@ test('a new driver goes through the first screens, signs up with a code and land
   await expect(page.locator('#driver-signup-name')).toHaveCount(0);
   await expect(page.locator('#driver-signin-to')).toHaveCount(0);
 
-  const token = await page.evaluate(() => localStorage.getItem('oc-token-driver'));
-  const me = await request.get('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
-  const user = (await me.json()).user;
+  // The token is not kept where page scripts could read it; the cookie signs the request in.
+  expect(await page.evaluate(() => localStorage.getItem('oc-token-driver'))).toBeNull();
+  const user = await page.evaluate(async () => (await (await fetch('/api/auth/me', { headers: { 'X-Voli-Portal': 'driver' } })).json()).user);
   expect(user.name).toBe('Madina Karimova');
   expect(user.consent).toMatchObject({ version: 1, marketing: false });
 

@@ -2,6 +2,7 @@ import express from 'express';
 import crypto from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { db, publicAccount, twoFactorRequired, REAL_SERVER as PRODUCTION, DEMO_STAFF } from './db.js';
+import { tokenOf, clearSessionCookie } from './session.js';
 import { DEMO_ACCOUNTS } from './seed.js';
 import { generateSecret, verifyTotp, otpauthUri } from './totp.js';
 import { hashPassword } from './seed.js';
@@ -528,10 +529,8 @@ api.get('/stream', (req, res) => {
 // Auth — every portal has its own account and its own password.
 // ---------------------------------------------------------------------------
 
-function bearer(req) {
-  const header = req.get('authorization') || '';
-  return header.startsWith('Bearer ') ? header.slice(7) : null;
-}
+/** The request's sign-in: the Bearer header, or the portal's HttpOnly cookie (server/session.js). */
+const bearer = tokenOf;
 
 /** Where the admin may work from: ADMIN_ALLOWED_IPS, comma-separated; empty = anywhere. */
 const ADMIN_IPS = new Set((process.env.ADMIN_ALLOWED_IPS ?? '').split(/[\s,]+/).filter(Boolean));
@@ -1339,6 +1338,7 @@ api.post('/admin/hosts/:id/decision', requireAuth('admin'), (req, res) => {
 
 api.post('/auth/logout', (req, res) => {
   db.revokeToken(bearer(req));
+  clearSessionCookie(req, res);
   res.json({ ok: true });
 });
 

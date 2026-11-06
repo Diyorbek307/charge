@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { API_ORIGIN } from './site';
+import { authHeaders } from './api';
 
 export type LatLng = { lat: number; lng: number };
 export type Lang = 'ru' | 'uz' | 'en';
@@ -290,13 +291,7 @@ function clip(lang: Lang, text: string) {
   const key = clipKey(lang, text);
   let p = clips.get(key);
   if (!p) {
-    let token: string | null = null;
-    try {
-      token = localStorage.getItem('oc-token-driver');
-    } catch {
-      /* private mode */
-    }
-    p = fetch(`${API_ORIGIN}/api/tts?lang=${lang}&text=${encodeURIComponent(text)}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    p = fetch(`${API_ORIGIN}/api/tts?lang=${lang}&text=${encodeURIComponent(text)}`, { headers: authHeaders('driver') })
       .then(r => (r.ok ? r.blob() : null))
       .then(b => (b ? URL.createObjectURL(b) : null))
       .catch(() => null);

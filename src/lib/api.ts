@@ -667,31 +667,67 @@ export interface DemoCredential {
 }
 
 const TOKEN_PREFIX = 'oc-token-';
-
-/** Tokens are stored per portal so each app keeps its own independent session. */
-export const tokenStore = {
-  get(portal: Portal): string | null {
+const SIGNED_PREFIX = 'oc-signed-';
+const store = {
+  get: (k: string) => {
     try {
-      return localStorage.getItem(TOKEN_PREFIX + portal);
+      return localStorage.getItem(k);
     } catch {
       return null;
     }
   },
-  set(portal: Portal, token: string) {
+  set: (k: string, v: string) => {
     try {
-      localStorage.setItem(TOKEN_PREFIX + portal, token);
+      localStorage.setItem(k, v);
     } catch {
-      /* private mode — session stays in memory only */
+      /* private mode: the cookie still carries the session */
     }
   },
-  clear(portal: Portal) {
+  drop: (k: string) => {
     try {
-      localStorage.removeItem(TOKEN_PREFIX + portal);
+      localStorage.removeItem(k);
     } catch {
       /* ignore */
     }
   },
 };
+
+/**
+ * Sign-ins, one per portal. The token itself lives in an HttpOnly cookie the
+ * server sets (server/session.js), out of reach of any script on the page;
+ * here only a mark that the portal is signed in. The API portal is the
+ * exception: developers copy its token into their own requests.
+ */
+export const tokenStore = {
+  /** A token to send as Bearer: the API portal's, or one kept from before the cookie. */
+  get(portal: Portal): string | null {
+    return store.get(TOKEN_PREFIX + portal);
+  },
+  has(portal: Portal): boolean {
+    return !!store.get(TOKEN_PREFIX + portal) || store.get(SIGNED_PREFIX + portal) === '1';
+  },
+  set(portal: Portal, token: string) {
+    if (portal === 'api') return store.set(TOKEN_PREFIX + portal, token);
+    store.set(SIGNED_PREFIX + portal, '1');
+    store.drop(TOKEN_PREFIX + portal);
+  },
+  /** The server answered with the cookie set: the old stored copy goes. */
+  moved(portal: Portal) {
+    if (portal === 'api' || !store.get(TOKEN_PREFIX + portal)) return;
+    store.set(SIGNED_PREFIX + portal, '1');
+    store.drop(TOKEN_PREFIX + portal);
+  },
+  clear(portal: Portal) {
+    store.drop(TOKEN_PREFIX + portal);
+    store.drop(SIGNED_PREFIX + portal);
+  },
+};
+
+/** Headers that sign a request in for a portal: its name (the server picks the cookie by it), and a Bearer token where one is kept. */
+export function authHeaders(portal: Portal): Record<string, string> {
+  const token = tokenStore.get(portal);
+  return { 'X-Voli-Portal': portal, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+}
 
 export type LeadKind = 'driver' | 'operator' | 'fleet' | 'partner';
 export type LeadStatus = 'new' | 'contacted' | 'won' | 'lost' | 'spam';
@@ -780,16 +816,16 @@ export class ApiError extends Error {
 
 async function request<T>(path: string, options: RequestInit & { portal?: Portal } = {}): Promise<T> {
   const { portal, headers, ...rest } = options;
-  const token = portal ? tokenStore.get(portal) : null;
 
   const res = await fetch(`${API_ORIGIN}/api${path}`, {
     ...rest,
     headers: {
       ...(rest.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(portal ? authHeaders(portal) : {}),
       ...headers,
     },
   });
+  if (portal && res.ok) tokenStore.moved(portal);
 
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;
