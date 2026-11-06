@@ -2363,7 +2363,9 @@ export default function DriverApp() {
   const [lastBooking, setLastBooking] = useState<Booking | null>(null);
   // Shown once per account on this device.
   const onboardKey = `oc-onboarded-${driverAccount?.id ?? 'guest'}`;
+  // The car question, once per account on a device — not at all when the account already has its car.
   const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (driverAccount?.car) return false;
     try {
       return !localStorage.getItem(onboardKey);
     } catch {

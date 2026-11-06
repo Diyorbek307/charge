@@ -140,9 +140,26 @@ function Location({ onDone }: { onDone: () => void }) {
     if (busy) return;
     if (note) return onDone();
     setBusy(true);
-    const fix = await locate(12_000);
+    // The answer to the permission is what matters here, not a fix: indoors a phone may take a
+    // while to find itself, and the map picks the position up later. So go on as soon as the
+    // permission is given, or a fix arrives, whichever comes first.
+    const fixed = locate(12_000);
+    const granted = new Promise<boolean>(resolve => {
+      const t = setInterval(async () => {
+        const state = await geoPermission();
+        if (state === 'granted' || state === 'denied') {
+          clearInterval(t);
+          resolve(state === 'granted');
+        }
+      }, 400);
+      void fixed.then(() => {
+        clearInterval(t);
+        resolve(false);
+      });
+    });
+    const ok = await Promise.race([fixed.then(f => !!f), granted]);
     setBusy(false);
-    if (fix) onDone();
+    if (ok || (await geoPermission()) === 'granted') onDone();
     else setNote('Доступ не дан — ничего страшного. Карта откроется на вашем городе, а включить геолокацию можно в настройках устройства.');
   };
   return (
