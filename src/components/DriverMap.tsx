@@ -528,7 +528,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
                 <span className="text-left leading-tight">
                   <span className="block text-[11px] text-slate-500">Баланс</span>
                   <span className="block text-[15px] font-bold text-slate-900 tabular-nums">{`${balance.toLocaleString('ru-RU')} сум`}</span>
-                  {bonus > 0 && <span className="block text-[11px] font-bold text-[#A87100] tabular-nums">{`+${bonus.toLocaleString('ru-RU')} бонус`}</span>}
+                  {bonus > 0 && <span className="block text-[11px] font-bold text-[#946300] tabular-nums">{`+${bonus.toLocaleString('ru-RU')} бонус`}</span>}
                 </span>
               </button>
             ) : <span />}

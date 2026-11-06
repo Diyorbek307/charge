@@ -634,7 +634,7 @@ function ChargingStartScreen({ station, preferConnector, onBack, onConfirm, onOp
                   <span className="text-right">
                     {(promo || plusOn || tariffK < 1) && <span className="block text-[11px] text-slate-400 line-through tabular-nums">{c.price.toLocaleString('ru-RU')}</span>}
                     <span className="block text-sm font-bold mono text-slate-700">{`${Math.round(priceNow(c.price, tariffK, promo?.percent) * plusK).toLocaleString('ru-RU')} сум/кВт·ч`}</span>
-                    {plusOn && <span className="block text-[10px] font-bold text-[#A87100]">{`Plus −${state?.plus?.discount ?? 5}%`}</span>}
+                    {plusOn && <span className="block text-[10px] font-bold text-[#946300]">{`Plus −${state?.plus?.discount ?? 5}%`}</span>}
                   </span>
                 </button>
               ))}
@@ -656,7 +656,7 @@ function ChargingStartScreen({ station, preferConnector, onBack, onConfirm, onOp
               <>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs text-slate-500">{`Сейчас ≈ ${currentBattery}%`}</span>
-                  <span className={`text-sm font-bold mono ${targetPct >= 80 ? 'text-green-600' : 'text-sky-600'}`}>{targetPct}%</span>
+                  <span className={`text-sm font-bold mono ${targetPct >= 80 ? 'text-emerald-700' : 'text-sky-600'}`}>{targetPct}%</span>
                 </div>
                 <input type="range" min={minPct} max={100} step={5} value={targetPct} aria-label="Зарядить до, %"
                   onChange={e => setTargetPct(Number(e.target.value))}
@@ -1200,7 +1200,7 @@ function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: ()
                   <p className="text-sm font-medium text-slate-800 truncate">{tx.label}</p>
                   <p className="text-xs text-slate-400 mt-0.5">{tx.date}</p>
                 </div>
-                <span className={`text-sm font-semibold font-mono shrink-0 ${tx.type === 'topup' ? 'text-green-600' : 'text-red-500'}`}>
+                <span className={`text-sm font-semibold font-mono shrink-0 ${tx.type === 'topup' ? 'text-emerald-700' : 'text-red-500'}`}>
                   {tx.type === 'topup' ? '+' : ''}{tx.amount.toLocaleString('ru-RU')} сум
                 </span>
               </div>
@@ -1791,7 +1791,7 @@ function FavoritesScreen({ onBack, onSelectStation }: { onBack: () => void; onSe
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 pg-stagger">
           {filtered.map(s => {
             const free = s.connectors.filter(c => c.status === 'available').length;
-            const statusColors: Record<string, string> = { available: 'text-green-600', occupied: 'text-red-500', unavailable: 'text-slate-400', reserved: 'text-amber-500' };
+            const statusColors: Record<string, string> = { available: 'text-emerald-700', occupied: 'text-red-500', unavailable: 'text-slate-400', reserved: 'text-amber-500' };
             const statusLabels: Record<string, string> = { available: 'Свободно', occupied: 'Занято', unavailable: 'Недоступно', reserved: 'Забронировано' };
             return (
               <div key={s.id} role="button" tabIndex={0} onClick={() => onSelectStation(s)} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onSelectStation(s)}
