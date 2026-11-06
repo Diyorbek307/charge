@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, Marker, Polyline, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { Search, SlidersHorizontal, Navigation, X, Wallet, List, Map as MapIcon, Clock, Info, Percent, Zap, History } from 'lucide-react';
 import type { Station } from '../data/mockData';
@@ -14,6 +14,7 @@ import { useTariffNow, priceNow } from '../lib/tariff';
 import { NetworkBadge } from './driver/NetworkBadge';
 import { ChargerFriend } from './driver/Illustration';
 import { V_BLADE, V_STROKE } from '../landing/Logo';
+import { fetchRoute, pointAt, type Route } from '../lib/nav';
 
 const statusColor: Record<string, string> = {
   available: '#16A34A',
@@ -234,8 +235,8 @@ function FocusStation({ station }: { station: Station | null }) {
     const box = map.getContainer();
     const h = box.clientHeight;
     const sheet = box.closest('.pg-app')?.querySelector<HTMLElement>('[data-sheet]');
-    // The card grows as its blocks load, so plan for its tallest.
-    const top = Math.min(sheet?.offsetTop ?? h * 0.4, h * 0.2);
+    // The card opens half way (54% at most), so the station sits in the map above it.
+    const top = Math.min(sheet?.offsetTop ?? h * 0.46, h * 0.46);
     // Below the "no signal" banner when it is up.
     const banner = box.closest('.pg-app')?.querySelector<HTMLElement>('[data-offline-banner]');
     const below = banner ? banner.offsetTop + banner.offsetHeight + 72 : 0;
@@ -247,6 +248,60 @@ function FocusStation({ station }: { station: Station | null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [station?.id, map]);
   return null;
+}
+
+/**
+ * The way to the opened station: the road from the driver drawn in, with a
+ * bubble on it saying how far and how long, and the map framed so both ends
+ * show above the station card. Close stations only; a trip across the
+ * country is the navigator's job.
+ */
+function RoutePreview({ station, from }: { station: Station | null; from: { lat: number; lng: number } | null }) {
+  const map = useMap();
+  const [route, setRoute] = useState<Route | null>(null);
+  const fromKey = from ? `${from.lat.toFixed(3)},${from.lng.toFixed(3)}` : null;
+  useEffect(() => {
+    setRoute(null);
+    if (!station || !from) return;
+    let alive = true;
+    fetchRoute(from, { lat: station.geoLat, lng: station.geoLng })
+      .then(r => {
+        if (!alive || r.length > 40_000) return;
+        setRoute(r);
+        // After the card has settled, frame the whole way above it.
+        setTimeout(() => {
+          if (!alive) return;
+          const box = map.getContainer();
+          const sheet = box.closest('.pg-app')?.querySelector<HTMLElement>('[data-sheet]');
+          const bottom = Math.max(box.clientHeight - Math.min(sheet?.offsetTop ?? box.clientHeight * 0.45, box.clientHeight * 0.55), 120) + 24;
+          map.flyToBounds(L.latLngBounds(r.line.map(p => [p.lat, p.lng] as [number, number])), { paddingTopLeft: [48, 96], paddingBottomRight: [48, bottom], maxZoom: 16, duration: 0.8 });
+        }, 850);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // The route is fetched again only when the station or the driver's place really changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [station?.id, fromKey, map]);
+
+  if (!route || !station) return null;
+  const mid = pointAt(route, route.length / 2);
+  const km = route.length / 1000;
+  const min = Math.max(1, Math.round(route.duration / 60));
+  const bubble = L.divIcon({
+    className: '',
+    iconSize: [0, 0],
+    html: `<div class="pg-route-bubble"><b>${km < 10 ? km.toFixed(1).replace('.', ',') : Math.round(km)} км</b><span>${min} мин</span></div>`,
+  });
+  const line = route.line.map(p => [p.lat, p.lng] as [number, number]);
+  return (
+    <>
+      <Polyline key={`${station.id}-o`} positions={line} pathOptions={{ color: '#111111', weight: 9, opacity: 0.9, lineCap: 'round', lineJoin: 'round', className: 'pg-route-draw' }} />
+      <Polyline key={`${station.id}-i`} positions={line} pathOptions={{ color: '#FFC83D', weight: 5, opacity: 1, lineCap: 'round', lineJoin: 'round', className: 'pg-route-draw' }} />
+      <Marker position={[mid.lat, mid.lng]} icon={bubble} interactive={false} zIndexOffset={900} />
+    </>
+  );
 }
 
 /**
@@ -515,6 +570,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
         <ClusteredMarkers stations={filtered} promos={promos} onSelect={pick} selectedId={selected?.id ?? null} />
         <MapBridge target={target} />
         <FocusStation station={selected} />
+        <RoutePreview station={selected} from={here ?? lastKnown()} />
         <ViewKeeper onTouch={() => { touched.current = true; }} />
       </MapContainer>
 

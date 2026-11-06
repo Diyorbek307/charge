@@ -184,8 +184,10 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
   const closed = !openNow(station.hours);
 
   // The card slides away the way it came: by the cross, or pulled down by its handle.
+  // It opens half way, the map and the way to the station above it; pulled up or scrolled, it opens fully.
   const sheet = useRef<HTMLDivElement>(null);
   const [leaving, setLeaving] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const close = () => {
     if (leaving) return;
     setLeaving(true);
@@ -200,7 +202,8 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
   const dragMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const el = sheet.current;
     if (!drag.current || !el) return;
-    drag.current.dy = Math.max(0, e.clientY - drag.current.y);
+    drag.current.dy = e.clientY - drag.current.y;
+    if (drag.current.dy < 0) return; // upwards: opens the card on release
     el.style.animation = 'none';
     el.style.transition = 'none';
     el.style.transform = `translateY(${drag.current.dy}px)`;
@@ -210,6 +213,10 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
     const d = drag.current;
     drag.current = null;
     if (!el || !d) return;
+    if (d.dy < -30) {
+      setExpanded(true);
+      return;
+    }
     if (d.dy > 90) {
       el.style.transition = 'transform .22s cubic-bezier(.4,0,1,1)';
       el.style.transform = 'translateY(105%)';
@@ -241,9 +248,10 @@ function StationDetailSheet({ station, onClose, onStartCharging, onBook, onRevie
   const overlayBtn = 'w-10 h-10 rounded-full grid place-items-center bg-black/45 backdrop-blur-md text-white hover:bg-black/60 transition-colors';
 
   return (
-    <div ref={sheet} data-sheet className={`absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-[28px] shadow-[0_-12px_40px_rgba(15,23,42,0.18)] max-h-[88%] overflow-y-auto overscroll-contain ${leaving ? 'pg-sheet-out' : 'pg-sheet-in'}`}>
+    <div ref={sheet} data-sheet data-expanded={expanded || undefined} onScroll={e => { if (!expanded && e.currentTarget.scrollTop > 6) setExpanded(true); }}
+      className={`absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-[28px] shadow-[0_-12px_40px_rgba(15,23,42,0.18)] ${expanded ? 'max-h-[88%]' : 'max-h-[54%]'} transition-[max-height] duration-500 ease-[cubic-bezier(.2,.8,.2,1)] overflow-y-auto overscroll-contain ${leaving ? 'pg-sheet-out' : 'pg-sheet-in'}`}>
       {/* The cover photo, with close, share and favourite over it; pull it down to close */}
-      <div className="relative h-52 bg-slate-800 rounded-t-[28px] overflow-hidden touch-none cursor-grab active:cursor-grabbing" onPointerDown={dragStart} onPointerMove={dragMove} onPointerUp={dragEnd} onPointerCancel={dragEnd}>
+      <div className={`relative ${expanded ? 'h-52' : 'h-32'} transition-[height] duration-500 bg-slate-800 rounded-t-[28px] overflow-hidden touch-none cursor-grab active:cursor-grabbing`} onPointerDown={dragStart} onPointerMove={dragMove} onPointerUp={dragEnd} onPointerCancel={dragEnd}>
         {/* With no signal the photo may not load: the card keeps a calm tile instead of a broken image. */}
         <span className="absolute inset-0 grid place-items-center text-white/20" aria-hidden="true"><Zap size={40} /></span>
         {photos[0] && <img src={photos[0]} alt={station.name} className="relative w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; }} />}
