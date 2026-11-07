@@ -650,7 +650,7 @@ export default function OperatorApp({ onBack }: { onBack: () => void }) {
         </button>
         {renderPage()}
       </div>
-      <AIChat portalType="operator" />
+      <AIChat portalType="operator" hideButton={page === 'help'} />
     </div>
   );
 }

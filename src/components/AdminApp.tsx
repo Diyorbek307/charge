@@ -219,7 +219,7 @@ export default function AdminApp({ onBack }: { onBack: () => void }) {
         <AdminSearch onOpen={go} />
         {renderPage()}
       </div>
-      <AIChat portalType="admin" />
+      <AIChat portalType="admin" hideButton={page === 'support'} />
     </div>
   );
 }

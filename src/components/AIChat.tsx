@@ -208,7 +208,8 @@ function answer(topic: Topic, portal: PortalType, a: Analytics | null, live: Liv
 
 const LOCALE: Record<Lang, string> = { ru: 'ru-RU', en: 'en-GB', uz: 'uz-UZ' };
 
-export default function AIChat({ portalType }: { portalType: PortalType }) {
+// `hideButton`: the page already shows a support chat, so the floating button would only cover it.
+export default function AIChat({ portalType, hideButton = false }: { portalType: PortalType; hideButton?: boolean }) {
   const { lang } = useI18n();
   const L = pick(lang);
   const cfg = CONFIG[portalType];
@@ -250,7 +251,7 @@ export default function AIChat({ portalType }: { portalType: PortalType }) {
 
   return (
     <div data-no-translate>
-      {!open && (
+      {!open && !hideButton && (
         <button
           onClick={() => setOpen(true)}
           aria-label={name}

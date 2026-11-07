@@ -132,7 +132,7 @@ export default function BusinessApp({ onBack }: { onBack: () => void }) {
         </button>
         <div key={page} className="animate-fade-in h-full">{content}</div>
       </div>
-      <AIChat portalType="business" />
+      <AIChat portalType="business" hideButton={page === 'support'} />
     </div>
   );
 }
