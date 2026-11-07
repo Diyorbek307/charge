@@ -1,6 +1,7 @@
 import { db } from './db.js';
 import { api, requireAuth } from './api.js';
 import { attempt } from './guard.js';
+import { startOf } from './analytics.js';
 
 /**
  * Demand the network does not meet yet — the case for a new charger, made
@@ -66,7 +67,7 @@ export function demandFor({ days = 30 } = {}) {
   const from = now - days * DAY;
   const byStation = new Map();
   for (const s of db.data.sessions) {
-    if (Date.parse(s.start) < from - DAY) continue;
+    if (startOf(s) < from - DAY) continue;
     (byStation.get(s.stationId) ?? byStation.set(s.stationId, []).get(s.stationId)).push(s);
   }
   const recent = events().filter(e => Date.parse(e.at) >= from);

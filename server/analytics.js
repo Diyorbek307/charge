@@ -25,15 +25,66 @@ export const monthStart = (now = Date.now()) => {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - TZ;
 };
 
+/**
+ * Facts about a session's start that the dashboards group by. A session's start never
+ * changes, so they are worked out once per session instead of on every request:
+ * with a year of history, parsing dates again in every loop is what made the
+ * dashboards take seconds.
+ */
+const startMeta = new WeakMap();
+export function metaOf(s) {
+  let m = startMeta.get(s);
+  if (!m || m.start !== s.start) {
+    const t = Date.parse(s.start);
+    const day = tkDate(t);
+    m = { start: s.start, t, day, month: day.slice(0, 7), hour: tkHour(t), weekday: tkWeekday(t) };
+    startMeta.set(s, m);
+  }
+  return m;
+}
+/** A session's start in ms, parsed once. */
+export const startOf = s => metaOf(s).t;
+const minutesOf = s => {
+  const m = metaOf(s);
+  // The end is set once, when the charge finishes.
+  if (m.end !== s.end) {
+    m.end = s.end;
+    m.endT = Date.parse(s.end);
+  }
+  return (m.endT - m.t) / 60000;
+};
+
 /** What a fleet employee has charged to the company this month — limits are checked against it. */
 export function monthSpend(driverId, now = Date.now()) {
   const from = monthStart(now);
   let sum = 0;
   for (const s of db.data.sessions) {
-    if (s.userId === driverId && s.corporate && s.status === 'completed' && Date.parse(s.start) >= from) sum += s.cost;
+    if (s.userId === driverId && s.corporate && s.status === 'completed' && startOf(s) >= from) sum += s.cost;
   }
   return sum;
 }
+
+/** monthSpend for everyone at once, in one pass: driverId → this month's company spend. */
+export function monthSpendAll(now = Date.now()) {
+  const from = monthStart(now);
+  const out = new Map();
+  for (const s of db.data.sessions) {
+    if (s.corporate && s.status === 'completed' && startOf(s) >= from) out.set(s.userId, (out.get(s.userId) ?? 0) + s.cost);
+  }
+  return out;
+}
+
+/** Splits a list into a Map by one field. */
+const groupBy = (list, key) => {
+  const m = new Map();
+  for (const x of list) {
+    const k = x[key];
+    const a = m.get(k);
+    if (a) a.push(x);
+    else m.set(k, [x]);
+  }
+  return m;
+};
 
 /** Masks a phone for viewers who should not see it in full. */
 export const maskPhone = p => (p ? `${p.slice(0, 6)} ${p.slice(6, 8)} ••• •• ${p.slice(-2)}` : '');
@@ -63,7 +114,7 @@ function totalsOf(list, stations, periodDays) {
   const done = list.filter(s => s.status === 'completed');
   const energy = done.reduce((n, s) => n + s.energy, 0);
   const revenue = done.reduce((n, s) => n + s.cost, 0);
-  const minutes = done.reduce((n, s) => n + (Date.parse(s.end) - Date.parse(s.start)) / 60000, 0);
+  const minutes = done.reduce((n, s) => n + minutesOf(s), 0);
   const users = new Map();
   for (const s of done) users.set(s.userId, (users.get(s.userId) ?? 0) + 1);
   const repeat = [...users.values()].filter(n => n > 1).length;
@@ -108,28 +159,57 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
 
   const scoped = scopeSessions(viewer);
   const stations = scopeStations(viewer);
-  const inRange = scoped.filter(s => Date.parse(s.start) >= from);
-  const prevRange = scoped.filter(s => {
-    const t = Date.parse(s.start);
-    return t >= prevFrom && t < from;
-  });
+  const inRange = [];
+  const prevRange = [];
+  const todayList = [];
+  const midnight = tkMidnight(now);
+  for (const s of scoped) {
+    const t = startOf(s);
+    if (t >= from) inRange.push(s);
+    else if (t >= prevFrom) prevRange.push(s);
+    if (t >= midnight) todayList.push(s);
+  }
   const done = inRange.filter(s => s.status === 'completed');
 
   const totals = totalsOf(inRange, stations, span);
   const prev = totalsOf(prevRange, stations, span);
-  const today = totalsOf(scoped.filter(s => Date.parse(s.start) >= tkMidnight(now)), stations, 1);
+  const today = totalsOf(todayList, stations, 1);
+
+  // One pass over the period's charges, grouped every way the dashboards need.
+  const byDay = new Map();
+  const byStationId = new Map();
+  const failedAt = new Map();
+  const byOperatorDay = new Map();
+  for (const s of inRange) if (s.status === 'failed') failedAt.set(s.stationId, (failedAt.get(s.stationId) ?? 0) + 1);
+  for (const s of done) {
+    const { day } = metaOf(s);
+    const dd = byDay.get(day) ?? { sessions: 0, energy: 0, revenue: 0 };
+    dd.sessions += 1;
+    dd.energy += s.energy;
+    dd.revenue += s.cost;
+    byDay.set(day, dd);
+    const st = byStationId.get(s.stationId) ?? { sessions: 0, energy: 0, revenue: 0, minutes: 0 };
+    st.sessions += 1;
+    st.energy += s.energy;
+    st.revenue += s.cost;
+    st.minutes += minutesOf(s);
+    byStationId.set(s.stationId, st);
+    const od = byOperatorDay.get(s.operatorId) ?? new Map();
+    od.set(day, (od.get(day) ?? 0) + s.cost);
+    byOperatorDay.set(s.operatorId, od);
+  }
 
   const daily = [];
   for (let t = from; t <= now; t += DAY) {
     const key = tkDate(t);
-    const list = done.filter(s => tkDate(Date.parse(s.start)) === key);
+    const dd = byDay.get(key);
     daily.push({
       date: key,
       // Today is still running; charts leave it out so the line does not dive.
       partial: key === tkDate(now),
-      sessions: list.length,
-      energy: round(list.reduce((n, s) => n + s.energy, 0), 1),
-      revenue: list.reduce((n, s) => n + s.cost, 0),
+      sessions: dd?.sessions ?? 0,
+      energy: round(dd?.energy ?? 0, 1),
+      revenue: dd?.revenue ?? 0,
     });
   }
 
@@ -137,11 +217,11 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
   const weekday = Array.from({ length: 7 }, (_, day) => ({ day, sessions: 0, revenue: 0 }));
   const connectors = new Map();
   for (const s of done) {
-    const t = Date.parse(s.start);
-    hourly[tkHour(t)].sessions += 1;
-    hourly[tkHour(t)].energy = round(hourly[tkHour(t)].energy + s.energy, 1);
-    weekday[tkWeekday(t)].sessions += 1;
-    weekday[tkWeekday(t)].revenue += s.cost;
+    const { hour, weekday: wd } = metaOf(s);
+    hourly[hour].sessions += 1;
+    hourly[hour].energy = round(hourly[hour].energy + s.energy, 1);
+    weekday[wd].sessions += 1;
+    weekday[wd].revenue += s.cost;
     const c = connectors.get(s.connector) ?? { type: s.connector, sessions: 0, energy: 0 };
     c.sessions += 1;
     c.energy = round(c.energy + s.energy, 1);
@@ -153,8 +233,7 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
 
   const byStation = stations
     .map(st => {
-      const list = done.filter(s => s.stationId === st.id);
-      const minutes = list.reduce((n, s) => n + (Date.parse(s.end) - Date.parse(s.start)) / 60000, 0);
+      const agg = byStationId.get(st.id) ?? { sessions: 0, energy: 0, revenue: 0, minutes: 0 };
       return {
         id: st.id,
         name: st.name,
@@ -163,11 +242,11 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
         operatorId: st.operatorId,
         connectors: st.connectors.length,
         free: st.connectors.filter(c => c.status === 'available').length,
-        sessions: list.length,
-        failed: inRange.filter(s => s.stationId === st.id && s.status === 'failed').length,
-        energy: round(list.reduce((n, s) => n + s.energy, 0), 1),
-        revenue: list.reduce((n, s) => n + s.cost, 0),
-        utilization: round(((minutes / 60) / (st.connectors.length * 24 * span)) * 100, 1),
+        sessions: agg.sessions,
+        failed: failedAt.get(st.id) ?? 0,
+        energy: round(agg.energy, 1),
+        revenue: agg.revenue,
+        utilization: round(((agg.minutes / 60) / (st.connectors.length * 24 * span)) * 100, 1),
         rating: st.rating,
       };
     })
@@ -185,11 +264,14 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
   }
 
   const operatorIds = viewer?.portal === 'operator' ? [viewer.orgId] : viewer?.portal === 'admin' ? db.data.operators.map(o => o.id) : [];
+  const inByOp = groupBy(inRange, 'operatorId');
+  const prevByOp = groupBy(prevRange, 'operatorId');
+  const stationsByOp = groupBy(db.data.stations, 'operatorId');
   const operators = operatorIds.map(id => {
     const o = db.byId('operators', id);
-    const own = db.data.stations.filter(st => st.operatorId === id);
-    const t = totalsOf(inRange.filter(s => s.operatorId === id), own, span);
-    const p = totalsOf(prevRange.filter(s => s.operatorId === id), own, span);
+    const own = stationsByOp.get(id) ?? [];
+    const t = totalsOf(inByOp.get(id) ?? [], own, span);
+    const p = totalsOf(prevByOp.get(id) ?? [], own, span);
     return {
       id,
       name: o.name,
@@ -207,7 +289,7 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
       online: own.reduce((n, st) => n + st.connectors.filter(c => c.status !== 'unavailable').length, 0),
       ...t,
       revenueDelta: pct(t.revenue, p.revenue),
-      trend: daily.map(d => done.filter(s => s.operatorId === id && tkDate(Date.parse(s.start)) === d.date).reduce((n, s) => n + s.cost, 0)),
+      trend: daily.map(d => byOperatorDay.get(id)?.get(d.date) ?? 0),
     };
   });
 
@@ -228,10 +310,11 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
       monthly.set(m.month, row);
     }
   }
+  const rolledUp = new Set(ownMonthly.map(m => m.month));
   for (const s of scoped) {
     if (s.status !== 'completed') continue;
-    const key = monthKey(Date.parse(s.start));
-    if (ownMonthly.some(m => m.month === key)) continue;
+    const key = metaOf(s).month;
+    if (rolledUp.has(key)) continue;
     const row = monthly.get(key) ?? { month: key, sessions: 0, energy: 0, revenue: 0, commission: 0 };
     row.sessions += 1;
     row.energy = round(row.energy + s.energy, 1);
@@ -242,7 +325,7 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
   // Without roll-ups, the month the demo history starts in is only partly
   // covered; showing it would read as a real, very quiet month.
   if (!ownMonthly.length && scoped.length) {
-    const first = scoped.reduce((m, s) => Math.min(m, Date.parse(s.start)), Infinity);
+    const first = scoped.reduce((m, s) => Math.min(m, startOf(s)), Infinity);
     const generated = Date.parse(db.data.historyStart ?? '');
     if (first < generated + 2 * DAY && first > monthStart(first) + DAY) monthly.delete(monthKey(first));
   }
@@ -341,8 +424,10 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
   }
 
   if (viewer?.portal === 'business' || viewer?.portal === 'admin') {
+    const corporate = groupBy(done.filter(s => s.corporate), 'userId');
+    const spentMonthOf = monthSpendAll(now);
     result.employees = db.data.employees.map(e => {
-      const list = done.filter(s => s.userId === e.driverId && s.corporate);
+      const list = (e.driverId && corporate.get(e.driverId)) || [];
       return {
         id: e.id,
         name: e.name,
@@ -351,7 +436,7 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
         phone: e.phone ?? null,
         linked: !!e.driverId,
         limit: e.limit,
-        spentMonth: monthSpend(e.driverId, now),
+        spentMonth: spentMonthOf.get(e.driverId) ?? 0,
         sessions: list.length,
         energy: round(list.reduce((n, s) => n + s.energy, 0), 1),
         spent: list.reduce((n, s) => n + s.cost, 0),
@@ -400,7 +485,8 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
       });
     const wallet = db.data.wallets[viewer.orgId];
     const budget = db.data.employees.reduce((n, e) => n + e.limit, 0);
-    const spentMonth = db.data.employees.reduce((n, e) => n + monthSpend(e.driverId, now), 0);
+    const spentOf = monthSpendAll(now);
+    const spentMonth = db.data.employees.reduce((n, e) => n + (spentOf.get(e.driverId) ?? 0), 0);
     result.account = {
       balance: wallet?.balance ?? 0,
       threshold: wallet?.threshold ?? 0,
@@ -443,6 +529,22 @@ function invoicesFor(operatorIds, sessions, now) {
   }
   const current = monthKey(now);
   const rollups = db.data.monthly ?? [];
+  // Live totals per operator and month, in one pass over the sessions.
+  const wanted = new Set(months);
+  const ids = new Set(operatorIds);
+  const live = new Map();
+  for (const s of sessions) {
+    if (s.status !== 'completed' || !ids.has(s.operatorId)) continue;
+    const { month } = metaOf(s);
+    if (!wanted.has(month)) continue;
+    const k = `${s.operatorId}|${month}`;
+    const a = live.get(k) ?? { sessions: 0, revenue: 0, energy: 0, commission: 0 };
+    a.sessions += 1;
+    a.revenue += s.cost;
+    a.energy += s.energy;
+    a.commission += s.cost * (rateFor(s) / 100);
+    live.set(k, a);
+  }
   const out = [];
   for (const month of months) {
     for (const id of operatorIds) {
@@ -459,13 +561,8 @@ function invoicesFor(operatorIds, sessions, now) {
         energy = roll.energy;
         commission = Math.round(revenue * ((roll.commissionRate ?? o.commission) / 100));
       } else {
-        for (const s of sessions) {
-          if (s.operatorId !== id || s.status !== 'completed' || monthKey(Date.parse(s.start)) !== month) continue;
-          sessionsN += 1;
-          revenue += s.cost;
-          energy += s.energy;
-          commission += s.cost * (rateFor(s) / 100);
-        }
+        const a = live.get(`${id}|${month}`);
+        if (a) ({ sessions: sessionsN, revenue, energy, commission } = a);
         commission = Math.round(commission);
       }
       if (!sessionsN) continue;

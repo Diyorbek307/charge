@@ -207,6 +207,14 @@ export function twoFactorRequired(account) {
   if (!account || account.portal === 'driver' || !STAFF_2FA) return false;
   return account.portal === 'admin' || !(DEMO_STAFF && isDemoStaff(account));
 }
+/**
+ * How long changes wait before the whole state is written. Every write turns all of it
+ * into JSON, and the server answers nobody meanwhile: on a big database that is half a
+ * second. So the wait grows with that cost and saving takes at most a tenth of the time.
+ * A small database still saves within a quarter of a second; shutdown saves at once.
+ */
+export const saveDelay = (stringifyMs = 0) => Math.min(15_000, Math.max(250, Math.round(stringifyMs * 10)));
+
 /** Devices one account may stay signed in on. */
 const TOKENS_PER_ACCOUNT = 20;
 
@@ -243,7 +251,9 @@ class Database {
   }
 
   #queueWrite() {
+    const t = performance.now();
     const json = JSON.stringify(this.data);
+    this.stringifyMs = performance.now() - t;
     this.writing = this.writing
       .then(() => this.store.write(json))
       .then(() => {
@@ -269,7 +279,7 @@ class Database {
     this.flushTimer = setTimeout(() => {
       this.flushTimer = null;
       void this.#queueWrite();
-    }, 250);
+    }, saveDelay(this.stringifyMs));
   }
 
   /** Writes anything pending right now; awaited on shutdown. */

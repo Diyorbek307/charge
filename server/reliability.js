@@ -1,5 +1,6 @@
 import { db } from './db.js';
 import { api, requireAuth } from './api.js';
+import { startOf } from './analytics.js';
 
 /**
  * How dependable each station is, the number a driver checks before a long
@@ -40,7 +41,7 @@ function sample(now = Date.now()) {
 export function refreshReliability(now = Date.now()) {
   const starts = new Map();
   for (const s of db.data.sessions) {
-    if (Date.parse(s.start) < now - WINDOW || (s.status !== 'completed' && s.status !== 'failed')) continue;
+    if (startOf(s) < now - WINDOW || (s.status !== 'completed' && s.status !== 'failed')) continue;
     const row = starts.get(s.stationId) ?? { ok: 0, failed: 0 };
     row[s.status === 'failed' ? 'failed' : 'ok'] += 1;
     starts.set(s.stationId, row);

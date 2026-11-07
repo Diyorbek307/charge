@@ -14,7 +14,7 @@ import { normalizePhone, issueCode, consumeCode, PURPOSES, smsConfigured } from 
 import { submitLead, listLeads, updateLead, LEAD_KINDS } from './leads.js';
 import { notifyTeam, mailConfigured, mailbox, mailStatus, sendTestLetter } from './mail.js';
 import { joinByCode, onFriendPaid, referralFor } from './referrals.js';
-import { analyticsFor, adminUsers, setUserStatus, isBlocked, monthSpend, growthFor, investorFor } from './analytics.js';
+import { analyticsFor, adminUsers, setUserStatus, isBlocked, monthSpend, monthSpendAll, growthFor, investorFor } from './analytics.js';
 import { demoEnergy, OPERATORS as DEMO_OPERATORS } from './history.js';
 import { riskReport, reviewFinding, cdrReport, bandFor, tariffBands, setTariffBands } from './admin.js';
 import { verifyInitData, accountByTelegram, telegramConfigured } from './telegram.js';
@@ -409,8 +409,9 @@ function stateFor(viewer) {
 
 /** Employees with this month's spending, which resets on the 1st. */
 function employeesNow() {
+  const spentOf = monthSpendAll();
   return db.data.employees.map(e => {
-    const spent = monthSpend(e.driverId);
+    const spent = spentOf.get(e.driverId) ?? 0;
     return { ...e, spent, status: spent > e.limit ? 'warning' : 'active' };
   });
 }

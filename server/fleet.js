@@ -8,6 +8,7 @@
  */
 import { db } from './db.js';
 import { setting } from './settings.js';
+import { metaOf } from './analytics.js';
 
 const DAY = 86_400_000;
 /** The volume tiers, as the admin set them (server/settings.js). */
@@ -53,9 +54,14 @@ export const fleetPriority = driverId => !!db.find('employees', e => e.driverId 
 
 /** Per driver for a month (YYYY-MM, Tashkent): charges, energy, money, night share, typical stop, where. */
 export function fleetDriverReport(month) {
-  const inMonth = s => new Date(Date.parse(s.start) + 5 * 3600_000).toISOString().startsWith(month);
+  // The month's company charges, grouped by driver in one pass.
+  const byDriver = new Map();
+  for (const s of db.data.sessions) {
+    if (!s.corporate || s.status !== 'completed' || metaOf(s).month !== month) continue;
+    (byDriver.get(s.userId) ?? byDriver.set(s.userId, []).get(s.userId)).push(s);
+  }
   return db.data.employees.map(e => {
-    const list = db.data.sessions.filter(s => s.userId === e.driverId && s.corporate && s.status === 'completed' && inMonth(s));
+    const list = (e.driverId && byDriver.get(e.driverId)) || [];
     const energy = list.reduce((n, s) => n + (s.energy ?? 0), 0);
     const cost = list.reduce((n, s) => n + (s.cost ?? 0), 0);
     const minutes = list.map(s => (Date.parse(s.end ?? s.start) - Date.parse(s.start)) / 60000).sort((a, b) => a - b);
