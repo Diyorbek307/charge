@@ -4,12 +4,13 @@ import {
   AlertCircle, RefreshCw, Cpu, Map as MapIcon, Rocket,
 } from 'lucide-react';
 import WebhooksLive from './WebhooksLive';
+import SupportChat from './driver/SupportChat';
 import { tokenStore } from '../lib/api';
 import { BRAND } from '../brand';
 import { LogoMark } from '../landing/Logo';
 import { API_ORIGIN } from '../lib/site';
 
-type Section = 'overview' | 'auth' | 'stations' | 'tariffs' | 'events' | 'webhooks' | 'ocpp' | 'errors' | 'roadmap' | 'status';
+type Section = 'overview' | 'auth' | 'stations' | 'tariffs' | 'events' | 'webhooks' | 'ocpp' | 'errors' | 'roadmap' | 'status' | 'support';
 
 const ORIGIN = typeof location !== 'undefined' ? location.origin : 'https://<host>';
 const BASE = `${ORIGIN}/api`;
@@ -468,6 +469,7 @@ const NAV: { label: string; items: { id: Section; label: string; icon: ReactNode
     { id: 'auth', label: 'Авторизация', icon: <Lock size={14} /> },
     { id: 'errors', label: 'Ошибки', icon: <AlertCircle size={14} /> },
     { id: 'status', label: 'Статус', icon: <Activity size={14} /> },
+    { id: 'support', label: 'Поддержка', icon: <Bell size={14} /> },
   ] },
   { label: 'ДАННЫЕ', items: [
     { id: 'stations', label: 'Станции', icon: <Zap size={14} /> },
@@ -499,6 +501,13 @@ export default function ApiDocsApp({ onBack }: { onBack: () => void }) {
       case 'errors': return <Errors />;
       case 'roadmap': return <Roadmap />;
       case 'status': return <Status />;
+      case 'support': return (
+        <div className="space-y-3">
+          <h2 className="text-xl font-bold text-white">Поддержка</h2>
+          <p className="text-sm text-slate-400">Вопрос по интеграции, ключам или вебхукам — напишите разработчикам Voli, ответим здесь.</p>
+          {tokenStore.has('api') ? <SupportChat portal="api" tall /> : <p className="text-sm text-slate-400">{`Войдите в кабинет разработчика, чтобы написать в чат, или напишите на ${BRAND.emails.partners}.`}</p>}
+        </div>
+      );
       default: {
         const [title, sub] = TITLES[section];
         return (

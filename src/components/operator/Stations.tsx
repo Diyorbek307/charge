@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
-import { MapPin, Zap, PlugZap, AlertTriangle, Plus, X, Trash2, Copy, Check, QrCode } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { MapPin, Zap, PlugZap, AlertTriangle, Plus, X, Trash2, Copy, Check, QrCode, Upload, Download } from 'lucide-react';
+import { apiClient } from '../../lib/api';
 import { StickerButton } from './Stickers';
 import { useSync } from '../../lib/sync';
 import { useAnalytics, money, num, plural } from '../../lib/analytics';
@@ -9,6 +10,104 @@ const TYPES = ['CCS2', 'Type2', 'GB/T DC', 'CHAdeMO'];
 const DOT: Record<string, string> = { available: 'bg-emerald-500', occupied: 'bg-amber-500', reserved: 'bg-sky-500', unavailable: 'bg-slate-300' };
 
 type Spec = { type: string; power: string; price: string };
+
+/** One row per connector; rows with the same station name make one station. Excel saves CSV with ";". */
+const TEMPLATE = [
+  'Название;Город;Адрес;Широта;Долгота;Часы работы;Разъём;Мощность, кВт;Цена, сум за кВт·ч',
+  'Chilonzor Hub;Toshkent;Bunyodkor shoh ko‘chasi 24;41.2856;69.2034;24/7;CCS2;120;2000',
+  'Chilonzor Hub;Toshkent;Bunyodkor shoh ko‘chasi 24;41.2856;69.2034;24/7;Type2;22;1200',
+  'Samarqand Darvoza;Samarqand;Registon ko‘chasi 5;39.6548;66.9757;08:00-22:00;CCS2;60;1900',
+].join('\n') + '\n';
+
+function parseStations(textIn: string) {
+  const lines = textIn.replace(/^\uFEFF/, '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return [];
+  const sep = [';', '\t', ','].find(c => lines[0].includes(c)) ?? ';';
+  const cells = (l: string) => l.split(sep).map(c => c.trim().replace(/^"|"$/g, ''));
+  const body = /назван|name|nomi/i.test(lines[0]) ? lines.slice(1) : lines;
+  const byName = new Map<string, { name: string; city: string; address: string; geoLat: number; geoLng: number; hours?: string; connectors: { type: string; power: number; price: number }[] }>();
+  for (const l of body) {
+    const [name = '', city = '', address = '', lat = '', lng = '', hours = '', type = '', power = '', price = ''] = cells(l);
+    if (!name) continue;
+    const key = name.toLowerCase();
+    const st = byName.get(key) ?? { name, city, address, geoLat: Number(lat.replace(',', '.')), geoLng: Number(lng.replace(',', '.')), hours: hours || '24/7', connectors: [] };
+    const t = TYPES.find(x => x.toLowerCase().replace(/\W/g, '') === type.toLowerCase().replace(/\W/g, '')) ?? type;
+    if (type) st.connectors.push({ type: t, power: Number(power.replace(',', '.')), price: Number(price.replace(/\s/g, '')) });
+    byName.set(key, st);
+  }
+  return [...byName.values()];
+}
+
+/** A whole network from a spreadsheet. */
+function ImportStations({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [result, setResult] = useState<{ added: { id: string; name: string }[]; skipped: { name: string; reason: string }[] } | null>(null);
+  const file = useRef<HTMLInputElement>(null);
+  const template = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['\uFEFF' + TEMPLATE], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'voli-stations.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+  const upload = async (f: File) => {
+    setBusy(true);
+    setError('');
+    try {
+      const stations = parseStations(await f.text());
+      if (!stations.length) throw new Error('В файле нет станций');
+      setResult(await apiClient.importStations(stations));
+      onDone();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+      if (file.current) file.current.value = '';
+    }
+  };
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/40 flex items-center justify-center p-4" role="dialog" aria-label="Загрузить станции файлом">
+      <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-900">Загрузить станции файлом</h2>
+          <button onClick={onClose} aria-label="Закрыть" className="p-1 text-slate-400 hover:text-slate-600"><X size={18} /></button>
+        </div>
+        {result ? (
+          <div className="space-y-3 text-sm">
+            <p className="font-semibold text-slate-800">{`Добавлено станций: ${result.added.length}`}</p>
+            {result.added.length > 0 && <p className="text-slate-600">Каждая появится у водителей, как только её зарядное устройство подключится по OCPP 1.6-J. Логин устройства — номер станции:</p>}
+            <div className="max-h-40 overflow-y-auto rounded-xl bg-slate-50 p-3 space-y-1">
+              {result.added.map(a => <p key={a.id} className="text-xs text-slate-700"><code className="font-mono">{a.id}</code>{` · ${a.name}`}</p>)}
+            </div>
+            {result.skipped.length > 0 && (
+              <div className="rounded-xl bg-amber-50 border border-amber-100 p-3 space-y-1 max-h-40 overflow-y-auto">
+                <p className="text-xs font-semibold text-amber-800">{`Не добавлены: ${result.skipped.length}`}</p>
+                {result.skipped.map((x, i) => <p key={i} className="text-xs text-amber-800">{`${x.name}: ${x.reason}`}</p>)}
+              </div>
+            )}
+            <button onClick={onClose} className="w-full py-3 rounded-2xl bg-[#FFC83D] text-[#111] font-bold">Готово</button>
+          </div>
+        ) : (
+          <div className="space-y-3 text-sm text-slate-600">
+            <ol className="list-decimal pl-5 space-y-1">
+              <li>Скачайте шаблон и заполните его в Excel или Google Таблицах.</li>
+              <li>Одна строка — один разъём. Строки с одинаковым названием станут одной станцией.</li>
+              <li>Сохраните как CSV и загрузите сюда — до 200 станций за раз.</li>
+            </ol>
+            <p className="text-xs text-slate-400">Сеть с OCPI 2.2.1 подключается целиком сама — напишите нам на partners@voli.uz.</p>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            <div className="flex flex-wrap gap-2">
+              <button onClick={template} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 font-semibold text-slate-700"><Download size={15} />Скачать шаблон</button>
+              <button disabled={busy} onClick={() => file.current?.click()} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-sky-500 text-white font-semibold disabled:opacity-40"><Upload size={15} />{busy ? 'Загружаем…' : 'Выбрать файл CSV'}</button>
+              <input ref={file} type="file" accept=".csv,text/csv,text/plain" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) void upload(f); }} />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function AddStation({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const { actions } = useSync();
@@ -105,6 +204,7 @@ export default function OperatorStations({ onOpen }: { onOpen: (stationId: strin
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'free' | 'busy' | 'down'>('all');
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
   const org = sessions.operator?.orgId;
 
   const stats = useMemo(() => new Map((data?.stations ?? []).map(s => [s.id, s])), [data]);
@@ -129,6 +229,7 @@ export default function OperatorStations({ onOpen }: { onOpen: (stationId: strin
       actions={
         <span className="flex flex-wrap gap-2">
           <StickerButton stations={shown} fileName="voli-qr-stickers.pdf" label={shown.length === own.length ? 'Все наклейки QR' : `Наклейки QR · ${shown.length}`} />
+          <button onClick={() => setImporting(true)} className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50"><Upload size={15} />Загрузить файлом</button>
           <button onClick={() => setAdding(true)} className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sky-500 text-white text-sm font-semibold hover:bg-sky-600"><Plus size={15} />Добавить станцию</button>
         </span>
       }
@@ -200,6 +301,7 @@ export default function OperatorStations({ onOpen }: { onOpen: (stationId: strin
         )}
       </Card>
       {adding && <AddStation onClose={() => setAdding(false)} onCreated={() => { void refresh(); void reload(); }} />}
+      {importing && <ImportStations onClose={() => setImporting(false)} onDone={() => { void refresh(); void reload(); }} />}
     </Page>
   );
 }

@@ -22,11 +22,17 @@ const ICONS: Record<string, typeof Zap> = {
   'auth.login': LogIn,
 };
 
-/** Meter ticks fire constantly and would drown out anything meaningful. */
-const MUTED = new Set(['session.tick']);
+/**
+ * Only what someone should act on or will be glad to hear. Every charge starting
+ * and stopping across the network (the demo network never rests) was a flood.
+ */
+const SHOWN = new Set([
+  'alert.new', 'sos.new', 'sos.update', 'support.message', 'wallet.topup', 'session.failed',
+  'station.added', 'operator.payout.paid', 'community.broken', 'host.applied',
+]);
 
 export default function SyncToasts() {
-  const { events, sessions } = useSync();
+  const { events } = useSync();
   const [visible, setVisible] = useState<SyncEvent[]>([]);
   // A demo showcase of cross-portal sync: on a phone it would cover the page header.
   const [wide, setWide] = useState(() => typeof window === 'undefined' || window.matchMedia('(min-width: 640px)').matches);
@@ -36,8 +42,11 @@ export default function SyncToasts() {
     mq.addEventListener('change', on);
     return () => mq.removeEventListener('change', on);
   }, []);
-  const mine = new Set(Object.values(sessions).filter(Boolean).map(a => a!.name));
   const seen = useRef<Set<string> | null>(null);
+  // One timer per toast. Not tied to the effect below: events change every second
+  // (meter ticks), and clearing the timer on each change kept toasts up for good.
+  const timers = useRef<number[]>([]);
+  useEffect(() => () => timers.current.forEach(t => clearTimeout(t)), []);
 
   useEffect(() => {
     // Skip the backlog that arrives with the first snapshot.
@@ -46,17 +55,15 @@ export default function SyncToasts() {
       return;
     }
 
-    // Your own sign-in is not news to you.
-    const fresh = events.filter(e => !seen.current!.has(e.id) && !MUTED.has(e.type) && !(e.type === 'auth.login' && mine.has(e.actor)));
+    const fresh = events.filter(e => !seen.current!.has(e.id) && SHOWN.has(e.type));
     if (fresh.length === 0) return;
     fresh.forEach(e => seen.current!.add(e.id));
 
     setVisible(prev => [...fresh, ...prev].slice(0, 3));
 
-    const timer = setTimeout(() => {
-      setVisible(prev => prev.filter(v => !fresh.some(f => f.id === v.id)));
-    }, 4500);
-    return () => clearTimeout(timer);
+    const ids = new Set(fresh.map(f => f.id));
+    timers.current.push(window.setTimeout(() => setVisible(prev => prev.filter(v => !ids.has(v.id))), 4500));
+    if (timers.current.length > 20) timers.current.splice(0, timers.current.length - 20);
   }, [events]);
 
   if (visible.length === 0 || !wide) return null;

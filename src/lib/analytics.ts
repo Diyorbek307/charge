@@ -74,7 +74,7 @@ export interface Analytics {
   operators: OperatorStat[];
   monthly: { month: string; sessions: number; energy: number; revenue: number; commission: number }[];
   customers?: { id: string; name: string; phone: string; car: string; city: string; sessions: number; spent: number; energy: number; last: string; stations: number }[];
-  employees?: { id: string; name: string; dept: string; vehicle: string; limit: number; spentMonth: number; sessions: number; energy: number; spent: number }[];
+  employees?: { id: string; name: string; dept: string; vehicle: string; phone?: string | null; linked?: boolean; limit: number; spentMonth: number; sessions: number; energy: number; spent: number }[];
   departments?: { dept: string; spent: number; sessions: number }[];
   trips?: Trip[];
   account?: { balance: number; threshold: number; autoTopUp: boolean; budget: number; spentMonth: number; runwayDays: number | null };

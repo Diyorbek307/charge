@@ -584,8 +584,15 @@ interface I18nValue {
 
 const I18nContext = createContext<I18nValue | null>(null);
 
+/** Search engines' robots: they get the site's main language, not their own browser's English. */
+const CRAWLER = /bot|crawl|spider|slurp|yandex|bingpreview|facebookexternalhit|telegrambot|whatsapp/i;
+
 function readLang(): Lang {
   try {
+    // A link to one language (?lang=uz) opens in it — the addresses search engines list per language.
+    const asked = new URLSearchParams(window.location.search).get('lang');
+    if (asked === 'ru' || asked === 'uz' || asked === 'en') return asked;
+    if (CRAWLER.test(navigator.userAgent)) return 'ru';
     const stored = localStorage.getItem('oc-lang');
     if (stored === 'ru' || stored === 'uz' || stored === 'en') return stored;
     const nav = navigator.language.slice(0, 2).toLowerCase();

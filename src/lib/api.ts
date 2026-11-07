@@ -193,8 +193,23 @@ export type ChargeGoal = { kind: 'percent'; value: number; fromPct?: number } | 
 export interface SessionGoal { kind: 'percent' | 'sum' | 'km'; value: number; fromPct?: number; stopKwh?: number; stopCost?: number }
 export interface ScheduledStart { id: string; stationId: string; stationName: string; connectorId: string; connector: string; payer: string; goal: ChargeGoal | null; at: string; status: 'pending' | 'starting' | 'started' | 'failed' | 'cancelled' }
 export interface SupportMessage { id: string; from: 'user' | 'support' | 'ai'; text: string; image: string | null; at: string; agent?: string; agentName?: string }
+/** Who wrote to support, for the admin answering (server/supportProfile.js). */
+export interface SupportProfile {
+  kind: 'driver' | 'operator' | 'business' | 'api' | 'gone';
+  name: string; login?: string; since?: string | null; blocked?: boolean; car?: string | null; org?: string | null;
+  balance?: number; debt?: number; company?: string | null; commission?: number | null; mode?: string;
+  totals?: { sessions: number; spent: number; energy: number };
+  month?: { sessions: number; spent?: number; revenue?: number; failed?: number };
+  sessions?: { id: string; start: string; station: string; energy: number; cost: number; status: string; stopReason: string | null }[];
+  payments?: { id: string; provider: string; amount: number; status: string; at: string }[];
+  reports?: { id: string; message: string; ack: boolean; at: string | null }[];
+  stations?: number; connectors?: number; down?: number; openAlerts?: number;
+  lastPayout?: { month: string; amount: number; paidAt: string; ref: string } | null;
+  employees?: number; waiting?: number; budget?: number; webhooks?: number;
+}
+
 export interface SupportThread {
-  id: string; userId: string; user: string; phone: string | null; status: 'open' | 'closed' | 'new'; updatedAt: string; unreadAdmin: number; unreadUser: number; messages: SupportMessage[];
+  id: string; userId: string; user: string; phone: string | null; portal?: Portal; org?: string | null; status: 'open' | 'closed' | 'new'; updatedAt: string; unreadAdmin: number; unreadUser: number; messages: SupportMessage[];
   /** An AI agent called a person into this chat. */
   needsHuman?: boolean; handoffReason?: string | null;
   /** Until when the agents stay out (a person is answering). */
@@ -859,6 +874,9 @@ export class ApiError extends Error {
   }
 }
 
+/** One employee as a fleet manager types it or a spreadsheet row gives it. */
+export interface EmployeeRow { name: string; phone: string; dept?: string; vehicle?: string; limit?: number | string }
+
 async function request<T>(path: string, options: RequestInit & { portal?: Portal } = {}): Promise<T> {
   const { portal, headers, ...rest } = options;
 
@@ -1007,8 +1025,9 @@ export const apiClient = {
     post<{ session: Session; stats: Stats }>('/sessions/start', { stationId, connectorId, payer, ...(faceToken ? { faceToken } : {}), ...(goal ? { goal } : {}) }, portal),
   reportCamera: (lat: number, lng: number, maxspeed?: number) => post<{ camera: { id: string } }>('/cameras', { lat, lng, ...(maxspeed ? { maxspeed } : {}) }, 'driver'),
   /** A link to the running charge for family or colleagues; the page shows no name or money. */
-  supportThread: () => request<SupportThread>('/support/messages', { portal: 'driver' }),
-  sendSupport: (text: string, image: string | null) => post<SupportThread>('/support/messages', { text, ...(image ? { image } : {}) }, 'driver'),
+  supportThread: (portal: Portal = 'driver') => request<SupportThread>('/support/messages', { portal }),
+  sendSupport: (text: string, image: string | null, portal: Portal = 'driver') => post<SupportThread>('/support/messages', { text, ...(image ? { image } : {}) }, portal),
+  supportProfile: (id: string) => request<SupportProfile>(`/admin/support/${encodeURIComponent(id)}/profile`, { portal: 'admin' }),
   adminSupport: () => request<SupportThread[]>('/admin/support', { portal: 'admin' }),
   answerSupport: (id: string, body: { text?: string; close?: boolean; ai?: boolean }) => post<SupportThread>(`/admin/support/${id}`, body, 'admin'),
   aiAgents: () => request<AiAgentsView>('/admin/ai-agents', { portal: 'admin' }),
@@ -1066,6 +1085,9 @@ export const apiClient = {
   topUp: (portal: Portal, amount: number) => post<{ wallet: Wallet }>('/wallet/topup', { amount }, portal),
   setEmployeeLimit: (portal: Portal, id: string, limit: number) =>
     post<{ employee: Employee }>(`/employees/${id}/limit`, { limit }, portal),
+  addEmployee: (row: EmployeeRow) => post<{ linked: boolean }>('/employees', row, 'business'),
+  importEmployees: (rows: EmployeeRow[]) => post<{ added: number; linked: number; skipped: { row: number; reason: string }[] }>('/employees/import', { rows }, 'business'),
+  removeEmployee: (id: string) => request<{ removed: boolean }>(`/employees/${encodeURIComponent(id)}`, { method: 'DELETE', portal: 'business' }),
   setOperatorStatus: (portal: Portal, id: string, status: string) =>
     post<{ operator: OperatorRecord }>(`/operators/${id}/status`, { status }, portal),
 
@@ -1075,6 +1097,8 @@ export const apiClient = {
   setCommission: (portal: Portal, id: string, rate: number) => post<{ operator: OperatorRecord }>(`/operators/${id}/commission`, { rate }, portal),
   setConnectorPrice: (portal: Portal, stationId: string, connectorId: string, price: number) =>
     post<{ station: Station }>(`/stations/${stationId}/connectors/${connectorId}/price`, { price }, portal),
+  importStations: (stations: { name: string; city: string; address: string; geoLat: number; geoLng: number; hours?: string; connectors: { type: string; power: number; price: number }[] }[]) =>
+    post<{ added: { id: string; name: string; ocpp: string }[]; skipped: { name: string; reason: string }[] }>('/stations/import', { stations }, 'operator'),
   addStation: (portal: Portal, body: { name: string; city: string; address: string; geoLat: number; geoLng: number; hours?: string; connectors: { type: string; power: number; price: number }[] }) =>
     post<{ station: Station; ocpp: { url: string; login: string } }>('/stations', body, portal),
   ocppChargepoints: (portal: Portal) => request<ChargePointInfo[]>('/ocpp/chargepoints', { portal }),

@@ -1,3 +1,4 @@
+import { DEFAULT_COMMISSION } from './commission.js';
 import crypto from 'node:crypto';
 import express from 'express';
 import { db } from './db.js';
@@ -180,7 +181,7 @@ function operatorFor(partner) {
     since: now().slice(0, 10),
     region: '',
     contact: '',
-    commission: 3.0,
+    commission: DEFAULT_COMMISSION,
     iban: '—',
     stations: 0,
     evse: 0,

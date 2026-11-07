@@ -26,6 +26,13 @@ Voli зарабатывает комиссией с зарядок, которы
 | Business Portal | автопарки и такси | `?portal=business` |
 | Partner API | разработчики сетей | `?portal=api` |
 
+Свои адреса кабинетов (тот же сервер и та же база, `hostPortal()` в `src/App.tsx`):
+operator.voli.uz → кабинет сети, business.voli.uz → автопарк, partner.voli.uz → Partner API.
+Чтобы заработали: в DNS (domains.uz) CNAME каждого на адрес сервиса Render, в Render → charge →
+Settings → Custom Domains добавить каждый. Поисковики индексируют только voli.uz (`/robots.txt`, `/sitemap.xml`).
+
+Комиссия Voli по умолчанию — 5% (`server/commission.js`), у сети может быть своя по договору.
+
 Язык интерфейса — русский (исходный), плюс узбекский и английский.
 
 ## 2. Компания и аккаунты

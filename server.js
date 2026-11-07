@@ -33,6 +33,8 @@ import "./server/places.js";
 import { errorHandler } from "./server/monitoring.js";
 import "./server/clientErrors.js";
 import "./server/driverPhotos.js";
+import "./server/employees.js";
+import "./server/supportProfile.js";
 import { startPayoutWatch } from "./server/payouts.js";
 import { watchProcess } from "./server/alerts.js";
 
@@ -147,6 +149,23 @@ const demoCpo = DEMO_LIFE && process.env.OCPI_DEMO !== "false" ? mockCpo({ base:
 if (demoCpo) app.use("/demo-cpo", demoCpo.router);
 
 // Статика собранного Vite-приложения
+// Search engines: the landing (voli.uz) is indexed page by page in three languages;
+// the app and cabinets (app.voli.uz and the like) are not search results.
+const SITE = "https://voli.uz";
+const SITE_PAGES = ["/", "/drivers", "/networks", "/prices", "/guide", "/faq", "/about", "/join"];
+const isLandingHost = req => !/^(app|operator|business|partner|developers|api)\./i.test(req.hostname);
+app.get("/robots.txt", (req, res) => {
+  res.type("text/plain").send(isLandingHost(req)
+    ? `User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${SITE}/sitemap.xml\n`
+    : "User-agent: *\nDisallow: /\n");
+});
+app.get("/sitemap.xml", (_req, res) => {
+  const at = (path, l) => `${SITE}${path}${l === "ru" ? "" : `?lang=${l}`}`;
+  const urls = SITE_PAGES.flatMap(path => ["ru", "uz", "en"].map(l => `  <url><loc>${at(path, l)}</loc>${["ru", "uz", "en"].map(x => `<xhtml:link rel="alternate" hreflang="${x}" href="${at(path, x)}"/>`).join("")}<xhtml:link rel="alternate" hreflang="x-default" href="${at(path, "ru")}"/><changefreq>weekly</changefreq><priority>${path === "/" ? "1.0" : "0.8"}</priority></url>`));
+  res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls.join("\n")}\n</urlset>
+`);
+});
+
 app.use(express.static(distDir));
 
 // SPA fallback — любой не-API маршрут отдаёт index.html

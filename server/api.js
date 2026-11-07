@@ -1,3 +1,4 @@
+import { DEFAULT_COMMISSION } from './commission.js';
 import express from 'express';
 import crypto from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -174,6 +175,12 @@ function scopeOf({ type, entity, payload = {} }) {
       return { operatorId: stationOperator(entity) };
     case 'wallet.points':
       return { userId: entity };
+    case 'operator.payout.paid':
+    case 'operator.payout.undo':
+      return { operatorId: payload.operatorId ?? null };
+    case 'employee.added':
+      return { fleet: true, userId: payload.userId ?? null };
+    case 'employee.removed':
     case 'employee.limit':
     case 'fleet.limit':
     case 'fleet.balance':
@@ -399,7 +406,16 @@ function employeesNow() {
 
 /** For a driver who is a fleet employee: whose account they may charge to, and what is left. */
 function employerOf(driverId) {
-  const e = db.find('employees', x => x.driverId === driverId);
+  let e = db.find('employees', x => x.driverId === driverId);
+  // Added by phone before they used Voli (server/employees.js): linked now, on their first look.
+  if (!e) {
+    const login = db.byId('accounts', driverId)?.login;
+    e = login ? db.find('employees', x => !x.driverId && x.phone === login) : null;
+    if (e) {
+      e.driverId = driverId;
+      db.save();
+    }
+  }
   if (!e) return null;
   const company = db.find('accounts', a => a.portal === 'business' && a.orgId === 'biz-001');
   const spent = monthSpend(driverId);
@@ -1617,7 +1633,7 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     ...(!station.ocpi && corporate && fleetDiscount() ? { fleetDiscount: fleetDiscount() } : {}),
     ...(promo ? { promo: { id: promo.id, title: promo.title, percent: promo.percent, funder: promo.funder ?? 'network' } } : {}),
     // Platform commission is locked at start too, so a rate change is not retroactive.
-    commissionRate: db.byId('operators', station.operatorId)?.commission ?? 3,
+    commissionRate: db.byId('operators', station.operatorId)?.commission ?? DEFAULT_COMMISSION,
     status: 'active',
     corporate,
     ...(familyOwner && !corporate ? { familyOwner } : {}),
@@ -2605,6 +2621,39 @@ api.post('/stations', requireAuth('operator'), (req, res) => {
     payload: { stationId: station.id },
   });
   res.status(201).json({ station, ocpp: { url: `/ocpp/${station.id}`, login: station.id } });
+});
+
+/**
+ * A whole network at once, from a spreadsheet: each station checked like a
+ * single one, the good ones added, the rest explained by name. (A network on
+ * OCPI arrives with all its stations by itself — this is for the rest.)
+ */
+api.post('/stations/import', requireAuth('operator'), (req, res) => {
+  const list = Array.isArray(req.body?.stations) ? req.body.stations : null;
+  if (!list?.length) return res.status(400).json({ error: 'Список пуст' });
+  if (list.length > 200) return res.status(400).json({ error: 'Не больше 200 станций за раз' });
+  const operator = db.byId('operators', req.account.orgId);
+  const result = { added: [], skipped: [] };
+  for (const item of list) {
+    const checked = stationInput(item);
+    if (checked.error) {
+      result.skipped.push({ name: String(item?.name ?? '').slice(0, 60) || '—', reason: checked.error });
+      continue;
+    }
+    const station = createStation(operator, checked.data);
+    result.added.push({ id: station.id, name: station.name, ocpp: `/ocpp/${station.id}` });
+  }
+  if (result.added.length) {
+    emit({
+      type: 'station.added',
+      portal: 'operator',
+      actor: req.account.name,
+      message: `Загружено станций: ${result.added.length} · ожидают подключения OCPP`,
+      entity: result.added[0].id,
+      payload: { stationId: result.added[0].id, count: result.added.length },
+    });
+  }
+  res.json(result);
 });
 
 /** Recent OCPP frames for the caller's stations. */

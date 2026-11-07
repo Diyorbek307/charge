@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ImagePlus, LoaderCircle, Send, Sparkles, X } from 'lucide-react';
-import type { SupportThread } from '../../lib/api';
+import { apiClient, type Portal, type SupportThread } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 
 /** Shrinks a photo to ~1000 px so it travels fast and fits the request limit. */
@@ -23,9 +23,9 @@ export function shrink(file: File, max = 1000): Promise<string> {
 
 const time = (iso: string) => new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tashkent' });
 
-/** Chat with support: text and a photo of the problem; answers arrive live. */
-export default function SupportChat() {
-  const { actions, events } = useSync();
+/** Chat with support: text and a photo of the problem; answers arrive live. The same chat in every cabinet. */
+export default function SupportChat({ portal = 'driver', tall = false }: { portal?: Portal; tall?: boolean }) {
+  const { events } = useSync();
   const [thread, setThread] = useState<SupportThread | null>(null);
   const [text, setText] = useState('');
   const [image, setImage] = useState<string | null>(null);
@@ -36,8 +36,8 @@ export default function SupportChat() {
   const latest = events.find(e => e.type === 'support.message')?.id;
 
   const load = useCallback(() => {
-    actions.supportThread().then(setThread).catch(() => {});
-  }, [actions]);
+    apiClient.supportThread(portal).then(setThread).catch(() => {});
+  }, [portal]);
   useEffect(() => {
     load();
   }, [load, latest]);
@@ -54,7 +54,7 @@ export default function SupportChat() {
     setBusy(true);
     setError(null);
     try {
-      setThread(await actions.sendSupport(text.trim(), image));
+      setThread(await apiClient.sendSupport(text.trim(), image, portal));
       setText('');
       setImage(null);
     } catch (e) {
@@ -70,7 +70,7 @@ export default function SupportChat() {
         <p className="text-sm font-semibold text-slate-800">Чат с поддержкой</p>
         <p className="text-xs text-slate-500">{thread?.aiActive ? 'Опишите проблему и приложите фото — ИИ-помощник ответит сразу, в сложных случаях подключится специалист' : 'Опишите проблему и приложите фото — ответим здесь и пришлём уведомление'}</p>
       </div>
-      <div className="max-h-72 overflow-y-auto px-3 py-3 space-y-2 bg-slate-50">
+      <div className={`${tall ? 'h-[52vh] min-h-72' : 'max-h-72'} overflow-y-auto px-3 py-3 space-y-2 bg-slate-50`}>
         {(thread?.messages ?? []).length === 0 && <p className="text-center text-xs text-slate-400 py-4">Сообщений пока нет</p>}
         {thread?.messages.map(m => (
           <div key={m.id} className={`flex ${m.from === 'user' ? 'justify-end' : 'justify-start'}`}>

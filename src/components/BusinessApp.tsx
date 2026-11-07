@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { LayoutDashboard, Car, Users, DollarSign, Settings, LogOut, Menu, Wallet } from 'lucide-react';
+import { LayoutDashboard, Car, Users, DollarSign, Settings, LogOut, Menu, Wallet, MessageCircle } from 'lucide-react';
+import SupportChat from './driver/SupportChat';
 import { useSync } from '../lib/sync';
 import { useI18n } from '../lib/i18n';
 import { plural } from '../lib/analytics';
@@ -13,7 +14,7 @@ import BusinessBilling from './business/Billing';
 import BusinessSettings from './business/Settings';
 import { LogoMark } from '../landing/Logo';
 
-type Page = 'dashboard' | 'fleet' | 'employees' | 'expenses' | 'billing' | 'settings';
+type Page = 'dashboard' | 'fleet' | 'employees' | 'expenses' | 'billing' | 'settings' | 'support';
 
 function Sidebar({ current, onChange, onBack, isOpen, onClose }: { current: Page; onChange: (p: Page) => void; onBack: () => void; isOpen?: boolean; onClose?: () => void }) {
   const { t } = useI18n();
@@ -37,6 +38,7 @@ function Sidebar({ current, onChange, onBack, isOpen, onClose }: { current: Page
         { id: 'expenses' as Page, label: t('nav.expenses'), icon: <DollarSign size={14} /> },
         { id: 'billing' as Page, label: 'Счёт и оплата', icon: <Wallet size={14} /> },
         { id: 'settings' as Page, label: t('nav.settings'), icon: <Settings size={14} /> },
+        { id: 'support' as Page, label: 'Поддержка', icon: <MessageCircle size={14} /> },
       ],
     },
   ];
@@ -109,6 +111,15 @@ export default function BusinessApp({ onBack }: { onBack: () => void }) {
     expenses: <BusinessExpenses />,
     billing: <BusinessBilling />,
     settings: <BusinessSettings />,
+    support: (
+      <div className="p-4 md:p-6 pb-28 space-y-4 overflow-y-auto h-full max-w-3xl">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Поддержка</h1>
+          <p className="text-sm text-slate-400 mt-0.5">Напишите команде Voli: счёт, сотрудники, лимиты, зарядки — ответим здесь и уведомлением</p>
+        </div>
+        <SupportChat portal="business" tall />
+      </div>
+    ),
   }[page];
 
   return (

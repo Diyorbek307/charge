@@ -79,6 +79,17 @@ const STALE_PHOTOS = {
 };
 
 /** Swaps those stale photos in stations stored before the change. */
+/**
+ * Voli's rate is 5%. A database made when the demo networks were seeded at 3%
+ * moves them once to the new rates; a rate an admin set by hand later stays.
+ */
+const DEMO_RATES = { 'op-001': 5, 'op-002': 4.5, 'op-003': 5, 'op-004': 5, 'op-005': 5 };
+export function demoRatesAt5(data) {
+  if (data.flags?.commission5) return;
+  for (const o of data.operators ?? []) if (DEMO_RATES[o.id] !== undefined) o.commission = DEMO_RATES[o.id];
+  data.flags = { ...(data.flags ?? {}), commission5: true };
+}
+
 export function freshDemoPhotos(data) {
   for (const s of data.stations ?? []) {
     const stale = Object.keys(STALE_PHOTOS).find(id => String(s.image ?? '').includes(id));
@@ -116,7 +127,7 @@ function auditTrail(ago) {
     [610, 'user.status', 'admin', 'Nodira Baxtiyorova', 'Заблокирован пользователь · 4 отменённых платежа подряд', null],
     [900, 'operator.status', 'system', 'Xorazm Energiya', 'Xorazm Energiya подал заявку на подключение · 6 станций в Xorazm', 'op-005'],
     [1440, 'system.backup', 'system', 'Backup', 'Резервная копия базы создана · 14 дней хранения', null],
-    [1700, 'commission.update', 'admin', 'Nodira Baxtiyorova', 'Комиссия EcoVolt: 3,0% → 2,8% по договору от 01.10', 'op-002'],
+    [1700, 'commission.update', 'admin', 'Nodira Baxtiyorova', 'Комиссия EcoVolt: 5,0% → 4,5% по договору от 01.10', 'op-002'],
     [2600, 'settlement.paid', 'system', 'Settlement', 'Закрыт расчёт за прошлый месяц · 4 инвойса отправлены в банк', null],
     [2900, 'webhook.created', 'api', 'Integration Partner', 'Подписка на session.start, session.stop, evse.status', 'wh-001'],
     [4300, 'station.added', 'operator', 'SilkRoad EV', 'Добавлена станция Jizzax M-39 Stop · 3 разъёма до 150 кВт', 'st-026'],

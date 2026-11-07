@@ -1,3 +1,4 @@
+import { DEFAULT_COMMISSION } from './commission.js';
 import { db } from './db.js';
 
 /**
@@ -90,7 +91,7 @@ function totalsOf(list, stations, periodDays) {
 }
 
 function rateOf(operatorId) {
-  return db.byId('operators', operatorId)?.commission ?? 3;
+  return db.byId('operators', operatorId)?.commission ?? DEFAULT_COMMISSION;
 }
 
 /** The rate locked on the session; older records fall back to the current one. */
@@ -347,6 +348,8 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
         name: e.name,
         dept: e.dept,
         vehicle: e.vehicle,
+        phone: e.phone ?? null,
+        linked: !!e.driverId,
         limit: e.limit,
         spentMonth: monthSpend(e.driverId, now),
         sessions: list.length,
@@ -475,7 +478,8 @@ function invoicesFor(operatorIds, sessions, now) {
       const demoHistory = DEMO_MODE && month < previousMonth(now);
       const status = month === current ? 'accruing'
         : record || demoHistory ? 'paid'
-        : now >= payDate + PAYOUT_GRACE ? 'overdue'
+        // The demo never shows Voli as late to a network: showing a partner the cabinet, that would read as arrears.
+        : !DEMO_MODE && now >= payDate + PAYOUT_GRACE ? 'overdue'
         : 'processing';
       out.push({
         id: invoiceId,

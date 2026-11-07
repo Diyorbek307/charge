@@ -120,7 +120,6 @@ const METHODS = {
       message: `Пополнение через Paynet · +${amount.toLocaleString('ru-RU')} сум`,
       entity: account.id,
       payload: { amount, balance: wallet.balance, provider: 'paynet', orderId: order.id },
-      scope: { userId: account.id },
     });
     return { timestamp: stamp(), providerTrnId, fields: { client_id: accountNumber(account) } };
   },
@@ -142,7 +141,7 @@ const METHODS = {
     o.status = 'cancelled';
     o.cancelledAt = new Date().toISOString();
     db.save();
-    emit({ type: 'wallet.refund', portal: 'system', actor: 'Paynet', message: `Paynet отменил пополнение · −${o.amount.toLocaleString('ru-RU')} сум`, entity: o.walletId, scope: { userId: o.userId } });
+    emit({ type: 'wallet.refund', portal: 'system', actor: 'Paynet', message: `Paynet отменил пополнение · −${o.amount.toLocaleString('ru-RU')} сум`, entity: o.walletId, payload: { userId: o.userId } });
     return { providerTrnId: o.paynet.providerTrnId, timestamp: stamp(), transactionState: 2 };
   },
 

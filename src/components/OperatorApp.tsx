@@ -5,6 +5,7 @@ import OperatorTariffs from './operator/Tariffs';
 import OperatorFinance from './operator/Finance';
 import OperatorCustomers from './operator/Customers';
 import OperatorIntegration from './operator/Integration';
+import SupportChat from './driver/SupportChat';
 import AdminSessions from './admin/Sessions';
 import { plural } from '../lib/analytics';
 import {
@@ -359,6 +360,8 @@ function HelpPage({ onNavigate }: { onNavigate: (page: string) => void }) {
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Помощь</h1>
         <p className="text-sm text-slate-400 mt-0.5">Частые вопросы и связь с командой платформы</p>
       </div>
+
+      <div className="max-w-3xl"><SupportChat portal="operator" tall /></div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[

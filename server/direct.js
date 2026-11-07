@@ -1,3 +1,4 @@
+import { DEFAULT_COMMISSION } from './commission.js';
 import crypto from 'node:crypto';
 import { db } from './db.js';
 
@@ -64,14 +65,14 @@ export function chargeNetwork(session) {
   const before = netBalance(session.userId, session.direct);
   const paid = Math.min(before, session.cost);
   setNet(session.userId, session.direct, before - session.cost);
-  const commission = Math.round((session.cost * (session.commissionRate ?? 3)) / 100);
+  const commission = Math.round((session.cost * (session.commissionRate ?? DEFAULT_COMMISSION)) / 100);
   record({ kind: 'charge', operatorId: session.direct, userId: session.userId, amount: session.cost, paid, commission, ref: session.id });
   return paid;
 }
 
 export function refundNetwork(session, amount) {
   setNet(session.userId, session.direct, netBalance(session.userId, session.direct) + amount);
-  const commission = Math.round((amount * (session.commissionRate ?? 3)) / 100);
+  const commission = Math.round((amount * (session.commissionRate ?? DEFAULT_COMMISSION)) / 100);
   record({ kind: 'refund', operatorId: session.direct, userId: session.userId, amount, commission, ref: session.id });
 }
 

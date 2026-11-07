@@ -298,8 +298,21 @@ function PortalLoading() {
 
 const VALID_PORTALS: Portal[] = ['selector', 'driver', 'operator', 'admin', 'business', 'api', 'architecture'];
 
+/**
+ * Each cabinet can have an address of its own — operator.voli.uz,
+ * business.voli.uz, partner.voli.uz — served by the same server and the same
+ * data as app.voli.uz, so everything stays linked.
+ */
+const HOST_PORTALS: Record<string, Portal> = { operator: 'operator', business: 'business', partner: 'api', developers: 'api' };
+export function hostPortal(): Portal | null {
+  if (typeof window === 'undefined') return null;
+  return HOST_PORTALS[window.location.hostname.split('.')[0]?.toLowerCase() ?? ''] ?? null;
+}
+
 /** Lets a portal be deep-linked (?portal=operator) — used by the split view. */
 function initialPortal(): Portal {
+  const pinned = hostPortal();
+  if (pinned) return pinned;
   // The store app and the Telegram mini app are the driver's app, and so is
   // the front page of the app's own site (app.voli.uz) when the landing has its own.
   if (inTelegram() || inNativeShell()) return 'driver';
@@ -330,6 +343,10 @@ export default function App() {
 function MainApp() {
   const { t: tApp } = useI18n();
   const [portal, setPortal] = useState<Portal>(initialPortal);
+  // A cabinet on its own address has no portal list behind it: "back" leads to the main site.
+  useEffect(() => {
+    if (portal === 'selector' && hostPortal()) window.location.href = LANDING_URL || 'https://voli.uz';
+  }, [portal]);
   const [splitView, setSplitView] = useState(() => new URLSearchParams(window.location.search).has('split'));
   // Split view embeds the app in iframes; nested chrome there would be noise.
   const embedded = typeof window !== 'undefined' && window.self !== window.top;

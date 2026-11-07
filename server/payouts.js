@@ -39,7 +39,7 @@ api.post('/admin/payouts', requireAuth('admin'), (req, res) => {
     actor: record.by,
     message: `${inv.operator}: выплата за ${inv.month} — ${amount.toLocaleString('ru-RU')} сум, п/п ${ref}`,
     entity: inv.id,
-    scope: { operatorId: inv.operatorId },
+    payload: { operatorId: inv.operatorId },
   });
   res.json(record);
 });
@@ -50,7 +50,7 @@ api.delete('/admin/payouts/:invoiceId/:operatorId', requireAuth('admin'), (req, 
   db.data.payouts = payouts().filter(r => !(r.invoiceId === req.params.invoiceId && r.operatorId === req.params.operatorId));
   if (db.data.payouts.length === before) return res.status(404).json({ error: 'Отметки нет' });
   db.save();
-  emit({ type: 'operator.payout.undo', portal: 'admin', actor: req.account.name ?? req.account.login, message: `Отметка выплаты ${req.params.invoiceId} снята`, entity: req.params.invoiceId, scope: { operatorId: req.params.operatorId } });
+  emit({ type: 'operator.payout.undo', portal: 'admin', actor: req.account.name ?? req.account.login, message: `Отметка выплаты ${req.params.invoiceId} снята`, entity: req.params.invoiceId, payload: { operatorId: req.params.operatorId } });
   res.json({ removed: true });
 });
 

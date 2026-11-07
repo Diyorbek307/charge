@@ -1512,10 +1512,21 @@ export default function Landing() {
       ],
     });
     document.head.appendChild(ld);
+    // One address per language for search engines: Russian at the plain path, the others with ?lang=.
+    const path = `https://${BRAND.domain}${PATHS[page]}`;
+    const at = (l: Lang) => (l === 'ru' ? path : `${path}?lang=${l}`);
+    const links = [
+      Object.assign(document.createElement('link'), { rel: 'canonical', href: at(lang) }),
+      ...(['ru', 'uz', 'en'] as Lang[]).map(l => Object.assign(document.createElement('link'), { rel: 'alternate', hreflang: l, href: at(l) })),
+      Object.assign(document.createElement('link'), { rel: 'alternate', hreflang: 'x-default', href: path }),
+    ];
+    if (!doc) links.forEach(l => document.head.appendChild(l));
+    document.documentElement.lang = lang;
     return () => {
       document.title = prev;
       if (desc && prevDesc !== undefined) desc.content = prevDesc;
       ld.remove();
+      links.forEach(l => l.remove());
     };
   }, [c, lang, page, doc]);
 

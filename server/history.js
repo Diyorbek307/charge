@@ -1,3 +1,4 @@
+import { DEFAULT_COMMISSION } from './commission.js';
 /**
  * The demo network and its history.
  *
@@ -40,11 +41,11 @@ const IMG = [
 ];
 
 export const OPERATORS = [
-  { id: 'op-001', name: 'GreenCharge UZ', logo: '🟢', status: 'active', integration: 'OCPP 1.6-J', since: '2024-03-12', region: 'Toshkent, Toshkent viloyati, Namangan', contact: 'tech@greencharge.uz', commission: 3.0, iban: 'UZ12 0001 •••• 4410' },
-  { id: 'op-002', name: 'EcoVolt', logo: '⚡', status: 'active', integration: 'OCPP 1.6-J', since: '2024-06-03', region: 'Toshkent, Farg‘ona vodiysi', contact: 'api@ecovolt.uz', commission: 2.8, iban: 'UZ55 0004 •••• 9021' },
-  { id: 'op-003', name: 'SilkRoad EV', logo: '🔵', status: 'active', integration: 'OCPP 1.6-J', since: '2024-09-20', region: 'Samarqand, Buxoro, Navoiy, Qashqadaryo, Surxondaryo', contact: 'info@silkroadev.uz', commission: 3.2, iban: 'UZ07 0009 •••• 3378' },
-  { id: 'op-004', name: 'Nukus Power', logo: '🟡', status: 'active', integration: 'REST API', since: '2025-01-15', region: 'Qoraqalpog‘iston, Xorazm', contact: 'admin@nukuspower.uz', commission: 4.0, iban: 'UZ31 0011 •••• 7754' },
-  { id: 'op-005', name: 'Xorazm Energiya', logo: '🟠', status: 'pending', integration: 'OCPP 1.6-J', since: '2026-09-28', region: 'Xorazm', contact: 'ev@xorazmenergiya.uz', commission: 3.5, iban: '—' },
+  { id: 'op-001', name: 'GreenCharge UZ', logo: '🟢', status: 'active', integration: 'OCPP 1.6-J', since: '2024-03-12', region: 'Toshkent, Toshkent viloyati, Namangan', contact: 'tech@greencharge.uz', commission: 5.0, iban: 'UZ12 0001 •••• 4410' },
+  { id: 'op-002', name: 'EcoVolt', logo: '⚡', status: 'active', integration: 'OCPP 1.6-J', since: '2024-06-03', region: 'Toshkent, Farg‘ona vodiysi', contact: 'api@ecovolt.uz', commission: 4.5, iban: 'UZ55 0004 •••• 9021' },
+  { id: 'op-003', name: 'SilkRoad EV', logo: '🔵', status: 'active', integration: 'OCPP 1.6-J', since: '2024-09-20', region: 'Samarqand, Buxoro, Navoiy, Qashqadaryo, Surxondaryo', contact: 'info@silkroadev.uz', commission: 5.0, iban: 'UZ07 0009 •••• 3378' },
+  { id: 'op-004', name: 'Nukus Power', logo: '🟡', status: 'active', integration: 'REST API', since: '2025-01-15', region: 'Qoraqalpog‘iston, Xorazm', contact: 'admin@nukuspower.uz', commission: 5.0, iban: 'UZ31 0011 •••• 7754' },
+  { id: 'op-005', name: 'Xorazm Energiya', logo: '🟠', status: 'pending', integration: 'OCPP 1.6-J', since: '2026-09-28', region: 'Xorazm', contact: 'ev@xorazmenergiya.uz', commission: 5.0, iban: '—' },
 ];
 
 const op = id => OPERATORS.find(o => o.id === id);
@@ -302,7 +303,7 @@ export function sessionsBetween({ stations, customers, from, to, r, growthAt = (
           multiplier,
           price,
           status: failed ? 'failed' : 'completed',
-          commissionRate: op(st.operatorId)?.commission ?? 3,
+          commissionRate: op(st.operatorId)?.commission ?? DEFAULT_COMMISSION,
           // Fleet drivers charge the company car on the corporate account; the
           // demo driver also charges privately about half the time.
           corporate: customer.fleet && (customer.id !== 'acc-driver' || r() < 0.5),
@@ -487,7 +488,7 @@ export function plantIncidents({ history, stations, customers, now }) {
       multiplier,
       price,
       status,
-      commissionRate: op(st.operatorId)?.commission ?? 3,
+      commissionRate: op(st.operatorId)?.commission ?? DEFAULT_COMMISSION,
       corporate: false,
       source: 'app',
     };

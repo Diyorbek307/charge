@@ -165,9 +165,9 @@ api.get('/share/:token', (req, res) => {
 const threads = () => (db.data.supportThreads ??= []);
 const threadOf = userId => threads().find(t => t.userId === userId);
 const publicThread = t => ({
-  id: t.id, userId: t.userId, user: t.user, phone: t.phone, status: t.status, updatedAt: t.updatedAt, unreadAdmin: t.unreadAdmin, unreadUser: t.unreadUser,
+  id: t.id, userId: t.userId, user: t.user, phone: t.phone, portal: t.portal ?? 'driver', org: t.org ?? null, status: t.status, updatedAt: t.updatedAt, unreadAdmin: t.unreadAdmin, unreadUser: t.unreadUser,
   needsHuman: !!t.needsHuman, handoffReason: t.handoffReason ?? null, aiHoldUntil: t.aiHoldUntil ?? null,
-  aiActive: aiAnswering() && !(t.aiHoldUntil && Date.parse(t.aiHoldUntil) > Date.now()),
+  aiActive: (t.portal ?? 'driver') === 'driver' && aiAnswering() && !(t.aiHoldUntil && Date.parse(t.aiHoldUntil) > Date.now()),
   messages: t.messages.slice(-200),
 });
 
@@ -186,7 +186,12 @@ function post(thread, from, b) {
   return { message: m };
 }
 
-api.get('/support/messages', requireAuth('driver'), (req, res) => {
+// Everyone who uses Voli can write to support: drivers, networks, fleets, developers.
+const SUPPORT_PORTALS = ['driver', 'operator', 'business', 'api'];
+const WHO = { driver: 'Водитель', operator: 'Сеть', business: 'Автопарк', api: 'Разработчик' };
+const orgOf = a => (a.portal === 'operator' ? db.byId('operators', a.orgId)?.name : a.portal === 'business' ? a.org : null) ?? null;
+
+api.get('/support/messages', requireAuth(...SUPPORT_PORTALS), (req, res) => {
   const t = threadOf(req.account.id);
   if (t && t.unreadUser) {
     t.unreadUser = 0;
@@ -195,10 +200,11 @@ api.get('/support/messages', requireAuth('driver'), (req, res) => {
   res.json(t ? publicThread(t) : { messages: [], status: 'new', aiActive: aiAnswering() });
 });
 
-api.post('/support/messages', requireAuth('driver'), (req, res) => {
+api.post('/support/messages', requireAuth(...SUPPORT_PORTALS), (req, res) => {
   let t = threadOf(req.account.id);
+  const driver = req.account.portal === 'driver';
   if (!t) {
-    t = { id: `SUP-${crypto.randomBytes(3).toString('hex').toUpperCase()}`, userId: req.account.id, user: req.account.name, phone: req.account.phone ?? null, status: 'open', messages: [], unreadAdmin: 0, unreadUser: 0, updatedAt: new Date().toISOString() };
+    t = { id: `SUP-${crypto.randomBytes(3).toString('hex').toUpperCase()}`, userId: req.account.id, user: req.account.name, phone: req.account.phone ?? (driver ? null : req.account.login), portal: req.account.portal, org: orgOf(req.account), status: 'open', messages: [], unreadAdmin: 0, unreadUser: 0, updatedAt: new Date().toISOString() };
     threads().push(t);
   }
   const waiting = t.unreadAdmin ?? 0;
@@ -206,16 +212,22 @@ api.post('/support/messages', requireAuth('driver'), (req, res) => {
   if (r.error) return res.status(r.status).json({ error: r.error });
   // One letter per conversation the team has not opened yet, not one per message.
   // With the AI agents on, the letter comes when an agent calls a person.
-  if (!waiting && !aiAnswering()) {
-    notifyTeam(`Поддержка: пишет ${req.account.name}`, [
+  // The AI agents know the driver app; a network or a fleet goes straight to a person.
+  if (!waiting && (!aiAnswering() || !driver)) {
+    notifyTeam(`Поддержка: пишет ${req.account.name}${t.org ? ` (${t.org})` : ''}`, [
       ['Обращение', t.id],
-      ['Водитель', req.account.name],
+      [WHO[req.account.portal] ?? 'Пользователь', `${req.account.name}${t.org ? ` · ${t.org}` : ''}`],
       ['Телефон', req.account.login],
       ['Сообщение', r.message.text || '(фото)'],
     ], '/?portal=admin&page=support', 'support');
   }
-  emit({ type: 'support.message', portal: 'driver', actor: req.account.name, message: `Поддержка: сообщение от ${req.account.name}`, entity: t.id, payload: { userId: req.account.id, from: 'user' } });
-  onDriverMessage(t);
+  emit({ type: 'support.message', portal: req.account.portal, actor: req.account.name, message: `Поддержка: сообщение от ${req.account.name}`, entity: t.id, payload: { userId: req.account.id, from: 'user' } });
+  if (driver) onDriverMessage(t);
+  else if (!t.needsHuman) {
+    t.needsHuman = true;
+    t.handoffReason = `${WHO[req.account.portal]}: отвечает команда`;
+    db.save();
+  }
   res.status(201).json(publicThread(t));
 });
 
