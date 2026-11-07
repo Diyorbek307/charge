@@ -383,10 +383,10 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
         {header(fromRecent ? 'Станция' : 'Станция найдена', null, reset)}
         <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
           <div className="flex flex-col items-center py-3">
-            <div className="w-16 h-16 rounded-2xl grid place-items-center mb-3 pg-pop" style={{ background: 'linear-gradient(135deg,#22C55E,#16A34A)', boxShadow: '0 8px 24px rgba(34,197,94,0.4)' }}>
-              <CheckCircle size={32} className="text-white" />
+            <div className="w-16 h-16 rounded-2xl grid place-items-center mb-3 pg-pop" style={{ background: 'linear-gradient(135deg,#FFD66B,#FFB000)', boxShadow: '0 8px 24px rgba(255,200,61,0.45)' }}>
+              <CheckCircle size={32} className="text-[#111]" />
             </div>
-            <p className="font-bold text-emerald-700 text-base">{fromRecent ? 'Вы заряжались здесь' : 'QR распознан'}</p>
+            <p className="font-bold text-[#111] text-base">{fromRecent ? 'Вы заряжались здесь' : 'QR распознан'}</p>
             <p className="text-slate-400 text-xs mt-0.5">{`Код ${found.id.toUpperCase()}${pointLetter ? ` · точка ${pointLetter}` : ''}`}</p>
           </div>
 

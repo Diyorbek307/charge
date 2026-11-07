@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { V_STROKE, V_BLADE, WORD } from './Logo';
 import './intro.css';
+import { useI18n } from '../lib/i18n';
+
+/** The status on the car, in the page's language. */
+const CHARGING = { ru: 'Заряжается', uz: 'Zaryadlanmoqda', en: 'Charging' } as const;
 
 const KEY = 'voli-intro';
 /** When the logo is full and the cut through the screen begins. */
@@ -81,6 +85,7 @@ function Gun({ tall }: { tall: boolean }) {
  * the cut.
  */
 export default function Intro({ tagline, onDone }: { tagline: string; onDone: () => void }) {
+  const { lang } = useI18n();
   const [cut, setCut] = useState(false);
   const [pct, setPct] = useState(0);
   const [tall] = useState(() => window.innerHeight > window.innerWidth * 1.05);
@@ -186,7 +191,7 @@ export default function Intro({ tagline, onDone }: { tagline: string; onDone: ()
         {/* The status on the car */}
         <g className="lpi-status" transform={`translate(${L.status[0]} ${L.status[1]})`}>
           <rect x="-8" y="-20" width={full ? 92 : 150} height="30" rx="15" className={`lpi-status-pill${full ? ' is-full' : ''}`} />
-          <text x="8" y="0">{full ? '⚡ 100%' : `⚡ Заряжается · ${pct}%`}</text>
+          <text x="8" y="0">{full ? '⚡ 100%' : `⚡ ${CHARGING[lang]} · ${pct}%`}</text>
         </g>
 
         {/* The logo: an outline that fills like a battery, then its own colours */}

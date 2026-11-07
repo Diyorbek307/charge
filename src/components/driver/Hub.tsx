@@ -117,9 +117,9 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 pg-stagger">
         {note && <p role="status" className="text-xs text-slate-700 bg-white border border-slate-100 rounded-xl px-3 py-2 pg-reveal">{note}</p>}
         {live && (
-          <button onClick={onOpenCharge} className="w-full rounded-2xl p-4 text-left text-white flex items-center gap-3 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #065F46, #047857)' }}>
+          <button onClick={onOpenCharge} className="w-full rounded-2xl p-4 text-left text-white flex items-center gap-3 relative overflow-hidden" style={{ background: 'linear-gradient(135deg,#2A2416,#111111)' }}>
             <span className="absolute inset-0 pointer-events-none opacity-30" style={{ background: 'linear-gradient(100deg,transparent 30%,rgba(255,255,255,.35) 50%,transparent 70%)', backgroundSize: '200% 100%', animation: 'pg-shine 2.4s linear infinite' }} />
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center pg-icon-charge"><Zap size={18} /></div>
+            <div className="w-10 h-10 rounded-xl bg-[#FFC83D] text-[#111] flex items-center justify-center pg-icon-charge"><Zap size={18} /></div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold">Идёт зарядка</p>
               <p className="text-xs text-white/80 truncate">{`${live.stationName} · с ${time(live.start)}`}</p>

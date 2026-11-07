@@ -138,13 +138,13 @@ export function ProfileScreen({ onNavigate }: { onNavigate: (s: string) => void 
           )}
         </div>
 
-        <button onClick={() => onNavigate('eco')} className="w-full rounded-2xl p-4 flex items-center gap-3 text-left text-white" style={{ background: 'linear-gradient(135deg,#16A34A,#0D9488)' }}>
+        <button onClick={() => onNavigate('eco')} className="w-full rounded-2xl p-4 flex items-center gap-3 text-left text-white" style={{ background: 'linear-gradient(135deg,#2A2416,#111111)' }}>
           <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">🌱</div>
           <div className="flex-1">
             <p className="text-sm font-bold">Эко-профиль</p>
-            <p className="text-xs text-green-100">CO₂, достижения, зелёные часы и лидеры</p>
+            <p className="text-xs text-[#FFE7A0]">CO₂, достижения, зелёные часы и лидеры</p>
           </div>
-          <ChevronRight size={16} className="text-green-100" />
+          <ChevronRight size={16} className="text-[#FFC83D]" />
         </button>
 
         <PushToggle portal="driver" />

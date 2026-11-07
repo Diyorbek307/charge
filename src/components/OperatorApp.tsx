@@ -356,7 +356,7 @@ function HelpPage({ onNavigate }: { onNavigate: (page: string) => void }) {
 
   return (
     <div className="p-4 md:p-6 pb-28 space-y-5 overflow-y-auto h-full">
-      <div>
+      <div className="pl-12 md:pl-0">
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Помощь</h1>
         <p className="text-sm text-slate-400 mt-0.5">Частые вопросы и связь с командой платформы</p>
       </div>
@@ -476,7 +476,7 @@ function AlertsPage() {
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex items-center justify-between gap-3 flex-wrap pl-12 md:pl-0">
         <div>
           <h1 className="text-xl font-bold text-slate-800">{t('page.alerts')}</h1>
           <p className="text-sm text-slate-500 mt-0.5">{alertsData.length} {plural(alertsData.length, ['оповещение', 'оповещения', 'оповещений'])} всего</p>

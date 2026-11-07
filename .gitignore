@@ -14,3 +14,4 @@ signing/
 android/keystore.properties
 *.jks
 *.keystore
+qa/

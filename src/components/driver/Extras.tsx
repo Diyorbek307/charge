@@ -125,9 +125,9 @@ export function FinanceScreen({ onBack }: { onBack: () => void }) {
           </div>
         </div>
 
-        <div className="rounded-2xl p-4 text-white" style={{ background: 'linear-gradient(135deg,#065F46,#047857)' }}>
+        <div className="rounded-2xl p-4 text-white" style={{ background: 'linear-gradient(135deg,#2A2416,#111111)' }}>
           <p className="text-xs text-white/80 flex items-center gap-1.5"><Fuel size={13} />По сравнению с бензиновой машиной</p>
-          <p className="text-2xl font-bold mt-1 tabular-nums">{saved > 0 ? `≈ ${sum(saved)} экономии` : '—'}</p>
+          <p className="text-2xl font-bold mt-1 tabular-nums text-[#FFC83D]">{saved > 0 ? `≈ ${sum(saved)} экономии` : '—'}</p>
           <p className="text-xs text-white/80 mt-1">{`Бензин на ${Math.round(km)} км: ≈ ${sum(petrol)} · электричество: ${sum(allCost)}`}</p>
         </div>
         <div className="bg-white rounded-2xl border border-slate-100 p-3 grid grid-cols-2 gap-2">
@@ -365,7 +365,7 @@ export function HostScreen({ onBack }: { onBack: () => void }) {
     <div className="h-full flex flex-col bg-slate-50">
       <Header title="Моя зарядка для других" onBack={onBack} />
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        <div className="rounded-2xl p-4 text-white" style={{ background: 'linear-gradient(135deg,#065F46,#047857)' }}>
+        <div className="rounded-2xl p-4 text-white" style={{ background: 'linear-gradient(135deg,#2A2416,#111111)' }}>
           <p className="text-sm font-bold">Зарабатывайте на своей зарядке</p>
           <p className="text-xs text-white/85 mt-1">{`Дом, гостиница, офис или парковка: подключите зарядку к сети, водители найдут её на карте. Вы задаёте цену, платформа удерживает ${data?.commission ?? 10}%, остальное — на ваш кошелёк после каждой зарядки.`}</p>
         </div>

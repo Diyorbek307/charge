@@ -113,7 +113,7 @@ export default function BusinessApp({ onBack }: { onBack: () => void }) {
     settings: <BusinessSettings />,
     support: (
       <div className="p-4 md:p-6 pb-28 space-y-4 overflow-y-auto h-full max-w-3xl">
-        <div>
+        <div className="pl-12 md:pl-0">
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Поддержка</h1>
           <p className="text-sm text-slate-400 mt-0.5">Напишите команде Voli: счёт, сотрудники, лимиты, зарядки — ответим здесь и уведомлением</p>
         </div>

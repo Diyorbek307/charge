@@ -1061,3 +1061,6 @@
 .lp-city-others { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
 .lp-city-others a { padding: 8px 14px; border-radius: 99px; border: 1px solid var(--line-2); font-weight: 700; color: var(--ink); text-decoration: none; }
 @media (max-width: 760px) { .lp-city-stats { grid-template-columns: repeat(2, 1fr); } .lp-city-why { grid-template-columns: 1fr; } }
+
+/* On a phone the page's yellow glow sits right behind the logo and swallows the V's yellow blade: the bar keeps a light ground there. */
+@media (max-width: 760px) { .lp-nav { background: rgba(245, 245, 240, 0.9); backdrop-filter: blur(18px) saturate(1.6); -webkit-backdrop-filter: blur(18px) saturate(1.6); } }
