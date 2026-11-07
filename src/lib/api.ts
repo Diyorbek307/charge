@@ -648,7 +648,7 @@ export interface PaymentProvider {
 
 export interface PaymentOrder {
   id: string;
-  provider: 'payme' | 'click' | 'uzum' | 'humo';
+  provider: 'payme' | 'click' | 'uzum' | 'humo' | 'paynet';
   amount: number;
   status: 'pending' | 'paid' | 'cancelled' | 'expired';
   created: string;
@@ -983,6 +983,8 @@ export const apiClient = {
   adminSettings: () => request<SettingsView>('/admin/settings', { portal: 'admin' }),
   saveSettings: (changes: Record<string, unknown>) => request<SettingsView>('/admin/settings', { method: 'PUT', body: JSON.stringify({ changes }), portal: 'admin' }),
   adminPrograms: () => request<any>('/admin/programs', { portal: 'admin' }),
+  markPayout: (b: { invoiceId: string; operatorId: string; amount: number; paidAt: string; ref: string }) => post<{ paidAt: string }>('/admin/payouts', b, 'admin'),
+  undoPayout: (invoiceId: string, operatorId: string) => request<{ removed: boolean }>(`/admin/payouts/${encodeURIComponent(invoiceId)}/${encodeURIComponent(operatorId)}`, { method: 'DELETE', portal: 'admin' }),
   adminBonus: (phone: string, amount: number, reason: string) => post<BonusGrant>('/admin/bonus', { phone, amount, reason }, 'admin'),
   adminPartners: () => request<PartnerPlace[]>('/admin/partners', { portal: 'admin' }),
   createPartner: (body: { name: string; kind: PlaceKind; offer: string; lat: number; lng: number; pricePerShow: number; days: number }) => post<PartnerPlace>('/admin/partners', body, 'admin'),
@@ -1046,6 +1048,7 @@ export const apiClient = {
     post<{ order: PaymentOrder; checkoutUrl: string; sandbox: boolean }>('/payments/topup', { provider, amount, ...(operatorId ? { operatorId } : {}) }, portal),
   /** Your own recent top-up orders, newest first. */
   listPayments: (portal: Portal) => request<PaymentOrder[]>('/payments', { portal }),
+  paynetAccount: () => request<{ number: string; on: boolean }>('/payments/paynet/account', { portal: 'driver' }),
   sandboxConfirm: (portal: Portal, id: string) =>
     post<{ order: PaymentOrder; balance: number | null }>(`/payments/order/${id}/sandbox-confirm`, undefined, portal),
   joinQueue: (portal: Portal, stationId: string) =>

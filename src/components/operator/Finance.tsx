@@ -32,7 +32,7 @@ export default function OperatorFinance() {
         <Kpi label={current ? `Оборот · ${monthShort(current.month)}` : 'Оборот'} value={money(current?.revenue ?? 0, false)} sub={`сум · ${num(current?.sessions ?? 0)} сессий`} icon={<Wallet size={14} />} tone="emerald" />
         <Kpi label="Комиссия платформы" value={money(current?.commission ?? 0, false)} sub={`сум · ${op ? num(op.commissionRate, 1) : '—'}%`} icon={<Percent size={14} />} tone="violet" />
         <Kpi label="К выплате" value={money(current?.payout ?? 0, false)} sub={current ? `сум · ${dateShort(current.payDate)}` : ''} icon={<CalendarClock size={14} />} tone="sky" />
-        <Kpi label="Последняя выплата" value={money(lastPaid?.payout ?? 0, false)} sub={lastPaid ? `сум · ${dateShort(lastPaid.payDate)}` : 'ещё не было'} icon={<Banknote size={14} />} tone="amber" />
+        <Kpi label="Последняя выплата" value={money(lastPaid?.paidAmount ?? lastPaid?.payout ?? 0, false)} sub={lastPaid ? `сум · ${dateShort(lastPaid.paidAt ?? lastPaid.payDate)}${lastPaid.paidRef ? ` · п/п ${lastPaid.paidRef}` : ''}` : 'ещё не было'} icon={<Banknote size={14} />} tone="amber" />
       </div>
 
       <Card title="Оборот по месяцам" right={<span className="text-xs text-slate-400">сум</span>}>
@@ -73,7 +73,7 @@ export default function OperatorFinance() {
                   <td className="px-5 py-2.5 text-right tabular-nums text-slate-700 whitespace-nowrap">{money(i.revenue)}</td>
                   <td className="px-5 py-2.5 text-right tabular-nums text-red-500 whitespace-nowrap">−{money(i.commission)}</td>
                   <td className="px-5 py-2.5 text-right tabular-nums font-semibold text-emerald-700 whitespace-nowrap">{money(i.payout)}</td>
-                  <td className="px-5 py-2.5 text-xs text-slate-500 whitespace-nowrap">{dateShort(i.payDate)}</td>
+                  <td className="px-5 py-2.5 text-xs text-slate-500 whitespace-nowrap">{i.paidAt ? <><span className="text-emerald-700 font-semibold">{dateShort(i.paidAt)}</span>{i.paidRef && <span className="text-slate-400"> · п/п {i.paidRef}</span>}</> : dateShort(i.payDate)}</td>
                   <td className="px-5 py-2.5"><Pill tone={STATUS_PILL[i.status].tone}>{STATUS_PILL[i.status].label}</Pill></td>
                   <td className="px-5 py-2.5 text-right">{i.status !== 'accruing' && <button onClick={() => void downloadAct(i)} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 whitespace-nowrap"><FileText size={12} />Акт PDF</button>}</td>
                 </tr>

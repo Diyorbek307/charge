@@ -89,6 +89,7 @@ export const SCHEMA = [
   { key: 'payments.click', group: 'payments', label: 'Click', type: 'bool', def: true },
   { key: 'payments.uzum', group: 'payments', label: 'Uzum', type: 'bool', def: true },
   { key: 'payments.humo', group: 'payments', label: 'Humo', type: 'bool', def: true },
+  { key: 'payments.paynet', group: 'payments', label: 'Paynet (пополнение по номеру счёта)', type: 'bool', def: true },
   { key: 'topup.min', group: 'payments', label: 'Минимальное пополнение', type: 'money', def: 1000, min: 100, max: 1_000_000, unit: 'сум' },
   { key: 'topup.max', group: 'payments', label: 'Максимальное пополнение', type: 'money', def: 10_000_000, min: 10_000, max: 100_000_000, unit: 'сум' },
 

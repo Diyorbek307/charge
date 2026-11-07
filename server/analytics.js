@@ -412,6 +412,20 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
   return result;
 }
 
+const DEMO_MODE = process.env.DEMO_MODE !== 'false';
+/** Days after the 2nd before an unpaid month counts as overdue. */
+export const PAYOUT_GRACE = 3 * DAY;
+const previousMonth = now => {
+  const d = new Date(now + TZ);
+  const p = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1));
+  return `${p.getUTCFullYear()}-${String(p.getUTCMonth() + 1).padStart(2, '0')}`;
+};
+
+/** Every active network's statements, for the payout watch. */
+export function allInvoices(now = Date.now()) {
+  return invoicesFor(db.data.operators.filter(o => o.status === 'active').map(o => o.id), db.data.sessions, now);
+}
+
 /**
  * Monthly statements per operator for the last four months. A month is paid
  * out on the 2nd of the next month (D+2 after close); the current month is
@@ -454,9 +468,17 @@ function invoicesFor(operatorIds, sessions, now) {
       if (!sessionsN) continue;
       const [y, mm] = month.split('-').map(Number);
       const payDate = Date.UTC(y, mm, 2, 6) - TZ; // 2nd of next month, 11:00 Tashkent
-      const status = month === current ? 'accruing' : now >= payDate ? 'paid' : 'processing';
+      const invoiceId = `INV-${o.name.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase()}-${month.slice(2).replace('-', '')}`;
+      // Paid only once the admin marked the bank transfer (server/payouts.js). The demo's
+      // history before last month counts as paid, so the prototype does not look in arrears.
+      const record = (db.data.payouts ?? []).find(r => r.invoiceId === invoiceId && r.operatorId === id);
+      const demoHistory = DEMO_MODE && month < previousMonth(now);
+      const status = month === current ? 'accruing'
+        : record || demoHistory ? 'paid'
+        : now >= payDate + PAYOUT_GRACE ? 'overdue'
+        : 'processing';
       out.push({
-        id: `INV-${o.name.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase()}-${month.slice(2).replace('-', '')}`,
+        id: invoiceId,
         operatorId: id,
         operator: o.name,
         logo: o.logo,
@@ -470,6 +492,8 @@ function invoicesFor(operatorIds, sessions, now) {
         status,
         payDate: new Date(payDate).toISOString(),
         iban: o.iban,
+        mode: o.payout?.mode ?? 'platform',
+        ...(record ? { paidAt: record.paidAt, paidRef: record.ref, paidAmount: record.amount } : {}),
       });
     }
   }

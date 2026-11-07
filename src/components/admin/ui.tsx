@@ -210,6 +210,7 @@ export const STATUS_PILL: Record<string, { tone: keyof typeof PILL; label: strin
   expired: { tone: 'slate', label: 'Истёк' },
   accruing: { tone: 'sky', label: 'Начисляется' },
   processing: { tone: 'amber', label: 'В обработке' },
+  overdue: { tone: 'red', label: 'Просрочена' },
   blocked: { tone: 'red', label: 'Заблокирован' },
   suspended: { tone: 'red', label: 'Приостановлен' },
 };

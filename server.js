@@ -7,6 +7,7 @@ import { sessionCookies } from "./server/session.js";
 import { db } from "./server/db.js";
 import { attachOcpp } from "./server/ocpp.js";
 import { paymentsApi } from "./server/payments.js";
+import { paynetApi } from "./server/paynet.js";
 import { pushApi, attachPush } from "./server/push.js";
 import { startWebhookWorker } from "./server/webhooks.js";
 import { startDemoLife } from "./server/demoLife.js";
@@ -32,6 +33,7 @@ import "./server/places.js";
 import { errorHandler } from "./server/monitoring.js";
 import "./server/clientErrors.js";
 import "./server/driverPhotos.js";
+import { startPayoutWatch } from "./server/payouts.js";
 import { watchProcess } from "./server/alerts.js";
 
 // A crash or a forgotten promise error reaches the team before the process goes down.
@@ -128,6 +130,7 @@ app.get("/health", (_req, res) => {
 // Sign-ins travel in an HttpOnly cookie as well as the old header (server/session.js).
 app.use("/api", sessionCookies);
 // Payme / Click merchant callbacks and top-up orders.
+app.use("/api/payments/paynet", paynetApi);
 app.use("/api/payments", paymentsApi);
 // Web Push subscriptions.
 app.use("/api/push", pushApi);
@@ -186,6 +189,7 @@ attachOcpp(server);
 attachPush();
 // Charge goals, progress notices and scheduled starts.
 startSessionWatch();
+startPayoutWatch();
 startWebhookWorker();
 // The demo network keeps charging on its own; tests turn this off.
 if (DEMO_LIFE) startDemoLife();

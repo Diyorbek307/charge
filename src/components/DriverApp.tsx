@@ -45,6 +45,7 @@ import type { Payer, ChargeGoal } from '../lib/api';
 import { useMyLocation, km, fmtKm, driveMinutes, locate, openNow, samePort } from '../lib/geo';
 import { inTelegram, telegramInitData } from '../lib/telegram';
 import type { Booking, Session, PaymentOrder, ArrivalChance } from '../lib/api';
+import { apiClient } from '../lib/api';
 import Tour from './driver/Tour';
 import PriceToday from './driver/PriceToday';
 import { readFirstRun, tourSeen, markTour } from '../lib/firstRun';
@@ -1087,6 +1088,12 @@ function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: ()
   const [payError, setPayError] = useState<string | null>(null);
   const [topUpSuccess, setTopUpSuccess] = useState(false);
   const [orders, setOrders] = useState<PaymentOrder[]>([]);
+  // Paynet: the driver pays in Paynet's own app or terminal by their Voli account number.
+  const [paynet, setPaynet] = useState<{ number: string; on: boolean } | null>(null);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (showTopUp && !paynet) apiClient.paynetAccount().then(setPaynet).catch(() => setPaynet(null));
+  }, [showTopUp, paynet]);
 
   const quickAmounts = [10000, 20000, 50000, 100000];
   const providers = [
@@ -1111,7 +1118,7 @@ function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: ()
   const transactions = [
     ...orders.filter(o => o.status === 'paid').map(o => {
       const network = o.operatorId ? state?.networkWallets?.find(w => w.operatorId === o.operatorId)?.name ?? o.operatorId : null;
-      const via = { payme: 'Payme', click: 'Click', uzum: 'Uzum', humo: 'Humo' }[o.provider];
+      const via = { payme: 'Payme', click: 'Click', uzum: 'Uzum', humo: 'Humo', paynet: 'Paynet' }[o.provider];
       return { id: o.id, type: 'topup', amount: o.amount, label: network ? `Баланс сети ${network} — ${via}` : `Пополнение — ${via}`, at: o.paidAt ?? o.created };
     }),
     ...(state?.transactions ?? [])
@@ -1293,6 +1300,22 @@ function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: ()
                   className="w-full py-3.5 bg-sky-500 text-white rounded-2xl font-bold text-sm disabled:opacity-40 active:scale-95 transition-all">
                   {paying ? 'Подтверждаем оплату…' : `Оплатить через ${providerName}`}{!paying && (selectedAmount ? ` ${selectedAmount.toLocaleString('ru-RU')} сум` : customAmount ? ` ${parseInt(customAmount).toLocaleString('ru-RU')} сум` : '')}
                 </button>
+
+                {paynet?.on && (
+                  <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3.5">
+                    <p className="text-xs font-semibold text-slate-500">ИЛИ ЧЕРЕЗ PAYNET</p>
+                    <p className="text-[13px] text-slate-600 mt-1">В приложении Paynet или в терминале найдите «Voli» и введите номер счёта:</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="flex-1 font-mono text-lg font-bold tracking-wider text-slate-900" data-no-translate>{paynet.number}</span>
+                      <button
+                        onClick={() => { void navigator.clipboard?.writeText(paynet.number).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1800); }).catch(() => {}); }}
+                        className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700">
+                        {copied ? 'Скопировано' : 'Скопировать'}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-1.5">Деньги придут на ваш счёт Voli сразу после оплаты.</p>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -1308,7 +1331,7 @@ function SupportScreen({ onBack, onReport }: { onBack: () => void; onReport: () 
   const faqs = [
     { q: 'Как начать зарядку?', a: 'Найдите станцию на карте или отсканируйте QR-код на ней → «Начать зарядку» → выберите разъём и способ оплаты → подтвердите. Подключите кабель к машине — зарядка начнётся, когда станция её подтвердит.' },
     { q: 'Почему зарядка не началась?', a: 'Частые причины: разъём занят или забронирован, на кошельке не хватает на 5 кВт·ч, исчерпан лимит компании. Текст ошибки на экране подскажет, что именно. Если станция неисправна — сообщите о проблеме, оператор получит оповещение сразу.' },
-    { q: 'Как пополнить кошелёк?', a: 'Профиль → Кошелёк → Пополнить через Payme, Click, Uzum или Humo. Деньги зачисляются, когда платёжная система подтвердит оплату. Данные карт мы не храним — их обрабатывает платёжная система.' },
+    { q: 'Как пополнить кошелёк?', a: 'Профиль → Кошелёк → Пополнить через Payme, Click, Uzum или Humo. Или в приложении Paynet и терминалах — по номеру счёта из окна пополнения. Деньги зачисляются, когда платёжная система подтвердит оплату. Данные карт мы не храним — их обрабатывает платёжная система.' },
     { q: 'Сколько стоит зарядка?', a: 'Цену за кВт·ч задаёт оператор станции, она видна на карточке разъёма. Ночью (23:00–07:00) — ×0,7, днём (10:00–17:00) — ×0,9, вечером в пик (17:00–22:00) — ×1,25. Тариф фиксируется в момент старта, оплата — по фактической энергии.' },
     { q: 'Как работает бронь?', a: `Бронь держит разъём за вами ${platform.booking.graceMin} минут после назначенного времени и стоит ${platform.booking.fee.toLocaleString('ru-RU')} сум (с Voli Plus — бесплатно). Если отменить до начала окна — плата возвращается на кошелёк.` },
     { q: 'Я сотрудник компании-клиента. Как заряжаться за счёт компании?', a: 'Если ваш номер привязан к автопарку компании, при старте зарядки появится вариант «За счёт компании» и остаток вашего месячного лимита. Лимит меняет менеджер автопарка.' },

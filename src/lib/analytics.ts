@@ -123,9 +123,15 @@ export interface Invoice {
   commissionRate: number;
   commission: number;
   payout: number;
-  status: 'paid' | 'processing' | 'accruing';
+  status: 'paid' | 'processing' | 'accruing' | 'overdue';
   payDate: string;
   iban: string;
+  /** 'direct': the network takes the money on its own cashbox; nothing to transfer. */
+  mode?: 'platform' | 'direct';
+  /** The bank transfer the admin marked (server/payouts.js). */
+  paidAt?: string;
+  paidRef?: string;
+  paidAmount?: number;
 }
 
 /** Events after which dashboard figures may have changed. */
