@@ -37,7 +37,8 @@ import "./server/employees.js";
 import "./server/supportProfile.js";
 import "./server/supportActions.js";
 import { startPayoutWatch } from "./server/payouts.js";
-import { watchProcess } from "./server/alerts.js";
+import { watchProcess, alertTeam } from "./server/alerts.js";
+import { mixedMode, realPaymentKeys } from "./server/money.js";
 
 // A crash or a forgotten promise error reaches the team before the process goes down.
 watchProcess();
@@ -153,7 +154,7 @@ if (demoCpo) app.use("/demo-cpo", demoCpo.router);
 // Search engines: the landing (voli.uz) is indexed page by page in three languages;
 // the app and cabinets (app.voli.uz and the like) are not search results.
 const SITE = "https://voli.uz";
-const SITE_PAGES = ["/", "/drivers", "/networks", "/prices", "/guide", "/faq", "/about", "/join"];
+const SITE_PAGES = ["/", "/drivers", "/networks", "/prices", "/guide", "/faq", "/about", "/join", "/tashkent", "/samarkand", "/bukhara"];
 const isLandingHost = req => !/^(app|operator|business|partner|developers|api)\./i.test(req.hostname);
 app.get("/robots.txt", (req, res) => {
   res.type("text/plain").send(isLandingHost(req)
@@ -210,6 +211,8 @@ attachPush();
 // Charge goals, progress notices and scheduled starts.
 startSessionWatch();
 startPayoutWatch();
+// Real payment keys on a server still in demo mode: the demo accounts with public passwords still work.
+if (mixedMode()) setTimeout(() => void alertTeam("mixed-mode", "Демо-режим включён, а ключи оплаты настоящие", [["Ключи", realPaymentKeys().join(", ")], ["Что сделать", "DEMO_MODE=false в Render"]]), 15_000).unref();
 startWebhookWorker();
 // The demo network keeps charging on its own; tests turn this off.
 if (DEMO_LIFE) startDemoLife();

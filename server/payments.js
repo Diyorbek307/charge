@@ -4,6 +4,7 @@ import express from 'express';
 import { db } from './db.js';
 import { tokenOf } from './session.js';
 import { alertTeam } from './alerts.js';
+import { playMoney } from './money.js';
 
 /** A callback from a payment system that does not prove itself: someone may be faking payments. */
 const badSignature = (provider, operatorId) =>
@@ -31,8 +32,9 @@ import { isDirect, creditNetwork, reverseTopUp, netBalance } from './direct.js';
  * integration is exercised end to end before a merchant account exists.
  */
 
-const DEMO_MODE = process.env.DEMO_MODE !== 'false';
-const PUBLIC_URL = (process.env.PUBLIC_URL || 'https://charge-qogf.onrender.com').replace(/\/$/, '');
+// Sandbox keys only while no real money is taken anywhere (server/money.js).
+const DEMO_MODE = playMoney();
+const PUBLIC_URL = (process.env.PUBLIC_URL || 'https://app.voli.uz').replace(/\/$/, '');
 
 const PAYME = {
   merchantId: process.env.PAYME_MERCHANT_ID || (DEMO_MODE ? 'demo-merchant' : ''),
@@ -281,8 +283,10 @@ paymentsApi.get('/order/:id', (req, res) => {
 
 class PaymeError extends Error {
   constructor(code, message, data) {
-    super(message);
+    // Payme wants the message as { ru, uz, en }; Error itself keeps a string.
+    super(typeof message === 'object' ? message.ru : message);
     this.code = code;
+    this.localized = typeof message === 'object' ? message : { ru: message, uz: message, en: message };
     this.data = data;
   }
 }
@@ -446,7 +450,7 @@ function paymeEndpoint(req, res) {
       console.error('[payme]', err);
       return reply({ error: { code: -32400, message: paymeMessage('Системная ошибка', 'System error') } });
     }
-    reply({ error: { code: err.code, message: err.message && typeof err.message === 'object' ? err.message : err.message, data: err.data } });
+    reply({ error: { code: err.code, message: err.localized, data: err.data } });
   }
 }
 paymentsApi.post('/payme', paymeEndpoint);
@@ -454,7 +458,7 @@ paymentsApi.post('/payme/:operatorId', paymeEndpoint);
 
 // PaymeError carries a localized message object; keep it intact on the wire.
 PaymeError.prototype.toJSON = function toJSON() {
-  return { code: this.code, message: this.message, data: this.data };
+  return { code: this.code, message: this.localized, data: this.data };
 };
 
 // ---------------------------------------------------------------------------
@@ -506,7 +510,8 @@ export function clickPrepare(f, operatorId = null) {
 export function clickComplete(f, operatorId = null) {
   const { fail, order } = clickCommon(f, '1', true, operatorId);
   if (fail) return fail;
-  if (!order.click || String(order.click.prepareId) !== String(f.merchant_prepare_id)) {
+  // Complete must name the same Click transaction that Prepare did.
+  if (!order.click || String(order.click.prepareId) !== String(f.merchant_prepare_id) || String(order.click.clickTransId) !== String(f.click_trans_id)) {
     return clickReply(f, -6, 'Transaction does not exist');
   }
   // Click reports its own failure in `error`; the order is then void.
@@ -598,7 +603,7 @@ paymentsApi.post('/order/:id/sandbox-confirm', (req, res) => {
       if (completed.error !== 0) throw new Error(completed.error_note);
     }
   } catch (err) {
-    return res.status(409).json({ error: err.message?.ru ?? err.message ?? 'Оплата не прошла' });
+    return res.status(409).json({ error: err.localized?.ru ?? err.message ?? 'Оплата не прошла' });
   }
   res.json({ order: publicOrder(order), balance: order.operatorId ? netBalance(order.userId, order.operatorId) : db.data.wallets[order.walletId]?.balance ?? null });
 });

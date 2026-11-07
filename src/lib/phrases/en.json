@@ -4499,5 +4499,10 @@
 "Аккаунт не найден": "Account not found",
 "Имя — от 2 символов": "The name needs 2 characters or more",
 "Удалить можно аккаунт водителя; сеть или автопарк отключаются в их разделе": "Only a driver’s account can be deleted; a network or a fleet is switched off in its section",
-"Сначала верните деньги водителю": "Refund the driver first"
+"Сначала верните деньги водителю": "Refund the driver first",
+"Это демо-станция — зарядка на ней недоступна": "This is a demo station — charging here is not available",
+"Демо-аккаунт на рабочем сервере выключен — войдите по коду из SMS": "The demo account is off on the live server — sign in with an SMS code",
+"Внимание: вписаны настоящие ключи оплаты ({0}), а демо-режим ещё включён. Учебные ключи и песочница уже отключены, но демо-аккаунты с известными паролями работают — поставьте DEMO_MODE=false в Render.": "Warning: real payment keys are set ({0}) while demo mode is still on. Sandbox keys are already off — set DEMO_MODE=false in Render.",
+"Некорректный токен": "Invalid token",
+"Зарядка не найдена": "Charge not found"
 }

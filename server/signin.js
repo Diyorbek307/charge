@@ -1,3 +1,4 @@
+import { playMoney } from './money.js';
 import crypto from 'node:crypto';
 import { db, publicAccount } from './db.js';
 import { api, emit, consentFrom } from './api.js';
@@ -24,7 +25,8 @@ import { issueCode, consumeCode, normalizePhone, normalizeEmail, smsConfigured }
  * is set up (or in the demo, where the code comes back on screen).
  */
 
-const DEMO_MODE = process.env.DEMO_MODE !== 'false';
+// What the sign-in screen offers follows sms.js: no on-screen codes once money is real.
+const DEMO_MODE = playMoney();
 const list = v => String(v ?? '').split(',').map(s => s.trim()).filter(Boolean);
 const GOOGLE_WEB = process.env.GOOGLE_CLIENT_ID || '';
 const APPLE_WEB = process.env.APPLE_CLIENT_ID || '';

@@ -4,6 +4,7 @@ import type { Session } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 import { exportPdf } from '../../lib/export';
 import WhileCharging from './WhileCharging';
+import { startLiveActivity, endLiveActivity } from '../../lib/liveActivity';
 
 /** Mirrors server/history.js: what a car really draws — DC tapers, AC is capped by the onboard charger. */
 const effectiveKw = (power: number) => (power >= 50 ? power * 0.6 : Math.min(power, 11) * 0.95);
@@ -38,6 +39,12 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
     return () => clearTimeout(t);
   }, [askStop]);
   const [shared, setShared] = useState<string | null>(null);
+  // iPhone: the charge on the lock screen and in the Dynamic Island (once the native part is in the build).
+  useEffect(() => {
+    if (!session) return;
+    if (session.status === 'active') void startLiveActivity(session);
+    else endLiveActivity(session.id);
+  }, [session?.id, session?.status]);
   const { actions, state } = useSync();
   const idleRule = state?.platform?.idle;
   /** The phone's share sheet where there is one; otherwise the link is copied. */

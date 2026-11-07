@@ -156,6 +156,7 @@ export default function AdminHealth() {
             <li className="flex justify-between gap-3"><span>Симуляция живой сети</span><Pill tone={data.demo.simulation ? 'amber' : 'slate'}>{data.demo.simulation ? 'идёт' : 'выключена'}</Pill></li>
           </ul>
           {w.lastError && <p className="mt-4 text-xs text-red-600 bg-red-50 rounded-xl px-3 py-2">{`Последняя ошибка вебхука: ${w.lastError.url} — ${w.lastError.error} (${dateTime(w.lastError.at)})`}</p>}
+          {data.demo.mixed && <p className="mt-4 text-sm font-semibold text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{`Внимание: вписаны настоящие ключи оплаты (${(data.demo.realMoney ?? []).join(', ')}), а демо-режим ещё включён. Учебные ключи и песочница уже отключены, но демо-аккаунты с известными паролями работают — поставьте DEMO_MODE=false в Render.`}</p>}
           {data.demo.mode && <p className="mt-4 text-xs text-slate-500">Перед запуском: DEMO_MODE=false, ключи Payme/Click, SMS-шлюз и DATABASE_URL — переменные описаны в README.</p>}
         </Card>
       </div>

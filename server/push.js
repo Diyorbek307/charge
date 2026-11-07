@@ -6,6 +6,7 @@ import { setPushHook } from './api.js';
 import { notifyTelegram } from './telegram.js';
 import { sendFcm, sendFcmData, fcmConfigured } from './fcm.js';
 import { translate, pushLang } from './phrases.js';
+import { sendLiveActivity, apnsConfigured } from './apns.js';
 
 /**
  * Web Push notifications, so a driver hears "your turn" with the app closed.
@@ -94,20 +95,51 @@ const num = (n, digits = 1) => (Math.round(n * 10 ** digits) / 10 ** digits).toL
 
 /** The charge's live card on Android phones; other phones get the ordinary notice at the start and the end. */
 async function sendLiveCard(session, { title, body, first, final, live }) {
-  if (!fcmConfigured()) return;
+  if (!fcmConfigured() && !apnsConfigured()) return;
   const station = db.byId('stations', session.stationId);
   const idx = station?.connectors.findIndex(c => c.id === session.connectorId) ?? -1;
   const point = idx >= 0 ? String.fromCharCode(65 + idx) : '';
   const left = live.left ? `ещё ~${live.left} мин` : '';
   const status = live.stage === 'done' ? '✅ Зарядка завершена' : live.stage === 'stopped' ? 'Зарядка остановлена' : 'Идёт зарядка';
   const gone = new Set();
+  // The same numbers and labels for Android's card and the iPhone's Live Activity.
+  const stateFor = lang => {
+    const t = text => translate(text, lang);
+    return {
+      stage: live.stage,
+      pct: live.pct === null || live.pct === undefined ? -1 : Number(live.pct),
+      energy: num(live.energy ?? 0),
+      cost: num(live.cost ?? 0, 0),
+      power: live.power === null || live.power === undefined ? '' : num(live.power),
+      status: t(status),
+      left: left ? t(left) : '',
+      lEnergy: t('Энергия'), lCost: t('Стоимость'), lPower: t('Мощность'),
+      uKwh: t('кВт·ч'), uSum: t('сум'), uKw: t('кВт'),
+    };
+  };
+  // iPhones that started a Live Activity for this charge (src/lib/liveActivity.ts).
+  if (apnsConfigured()) {
+    const lang = langOf(session.userId);
+    const acts = liveActivities().filter(a => a.sessionId === session.id);
+    for (const a of acts) {
+      const r = await sendLiveActivity(a.token, { state: stateFor(lang), end: final, alert: final ? { title: translate(title, lang), body: translate(body, lang) } : null });
+      if (r === 'gone' || final) a.done = true;
+    }
+    if (acts.some(a => a.done)) {
+      db.data.liveActivities = liveActivities().filter(a => !a.done);
+      db.save();
+    }
+  }
+  if (!fcmConfigured()) return;
   for (const d of devices().filter(x => x.accountId === session.userId)) {
     const lang = langOf(d.accountId);
     const t = text => translate(text, lang);
     const tag = `charge-${session.id}`;
     const url = final ? '/?portal=driver' : '/?portal=driver&go=charging';
     if (d.platform !== 'android') {
+      // An iPhone with a Live Activity for this charge hears it there, not as a notice.
       if (!first && !final) continue;
+      if (liveActivities().some(a => a.sessionId === session.id && a.userId === session.userId) && !final) continue;
       const r = await sendFcm(d.token, inLang({ title, body, url, tag }, lang));
       if (r === 'gone') gone.add(d.token);
       continue;
@@ -309,6 +341,20 @@ pushApi.post('/native', requireViewer, (req, res) => {
 });
 
 /** Signing out of the store app stops its notifications. */
+/** The push token Apple issued for a charge's Live Activity on an iPhone. */
+const liveActivities = () => (db.data.liveActivities ??= []);
+pushApi.post('/live-activity', requireViewer, (req, res) => {
+  const sessionId = String(req.body?.sessionId ?? '');
+  const token = String(req.body?.token ?? '');
+  if (!/^[a-f0-9]{32,512}$/i.test(token)) return res.status(400).json({ error: 'Некорректный токен' });
+  const session = db.byId('sessions', sessionId);
+  if (!session || session.userId !== req.account.id) return res.status(404).json({ error: 'Зарядка не найдена' });
+  db.data.liveActivities = liveActivities().filter(a => a.sessionId !== sessionId && Date.now() - Date.parse(a.at) < 24 * 3600_000);
+  liveActivities().push({ sessionId, userId: req.account.id, token, at: new Date().toISOString() });
+  db.save();
+  res.json({ registered: true, delivery: apnsConfigured() });
+});
+
 pushApi.post('/native/remove', requireViewer, (req, res) => {
   const token = String(req.body?.token ?? '');
   db.data.nativePush = devices().filter(d => !(d.token === token && d.accountId === req.account.id));

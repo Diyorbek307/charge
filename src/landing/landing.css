@@ -1036,3 +1036,28 @@
   .lp-show-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-right: -16px; padding-right: 16px; }
   .lp-show-tabs button { flex: none; height: 40px; padding: 0 15px; font-size: 14px; }
 }
+
+/* ── City pages (search) ── */
+.lp-city-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 0; }
+.lp-city-stats > div { padding: 22px 20px; border-radius: 22px; background: var(--paper); border: 1px solid var(--line); }
+.lp-city-stats dd { margin: 0; font-weight: 800; font-size: clamp(30px, 3.4vw, 46px); letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.lp-city-stats dt { font-size: 14px; color: var(--muted); font-weight: 650; }
+.lp-city-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 24px; }
+.lp-city-card { display: grid; gap: 4px; padding: 18px 18px 16px; border-radius: 20px; background: var(--paper); border: 1px solid var(--line); color: var(--ink); text-decoration: none; transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease); }
+.lp-city-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+.lp-city-card b { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; }
+.lp-city-addr { font-size: 14px; color: var(--ink-2); }
+.lp-city-op { font-size: 13px; color: var(--muted); }
+.lp-city-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.lp-city-row em { font-style: normal; font-weight: 750; font-size: 12px; padding: 4px 9px; border-radius: 99px; background: var(--bg); color: var(--ink-2); }
+.lp-city-row em.is-free { background: var(--y); color: var(--ink); }
+.lp-city-row em.is-busy { background: #ececE6; color: var(--muted); }
+.lp-city-empty, .lp-city-more { margin-top: 18px; color: var(--ink-2); }
+.lp-city-more a { font-weight: 750; color: var(--ink); }
+.lp-city-why { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 20px; }
+.lp-city-why-item { padding: 22px; border-radius: 22px; background: var(--paper); border: 1px solid var(--line); }
+.lp-city-why-item b { font-size: 18px; font-weight: 800; }
+.lp-city-why-item p { margin: 6px 0 0; color: var(--ink-2); }
+.lp-city-others { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+.lp-city-others a { padding: 8px 14px; border-radius: 99px; border: 1px solid var(--line-2); font-weight: 700; color: var(--ink); text-decoration: none; }
+@media (max-width: 760px) { .lp-city-stats { grid-template-columns: repeat(2, 1fr); } .lp-city-why { grid-template-columns: 1fr; } }

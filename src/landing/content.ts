@@ -14,6 +14,7 @@ const ru = {
   meta: { title: `${B} — все зарядки Узбекистана в одном приложении` },
   nav: {
     home: 'Главная', drivers: 'Водителям', networks: 'Сетям', prices: 'Тарифы', guide: 'Обучение', faq: 'Вопросы', about: 'О нас', join: 'Подключиться',
+    tashkent: 'Зарядка в Ташкенте', samarkand: 'Зарядка в Самарканде', bukhara: 'Зарядка в Бухаре',
     menu: 'Меню', close: 'Закрыть',
   },
   pages: {
@@ -168,6 +169,31 @@ const ru = {
         points: ['Ночью дешевле на 30%', 'Бонус 100 000 сум за данные автомобиля', 'Награды и подписка Voli Plus', 'Контроль здоровья батареи', 'Подсказки, чем заняться во время зарядки', 'Автопарки и семьи, три языка, Telegram'],
         ui: ['Ночью ×0,7', '+100 000 сум', 'Батарея 96%'],
       },
+    ],
+  },
+  cityPage: {
+    kicker: 'Зарядка электромобилей',
+    in: { tashkent: 'в Ташкенте', samarkand: 'в Самарканде', bukhara: 'в Бухаре' },
+    title: 'Зарядка электромобилей {in}',
+    sub: 'Все станции {in} на одной карте: какие свободны прямо сейчас, сколько стоит кВт·ч и как доехать. Оплата Payme, Click, Uzum и Paynet в одном приложении.',
+    stats: { stations: 'станций', connectors: 'разъёмов', free: 'свободно сейчас', from: 'сум за кВт·ч, от' },
+    listTitle: 'Станции {in}',
+    free: '{f} из {t} свободно', busy: 'Все заняты', upTo: 'до {kw} кВт', price: 'от {p} сум',
+    empty: 'Станции {in} появятся здесь, как только подключатся первые сети.',
+    more: 'Ещё {n} — в приложении',
+    open: 'Открыть карту в приложении',
+    whyTitle: 'Почему с Voli удобнее',
+    why: [
+      { t: 'Все сети вместе', d: 'Не нужно ставить приложение каждой сети: станции всех операторов на одной карте.' },
+      { t: 'Видно заранее', d: 'Свободен ли разъём, какая мощность и цена — до того, как вы приехали.' },
+      { t: 'Ночью дешевле', d: 'С 23:00 до 07:00 зарядка до 30% дешевле — приложение подскажет лучшее время.' },
+    ],
+    faqTitle: 'Частые вопросы',
+    faq: [
+      { q: 'Где зарядить электромобиль {in}?', a: 'Откройте карту Voli: на ней все станции {in} от разных сетей, со свободными разъёмами в реальном времени. Нажмите «Маршрут» — и навигатор доведёт до станции.' },
+      { q: 'Сколько стоит зарядка {in}?', a: 'Цену за кВт·ч задаёт сеть, обычно это от 1 000 до 2 500 сум. Цена видна на карточке станции до старта, ночью — до 30% дешевле.' },
+      { q: 'Как оплатить зарядку?', a: 'Пополните лицевой счёт в приложении через Payme, Click, Uzum, Humo или Paynet — деньги спишутся по факту за энергию, чек останется в приложении.' },
+      { q: 'Какие разъёмы есть на станциях?', a: 'Быстрые CCS2 и GB/T, CHAdeMO и Type2 для обычной зарядки. На карте можно оставить только станции с вашим разъёмом.' },
     ],
   },
   showcase: {
@@ -427,6 +453,7 @@ const uz: LandingCopy = {
   meta: { title: `${B} — O‘zbekistondagi barcha zaryadlash shoxobchalari bitta ilovada` },
   nav: {
     home: 'Bosh sahifa', drivers: 'Haydovchilarga', networks: 'Tarmoqlarga', prices: 'Tariflar', guide: 'Qo‘llanma', faq: 'Savollar', about: 'Biz haqimizda', join: 'Ulanish',
+    tashkent: 'Toshkentda quvvatlash', samarkand: 'Samarqandda quvvatlash', bukhara: 'Buxoroda quvvatlash',
     menu: 'Menyu', close: 'Yopish',
   },
   pages: {
@@ -581,6 +608,31 @@ const uz: LandingCopy = {
         points: ['Tunda 30% arzonroq', 'Avtomobil ma’lumotlari uchun 100 000 so‘m bonus', 'Mukofotlar va Voli Plus obunasi', 'Batareya salomatligi nazorati', 'Zaryadlash paytida nima qilish haqida maslahatlar', 'Avtoparklar va oilalar, uch til, Telegram'],
         ui: ['Tunda ×0,7', '+100 000 so‘m', 'Batareya 96%'],
       },
+    ],
+  },
+  cityPage: {
+    kicker: 'Elektromobillarni quvvatlash',
+    in: { tashkent: 'Toshkentda', samarkand: 'Samarqandda', bukhara: 'Buxoroda' },
+    title: 'Elektromobillarni quvvatlash {in}',
+    sub: '{in}gi barcha stansiyalar bitta xaritada: hozir qaysilari bo‘sh, kVt·s qancha turadi va qanday borish mumkin. Payme, Click, Uzum va Paynet orqali to‘lov — bitta ilovada.',
+    stats: { stations: 'stansiya', connectors: 'ulagich', free: 'hozir bo‘sh', from: 'so‘m/kVt·s dan' },
+    listTitle: 'Stansiyalar {in}',
+    free: '{t} tadan {f} tasi bo‘sh', busy: 'Hammasi band', upTo: '{kw} kVt gacha', price: '{p} so‘mdan',
+    empty: 'Birinchi tarmoqlar ulanishi bilan {in}gi stansiyalar shu yerda paydo bo‘ladi.',
+    more: 'Yana {n} tasi — ilovada',
+    open: 'Xaritani ilovada ochish',
+    whyTitle: 'Nega Voli bilan qulayroq',
+    why: [
+      { t: 'Barcha tarmoqlar birga', d: 'Har bir tarmoq ilovasini o‘rnatish shart emas: barcha operatorlar stansiyalari bitta xaritada.' },
+      { t: 'Oldindan ko‘rinadi', d: 'Ulagich bo‘shmi, quvvati va narxi qancha — yetib borishdan oldin.' },
+      { t: 'Kechasi arzonroq', d: '23:00 dan 07:00 gacha quvvatlash 30% gacha arzon — ilova eng yaxshi vaqtni aytadi.' },
+    ],
+    faqTitle: 'Ko‘p beriladigan savollar',
+    faq: [
+      { q: 'Elektromobilni {in} qayerda quvvatlash mumkin?', a: 'Voli xaritasini oching: unda {in}gi turli tarmoqlarning barcha stansiyalari, bo‘sh ulagichlar real vaqtda. «Marshrut»ni bosing — navigator stansiyagacha olib boradi.' },
+      { q: '{in} quvvatlash qancha turadi?', a: 'kVt·s narxini tarmoq belgilaydi, odatda 1 000 dan 2 500 so‘mgacha. Narx boshlashdan oldin stansiya kartasida ko‘rinadi, kechasi — 30% gacha arzon.' },
+      { q: 'Quvvatlash uchun qanday to‘lanadi?', a: 'Ilovada shaxsiy hisobni Payme, Click, Uzum, Humo yoki Paynet orqali to‘ldiring — pul energiya uchun fakt bo‘yicha yechiladi, chek ilovada qoladi.' },
+      { q: 'Stansiyalarda qanday ulagichlar bor?', a: 'Tezkor CCS2 va GB/T, CHAdeMO va oddiy quvvatlash uchun Type2. Xaritada faqat sizning ulagichingiz bor stansiyalarni qoldirish mumkin.' },
     ],
   },
   showcase: {
@@ -838,6 +890,7 @@ const en: LandingCopy = {
   meta: { title: `${B} — every charger in Uzbekistan, one app` },
   nav: {
     home: 'Home', drivers: 'Drivers', networks: 'Networks', prices: 'Prices', guide: 'Guide', faq: 'FAQ', about: 'About', join: 'Join',
+    tashkent: 'EV charging in Tashkent', samarkand: 'EV charging in Samarkand', bukhara: 'EV charging in Bukhara',
     menu: 'Menu', close: 'Close',
   },
   pages: {
@@ -992,6 +1045,31 @@ const en: LandingCopy = {
         points: ['30% cheaper at night', '100,000 UZS bonus for your car’s details', 'Rewards and a Voli Plus subscription', 'Battery health tracking', 'Ideas for what to do while you charge', 'Fleets and families, three languages, Telegram'],
         ui: ['×0.7 at night', '+100,000 UZS', 'Battery 96%'],
       },
+    ],
+  },
+  cityPage: {
+    kicker: 'EV charging',
+    in: { tashkent: 'in Tashkent', samarkand: 'in Samarkand', bukhara: 'in Bukhara' },
+    title: 'EV charging {in}',
+    sub: 'Every station {in} on one map: which are free right now, the price per kWh and the way there. Pay with Payme, Click, Uzum or Paynet in one app.',
+    stats: { stations: 'stations', connectors: 'connectors', free: 'free right now', from: 'UZS per kWh, from' },
+    listTitle: 'Stations {in}',
+    free: '{f} of {t} free', busy: 'All busy', upTo: 'up to {kw} kW', price: 'from {p} UZS',
+    empty: 'Stations {in} appear here as soon as the first networks connect.',
+    more: '{n} more in the app',
+    open: 'Open the map in the app',
+    whyTitle: 'Why it’s easier with Voli',
+    why: [
+      { t: 'Every network together', d: 'No app per network: every operator’s stations on one map.' },
+      { t: 'Known in advance', d: 'Whether a connector is free, its power and price — before you arrive.' },
+      { t: 'Cheaper at night', d: 'From 23:00 to 07:00 charging is up to 30% cheaper — the app suggests the best time.' },
+    ],
+    faqTitle: 'Common questions',
+    faq: [
+      { q: 'Where can I charge an EV {in}?', a: 'Open the Voli map: every station {in} from different networks, with free connectors live. Tap “Route” and the navigator takes you there.' },
+      { q: 'How much does charging cost {in}?', a: 'The network sets the price per kWh, usually 1,000 to 2,500 UZS. You see it on the station card before you start; at night it’s up to 30% cheaper.' },
+      { q: 'How do I pay?', a: 'Top up your account in the app with Payme, Click, Uzum, Humo or Paynet — you pay for the energy you get, and the receipt stays in the app.' },
+      { q: 'Which connectors are there?', a: 'Fast CCS2 and GB/T, CHAdeMO, and Type2 for regular charging. The map can show only stations with your connector.' },
     ],
   },
   showcase: {

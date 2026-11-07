@@ -4,7 +4,7 @@ import { flushSync } from 'react-dom';
 import {
   ArrowRight, ArrowUpRight, BellRing, CalendarClock, Check, Clock, CircleDollarSign, Gift, Handshake, HeartPulse,
   Layers, Map as MapIcon, Menu, Minus, Moon, Navigation, QrCode, ScanLine, ScrollText, Send, Siren, Sparkles,
-  Car, Apple, Play, WifiOff, X, Zap, Users, BadgePercent, Coffee, Megaphone, ChartColumn, Wallet, CreditCard, Lock,
+  Car, Apple, Play, WifiOff, X, Zap, MapPin, Users, BadgePercent, Coffee, Megaphone, ChartColumn, Wallet, CreditCard, Lock,
   ScanFace, KeyRound, LifeBuoy, Mail,
 } from 'lucide-react';
 import { useI18n, LANGS, type Lang } from '../lib/i18n';
@@ -19,6 +19,8 @@ import Join from './Join';
 import LegalPage, { LEGAL_IDS, legalHref } from './LegalPage';
 import type { LegalDocId } from './legal';
 import { track } from './analytics';
+import { HUB_CITIES } from './heroScene';
+import { APP_URL } from '../lib/site';
 import './landing.css';
 import Stage, { type StageCopy } from './Stage';
 import Intro, { introDue } from './Intro';
@@ -36,8 +38,11 @@ const delay = (ms: number) => ({ '--d': `${ms}ms` }) as CSSProperties;
  * direct link. Moving between them swaps the page in place, animated with
  * the View Transitions API where the browser has it.
  */
-export type Page = 'home' | 'drivers' | 'networks' | 'prices' | 'guide' | 'faq' | 'about' | 'join';
-const PATHS: Record<Page, string> = { home: '/', drivers: '/drivers', networks: '/networks', prices: '/prices', guide: '/guide', faq: '/faq', about: '/about', join: '/join' };
+export type Page = 'home' | 'drivers' | 'networks' | 'prices' | 'guide' | 'faq' | 'about' | 'join' | CityId;
+type CityId = 'tashkent' | 'samarkand' | 'bukhara';
+const CITY_IDS: CityId[] = ['tashkent', 'samarkand', 'bukhara'];
+const isCity = (p: Page): p is CityId => (CITY_IDS as string[]).includes(p);
+const PATHS: Record<Page, string> = { home: '/', drivers: '/drivers', networks: '/networks', prices: '/prices', guide: '/guide', faq: '/faq', about: '/about', join: '/join', tashkent: '/tashkent', samarkand: '/samarkand', bukhara: '/bukhara' };
 const PAGES = Object.keys(PATHS) as Page[];
 
 function pageFromUrl(): Page {
@@ -1061,6 +1066,94 @@ function FaqPage({ c }: { c: LandingCopy }) {
   );
 }
 
+// ───────────────────────── Cities (for search) ─────────────────────────
+
+const fill = (tpl: string, v: Record<string, string | number>) => tpl.replace(/\{(\w+)\}/g, (_, k: string) => String(v[k] ?? ''));
+/** Stations within ~35 km of the city centre, whatever spelling their address uses. */
+function nearCity(id: CityId, st: Station) {
+  const c = HUB_CITIES.find(x => x.id === id);
+  if (!c || typeof st.geoLat !== 'number' || typeof st.geoLng !== 'number') return false;
+  const dLat = (st.geoLat - c.lat) * 111;
+  const dLng = (st.geoLng - c.lng) * 111 * Math.cos((c.lat * Math.PI) / 180);
+  return Math.hypot(dLat, dLng) <= 35;
+}
+
+/** "EV charging in Tashkent": live stations, prices and answers, for people searching by city. */
+function CityPage({ c, lang, id }: { c: LandingCopy; lang: Lang; id: CityId }) {
+  const { state } = useSync();
+  const k = c.cityPage;
+  const v = { in: k.in[id] };
+  const list = useMemo(() => (state?.stations ?? []).filter(st => nearCity(id, st)), [state?.stations, id]);
+  const connectors = list.flatMap(st => st.connectors);
+  const free = connectors.filter(x => x.status === 'available').length;
+  const minPrice = connectors.length ? Math.min(...connectors.map(x => x.price)) : 0;
+  const shown = [...list].sort((a, b) => b.connectors.filter(x => x.status === 'available').length - a.connectors.filter(x => x.status === 'available').length).slice(0, 12);
+  const app = `${APP_URL}/?portal=driver`;
+  return (
+    <>
+      <PageHead kicker={k.kicker} title={fill(k.title, v)} sub={fill(k.sub, v)}>
+        <a href={app} className="lp-btn lp-btn-primary lp-btn-lg"><MapPin size={18} />{k.open}</a>
+      </PageHead>
+      <section className="lp-sec lp-sec-tight">
+        <div className="lp-wrap">
+          <dl className="lp-city-stats rv">
+            <div><dd>{list.length}</dd><dt>{k.stats.stations}</dt></div>
+            <div><dd>{connectors.length}</dd><dt>{k.stats.connectors}</dt></div>
+            <div><dd>{free}</dd><dt>{k.stats.free}</dt></div>
+            <div><dd>{minPrice ? fmt(minPrice, lang) : '—'}</dd><dt>{k.stats.from}</dt></div>
+          </dl>
+          <h2 className="lp-h2 rv" style={{ marginTop: 56 }}>{fill(k.listTitle, v)}</h2>
+          {shown.length === 0 ? <p className="lp-city-empty rv">{fill(k.empty, v)}</p> : (
+            <div className="lp-city-grid">
+              {shown.map((st, i) => {
+                const f = st.connectors.filter(x => x.status === 'available').length;
+                const kw = Math.max(...st.connectors.map(x => x.power));
+                const p = Math.min(...st.connectors.map(x => x.price));
+                return (
+                  <a key={st.id} href={`${APP_URL}/?portal=driver&station=${encodeURIComponent(st.id)}`} className="lp-city-card rv" style={delay((i % 6) * 50)}>
+                    <b>{st.name}</b>
+                    <span className="lp-city-addr">{st.address}</span>
+                    <span className="lp-city-op">{st.operator}</span>
+                    <span className="lp-city-row">
+                      <em className={f ? 'is-free' : 'is-busy'}>{f ? fill(k.free, { f, t: st.connectors.length }) : k.busy}</em>
+                      <em>{fill(k.upTo, { kw })}</em>
+                      <em>{fill(k.price, { p: fmt(p, lang) })}</em>
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
+          )}
+          {list.length > shown.length && <p className="lp-city-more"><a href={app}>{fill(k.more, { n: list.length - shown.length })} →</a></p>}
+        </div>
+      </section>
+      <section className="lp-sec lp-sec-tight">
+        <div className="lp-wrap">
+          <h2 className="lp-h2 rv">{k.whyTitle}</h2>
+          <div className="lp-city-why">
+            {k.why.map((w, i) => <div key={i} className="lp-city-why-item rv" style={delay(i * 80)}><b>{w.t}</b><p>{w.d}</p></div>)}
+          </div>
+        </div>
+      </section>
+      <section className="lp-sec lp-sec-tight">
+        <div className="lp-wrap">
+          <h2 className="lp-h2 rv">{k.faqTitle}</h2>
+          <div className="lp-faq-list">
+            {k.faq.map((f, i) => (
+              <details key={i} className="lp-faq-item rv" open={i === 0}>
+                <summary>{fill(f.q, v)}<span className="lp-faq-plus" aria-hidden="true" /></summary>
+                <p>{fill(f.a, v)}</p>
+              </details>
+            ))}
+          </div>
+          <p className="lp-city-others rv">{CITY_IDS.filter(x => x !== id).map(x => <PageLink key={x} to={x}>{c.nav[x]}</PageLink>)}</p>
+        </div>
+      </section>
+      <Cta c={c} />
+    </>
+  );
+}
+
 // ───────────────────────── Guide ─────────────────────────
 
 const shot = (lang: Lang, id: string) => `/landing/guide/${lang}/${id}.webp`;
@@ -1418,6 +1511,7 @@ function Footer({ c }: { c: LandingCopy }) {
         <div>
           <p className="lp-footer-h">{c.footer.pages}</p>
           {(['home', 'drivers', 'networks', 'prices', 'guide', 'faq', 'about', 'join'] as Page[]).map(p => <PageLink key={p} to={p}>{c.nav[p]}</PageLink>)}
+          {CITY_IDS.map(p => <PageLink key={p} to={p}>{c.nav[p]}</PageLink>)}
         </div>
         <div>
           <p className="lp-footer-h">{c.footer.company}</p>
@@ -1496,11 +1590,11 @@ export default function Landing() {
 
   useEffect(() => {
     const prev = document.title;
-    const name = doc ? c.legal[doc] : page === 'home' ? null : c.nav[page];
+    const name = doc ? c.legal[doc] : page === 'home' ? null : isCity(page) ? fill(c.cityPage.title, { in: c.cityPage.in[page] }) : c.nav[page];
     document.title = name ? `${name} — ${BRAND.name}` : c.meta.title;
     const desc = document.querySelector<HTMLMetaElement>('meta[name="description"]');
     const prevDesc = desc?.content;
-    if (desc) desc.content = c.network.meta;
+    if (desc) desc.content = !doc && isCity(page) ? fill(c.cityPage.sub, { in: c.cityPage.in[page] }) : c.network.meta;
     // FAQPage structured data, so search results can show the answers.
     const ld = document.createElement('script');
     ld.type = 'application/ld+json';
@@ -1508,6 +1602,7 @@ export default function Landing() {
       '@context': 'https://schema.org',
       '@graph': [
         { '@type': 'Organization', name: BRAND.name, url: `https://${BRAND.domain}`, logo: `https://${BRAND.domain}/icon-512.png`, areaServed: 'UZ', slogan: BRAND.tagline },
+        ...(!doc && isCity(page) ? [{ '@type': 'FAQPage', inLanguage: lang, mainEntity: c.cityPage.faq.map(f => ({ '@type': 'Question', name: fill(f.q, { in: c.cityPage.in[page] }), acceptedAnswer: { '@type': 'Answer', text: fill(f.a, { in: c.cityPage.in[page] }) } })) }] : []),
         ...(page === 'faq' ? [{ '@type': 'FAQPage', inLanguage: lang, mainEntity: c.faq.groups.flatMap(g => g.items).map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }] : []),
       ],
     });
@@ -1544,6 +1639,7 @@ export default function Landing() {
             : page === 'faq' ? <FaqPage c={c} />
             : page === 'about' ? <AboutPage c={c} />
             : page === 'join' ? <JoinPage c={c} lang={lang} />
+            : isCity(page) ? <CityPage c={c} lang={lang} id={page} />
             : <HomePage key={intro ? 'behind' : 'in'} c={c} lang={lang} />}
         </main>
         {intro && <Intro tagline={c.intro} onDone={() => setIntro(false)} />}

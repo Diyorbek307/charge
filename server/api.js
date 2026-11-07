@@ -1,3 +1,4 @@
+import { playMoney, realPaymentKeys, mixedMode } from './money.js';
 import { DEFAULT_COMMISSION } from './commission.js';
 import express from 'express';
 import crypto from 'node:crypto';
@@ -14,7 +15,7 @@ import { submitLead, listLeads, updateLead, LEAD_KINDS } from './leads.js';
 import { notifyTeam, mailConfigured, mailbox, mailStatus, sendTestLetter } from './mail.js';
 import { joinByCode, onFriendPaid, referralFor } from './referrals.js';
 import { analyticsFor, adminUsers, setUserStatus, isBlocked, monthSpend, growthFor, investorFor } from './analytics.js';
-import { demoEnergy } from './history.js';
+import { demoEnergy, OPERATORS as DEMO_OPERATORS } from './history.js';
 import { riskReport, reviewFinding, cdrReport, bandFor, tariffBands, setTariffBands } from './admin.js';
 import { verifyInitData, accountByTelegram, telegramConfigured } from './telegram.js';
 import {
@@ -290,6 +291,16 @@ const anonQueue = q => ({
 });
 
 /** The slice of shared state a given viewer is allowed to hold. */
+/**
+ * The demo network (its five made-up operators and their stations) is for
+ * showing the product. Once real money is taken (server/money.js) it leaves
+ * the drivers' map and takes no charges — nobody pays real money for a
+ * station that does not exist. The admin still sees it.
+ */
+const DEMO_OPERATOR_IDS = new Set(DEMO_OPERATORS.map(o => o.id));
+export const demoStationHidden = st => !playMoney() && DEMO_OPERATOR_IDS.has(st?.operatorId);
+const visibleStations = viewer => (viewer?.portal === 'admin' ? db.data.stations : db.data.stations.filter(st => !demoStationHidden(st)));
+
 function stateFor(viewer) {
   const d = db.data;
   const queues = pruneQueues();
@@ -312,7 +323,7 @@ function stateFor(viewer) {
     return [...running, ...list.filter(s => s.status !== 'active').slice(0, n)];
   };
   const base = {
-    stations: d.stations,
+    stations: visibleStations(viewer),
     operators: publicOperators,
     sessions: [],
     transactions: [],
@@ -625,6 +636,11 @@ api.post('/auth/login', async (req, res) => {
   if (stop) return tooMany(res, stop, 'Слишком много неверных попыток входа');
   if (portal === 'admin' && adminIpRefused(req)) return res.status(403).json({ error: 'Вход в админ-панель с этого адреса закрыт' });
   const account = db.find('accounts', a => a.portal === portal && a.login === loginKey);
+  // The demo driver's password is public too: once real money is taken, it opens nothing.
+  if (portal === 'driver' && !playMoney() && DEMO_ACCOUNTS.some(d => d.portal === 'driver' && d.login === loginKey && d.password === password)) {
+    attempt(ipKey, 100, 10 * 60_000);
+    return res.status(403).json({ error: 'Демо-аккаунт на рабочем сервере выключен — войдите по коду из SMS' });
+  }
   // The seeded staff passwords are in the source code: on a real server they open
   // nothing — the admin's never, the others unless DEMO_STAFF=true keeps them for showing.
   const demoStaffClosed = portal === 'admin' || !DEMO_STAFF;
@@ -899,7 +915,7 @@ api.post('/auth/password/reset', async (req, res) => {
 
 /** Legacy demo-only OTP sign-in with the fixed code from the seed. */
 api.post('/auth/otp/request', (req, res) => {
-  if (!DEMO_MODE) return res.status(404).json({ error: 'Not found' });
+  if (!playMoney()) return res.status(404).json({ error: 'Not found' });
   const phone = String(req.body?.phone ?? '').replace(/[^\d+]/g, '');
   const account = db.find('accounts', a => a.portal === 'driver' && a.login === phone.toLowerCase());
   if (!account) return res.status(404).json({ error: 'Номер не найден. Используйте демо-номер.' });
@@ -907,7 +923,7 @@ api.post('/auth/otp/request', (req, res) => {
 });
 
 api.post('/auth/otp/verify', (req, res) => {
-  if (!DEMO_MODE) return res.status(404).json({ error: 'Not found' });
+  if (!playMoney()) return res.status(404).json({ error: 'Not found' });
   const phone = String(req.body?.phone ?? '').replace(/[^\d+]/g, '');
   const code = String(req.body?.code ?? '');
   const tries = attempt(`otp:${phone}`, 5, 15 * 60_000);
@@ -1519,6 +1535,7 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
   const goal = opts.goal ?? intent?.goal ?? null;
   const { station, connector } = findConnector(stationId, connectorId);
   if (!station || !connector) return { status: 404, error: 'Коннектор не найден' };
+  if (demoStationHidden(station)) return { status: 409, error: 'Это демо-станция — зарядка на ней недоступна' };
   if (connector.status === 'occupied') return { status: 409, error: 'Коннектор уже занят' };
   if (connector.status === 'unavailable') return { status: 409, error: 'Коннектор недоступен' };
   if (db.byId('operators', station.operatorId)?.status === 'suspended') {
@@ -2094,7 +2111,8 @@ api.post('/alerts', requireAuth('operator', 'admin'), (req, res) => {
 });
 
 api.post('/wallet/topup', requireAuth('driver', 'business'), (req, res) => {
-  if (!DEMO_MODE) return res.status(403).json({ error: 'Пополнение только через Payme или Click' });
+  // Free top-ups are the demo's; once any real payment key is set they stop (server/money.js).
+  if (!playMoney()) return res.status(403).json({ error: 'Пополнение только через Payme или Click' });
   const amount = Number(req.body?.amount);
   if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ error: 'Некорректная сумма' });
 
@@ -2838,7 +2856,7 @@ api.get('/partner/stations', requireAuth('api', 'admin'), (req, res) => {
   const minPower = Number(req.query.minPower) || 0;
   const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 200);
   const offset = Math.max(Number(req.query.offset) || 0, 0);
-  let list = db.data.stations.map(partnerStation);
+  let list = db.data.stations.filter(st => req.account.portal === 'admin' || !demoStationHidden(st)).map(partnerStation);
   if (city) list = list.filter(s => s.city.toLowerCase() === String(city).toLowerCase());
   if (status) list = list.filter(s => s.status === status);
   if (type) list = list.filter(s => s.connectors.some(c => c.type.toLowerCase() === String(type).toLowerCase()));
@@ -3173,7 +3191,7 @@ api.get('/admin/health', requireAuth('admin'), (_req, res) => {
     node: process.version,
     memoryMb: { rss: Math.round(mem.rss / 1048576), heap: Math.round(mem.heapUsed / 1048576) },
     storage: process.env.DATABASE_URL ? 'postgres' : 'file',
-    demo: { mode: DEMO_MODE, simulation: DEMO_MODE && process.env.DEMO_SIMULATION !== 'false' },
+    demo: { mode: DEMO_MODE, simulation: DEMO_MODE && process.env.DEMO_SIMULATION !== 'false', realMoney: realPaymentKeys(), mixed: mixedMode() },
     records: {
       stations: db.data.stations.length,
       sessions: db.data.sessions.length,

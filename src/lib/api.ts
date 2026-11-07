@@ -249,7 +249,7 @@ export interface SystemHealth {
   node: string;
   memoryMb: { rss: number; heap: number };
   storage: 'postgres' | 'file';
-  demo: { mode: boolean; simulation: boolean };
+  demo: { mode: boolean; simulation: boolean; realMoney?: string[]; mixed?: boolean };
   records: Record<string, number>;
   live: { sseClients: number; activeSessions: number; eventsLastHour: number; tokens: number };
   ocpp: { connected: number };

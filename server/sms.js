@@ -1,3 +1,4 @@
+import { playMoney } from './money.js';
 import crypto from 'node:crypto';
 import { db } from './db.js';
 import { mailConfigured, sendCodeLetter } from './mail.js';
@@ -13,7 +14,8 @@ import { mailConfigured, sendCodeLetter } from './mail.js';
  * explorable; outside the demo an unconfigured gateway refuses to pretend.
  */
 
-const DEMO_MODE = process.env.DEMO_MODE !== 'false';
+// Codes shown on screen are the demo's: never once real money is taken (server/money.js).
+const DEMO_MODE = playMoney();
 
 const ESKIZ = {
   email: process.env.ESKIZ_EMAIL || '',

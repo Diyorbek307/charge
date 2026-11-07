@@ -4499,5 +4499,10 @@
 "Аккаунт не найден": "Akkaunt topilmadi",
 "Имя — от 2 символов": "Ism — kamida 2 belgi",
 "Удалить можно аккаунт водителя; сеть или автопарк отключаются в их разделе": "Faqat haydovchi akkauntini o‘chirish mumkin; tarmoq yoki avtopark o‘z bo‘limida o‘chiriladi",
-"Сначала верните деньги водителю": "Avval haydovchiga pulni qaytaring"
+"Сначала верните деньги водителю": "Avval haydovchiga pulni qaytaring",
+"Это демо-станция — зарядка на ней недоступна": "Bu demo-stansiya — unda quvvatlash mumkin emas",
+"Демо-аккаунт на рабочем сервере выключен — войдите по коду из SMS": "Ishchi serverda demo-akkaunt o‘chirilgan — SMS kod bilan kiring",
+"Внимание: вписаны настоящие ключи оплаты ({0}), а демо-режим ещё включён. Учебные ключи и песочница уже отключены, но демо-аккаунты с известными паролями работают — поставьте DEMO_MODE=false в Render.": "Diqqat: haqiqiy to‘lov kalitlari kiritilgan ({0}), demo-rejim esa hali yoqilgan. O‘quv kalitlari va qum qutisi o‘chirilgan — Render’da DEMO_MODE=false qiling.",
+"Некорректный токен": "Noto‘g‘ri token",
+"Зарядка не найдена": "Quvvatlash topilmadi"
 }
