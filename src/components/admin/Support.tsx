@@ -14,15 +14,79 @@ const WHO: Record<string, { label: string; tone: 'amber' | 'green' | 'sky' | 'sl
 };
 const STATUS: Record<string, string> = { completed: 'завершена', active: 'идёт', failed: 'ошибка', cancelled: 'отменена' };
 
+/** What support can do for the person, right beside the chat. Each action asks first and lands in the audit log. */
+function Actions({ p, onChanged }: { p: SupportProfile; onChanged: () => void }) {
+  const [open, setOpen] = useState<null | 'bonus' | 'balance' | 'name'>(null);
+  const [value, setValue] = useState('');
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+  if (!p.id) return null;
+  const id = p.id;
+  const run = async (fn: () => Promise<string>) => {
+    setBusy(true);
+    setNote(null);
+    try {
+      setNote({ ok: true, text: await fn() });
+      setOpen(null);
+      setValue('');
+      setReason('');
+      onChanged();
+    } catch (e) {
+      setNote({ ok: false, text: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+  const btn = 'px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40';
+  const sum = Number(value.replace(/\s/g, ''));
+  return (
+    <div className="space-y-2">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Действия</p>
+      <div className="flex flex-wrap gap-1.5">
+        <button disabled={busy} className={btn} onClick={() => window.confirm(`Сбросить пароль: ${p.name}? Все его устройства выйдут из аккаунта.`) && void run(async () => {
+          const r = await apiClient.adminResetPassword(id);
+          return r.temporary ? `Временный пароль: ${r.temporary} — продиктуйте его, он показан один раз` : 'Пароль сброшен: войдёт по коду из SMS';
+        })}>Сбросить пароль</button>
+        {p.kind === 'driver' && <button disabled={busy} className={btn} onClick={() => window.confirm(p.blocked ? `Разблокировать ${p.name}?` : `Заблокировать ${p.name}? Он сразу выйдет из аккаунта.`) && void run(async () => {
+          await apiClient.setUserStatus('admin', id, p.blocked ? 'active' : 'blocked');
+          return p.blocked ? 'Разблокирован' : 'Заблокирован';
+        })}>{p.blocked ? 'Разблокировать' : 'Заблокировать'}</button>}
+        {p.kind === 'driver' && <button disabled={busy} className={btn} onClick={() => setOpen(open === 'bonus' ? null : 'bonus')}>Дать бонус</button>}
+        {p.kind === 'driver' && <button disabled={busy} className={btn} onClick={() => { setOpen(open === 'balance' ? null : 'balance'); setValue(String(p.balance ?? 0)); }}>Поправить баланс</button>}
+        <button disabled={busy} className={btn} onClick={() => { setOpen(open === 'name' ? null : 'name'); setValue(p.name); }}>Изменить имя</button>
+        {p.kind === 'driver' && <button disabled={busy} className={`${btn} text-red-600 border-red-200 hover:bg-red-50`} onClick={() => window.prompt(`Удалить аккаунт ${p.name} навсегда? Напишите УДАЛИТЬ`)?.trim().toUpperCase() === 'УДАЛИТЬ' && void run(async () => {
+          await apiClient.deleteAccountByAdmin(id);
+          return 'Аккаунт удалён';
+        })}>Удалить аккаунт</button>}
+      </div>
+      {open && (
+        <div className="rounded-xl bg-slate-50 p-3 space-y-2">
+          <input value={value} onChange={e => setValue(e.target.value)} inputMode={open === 'name' ? undefined : 'numeric'} placeholder={open === 'name' ? 'Имя и фамилия' : 'Сумма, сум'} aria-label={open === 'name' ? 'Имя' : 'Сумма'} className="w-full h-9 px-3 rounded-lg border border-slate-200 text-sm" />
+          {open === 'bonus' && <input value={reason} onChange={e => setReason(e.target.value)} placeholder="За что (увидит водитель)" aria-label="За что" className="w-full h-9 px-3 rounded-lg border border-slate-200 text-sm" />}
+          <button disabled={busy || !value.trim() || (open !== 'name' && !(sum >= 0))} className="h-9 px-3 rounded-lg bg-[#111] text-white text-xs font-semibold disabled:opacity-40" onClick={() => void run(async () => {
+            if (open === 'bonus') { await apiClient.grantBonus(id, sum, reason.trim() || 'Подарок от поддержки Voli'); return `Начислено ${money(sum)} бонусом`; }
+            if (open === 'balance') { await apiClient.setBalance(id, sum); return `Баланс теперь ${money(sum)}`; }
+            await apiClient.renameAccount(id, value.trim());
+            return 'Имя изменено';
+          })}>Сохранить</button>
+        </div>
+      )}
+      {note && <p className={`text-xs rounded-lg px-2.5 py-2 ${note.ok ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-700'}`}>{note.text}</p>}
+    </div>
+  );
+}
+
 /** Who is writing: account, money and recent trouble, so the answer needs no other page. */
 function ProfilePanel({ threadId }: { threadId: string }) {
   const [p, setP] = useState<SupportProfile | null>(null);
   const [error, setError] = useState('');
+  const [tick, setTick] = useState(0);
   useEffect(() => {
-    setP(null);
     setError('');
     apiClient.supportProfile(threadId).then(setP).catch(e => setError((e as Error).message));
-  }, [threadId]);
+  }, [threadId, tick]);
+  useEffect(() => setP(null), [threadId]);
   const row = (k: string, v: React.ReactNode) => (
     <div className="flex justify-between gap-3 py-1.5 border-b border-slate-50 last:border-0 text-sm"><span className="text-slate-500">{k}</span><span className="font-semibold text-slate-800 text-right">{v}</span></div>
   );
@@ -97,6 +161,7 @@ function ProfilePanel({ threadId }: { threadId: string }) {
             </div>
           )}
           {p.kind === 'api' && <div>{row('Вебхуков', p.webhooks ?? 0)}</div>}
+          <Actions p={p} onChanged={() => setTick(t => t + 1)} />
         </div>
       )}
     </Card>

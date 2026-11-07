@@ -196,6 +196,7 @@ export interface SupportMessage { id: string; from: 'user' | 'support' | 'ai'; t
 /** Who wrote to support, for the admin answering (server/supportProfile.js). */
 export interface SupportProfile {
   kind: 'driver' | 'operator' | 'business' | 'api' | 'gone';
+  id?: string;
   name: string; login?: string; since?: string | null; blocked?: boolean; car?: string | null; org?: string | null;
   balance?: number; debt?: number; company?: string | null; commission?: number | null; mode?: string;
   totals?: { sessions: number; spent: number; energy: number };
@@ -1027,6 +1028,12 @@ export const apiClient = {
   /** A link to the running charge for family or colleagues; the page shows no name or money. */
   supportThread: (portal: Portal = 'driver') => request<SupportThread>('/support/messages', { portal }),
   sendSupport: (text: string, image: string | null, portal: Portal = 'driver') => post<SupportThread>('/support/messages', { text, ...(image ? { image } : {}) }, portal),
+  adminResetPassword: (id: string) => post<{ ok: boolean; temporary: string | null; signIn: 'code' | 'password' }>(`/admin/accounts/${encodeURIComponent(id)}/reset-password`, {}, 'admin'),
+  renameAccount: (id: string, name: string) => post<{ ok: boolean }>(`/admin/accounts/${encodeURIComponent(id)}/name`, { name }, 'admin'),
+  deleteAccountByAdmin: (id: string) => post<{ ok: boolean }>(`/admin/accounts/${encodeURIComponent(id)}/delete`, { confirm: 'УДАЛИТЬ' }, 'admin'),
+
+  grantBonus: (userId: string, amount: number, reason: string) => post<{ amount: number }>('/admin/bonus', { userId, amount, reason }, 'admin'),
+  setBalance: (walletId: string, balance: number) => post<{ wallet: unknown }>(`/wallets/${encodeURIComponent(walletId)}/balance`, { balance }, 'admin'),
   supportProfile: (id: string) => request<SupportProfile>(`/admin/support/${encodeURIComponent(id)}/profile`, { portal: 'admin' }),
   adminSupport: () => request<SupportThread[]>('/admin/support', { portal: 'admin' }),
   answerSupport: (id: string, body: { text?: string; close?: boolean; ai?: boolean }) => post<SupportThread>(`/admin/support/${id}`, body, 'admin'),

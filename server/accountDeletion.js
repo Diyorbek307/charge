@@ -16,7 +16,7 @@ import { creditFor } from './credit.js';
 
 const DELETED = 'Удалённый пользователь';
 
-function blockers(account) {
+export function blockers(account) {
   const id = account.id;
   if (db.data.sessions.some(s => s.userId === id && s.status === 'active')) return 'Сначала завершите зарядку';
   if (creditFor(id).debt > 0) return 'Сначала оплатите зарядки в долг — Профиль → Зарядка в долг';

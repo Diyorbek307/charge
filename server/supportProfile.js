@@ -21,6 +21,7 @@ function driverProfile(a) {
   const employee = db.data.employees.find(e => e.driverId === a.id);
   return {
     kind: 'driver',
+    id: a.id,
     name: a.name,
     login: a.login,
     since: a.created ?? null,
@@ -45,6 +46,7 @@ function operatorProfile(a) {
   const payouts = (db.data.payouts ?? []).filter(p => p.operatorId === a.orgId).sort((x, y) => y.paidAt.localeCompare(x.paidAt));
   return {
     kind: 'operator',
+    id: a.id,
     name: a.name,
     login: a.login,
     org: op?.name ?? a.orgId,
@@ -65,6 +67,7 @@ function businessProfile(a) {
   const month = recent(db.data.sessions.filter(s => s.corporate && drivers.has(s.userId) && s.status === 'completed'), 30);
   return {
     kind: 'business',
+    id: a.id,
     name: a.name,
     login: a.login,
     org: a.org ?? a.orgId,
@@ -83,6 +86,6 @@ api.get('/admin/support/:id/profile', requireAuth('admin'), (req, res) => {
   if (!a) return res.json({ kind: 'gone', name: t.user });
   if (a.portal === 'operator') return res.json(operatorProfile(a));
   if (a.portal === 'business') return res.json(businessProfile(a));
-  if (a.portal === 'api') return res.json({ kind: 'api', name: a.name, login: a.login, org: a.org ?? null, webhooks: (db.data.webhooks ?? []).filter(w => w.ownerId === a.id).length });
+  if (a.portal === 'api') return res.json({ kind: 'api', id: a.id, name: a.name, login: a.login, org: a.org ?? null, webhooks: (db.data.webhooks ?? []).filter(w => w.ownerId === a.id).length });
   res.json(driverProfile(a));
 });
