@@ -3,6 +3,18 @@ import express from "express";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { api } from "./server/api.js";
+// Route groups split out of api.js, in the order they used to have there.
+import "./server/routes/telegramSignIn.js";
+import "./server/routes/operatorControls.js";
+import "./server/routes/queue.js";
+import "./server/routes/reports.js";
+import "./server/routes/eco.js";
+import "./server/routes/partnerWebhooks.js";
+import "./server/routes/exports.js";
+import "./server/routes/leads.js";
+import "./server/routes/analytics.js";
+import "./server/routes/adminTools.js";
+import "./server/routes/promos.js";
 import { sessionCookies } from "./server/session.js";
 import { db } from "./server/db.js";
 import { attachOcpp } from "./server/ocpp.js";

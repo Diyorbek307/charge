@@ -192,13 +192,15 @@ npm run build && npx playwright test -c pw.local.tmp.mjs   # браузерны�
 |---|---|
 | `server.js` | Express, CSP и заголовки, раздача сайта |
 | `server/api.js` | основное API, вход, 2FA, зарядки, деньги |
+| `server/routes/*.js` | группы маршрутов, вынесенные из api.js (очередь, эко, вебхуки, заявки, аналитика, инструменты админа, акции…); подключаются в server.js сразу после api.js |
 | `server/db.js` | хранилище (файл или Postgres), токены, сроки сессий |
 | `server/seed.js` | демо-данные (смена `SCHEMA_VERSION` пересоздаёт базу — не трогать без нужды) |
 | `server/signin.js` | вход по коду, Google, Apple |
 | `server/adminBootstrap.js` | админ из переменных окружения |
 | `server/mail.js`, `server/sms.js` | письма (SMTP/Resend) и SMS (Eskiz) |
 | `server/aiSupport.js` | ИИ-агенты поддержки |
-| `src/components/DriverApp.tsx` | приложение водителя (большой файл) |
+| `src/components/DriverApp.tsx` | приложение водителя: навигация между экранами |
+| `src/components/driver/screens/*.tsx` | экраны водителя: станция, старт зарядки, кошелёк, бронь, машина, настройки, отзывы, избранное, поддержка |
 | `src/components/driver/*` | экраны водителя: `DriverAuth`, `Charging`, … |
 | `src/landing/*` | лендинг, логотип (`Logo.tsx`), юр. документы (`legal.ts`) |
 | `src/lib/phrases/{uz,en}.json` | переводы: русская строка → перевод, шаблоны с `{0}` |
