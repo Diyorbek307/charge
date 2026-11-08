@@ -34,6 +34,32 @@
 
 Название компании совпадает с брендом — переименовывать ничего не нужно.
 
+## Сейчас, пока нет D-U-N-S: личные аккаунты
+
+D-U-N-S нужен только аккаунту **организации**. Пока номера нет, оба магазина можно открыть
+на вас как на **физлицо** — паспорт и банковская карта Visa/Mastercard с оплатой за рубежом.
+Позже аккаунт Apple переводится в организацию через поддержку Apple (когда придёт D-U-N-S),
+а приложение в Google Play переносится в новый аккаунт организации (App transfer) —
+отзывы и установки сохраняются.
+
+Что видно покупателям: в карточке как разработчик будет указано ваше имя, а не VOLI ENERGY.
+
+| | Google Play Console | Apple Developer Program |
+|---|---|---|
+| Где | play.google.com/console | приложение **Apple Developer** на iPhone |
+| Тип | Личный аккаунт (Personal) | Individual |
+| Цена | $25 один раз | $99 в год |
+| Документы | паспорт или ID-карта, фото | паспорт или ID-карта, скан в приложении |
+| Сколько ждать | проверка личности 1–3 дня | 1–2 дня |
+| Главное ограничение | перед публикацией для всех — закрытый тест: **12 тестировщиков 14 дней подряд** | нет |
+
+**Google: начните закрытый тест сразу после регистрации** — 14 дней идут, пока мы ждём
+остальное. 12 тестировщиков — любые люди с Android и Google-почтой (друзья, семья,
+таксисты-знакомые). Их почты вписываются в Play Console → Тестирование → Закрытое →
+Тестировщики; каждый должен открыть ссылку-приглашение и установить приложение.
+
+Пароли, коды и данные карты вводите только сами — в чат их не присылайте.
+
 ## Google Play
 
 1. **Аккаунт**: play.google.com/console → тип «Организация» (нужен D-U-N-S) или «Личный».
@@ -110,7 +136,7 @@ Voli — все зарядные станции для электромобил�
 • Оплата через Payme и Click, чеки и история зарядок
 • Скидки и акции — значком «%» на карте, применяются сами
 • Бронь разъёма и очередь, если всё занято
-• Бонусы за зарядки и «Приведи друга»: процент с каждой зарядки друга
+• Бонусы: 50 000 сум за данные машины и 50 000 за паспорт, по 20 000 вам и другу за приглашение
 • Зарядка в долг: заряжайтесь сейчас — платите позже
 • Поиск станций по маршруту и офлайн-карты для трассы
 • Поддержка в чате: ИИ-помощник отвечает сразу, специалист — в сложных случаях
@@ -123,7 +149,9 @@ Voli работает на русском, узбекском и английс�
 ### O‘zbekcha
 
 **Nomi:** Voli — elektromobil zaryadlash
-**Qisqa tavsif:** O‘zbekistondagi barcha zaryadlash stansiyalari bitta ilovada: toping, zaryadlang, to‘lang.
+**Подзаголовок iOS (30):** Hamma stansiyalar bir xaritada
+**Qisqa tavsif:** Barcha zaryadlash stansiyalari bitta ilovada: toping, zaryadlang, to‘lang.
+**Ключевые слова iOS (100):** zaryadlash,elektromobil,stansiya,EV,quvvatlash,Toshkent,BYD,Zeekr,Tesla,kVt
 
 **To‘liq tavsif:**
 
@@ -137,7 +165,7 @@ Endi har bir tarmoq uchun alohida ilova o‘rnatish shart emas. Voli’da hamkor
 • Payme va Click orqali to‘lov, cheklar va tarix
 • Chegirmalar va aksiyalar — xaritada «%» belgisi bilan
 • Ulagichni bron qilish va navbat
-• Bonuslar va «Do‘stingizni taklif qiling»
+• Bonuslar: mashina ma’lumotlari va pasport uchun 50 000 so‘mdan, taklif uchun sizga va do‘stingizga 20 000 so‘mdan
 • Qarzga zaryadlash: hozir zaryadlang — keyin to‘lang
 • Yo‘nalish bo‘yicha stansiyalar va oflayn xaritalar
 • Chatda yordam: SI-yordamchi darhol javob beradi
@@ -146,6 +174,8 @@ Endi har bir tarmoq uchun alohida ilova o‘rnatish shart emas. Voli’da hamkor
 ### English
 
 **Name:** Voli — EV charging
+**Подзаголовок iOS (30):** Every station on one map
+**Ключевые слова iOS (100):** EV,charging,charger,electric car,station,Tashkent,Uzbekistan,BYD,Zeekr,Tesla,kWh
 **Short description:** Every EV charging station in Uzbekistan in one app: find, charge, pay.
 
 **Full description:**
@@ -160,7 +190,7 @@ No more separate apps for every network. Voli gathers the stations of partner ne
 • Pay with Payme or Click; receipts and history
 • Deals and promotions, applied automatically
 • Book a connector or join the queue
-• Bonuses and Bring a friend
+• Bonuses: 50,000 UZS each for your car’s details and your passport, 20,000 each for you and a friend you invite
 • Charge now, pay later
 • Stations along your route and offline maps
 • Chat support: an AI assistant answers at once
@@ -180,10 +210,13 @@ No more separate apps for every network. Voli gathers the stations of partner ne
 | История покупок | да | зарядки и платежи | да |
 | Платёжные данные карты | нет — оплата у Payme/Click | — | — |
 | Сообщения в поддержку | да | поддержка | да |
-| Сведения об автомобиле | да, по желанию | подбор разъёмов | да |
+| Сведения об автомобиле (марка, модель, госномер) | да, по желанию | подбор разъёмов, бонус | да |
+| Паспорт: серия, 3 последние цифры, дата рождения (ПИНФЛ — только хеш) | да, по желанию | бонус один раз на человека, защита от злоупотреблений | да |
 | Диагностика (ошибки) | да | стабильность (Sentry) | нет |
 
-Apple App Privacy: «Data Used to Track You» — нет; «Data Linked to You» — Contact Info (Name, Phone, Email), Purchases, User Content (Photos, Customer Support), Identifiers (User ID); «Data Not Linked to You» — Location (Precise), Diagnostics.
+Google Data safety: паспорт отметьте в «Личная информация → Другая информация» (Other info), цель — «Предотвращение мошенничества, безопасность».
+
+Apple App Privacy: «Data Used to Track You» — нет; «Data Linked to You» — Contact Info (Name, Phone, Email), Purchases, User Content (Photos, Customer Support), Identifiers (User ID), Other Data (паспорт, госномер); «Data Not Linked to You» — Location (Precise), Diagnostics.
 
 ## Что дальше (после первой версии)
 
