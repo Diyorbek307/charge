@@ -6,6 +6,7 @@ import { I18nProvider } from './lib/i18n'
 import './index.css'
 import { initAnalytics } from './landing/analytics'
 import { initMonitoring } from './lib/monitoring'
+import { reloadForNewBuild } from './lib/reloadForNewBuild'
 
 initAnalytics()
 initMonitoring()
@@ -26,6 +27,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </I18nProvider>
   </React.StrictMode>,
 )
+
+// A part of the old build asked for after a deploy: reload once to get the new one.
+window.addEventListener('vite:preloadError', event => {
+  if (reloadForNewBuild((event as Event & { payload?: unknown }).payload)) event.preventDefault()
+})
 
 // Offline support. Registered after load so it never competes with the first
 // paint, and skipped on the dev server where it would cache stale modules.

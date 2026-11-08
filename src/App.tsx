@@ -1,19 +1,26 @@
 import { useState, useEffect } from 'react';
 import { Zap, Car, Building2, Shield, ArrowRight, Briefcase, BookOpen } from 'lucide-react';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, type ComponentType } from 'react';
+import { reloadForNewBuild } from './lib/reloadForNewBuild';
 import TwoFactorPanel from './components/TwoFactorPanel';
 import SyncToasts from './components/SyncToasts';
 import { useI18n } from './lib/i18n';
 
+/** lazy(), but a part missing after a deploy reloads the page once instead of failing. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function lazyPage<T extends ComponentType<any>>(load: () => Promise<{ default: T }>) {
+  return lazy(() => load().catch(err => (reloadForNewBuild(err) ? new Promise<never>(() => {}) : Promise.reject(err))));
+}
+
 // Each portal is a large, independent app — load one only when it is opened
 // so the landing page ships a fraction of the bundle.
-const DriverApp = lazy(() => import('./components/DriverApp'));
-const OperatorApp = lazy(() => import('./components/OperatorApp'));
-const AdminApp = lazy(() => import('./components/AdminApp'));
-const BusinessApp = lazy(() => import('./components/BusinessApp'));
-const ApiDocsApp = lazy(() => import('./components/ApiDocsApp'));
-const SplitView = lazy(() => import('./components/SplitView'));
-const FirstRun = lazy(() => import('./components/driver/FirstRun'));
+const DriverApp = lazyPage(() => import('./components/DriverApp'));
+const OperatorApp = lazyPage(() => import('./components/OperatorApp'));
+const AdminApp = lazyPage(() => import('./components/AdminApp'));
+const BusinessApp = lazyPage(() => import('./components/BusinessApp'));
+const ApiDocsApp = lazyPage(() => import('./components/ApiDocsApp'));
+const SplitView = lazyPage(() => import('./components/SplitView'));
+const FirstRun = lazyPage(() => import('./components/driver/FirstRun'));
 import { useSync } from './lib/sync';
 import { useFirstRunNeeded } from './lib/firstRun';
 import { greetingDue } from './lib/greeting';
@@ -22,12 +29,12 @@ import type { Portal as AuthPortal } from './lib/api';
 import { inTelegram, telegramInitData } from './lib/telegram';
 // Only what the first screen needs is in the main file: the landing, the
 // sign-in screens and the tools load on their own when they are shown.
-const Landing = lazy(() => import('./landing/Landing'));
-const PortalLogin = lazy(() => import('./components/PortalLogin'));
-const Greeting = lazy(() => import('./components/driver/Greeting'));
-const SharePage = lazy(() => import('./components/SharePage'));
-const CommandPalette = lazy(() => import('./components/CommandPalette'));
-const SyncInspector = lazy(() => import('./components/SyncInspector'));
+const Landing = lazyPage(() => import('./landing/Landing'));
+const PortalLogin = lazyPage(() => import('./components/PortalLogin'));
+const Greeting = lazyPage(() => import('./components/driver/Greeting'));
+const SharePage = lazyPage(() => import('./components/SharePage'));
+const CommandPalette = lazyPage(() => import('./components/CommandPalette'));
+const SyncInspector = lazyPage(() => import('./components/SyncInspector'));
 
 type Portal = 'selector' | 'driver' | 'operator' | 'admin' | 'business' | 'api' | 'architecture';
 

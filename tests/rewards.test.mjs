@@ -58,19 +58,19 @@ after(() => {
 });
 
 describe('Voli rewards', () => {
-  test('telling us about the car grants 100 000 sum once, as a bonus that burns', async () => {
+  test('telling us about the car grants 50 000 sum once, as a bonus that burns', async () => {
     const token = await driver();
     const before = (await call('/rewards', { token })).data;
     const carBefore = before.achievements.find(a => a.id === 'car');
-    assert.equal(carBefore.amount, 100_000);
+    assert.equal(carBefore.amount, 50_000);
     assert.equal(carBefore.grantedAt, null);
     const car = { brand: 'BYD', model: 'Song Plus', year: 2025, battery: 72, port: 'CCS2', maxKw: 110, chargeLimit: 80 };
     const saved = await call('/me/car', { method: 'PUT', token, body: car });
     assert.equal(saved.status, 200);
-    assert.ok(saved.data.granted.some(g => g.kind === 'car' && g.amount === 100_000));
+    assert.ok(saved.data.granted.some(g => g.kind === 'car' && g.amount === 50_000));
     const after = (await call('/rewards', { token })).data;
     assert.ok(after.achievements.find(a => a.id === 'car').grantedAt);
-    assert.equal(after.bonus.balance - before.bonus.balance, 100_000);
+    assert.equal(after.bonus.balance - before.bonus.balance, 50_000);
     assert.ok(Date.parse(after.bonus.nextExpiry) > Date.now() + 50 * 86400_000);
     // Saving the car again grants nothing more.
     const again = await call('/me/car', { method: 'PUT', token, body: { ...car, model: 'Seal' } });

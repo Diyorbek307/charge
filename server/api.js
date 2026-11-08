@@ -1049,12 +1049,49 @@ api.put('/me/car', requireAuth('driver'), (req, res) => {
   // Where the driver likes to stop charging; 80% is kinder to the battery and the queue.
   const chargeLimit = b.chargeLimit === undefined ? 80 : Number(b.chargeLimit);
   if (!Number.isInteger(chargeLimit) || chargeLimit < 50 || chargeLimit > 100) return res.status(400).json({ error: 'Лимит заряда — от 50 до 100%' });
-  const car = { brand, model, year, battery: Math.round(battery), port: b.port, maxKw: Math.round(maxKw), chargeLimit };
+  // The plate from the registration certificate (техпаспорт): optional, letters and digits only.
+  const plate = String(b.plate ?? '').toUpperCase().replace(/[^A-Z0-9А-Я]/g, '').slice(0, 10);
+  if (plate && plate.length < 6) return res.status(400).json({ error: 'Госномер — как в техпаспорте, например 01A123BC' });
+  const car = { brand, model, year, battery: Math.round(battery), port: b.port, maxKw: Math.round(maxKw), chargeLimit, ...(plate ? { plate } : {}) };
   db.update('accounts', req.account.id, { car });
   const account = db.byId('accounts', req.account.id);
   const granted = syncRewards(account);
   announceRewards(account, granted);
   res.json({ user: publicAccount(account), granted });
+});
+
+/**
+ * The driver's passport, for a one-time bonus and so one person cannot collect
+ * welcome bonuses on many accounts. Only what is needed is kept: the series, the
+ * last three digits and the birth date on the account, and a salted hash of the
+ * ПИНФЛ in an index that says which account already used it. The full number
+ * and the ПИНФЛ itself are not stored.
+ */
+const pinflKey = pinfl => crypto.createHash('sha256').update(`${process.env.PINFL_SALT ?? 'voli-pinfl-v1'}:${pinfl}`).digest('hex');
+
+api.put('/me/passport', requireAuth('driver'), (req, res) => {
+  const b = req.body ?? {};
+  const series = String(b.series ?? '').toUpperCase().replace(/[^A-Z]/g, '');
+  const number = String(b.number ?? '').replace(/\D/g, '');
+  const pinfl = String(b.pinfl ?? '').replace(/\D/g, '');
+  const birth = String(b.birth ?? '');
+  if (!/^[A-Z]{2}$/.test(series)) return res.status(400).json({ error: 'Серия — две латинские буквы, например AA или AD' });
+  if (!/^\d{7}$/.test(number)) return res.status(400).json({ error: 'Номер паспорта — 7 цифр' });
+  if (!/^\d{14}$/.test(pinfl)) return res.status(400).json({ error: 'ПИНФЛ — 14 цифр, он есть в паспорте или ID-карте' });
+  const born = Date.parse(`${birth}T00:00:00Z`);
+  const age = (Date.now() - born) / (365.25 * 86400_000);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(birth) || !Number.isFinite(born) || age < 16 || age > 100) return res.status(400).json({ error: 'Проверьте дату рождения' });
+  const account = db.byId('accounts', req.account.id);
+  if (account.passport?.at) return res.status(409).json({ error: 'Паспорт уже указан. Чтобы изменить, напишите в поддержку' });
+  const index = (db.data.passportIndex ??= {});
+  const key = pinflKey(pinfl);
+  if (index[key] && index[key] !== account.id) return res.status(409).json({ error: 'Этот паспорт уже привязан к другому аккаунту Voli' });
+  index[key] = account.id;
+  db.update('accounts', account.id, { passport: { series, last: number.slice(-3), birth, at: new Date().toISOString() } });
+  const fresh = db.byId('accounts', account.id);
+  const granted = syncRewards(fresh);
+  announceRewards(fresh, granted);
+  res.json({ user: publicAccount(fresh), granted });
 });
 
 // ---------------------------------------------------------------------------

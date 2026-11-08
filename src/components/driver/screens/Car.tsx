@@ -29,7 +29,7 @@ export const portTypes: { type: string; label: string; maxKw: number }[] = [
   { type: 'NACS', label: 'NACS (Tesla)', maxKw: 250 },
 ];
 
-/** "+100 000 sum for your car's details", while that reward is still to get. */
+/** "+50 000 sum for your car's details", while that reward is still to get. */
 export function CarBonusBanner() {
   const reward = useSync().state?.rewards?.achievements.find(a => a.id === 'car');
   if (!reward || reward.grantedAt) return null;
@@ -44,7 +44,7 @@ export function CarBonusBanner() {
   );
 }
 
-export function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { brand: string; model: string; year: number; battery: number; port: string; maxKw: number; chargeLimit: number }) => void }) {
+export function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (car: { brand: string; model: string; year: number; battery: number; port: string; maxKw: number; chargeLimit: number; plate?: string }) => void }) {
   // Editing starts from the car already saved, if there is one.
   const saved = useSync().sessions.driver?.car;
   const [brand, setBrand] = useState(saved?.brand ?? 'BYD');
@@ -54,6 +54,7 @@ export function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (
   const [port, setPort] = useState(saved?.port.replace(/^Type (\d)$/, 'Type$1') ?? 'CCS2');
   const [maxKw, setMaxKw] = useState(saved?.maxKw ?? 150);
   const [chargeLimit, setChargeLimit] = useState(saved?.chargeLimit ?? 80);
+  const [plate, setPlate] = useState(saved?.plate ?? '');
   const [step, setStep] = useState<'form' | 'confirm'>('form');
   const [saving, setSaving] = useState(false);
   const stations = useLiveStations();
@@ -67,7 +68,7 @@ export function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (
   const save = async () => {
     setSaving(true);
     try {
-      await onSave({ brand, model, year, battery, port, maxKw, chargeLimit });
+      await onSave({ brand, model, year, battery, port, maxKw, chargeLimit, ...(plate ? { plate } : {}) });
     } finally {
       setSaving(false);
     }
@@ -94,6 +95,7 @@ export function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (
               { label: 'Ёмкость батареи', value: `${battery} кВт·ч` },
               { label: 'Тип разъёма', value: selectedPort?.label || port },
               { label: 'Макс. мощность зарядки', value: `${maxKw} кВт` },
+              ...(plate ? [{ label: 'Госномер', value: plate }] : []),
             ].map(row => (
               <div key={row.label} className="px-4 py-3 flex justify-between border-b border-slate-50 last:border-none">
                 <span className="text-sm text-slate-500">{row.label}</span>
@@ -162,6 +164,14 @@ export function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Plate, from the registration certificate */}
+        <div className="bg-white rounded-2xl border border-slate-100 p-4">
+          <label htmlFor="car-plate" className="text-xs font-semibold text-slate-500">ГОСНОМЕР ИЗ ТЕХПАСПОРТА</label>
+          <input id="car-plate" value={plate} onChange={e => setPlate(e.target.value.toUpperCase().replace(/[^A-Z0-9А-Я]/g, '').slice(0, 10))} placeholder="01A123BC" autoComplete="off"
+            className="mt-2 w-full h-11 rounded-xl border border-slate-200 px-3 text-base font-semibold tracking-wider text-slate-900 outline-none focus:border-[#FFC83D]" />
+          <p className="text-[11px] text-slate-400 mt-1.5">Необязательно. Поможет сетям и автопарку узнавать машину</p>
         </div>
 
         {/* Year */}

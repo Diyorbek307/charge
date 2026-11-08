@@ -33,6 +33,7 @@ import { subscribePush } from './PushToggle';
 import { enableNativePush, nativePushAvailable } from '../lib/nativePush';
 import { BookingDoneScreen, BookingScreen } from './driver/screens/Booking';
 import { AddCarScreen } from './driver/screens/Car';
+import PassportScreen from './driver/screens/Passport';
 import { type ChargeOptions, ChargingStartScreen, useLargeMode } from './driver/screens/ChargingStart';
 import { FavoritesScreen } from './driver/screens/Favorites';
 import { OnboardingScreen } from './driver/screens/Onboarding';
@@ -42,7 +43,7 @@ import { StationDetailSheet } from './driver/screens/StationSheet';
 import { SupportScreen } from './driver/screens/Support';
 import { WalletScreen } from './driver/screens/Wallet';
 
-type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate' | 'rewards' | 'battery' | 'plus' | 'autocharge' | 'referral';
+type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate' | 'rewards' | 'battery' | 'plus' | 'autocharge' | 'referral' | 'passport';
 type Tab = 'map' | 'charging' | 'deals' | 'profile';
 // The QR scanner sits in the middle, raised: it is how most charges start.
 const tabs: { id: Tab; label: string; icon: ReactNode }[] = [
@@ -237,6 +238,7 @@ export default function DriverApp() {
   const walletFrom = useRef<Screen>('profile');
   // The car form opens from the profile, the charging tab or the rewards; saving returns there.
   const carFrom = useRef<Screen>('profile');
+  const passportFrom = useRef<Screen>('profile');
   const batteryFrom = useRef<Screen>('profile');
   // A reward just reached: shown big, one at a time.
   const [burst, setBurst] = useState<{ amount: number; title: string } | null>(null);
@@ -498,7 +500,7 @@ export default function DriverApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [driverAccount?.id]);
 
-  const saveCar = async (car: { brand: string; model: string; year: number; battery: number; port: string; maxKw: number; chargeLimit: number }) => {
+  const saveCar = async (car: { brand: string; model: string; year: number; battery: number; port: string; maxKw: number; chargeLimit: number; plate?: string }) => {
     try {
       const { user, granted } = await actions.saveCar('driver', { ...car, port: car.port.replace(/^Type(\d)$/, 'Type $1') });
       updateAccount('driver', user);
@@ -565,7 +567,17 @@ export default function DriverApp() {
     if (screen === 'plus') return <PlusScreen onBack={() => setScreen('profile')} onTopUp={() => { walletFrom.current = 'plus'; setScreen('wallet'); }} />;
     if (screen === 'battery') return <BatteryScreen onBack={() => setScreen(batteryFrom.current)} onAddCar={() => { carFrom.current = 'battery'; setScreen('add-car'); }} />;
     if (screen === 'referral') return <ReferralScreen onBack={() => setScreen('profile')} />;
-    if (screen === 'rewards') return <RewardsScreen onBack={() => setScreen('profile')} onAddCar={() => { carFrom.current = 'rewards'; setScreen('add-car'); }} />;
+    if (screen === 'passport') return <PassportScreen onBack={() => setScreen(passportFrom.current)} onSaved={(user, granted) => {
+      updateAccount('driver', user);
+      const g = granted?.[0];
+      if (g) {
+        seenRewards.current.add(g.id);
+        setBurst({ amount: g.amount, title: g.title });
+      }
+      void refresh();
+      setScreen(passportFrom.current);
+    }} />;
+    if (screen === 'rewards') return <RewardsScreen onBack={() => setScreen('profile')} onAddCar={() => { carFrom.current = 'rewards'; setScreen('add-car'); }} onPassport={() => { passportFrom.current = 'rewards'; setScreen('passport'); }} />;
     if (screen === 'notifications') return <NotificationsScreen onBack={() => setScreen('profile')} />;
     if (screen === 'reviews') return <ReviewsScreen station={selectedStation} onBack={backToStation} />;
     if (screen === 'report') return <ReportScreen station={reportFrom.current === 'station' ? selectedStation : null} onBack={() => (reportFrom.current === 'station' ? backToStation() : setScreen(reportFrom.current))} />;
@@ -599,7 +611,7 @@ export default function DriverApp() {
     );
   };
 
-  const showTabs = !['history', 'charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host', 'credit', 'navigate', 'eco', 'rewards', 'battery', 'plus', 'autocharge', 'referral'].includes(screen);
+  const showTabs = !['history', 'charging-start', 'charging-active', 'charging-done', 'trip', 'booking', 'booking-done', 'add-car', 'notifications', 'reviews', 'report', 'favorites', 'qr-scan', 'app-settings', 'wallet', 'security', 'support', 'finance', 'loyalty', 'family', 'host', 'credit', 'navigate', 'eco', 'rewards', 'battery', 'plus', 'autocharge', 'referral', 'passport'].includes(screen);
 
   return (
     <div ref={appRef} className="pg-app h-full flex flex-col bg-white overflow-hidden relative" style={{ fontFamily: 'Inter, sans-serif' }}>

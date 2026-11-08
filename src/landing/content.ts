@@ -6,7 +6,7 @@ import { BRAND } from '../brand';
  * through the dashboard phrase tables — marketing text needs real wording.
  *
  * Comparison rows use 2 = yes, 1 = partly / some apps, 0 = no.
- * Market figures we don't have yet are left as [___] on purpose.
+ * Market figures are official: Нацкомстат (1 July 2026), daryo.uz (Aug 2025), Минэкономфин and kun.uz (May 2026).
  */
 const B = BRAND.name;
 
@@ -75,7 +75,7 @@ const ru = {
     title: 'Пара минут — и всё понятно.',
     tabs: { driver: 'Водителю', network: 'Сети зарядки' },
     driver: [
-      { t: 'Войдите по номеру телефона', d: 'Код придёт в SMS. Добавьте автомобиль и получите 100 000 сум бонуса.' },
+      { t: 'Войдите по номеру телефона', d: 'Код придёт в SMS. Добавьте автомобиль и паспорт — получите по 50 000 сум бонуса.' },
       { t: 'Найдите станцию', d: 'Карта покажет все сети, путь по дорогам и где будет свободно к вашему приезду. Разъём можно забронировать.' },
       { t: 'Подключите кабель и отсканируйте QR', d: 'Цену вы видите заранее, а ход зарядки — даже на экране блокировки.' },
       { t: 'Оплатите и поезжайте', d: 'Деньги спишутся из кошелька по факту, чек останется в приложении. Ночью на 30% дешевле.' },
@@ -124,7 +124,7 @@ const ru = {
     facts: [
       { n: '0', t: 'своих станций — мы одинаково честны со всеми сетями' },
       { n: '3', t: 'языка: узбекский, русский и английский' },
-      { n: '[___]', t: 'сетей-партнёров на старте' },
+      { n: '5%', t: 'наша комиссия с зарядки — остальное получает сеть' },
       { n: 'IV кв. 2026', t: 'запуск в Ташкенте' },
     ],
     principles: {
@@ -166,8 +166,8 @@ const ru = {
       },
       {
         id: 'care', n: '04', t: 'Выгода и забота', lead: 'Платите меньше, а батарея служит дольше.',
-        points: ['Ночью дешевле на 30%', 'Бонус 100 000 сум за данные автомобиля', 'Награды и подписка Voli Plus', 'Контроль здоровья батареи', 'Подсказки, чем заняться во время зарядки', 'Автопарки и семьи, три языка, Telegram'],
-        ui: ['Ночью ×0,7', '+100 000 сум', 'Батарея 96%'],
+        points: ['Ночью дешевле на 30%', 'Бонусы: по 50 000 сум за машину и паспорт, по 20 000 вам и другу', 'Награды и подписка Voli Plus', 'Контроль здоровья батареи', 'Подсказки, чем заняться во время зарядки', 'Автопарки и семьи, три языка, Telegram'],
+        ui: ['Ночью ×0,7', '+50 000 сум', 'Батарея 96%'],
       },
     ],
   },
@@ -286,7 +286,7 @@ const ru = {
   facts: [
     { n: '×0,7', t: 'ночью, с 23:00 до 07:00' },
     { n: '0 сум', t: 'за регистрацию — платите только за зарядку' },
-    { n: '100 000', t: 'сум бонуса за данные автомобиля' },
+    { n: '50 000', t: 'сум за данные машины и столько же за паспорт' },
     { n: '14 дней', t: 'на оплату зарядки в долг, без процентов' },
   ],
   green: {
@@ -329,9 +329,9 @@ const ru = {
     market: {
       title: 'Рынок растёт',
       items: [
-        { n: '[___]', t: 'электромобилей в Узбекистане' },
-        { n: '[___]', t: 'зарядных станций' },
-        { n: '[___]', t: 'сетей зарядки' },
+        { n: '122,7 тыс.', t: 'электромобилей в Узбекистане на 1 июля 2026 (Нацкомстат)' },
+        { n: '+68%', t: 'электромобилей за год: с 73 тыс. до 122,7 тыс.' },
+        { n: '≈1 400 → 4 000', t: 'зарядных станций сейчас и по плану на конец 2026 года' },
       ],
     },
     stepsTitle: 'Как подключиться',
@@ -400,7 +400,7 @@ const ru = {
         t: 'Водителям',
         items: [
           { q: `Что такое ${B}?`, a: `${B} — одно приложение для всех зарядных станций Узбекистана. Мы не строим свои станции, а подключаем сети-партнёров. Карта, запуск, оплата и очередь работают одинаково в любой сети.` },
-          { q: 'Подойдёт ли моя машина?', a: 'Приложение показывает тип и мощность каждого разъёма, а фильтр оставляет только подходящие станции. Добавьте данные автомобиля и получите бонус 100 000 сум.' },
+          { q: 'Подойдёт ли моя машина?', a: 'Приложение показывает тип и мощность каждого разъёма, а фильтр оставляет только подходящие станции. Добавьте данные автомобиля и получите бонус 50 000 сум.' },
           { q: 'Что если все разъёмы заняты?', a: 'Встаньте в очередь или забронируйте разъём заранее. Когда он освободится, мы придержим его для вас и пришлём уведомление.' },
           { q: 'Что если на трассе нет интернета?', a: 'Сохраните маршрут заранее: карта, станции и навигатор с камерами будут работать офлайн. На крайний случай есть кнопка SOS.' },
           { q: 'Работает ли Voli в машине?', a: 'Да, через Android Auto и CarPlay: карта и навигатор появятся на экране автомобиля.' },
@@ -514,7 +514,7 @@ const uz: LandingCopy = {
     title: 'Bir necha daqiqa — va hammasi tushunarli.',
     tabs: { driver: 'Haydovchiga', network: 'Zaryadlash tarmog‘iga' },
     driver: [
-      { t: 'Telefon raqamingiz bilan kiring', d: 'Kod SMS orqali keladi. Avtomobilingizni qo‘shing va 100 000 so‘m bonus oling.' },
+      { t: 'Telefon raqamingiz bilan kiring', d: 'Kod SMS orqali keladi. Avtomobil va pasportni qo‘shing — har biri uchun 50 000 so‘m bonus oling.' },
       { t: 'Stansiyani toping', d: 'Xarita barcha tarmoqlarni, yo‘l bo‘yicha masofani va yetib borganingizda qayer bo‘sh bo‘lishini ko‘rsatadi. Ulagichni band qilish mumkin.' },
       { t: 'Kabelni ulang va QR kodni skanerlang', d: 'Narxni oldindan ko‘rasiz, zaryadlash jarayonini esa hatto qulf ekranida.' },
       { t: 'To‘lang va yo‘lga chiqing', d: 'Pul hamyondan haqiqiy sarf bo‘yicha yechiladi, chek ilovada qoladi. Tunda 30% arzonroq.' },
@@ -563,7 +563,7 @@ const uz: LandingCopy = {
     facts: [
       { n: '0', t: 'o‘z stansiyamiz — barcha tarmoqlarga birdek halolmiz' },
       { n: '3', t: 'til: o‘zbek, rus va ingliz' },
-      { n: '[___]', t: 'hamkor tarmoq boshlanishda' },
+      { n: '5%', t: 'quvvatlashdan komissiyamiz — qolgani tarmoqqa' },
       { n: '2026, IV chorak', t: 'Toshkentda ishga tushish' },
     ],
     principles: {
@@ -605,8 +605,8 @@ const uz: LandingCopy = {
       },
       {
         id: 'care', n: '04', t: 'Foyda va g‘amxo‘rlik', lead: 'Kamroq to‘laysiz, batareya esa uzoqroq xizmat qiladi.',
-        points: ['Tunda 30% arzonroq', 'Avtomobil ma’lumotlari uchun 100 000 so‘m bonus', 'Mukofotlar va Voli Plus obunasi', 'Batareya salomatligi nazorati', 'Zaryadlash paytida nima qilish haqida maslahatlar', 'Avtoparklar va oilalar, uch til, Telegram'],
-        ui: ['Tunda ×0,7', '+100 000 so‘m', 'Batareya 96%'],
+        points: ['Tunda 30% arzonroq', 'Bonuslar: mashina va pasport uchun 50 000 so‘mdan, sizga va do‘stingizga 20 000 so‘mdan', 'Mukofotlar va Voli Plus obunasi', 'Batareya salomatligi nazorati', 'Zaryadlash paytida nima qilish haqida maslahatlar', 'Avtoparklar va oilalar, uch til, Telegram'],
+        ui: ['Tunda ×0,7', '+50 000 so‘m', 'Batareya 96%'],
       },
     ],
   },
@@ -725,7 +725,7 @@ const uz: LandingCopy = {
   facts: [
     { n: '×0,7', t: 'tunda, 23:00 dan 07:00 gacha' },
     { n: '0 so‘m', t: 'ro‘yxatdan o‘tish uchun — faqat zaryadlash uchun to‘laysiz' },
-    { n: '100 000', t: 'so‘m bonus avtomobil ma’lumotlari uchun' },
+    { n: '50 000', t: 'so‘m mashina ma’lumotlari uchun va shuncha pasport uchun' },
     { n: '14 kun', t: 'qarzga zaryadlashni to‘lash uchun, foizsiz' },
   ],
   green: {
@@ -768,9 +768,9 @@ const uz: LandingCopy = {
     market: {
       title: 'Bozor o‘smoqda',
       items: [
-        { n: '[___]', t: 'O‘zbekistondagi elektromobillar' },
-        { n: '[___]', t: 'zaryadlash stansiyalari' },
-        { n: '[___]', t: 'zaryadlash tarmoqlari' },
+        { n: '122,7 ming', t: 'O‘zbekistondagi elektromobillar, 2026-yil 1-iyul holatiga (Milliy statistika qo‘mitasi)' },
+        { n: '+68%', t: 'bir yilda elektromobillar: 73 mingdan 122,7 minggacha' },
+        { n: '≈1 400 → 4 000', t: 'zaryadlash stansiyalari hozir va 2026-yil oxirigacha reja' },
       ],
     },
     stepsTitle: 'Qanday ulanish mumkin',
@@ -839,7 +839,7 @@ const uz: LandingCopy = {
         t: 'Haydovchilarga',
         items: [
           { q: `${B} nima?`, a: `${B} — O‘zbekistondagi barcha zaryadlash stansiyalari uchun bitta ilova. Biz o‘z stansiyalarimizni qurmaymiz, hamkor tarmoqlarni ulaymiz. Xarita, boshlash, to‘lov va navbat istalgan tarmoqda bir xil ishlaydi.` },
-          { q: 'Mashinam mos keladimi?', a: 'Ilova har bir ulagichning turi va quvvatini ko‘rsatadi, filtr esa faqat mos stansiyalarni qoldiradi. Avtomobil ma’lumotlarini qo‘shing va 100 000 so‘m bonus oling.' },
+          { q: 'Mashinam mos keladimi?', a: 'Ilova har bir ulagichning turi va quvvatini ko‘rsatadi, filtr esa faqat mos stansiyalarni qoldiradi. Avtomobil ma’lumotlarini qo‘shing va 50 000 so‘m bonus oling.' },
           { q: 'Hamma ulagichlar band bo‘lsa-chi?', a: 'Navbatga turing yoki ulagichni oldindan band qiling. U bo‘shaganda uni siz uchun saqlab turamiz va bildirishnoma yuboramiz.' },
           { q: 'Trassada internet bo‘lmasa-chi?', a: 'Marshrutni oldindan saqlang: xarita, stansiyalar va kamerali navigator oflayn ishlaydi. Favqulodda holat uchun SOS tugmasi bor.' },
           { q: 'Voli mashinada ishlaydimi?', a: 'Ha, Android Auto va CarPlay orqali: xarita va navigator avtomobil ekranida paydo bo‘ladi.' },
@@ -951,7 +951,7 @@ const en: LandingCopy = {
     title: 'A couple of minutes and you’re set.',
     tabs: { driver: 'For drivers', network: 'For networks' },
     driver: [
-      { t: 'Sign in with your phone number', d: 'The code arrives by text. Add your car and get a 100,000 UZS bonus.' },
+      { t: 'Sign in with your phone number', d: 'The code arrives by text. Add your car and your passport and get a 50,000 UZS bonus for each.' },
       { t: 'Find a charger', d: 'The map shows every network, the route by road and what will be free when you arrive. You can book a connector.' },
       { t: 'Plug in and scan the QR code', d: 'You see the price up front and the charging progress even on your lock screen.' },
       { t: 'Pay and drive off', d: 'Your wallet pays for what you used, and the receipt stays in the app. 30% cheaper at night.' },
@@ -1000,7 +1000,7 @@ const en: LandingCopy = {
     facts: [
       { n: '0', t: 'chargers of our own — we’re equally fair to every network' },
       { n: '3', t: 'languages: Uzbek, Russian and English' },
-      { n: '[___]', t: 'partner networks at launch' },
+      { n: '5%', t: 'our commission per charge — the rest goes to the network' },
       { n: 'Q4 2026', t: 'launch in Tashkent' },
     ],
     principles: {
@@ -1042,8 +1042,8 @@ const en: LandingCopy = {
       },
       {
         id: 'care', n: '04', t: 'Savings and care', lead: 'Pay less, and keep your battery healthy for longer.',
-        points: ['30% cheaper at night', '100,000 UZS bonus for your car’s details', 'Rewards and a Voli Plus subscription', 'Battery health tracking', 'Ideas for what to do while you charge', 'Fleets and families, three languages, Telegram'],
-        ui: ['×0.7 at night', '+100,000 UZS', 'Battery 96%'],
+        points: ['30% cheaper at night', 'Bonuses: 50,000 UZS each for your car and passport, 20,000 each for you and a friend', 'Rewards and a Voli Plus subscription', 'Battery health tracking', 'Ideas for what to do while you charge', 'Fleets and families, three languages, Telegram'],
+        ui: ['×0.7 at night', '+50,000 UZS', 'Battery 96%'],
       },
     ],
   },
@@ -1162,7 +1162,7 @@ const en: LandingCopy = {
   facts: [
     { n: '×0.7', t: 'at night, 23:00 to 07:00' },
     { n: '0 UZS', t: 'to sign up — you pay only for charging' },
-    { n: '100,000', t: 'UZS bonus for your car’s details' },
+    { n: '50,000', t: 'UZS for your car’s details, and as much for your passport' },
     { n: '14 days', t: 'to pay for a charge on credit, interest-free' },
   ],
   green: {
@@ -1205,9 +1205,9 @@ const en: LandingCopy = {
     market: {
       title: 'A growing market',
       items: [
-        { n: '[___]', t: 'electric cars in Uzbekistan' },
-        { n: '[___]', t: 'charging stations' },
-        { n: '[___]', t: 'charging networks' },
+        { n: '122.7k', t: 'electric cars in Uzbekistan on 1 July 2026 (national statistics committee)' },
+        { n: '+68%', t: 'more electric cars in a year: from 73k to 122.7k' },
+        { n: '≈1,400 → 4,000', t: 'charging stations now, and planned by the end of 2026' },
       ],
     },
     stepsTitle: 'How to join',
@@ -1276,7 +1276,7 @@ const en: LandingCopy = {
         t: 'For drivers',
         items: [
           { q: `What is ${B}?`, a: `${B} is one app for every EV charger in Uzbekistan. We don’t build chargers — we connect partner networks. The map, starting, paying and queuing work the same on any network.` },
-          { q: 'Will my car work?', a: 'The app shows each connector’s type and power, and a filter keeps only compatible chargers. Add your car’s details and get a 100,000 UZS bonus.' },
+          { q: 'Will my car work?', a: 'The app shows each connector’s type and power, and a filter keeps only compatible chargers. Add your car’s details and get a 50,000 UZS bonus.' },
           { q: 'What if every connector is busy?', a: 'Join the queue or book a connector in advance. When it frees up, we hold it for you and send a notification.' },
           { q: 'What if there’s no signal on the highway?', a: 'Save the route in advance: the map, chargers and navigation with cameras all work offline. And for emergencies there’s an SOS button.' },
           { q: 'Does Voli work in the car?', a: 'Yes, through Android Auto and CarPlay: the map and navigation appear on your car’s screen.' },

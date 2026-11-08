@@ -40,9 +40,9 @@ const WHAT = { db: 'База данных не сохраняется', mail: '�
 export function errorHandler(app) {
   app.use((err, req, _res, next) => {
     const route = `${req.method} ${req.baseUrl ?? ''}${req.route?.path ?? ''}`;
-    if (DSN) Sentry.captureException(err, { tags: { where: route } });
-    // A client's malformed request is not a breakdown.
+    // A client's malformed request (a bot's broken %-escape, bad JSON) is not a breakdown.
     if (!(err.status >= 400 && err.status < 500)) {
+      if (DSN) Sentry.captureException(err, { tags: { where: route } });
       const d = describe(err);
       void alertTeam(`route:${route}:${d.message}`, 'Сервер ответил ошибкой 500', [['Запрос', route], ['Ошибка', d.message], ...(d.at ? [['Где', d.at]] : [])]);
     }

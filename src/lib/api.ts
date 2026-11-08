@@ -87,6 +87,8 @@ export interface Account {
   linked?: ('google' | 'apple')[];
   /** A driver's own car, when they have told us. */
   car?: Car | null;
+  /** What is kept of a driver's passport: series, last three digits, birth date. */
+  passport?: { series: string; last: string; birth: string; at: string } | null;
   /** Linked Telegram account: one-tap sign-in in the Mini App and bot notifications. */
   telegram?: { id: string; username: string | null; firstName: string; linkedAt: string; notify?: boolean } | null;
   /** The user agreement this driver accepted: its version, when, and whether promotions are welcome. */
@@ -100,6 +102,8 @@ export interface Referral {
   percent: number;
   months: number;
   friendBonus: number;
+  /** What the inviter gets once, on the friend's first paid charge. */
+  inviterBonus: number;
   monthCap: number;
   earnedMonth: number;
   earnedTotal: number;
@@ -122,6 +126,8 @@ export interface Car {
   maxKw: number;
   /** Stop charging at this level, %; 80 by default. */
   chargeLimit?: number;
+  /** Plate number from the registration certificate. */
+  plate?: string;
 }
 
 export interface StationForecast {
@@ -1019,6 +1025,7 @@ export const apiClient = {
   cancelPlus: () => request<PlusState>('/plus', { method: 'DELETE', portal: 'driver' }),
   batteryHealth: () => request<BatteryHealth>('/battery', { portal: 'driver' }),
   saveCar: (portal: Portal, car: Car) => request<{ user: Account; granted?: BonusGrant[] }>('/me/car', { method: 'PUT', body: JSON.stringify(car), portal }),
+  savePassport: (p: { series: string; number: string; pinfl: string; birth: string }) => request<{ user: Account; granted?: BonusGrant[] }>('/me/passport', { method: 'PUT', body: JSON.stringify(p), portal: 'driver' }),
   logout: (portal: Portal) => post<{ ok: boolean }>('/auth/logout', undefined, portal),
 
   /** payer 'company' charges a fleet employee's session to their employer, within the monthly limit. */

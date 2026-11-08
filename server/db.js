@@ -264,6 +264,15 @@ class Database {
         if (!this.saveError) report(err, 'db.save');
         this.saveError = err;
         console.warn('[db] persist failed:', err.message);
+        // The database may be restarting (Render maintenance): try again shortly, so
+        // the changes are not left waiting for the next one.
+        if (!this.retryTimer) {
+          this.retryTimer = setTimeout(() => {
+            this.retryTimer = null;
+            this.save();
+          }, 10_000);
+          this.retryTimer.unref?.();
+        }
       });
     return this.writing;
   }

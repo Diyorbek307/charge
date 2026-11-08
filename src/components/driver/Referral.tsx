@@ -47,7 +47,7 @@ export default function ReferralScreen({ onBack }: { onBack: () => void }) {
         <button onClick={onBack} aria-label="Назад" className="p-2 rounded-xl bg-slate-100"><ArrowLeft size={18} className="text-slate-600" /></button>
         <div>
           <h1 className="text-base font-bold text-slate-900">Приведи друга</h1>
-          <p className="text-xs text-slate-500">Бонусы за каждую зарядку друзей</p>
+          <p className="text-xs text-slate-500">Бонус вам и другу</p>
         </div>
       </div>
 
@@ -64,8 +64,10 @@ export default function ReferralScreen({ onBack }: { onBack: () => void }) {
             <div className="relative overflow-hidden rounded-3xl p-5 text-[#111] pg-reveal" style={{ background: 'linear-gradient(135deg,#FFE08A,#FFC83D 55%,#FFB000)' }}>
               <span className="absolute -right-6 -top-6 w-32 h-32 rounded-full bg-white/25" aria-hidden="true" />
               <p className="text-xs font-bold uppercase tracking-wider text-[#5C3D00]">Вам и другу</p>
-              <p className="text-[28px] leading-tight font-extrabold mt-1">{`${r.percent}% с каждой зарядки друга`}</p>
-              <p className="text-sm mt-1.5 text-[#2A2A30]">{`Бонусом на ваш кошелёк, ${r.months} мес. А другу — ${sum(r.friendBonus)} на первую зарядку.`}</p>
+              <p className="text-[28px] leading-tight font-extrabold mt-1">{r.inviterBonus > 0 ? `${sum(r.inviterBonus)} вам и ${sum(r.friendBonus)} другу` : `${r.percent}% с каждой зарядки друга`}</p>
+              <p className="text-sm mt-1.5 text-[#2A2A30]">{r.inviterBonus > 0
+                ? `Бонусом на зарядку, когда друг сделает первую зарядку.${r.percent > 0 ? ` И ещё ${r.percent}% с каждой его зарядки ${r.months} мес.` : ''}`
+                : `Бонусом на ваш кошелёк, ${r.months} мес. А другу — ${sum(r.friendBonus)} на первую зарядку.`}</p>
 
               <div className="mt-4 bg-white rounded-2xl p-3 flex items-center gap-3 shadow-sm">
                 <div className="flex-1 min-w-0">
@@ -104,7 +106,8 @@ export default function ReferralScreen({ onBack }: { onBack: () => void }) {
                 {[
                   'Отправьте другу ссылку или код',
                   `Друг регистрируется в ${BRAND.name} и получает ${sum(r.friendBonus)} на первую зарядку`,
-                  `Каждый раз, когда друг оплачивает зарядку, вам приходит ${r.percent}% её стоимости — бонусом на зарядку`,
+                  ...(r.inviterBonus > 0 ? [`Когда друг оплатит первую зарядку, вам придёт ${sum(r.inviterBonus)} — бонусом на зарядку`] : []),
+                  ...(r.percent > 0 ? [`Каждый раз, когда друг оплачивает зарядку, вам приходит ${r.percent}% её стоимости — бонусом на зарядку`] : []),
                 ].map((t, i) => (
                   <li key={i} className="flex gap-3 items-start">
                     <span className="w-6 h-6 rounded-full bg-[#FFC83D] text-[#111] text-xs font-bold grid place-items-center shrink-0">{i + 1}</span>

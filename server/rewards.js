@@ -15,9 +15,9 @@ const DAY = 86_400_000;
 // Amounts, goals, the budget and the bonus's life are the admin's to set (server/settings.js).
 const BONUS_DAYS = () => setting('rewards.bonusDays');
 const MONTH_BUDGET = () => setting('rewards.monthBudget');
-const amountOf = a => (a.id === 'car' ? setting('rewards.carBonus') : setting(`rewards.${a.id}.amount`));
+const amountOf = a => (a.id === 'car' ? setting('rewards.carBonus') : a.id === 'passport' ? setting('rewards.passportBonus') : setting(`rewards.${a.id}.amount`));
 const goalOf = a => (a.goal > 1 ? setting(`rewards.${a.id}.goal`) : a.goal);
-const enabled = a => a.id === 'car' || setting(`rewards.${a.id}.on`);
+const enabled = a => a.id === 'car' || a.id === 'passport' || setting(`rewards.${a.id}.on`);
 
 const store = () => (db.data.bonuses ??= {});
 const ledger = () => (db.data.bonusLedger ??= []);
@@ -29,6 +29,8 @@ const cityOf = s => db.byId('stations', s.stationId)?.city ?? null;
 /** What can be earned, and how far along the driver is. */
 export const ACHIEVEMENTS = [
   { id: 'car', icon: '🚗', title: 'Мой автомобиль', desc: 'Укажите марку, модель, батарею и разъём своей машины', goal: 1, progress: a => (a.car?.brand && a.car?.model && a.car?.battery && a.car?.port ? 1 : 0) },
+  // Paid once per passport, not per account (server/passport.js refuses a passport already in use).
+  { id: 'passport', icon: '🪪', title: 'Паспорт водителя', desc: 'Укажите серию и номер паспорта, ПИНФЛ и дату рождения', goal: 1, progress: a => (a.passport?.at ? 1 : 0) },
   { id: 'first', icon: '⚡', title: 'Первая зарядка', desc: 'Зарядитесь хотя бы на 5 кВт·ч', goal: 1, progress: (a, s) => (s.some(x => x.energy >= 5) ? 1 : 0) },
   { id: 'night', icon: '🌙', title: 'Ночная сова', desc: n => `${n} зарядок по ночному тарифу, 23:00–07:00`, goal: 5, progress: (a, s) => s.filter(x => x.multiplier === 0.7).length },
   { id: 'networks', icon: '🔀', title: 'Без границ', desc: n => `Зарядитесь в ${n} разных сетях`, goal: 3, progress: (a, s) => new Set(s.map(x => x.operatorId)).size },

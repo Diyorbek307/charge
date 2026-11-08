@@ -72,7 +72,7 @@ after(() => {
 });
 
 describe('bring a friend', () => {
-  test('a friend who signs up by the code brings a welcome bonus and the inviter a share of each paid charge', async () => {
+  test('a friend who signs up by the code brings a welcome bonus to the friend and a bonus to the inviter', async () => {
     const inviter = await newDriver('+998935552001', 'Aziz Rahimov');
     const me = (await call('/me/referral', { token: inviter.token })).data;
     assert.match(me.code, /^[A-Z2-9]{6}$/);
@@ -85,13 +85,15 @@ describe('bring a friend', () => {
 
     const first = await charge(friend.token);
     assert.ok(first.cost > 0);
+    assert.equal(me.inviterBonus, 20_000);
+    assert.equal(me.friendBonus, 20_000);
     const share = Math.round((first.cost * me.percent) / 100);
-    assert.equal(await bonus(inviter.token), before + share, 'the inviter earns their share');
+    assert.equal(await bonus(inviter.token), before + me.inviterBonus + share, 'the inviter gets the bonus on the first charge');
     const friendBonus = await bonus(friend.token);
     assert.ok(friendBonus >= me.friendBonus, 'the friend gets the welcome bonus');
 
     const second = await charge(friend.token);
-    assert.equal(await bonus(inviter.token), before + share + Math.round((second.cost * me.percent) / 100), 'every paid charge counts');
+    assert.equal(await bonus(inviter.token), before + me.inviterBonus + share + Math.round((second.cost * me.percent) / 100), 'the inviter bonus comes once');
     assert.ok((await bonus(friend.token)) <= friendBonus, 'the welcome bonus comes once');
 
     const after = (await call('/me/referral', { token: inviter.token })).data;
@@ -99,6 +101,24 @@ describe('bring a friend', () => {
     assert.equal(after.friends[0].name, 'Dilnoza Y.', 'the inviter sees a first name and an initial');
     assert.equal(after.friends[0].charges, 2);
     assert.equal(after.earnedTotal, after.friends[0].earned);
+    assert.ok(after.friends[0].earned >= me.inviterBonus);
+  });
+
+  test('a passport brings 50 000 sum once, and one passport cannot serve two accounts', async () => {
+    const a = await newDriver('+998935552021', 'Jasur Nazarov');
+    const b = await newDriver('+998935552022', 'Malika Ergasheva');
+    const passport = { series: 'aa', number: '1234567', pinfl: '30101900000001', birth: '1990-01-01' };
+    assert.equal((await call('/me/passport', { method: 'PUT', token: a.token, body: { ...passport, pinfl: '123' } })).status, 400, 'a short ПИНФЛ is refused');
+    assert.equal((await call('/me/passport', { method: 'PUT', token: a.token, body: { ...passport, birth: '2020-01-01' } })).status, 400, 'a child is refused');
+    const before = await bonus(a.token);
+    const saved = await call('/me/passport', { method: 'PUT', token: a.token, body: passport });
+    assert.equal(saved.status, 200);
+    assert.deepEqual(saved.data.user.passport && { series: saved.data.user.passport.series, last: saved.data.user.passport.last }, { series: 'AA', last: '567' });
+    assert.ok(!JSON.stringify(saved.data).includes('1234567') && !JSON.stringify(saved.data).includes('30101900000001'), 'the number and the ПИНФЛ are not kept');
+    assert.ok(saved.data.granted.some(g => g.kind === 'passport' && g.amount === 50_000));
+    assert.equal(await bonus(a.token), before + 50_000);
+    assert.equal((await call('/me/passport', { method: 'PUT', token: a.token, body: passport })).status, 409, 'once per account');
+    assert.equal((await call('/me/passport', { method: 'PUT', token: b.token, body: passport })).status, 409, 'once per passport');
   });
 
   test('no inviting oneself, no unknown codes, no second inviter, and the month has a cap', async () => {

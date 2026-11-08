@@ -1,7 +1,8 @@
 /**
  * Bring a friend. Every driver has a code; a friend who signs up with it
- * gets a welcome bonus on the first charge, and the one who invited them
- * earns a share of each charge the friend pays for, for a number of months.
+ * gets a welcome bonus on the first charge, and the one who invited them gets
+ * a bonus of their own at that moment. Optionally (off by default) the inviter
+ * also earns a share of each charge the friend pays for, for a number of months.
  *
  * Both are bonuses paid by Voli (the networks get their full price), drawn
  * from the same monthly rewards budget, and an inviter's earnings are capped
@@ -65,9 +66,16 @@ export function onFriendPaid(session) {
     const g = grantBonus(session.userId, 'ref-welcome', 'Бонус за приглашение друга', welcome);
     if (g) made.push(g);
   }
+  // The inviter's bonus: once per friend, on the friend's first paid charge.
+  const thanks = setting('referral.inviterBonus');
+  if (thanks > 0 && setting('referral.monthCap') - earnedThisMonth(link.by) >= thanks) {
+    const g = grantBonus(link.by, `ref-invite-${session.userId}`, `Друг ${firstName(friend?.name)} начал заряжаться`, thanks);
+    if (g) made.push({ ...g, userId: link.by });
+  }
   // The inviter's share, while the friendship is young and under the month's cap.
   if (Date.now() - Date.parse(link.at) > setting('referral.months') * MONTH) return made;
   const share = Math.round((session.cost * setting('referral.percent')) / 100);
+  if (share <= 0) return made;
   const room = setting('referral.monthCap') - earnedThisMonth(link.by);
   const amount = Math.min(share, room);
   if (amount > 0) {
@@ -91,7 +99,7 @@ export function referralFor(account) {
   const friends = links.map(([id, l]) => {
     const f = db.byId('accounts', id);
     const charges = db.data.sessions.filter(s => s.userId === id && s.status === 'completed' && s.cost > 0);
-    const earned = grants.filter(g => g.kind.startsWith('ref-') && charges.some(s => g.kind === `ref-${s.id}`)).reduce((n, g) => n + g.amount, 0);
+    const earned = grants.filter(g => g.kind === `ref-invite-${id}` || (g.kind.startsWith('ref-') && charges.some(s => g.kind === `ref-${s.id}`))).reduce((n, g) => n + g.amount, 0);
     return { name: shown(f?.name), since: l.at, charges: charges.length, earned, active: Date.now() - Date.parse(l.at) <= setting('referral.months') * MONTH };
   });
   return {
@@ -100,6 +108,7 @@ export function referralFor(account) {
     percent: setting('referral.percent'),
     months: setting('referral.months'),
     friendBonus: setting('referral.friendBonus'),
+    inviterBonus: setting('referral.inviterBonus'),
     monthCap: setting('referral.monthCap'),
     earnedMonth: earnedThisMonth(account.id),
     earnedTotal: friends.reduce((n, f) => n + f.earned, 0),

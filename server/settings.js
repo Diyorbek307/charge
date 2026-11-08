@@ -36,7 +36,8 @@ export const SCHEMA = [
   { key: 'legal.consentVersion', group: 'onboarding', label: 'Версия пользовательского согласия', hint: 'Увеличьте после изменения документа — каждый водитель примет его заново при следующем открытии', type: 'int', def: 1, min: 1, max: 1000 },
 
   // Bonuses and rewards (Voli pays them)
-  { key: 'rewards.carBonus', group: 'rewards', label: 'Бонус за данные автомобиля', type: 'money', def: n('CAR_BONUS_UZS', 100_000), min: 0, max: 1_000_000, unit: 'сум' },
+  { key: 'rewards.carBonus', group: 'rewards', label: 'Бонус за данные автомобиля', hint: 'Марка, модель, батарея, разъём и номер из техпаспорта', type: 'money', def: n('CAR_BONUS_UZS', 50_000), min: 0, max: 1_000_000, unit: 'сум' },
+  { key: 'rewards.passportBonus', group: 'rewards', label: 'Бонус за паспорт водителя', hint: 'Один паспорт — один бонус, на любом числе аккаунтов', type: 'money', def: n('PASSPORT_BONUS_UZS', 50_000), min: 0, max: 1_000_000, unit: 'сум' },
   { key: 'rewards.bonusDays', group: 'rewards', label: 'Срок жизни бонуса', type: 'int', def: n('BONUS_DAYS', 60), min: 1, max: 365, unit: 'дней' },
   { key: 'rewards.monthBudget', group: 'rewards', label: 'Бюджет наград в месяц', hint: 'Сверх него награды в этом месяце не начисляются', type: 'money', def: n('REWARDS_MONTH_BUDGET_UZS', 50_000_000), min: 0, max: 10_000_000_000, unit: 'сум' },
   ...[
@@ -55,7 +56,8 @@ export const SCHEMA = [
   { key: 'points.valueUzs', group: 'rewards', label: 'Стоимость одного балла', hint: 'При обмене баллов на кошелёк', type: 'money', def: 10, min: 0, max: 1000, unit: 'сум' },
 
   // Bring a friend (Voli pays, from the rewards budget)
-  { key: 'referral.percent', group: 'referral', label: 'Доля пригласившему', hint: 'От суммы каждой оплаченной зарядки друга — бонусом', type: 'percent', def: 5, min: 0, max: 30, unit: '%' },
+  { key: 'referral.inviterBonus', group: 'referral', label: 'Бонус пригласившему', hint: 'Один раз, когда друг оплатил первую зарядку', type: 'money', def: 20_000, min: 0, max: 1_000_000, unit: 'сум' },
+  { key: 'referral.percent', group: 'referral', label: 'Доля пригласившему', hint: 'От суммы каждой оплаченной зарядки друга — бонусом; 0 — выключено', type: 'percent', def: 0, min: 0, max: 30, unit: '%' },
   { key: 'referral.months', group: 'referral', label: 'Сколько месяцев начисляется', hint: 'Со дня, когда друг зарегистрировался', type: 'int', def: 12, min: 1, max: 60, unit: 'мес.' },
   { key: 'referral.friendBonus', group: 'referral', label: 'Бонус другу за первую зарядку', type: 'money', def: 20_000, min: 0, max: 1_000_000, unit: 'сум' },
   { key: 'referral.monthCap', group: 'referral', label: 'Потолок для пригласившего в месяц', hint: 'Сверх него за этот месяц не начисляется', type: 'money', def: 300_000, min: 0, max: 10_000_000, unit: 'сум' },

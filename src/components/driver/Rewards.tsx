@@ -9,7 +9,7 @@ const date = (iso: string) => new Date(iso).toLocaleDateString('ru-RU', { day: '
  * Voli's rewards: the bonus on the account, and each milestone with how
  * far along the driver is. The bonus pays for charging only and burns.
  */
-export default function RewardsScreen({ onBack, onAddCar }: { onBack: () => void; onAddCar: () => void }) {
+export default function RewardsScreen({ onBack, onAddCar, onPassport }: { onBack: () => void; onAddCar: () => void; onPassport?: () => void }) {
   const { state } = useSync();
   const r = state?.rewards;
   const list = r?.achievements ?? [];
@@ -65,6 +65,9 @@ export default function RewardsScreen({ onBack, onAddCar }: { onBack: () => void
                     )}
                     {a.id === 'car' && (
                       <button onClick={onAddCar} className="mt-2.5 w-full py-2.5 rounded-xl bg-[#111] text-white text-sm font-bold">Указать автомобиль</button>
+                    )}
+                    {a.id === 'passport' && onPassport && (
+                      <button onClick={onPassport} className="mt-2.5 w-full py-2.5 rounded-xl bg-[#111] text-white text-sm font-bold">Указать паспорт</button>
                     )}
                   </div>
                 </div>
