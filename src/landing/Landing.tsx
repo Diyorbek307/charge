@@ -69,6 +69,13 @@ const canTransition = () =>
   typeof document !== 'undefined' && !!(document as ViewTransitionDoc).startViewTransition
   && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+/**
+ * Whether the site shows the station network (live list, city station
+ * lists, the demo-data note). Off until real networks are connected: the
+ * stations in the database are demo ones. The app itself still shows them.
+ */
+const SHOW_NETWORK = false;
+
 const GoCtx = createContext<(p: Page) => void>(() => {});
 
 /** An ordinary link to a page — modified clicks still open a new tab. */
@@ -713,7 +720,7 @@ function DriversPage({ c, lang, fc }: { c: LandingCopy; lang: Lang; fc: TariffFo
       <PageHead kicker={p.kicker} title={p.title} sub={p.sub} />
       <Pillars c={c} />
       <Safety c={c} />
-      <LiveNetwork c={c} lang={lang} fc={fc} />
+      {SHOW_NETWORK && <LiveNetwork c={c} lang={lang} fc={fc} />}
       <Compare c={c} />
       <Cta c={c} />
     </>
@@ -1040,7 +1047,7 @@ function CityPage({ c, lang, id }: { c: LandingCopy; lang: Lang; id: CityId }) {
   const { state } = useSync();
   const k = c.cityPage;
   const v = { in: k.in[id] };
-  const list = useMemo(() => (state?.stations ?? []).filter(st => nearCity(id, st)), [state?.stations, id]);
+  const list = useMemo(() => (SHOW_NETWORK ? state?.stations ?? [] : []).filter(st => nearCity(id, st)), [state?.stations, id]);
   const connectors = list.flatMap(st => st.connectors);
   const free = connectors.filter(x => x.status === 'available').length;
   const minPrice = connectors.length ? Math.min(...connectors.map(x => x.price)) : 0;
@@ -1053,12 +1060,12 @@ function CityPage({ c, lang, id }: { c: LandingCopy; lang: Lang; id: CityId }) {
       </PageHead>
       <section className="lp-sec lp-sec-tight">
         <div className="lp-wrap">
-          <dl className="lp-city-stats rv">
+          {list.length > 0 && <dl className="lp-city-stats rv">
             <div><dd>{list.length}</dd><dt>{k.stats.stations}</dt></div>
             <div><dd>{connectors.length}</dd><dt>{k.stats.connectors}</dt></div>
             <div><dd>{free}</dd><dt>{k.stats.free}</dt></div>
             <div><dd>{minPrice ? fmt(minPrice, lang) : '—'}</dd><dt>{k.stats.from}</dt></div>
-          </dl>
+          </dl>}
           <h2 className="lp-h2 rv" style={{ marginTop: 56 }}>{fill(k.listTitle, v)}</h2>
           {shown.length === 0 ? <p className="lp-city-empty rv">{fill(k.empty, v)}</p> : (
             <div className="lp-city-grid">
@@ -1480,7 +1487,7 @@ function Footer({ c }: { c: LandingCopy }) {
       </div>
       <div className="lp-wrap lp-footer-base">
         <span>© {new Date().getFullYear()} {BRAND.name}. {c.footer.rights}</span>
-        <span>{c.footer.demo}</span>
+        {SHOW_NETWORK && <span>{c.footer.demo}</span>}
       </div>
       <p className="lp-footer-giant" aria-hidden="true">{BRAND.name}</p>
     </footer>

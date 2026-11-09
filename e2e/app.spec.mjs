@@ -27,22 +27,15 @@ test('landing page renders and switches language', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Agregator, raqobatchi emas.');
 });
 
-test('the landing feed shows a charge starting and ending on the network', async ({ page, request }) => {
+test('the site shows no demo stations until real networks connect', async ({ page }) => {
   await page.goto('/drivers');
-  const feed = page.locator('#network .lp-feed');
-  await feed.scrollIntoViewIfNeeded();
-  await expect(page.locator('#network .lp-st').first()).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.locator('#network')).toHaveCount(0);
+  await expect(page.locator('.lp-st')).toHaveCount(0);
 
-  const token = await apiToken(request, 'driver');
-  const headers = { Authorization: `Bearer ${token}` };
-  const start = await request.post('/api/sessions/start', { headers, data: { stationId: 'st-003', connectorId: 'c8' } });
-  expect(start.ok()).toBeTruthy();
-  await expect(feed.getByText('Началась зарядка')).toBeVisible();
-  await expect(feed.getByText(/Samarqand Gateway/).first()).toBeVisible();
-
-  const { session } = await start.json();
-  expect((await request.post(`/api/sessions/${session.id}/stop`, { headers })).ok()).toBeTruthy();
-  await expect(feed.getByText('Разъём освободился')).toBeVisible();
+  await page.goto('/tashkent');
+  await expect(page.locator('.lp-city-card')).toHaveCount(0);
+  await expect(page.locator('.lp-city-empty')).toBeVisible();
 });
 
 test('a driver charges end to end and the session is billed', async ({ page, request }) => {
