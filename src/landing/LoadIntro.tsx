@@ -23,10 +23,8 @@ const STEPS: Record<Lang, string[]> = {
 
 export function loadIntroDue() {
   try {
-    if (new URLSearchParams(window.location.search).has('intro')) return true;
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return false;
-    if (navigator.webdriver) return false;
-    return !sessionStorage.getItem(KEY);
+    // Off for now (owner's call): it plays only when ?intro is in the address.
+    return new URLSearchParams(window.location.search).has('intro');
   } catch {
     return false;
   }
