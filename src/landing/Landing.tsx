@@ -5,7 +5,7 @@ import {
   ArrowRight, ArrowUpRight, BellRing, CalendarClock, Check, Clock, CircleDollarSign, Gift, Handshake, HeartPulse,
   Layers, Map as MapIcon, Menu, Minus, Moon, Navigation, QrCode, ScanLine, ScrollText, Send, Siren, Sparkles,
   Car, Apple, Play, WifiOff, X, Zap, MapPin, Users, BadgePercent, Coffee, Megaphone, ChartColumn, Wallet, CreditCard, Lock,
-  ScanFace, KeyRound, LifeBuoy, Mail,
+  ScanFace, KeyRound, LifeBuoy, Mail, ChevronDown,
 } from 'lucide-react';
 import { useI18n, LANGS, type Lang } from '../lib/i18n';
 import { useSync } from '../lib/sync';
@@ -560,11 +560,15 @@ function LiveNetwork({ c, lang, fc }: { c: LandingCopy; lang: Lang; fc: TariffFo
   const stations = state?.stations;
   const feed = useActivity(stations, c.phone.kw);
   const [filter, setFilter] = useState<'all' | 'free' | 'fast'>('all');
-  const shown = (stations ?? []).filter(st =>
+  const [open, setOpen] = useState(false);
+  const matched = (stations ?? []).filter(st =>
     filter === 'free' ? st.connectors.some(k => k.status === 'available')
     : filter === 'fast' ? st.connectors.some(k => k.power >= 50)
     : true,
   );
+  // Eight rows are enough to show the network is alive; the rest on request.
+  const LIMIT = 8;
+  const shown = open ? matched : matched.slice(0, LIMIT);
   const time = (d: Date) =>
     d.toLocaleTimeString(lang === 'en' ? 'en-GB' : 'ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
@@ -576,7 +580,7 @@ function LiveNetwork({ c, lang, fc }: { c: LandingCopy; lang: Lang; fc: TariffFo
           <div className="lp-card lp-st-list rv">
             <div className="lp-chips" role="group" aria-label={c.network.kicker}>
               {(['all', 'free', 'fast'] as const).map(f => (
-                <button key={f} aria-pressed={filter === f} onClick={() => setFilter(f)}>{c.network.filters[f]}</button>
+                <button key={f} aria-pressed={filter === f} onClick={() => { setFilter(f); setOpen(false); }}>{c.network.filters[f]}</button>
               ))}
             </div>
             <div className="lp-st-rows">
@@ -599,6 +603,12 @@ function LiveNetwork({ c, lang, fc }: { c: LandingCopy; lang: Lang; fc: TariffFo
               })}
               {stations && shown.length === 0 && <p className="lp-note">{c.network.none}</p>}
             </div>
+            {matched.length > LIMIT && (
+              <button className="lp-btn lp-btn-ghost lp-st-more" aria-expanded={open} onClick={() => setOpen(o => !o)}>
+                {open ? c.network.less : fill(c.network.more, { n: String(matched.length) })}
+                <ChevronDown size={18} className={open ? 'is-up' : ''} />
+              </button>
+            )}
           </div>
           <aside className="lp-card lp-feed rv" aria-live="polite">
             <p className="lp-live"><span className="lp-dot" />{c.network.feed}</p>
