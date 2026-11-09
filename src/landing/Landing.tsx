@@ -13,8 +13,6 @@ import { apiClient, type Station, type TariffForecast, type TariffHour } from '.
 import { BRAND } from '../brand';
 import { COPY, CARS, type LandingCopy } from './content';
 import { Logo, LogoMark } from './Logo';
-import HeroMap from './HeroCanvas';
-import type { SceneStation } from './heroScene';
 import Join from './Join';
 import LegalPage, { LEGAL_IDS, legalHref } from './LegalPage';
 import type { LegalDocId } from './legal';
@@ -22,8 +20,8 @@ import { track } from './analytics';
 import { HUB_CITIES } from './heroScene';
 import { APP_URL } from '../lib/site';
 import './landing.css';
-import Stage, { type StageCopy } from './Stage';
-import Intro, { introDue } from './Intro';
+import './landing-pro.css';
+import LoadIntro, { loadIntroDue } from './LoadIntro';
 
 const fmt = (n: number, lang: Lang) =>
   Math.round(n).toLocaleString(lang === 'en' ? 'en-US' : 'ru-RU').replace(/,/g, lang === 'en' ? ',' : ' ');
@@ -216,102 +214,26 @@ function Nav({ c, page, scrolled }: { c: LandingCopy; page: Page | null; scrolle
 // ───────────────────────── Home ─────────────────────────
 
 function Hero({ c, lang }: { c: LandingCopy; lang: Lang }) {
-  const { state } = useSync();
-  const go = useContext(GoCtx);
-  const stations = useMemo<SceneStation[]>(
-    () =>
-      (state?.stations ?? [])
-        .filter(s => typeof s.geoLat === 'number' && typeof s.geoLng === 'number')
-        .map(s => ({
-          id: s.id,
-          lat: s.geoLat as number,
-          lng: s.geoLng as number,
-          power: s.totalPower ?? Math.max(...s.connectors.map(k => k.power)),
-          free: s.connectors.filter(k => k.status === 'available').length,
-          total: s.connectors.length,
-        })),
-    [state?.stations],
-  );
-  const cities = useMemo(
-    () => (['tashkent', 'samarkand', 'bukhara', 'khiva', 'nukus', 'fergana', 'termez', 'namangan', 'karshi', 'navoi'] as const)
-      .map(id => ({ id, name: c.cities[id], major: id === 'tashkent' || id === 'samarkand' || id === 'bukhara' || id === 'khiva' })),
-    [c],
-  );
-  const st = state?.stats;
-  const renderTip = useCallback(
-    (id: string) => {
-      const s = state?.stations.find(x => x.id === id);
-      if (!s) return null;
-      const free = s.connectors.filter(k => k.status === 'available').length;
-      return (
-        <>
-          <b>{s.name}</b>
-          <span>{s.city} · {s.operator}</span>
-          <span className="lp-tip-row">
-            <em className={free ? 'is-free' : 'is-full'}>{free}/{s.connectors.length} {c.network.freeOf}</em>
-            <em>{Math.max(...s.connectors.map(k => k.power))} {c.phone.kw}</em>
-          </span>
-        </>
-      );
-    },
-    [state?.stations, c],
-  );
-
   return (
     <section className="lp-hero" id="top">
-      <div className="lp-hero-bg" aria-hidden="true">
-        <span className="lp-blob lp-blob-a" />
-        <span className="lp-blob lp-blob-b" />
-        <span className="lp-hero-grid" />
-      </div>
       <div className="lp-wrap lp-hero-in">
         <div className="lp-hero-copy">
-          <p className="lp-badge rv"><span className="lp-dot" />{c.hero.badge}</p>
+          <p className="lp-badge">{c.hero.badge}</p>
           <h1 className="lp-h1">
-            {c.hero.title.map((line, i) => (
-              <span key={i} className="lp-h1-line">
-                <span className="lp-h1-in" style={delay(120 + i * 110)}>{i === 1 ? <mark className="lp-h1-mark">{line}</mark> : line}</span>
-              </span>
-            ))}
+            {c.hero.title.map((line, i) => <span key={i} className="lp-h1-line">{line}</span>)}
           </h1>
-          <p className="lp-hero-sub rv" style={delay(420)}>{c.hero.sub}</p>
-          <div className="lp-hero-cta rv" style={delay(520)}>
-            <PageLink to="join" className="lp-btn lp-btn-primary lp-btn-lg"><BellRing size={18} />{c.cta.join}</PageLink>
-            <PageLink to="drivers" className="lp-btn lp-btn-ghost lp-btn-lg">{c.hero.secondary}<ArrowRight size={18} /></PageLink>
+          <p className="lp-hero-sub">{c.hero.sub}</p>
+          <div className="lp-hero-cta">
+            <PageLink to="join" className="lp-btn lp-btn-primary lp-btn-lg">{c.cta.join}<ArrowRight size={18} /></PageLink>
+            <PageLink to="drivers" className="lp-btn lp-btn-ghost lp-btn-lg">{c.hero.secondary}</PageLink>
           </div>
-          <dl className="lp-hero-stats rv" style={delay(620)} aria-live="polite">
-            <div><dt>{c.hero.stations}</dt><dd><Count value={st?.stations ?? 0} lang={lang} /></dd></div>
-            <div><dt>{c.hero.connectors}</dt><dd><Count value={st?.evseTotal ?? 0} lang={lang} /></dd></div>
-            <div><dt>{c.hero.online}</dt><dd><Count value={st?.availability ?? 0} decimals={1} lang={lang} /><small>%</small></dd></div>
-          </dl>
-          <p className="lp-live rv" style={delay(680)}><span className="lp-dot" />{c.hero.live}</p>
         </div>
-        <div className="lp-hero-art rv" style={delay(200)}>
-          <div className="lp-map-card">
-            <p className="lp-map-label"><Layers size={14} />{c.hero.map}</p>
-            <HeroMap stations={stations} cities={cities} renderTip={renderTip} onPick={() => go('drivers')} />
-          </div>
-          <div className="lp-chip lp-chip-a"><span className="lp-chip-ic"><Clock size={16} /></span><span><small>{c.hero.chips.arrive}</small><b>{c.hero.chips.arriveV}</b></span></div>
-          <div className="lp-chip lp-chip-b"><span className="lp-chip-ic is-dark"><Moon size={16} /></span><span><small>{c.hero.chips.night}</small><b>{c.hero.chips.nightV}</b></span></div>
-          <div className="lp-chip lp-chip-c"><span className="lp-chip-ic"><CircleDollarSign size={16} /></span><span><small>{c.hero.chips.price}</small><b>{c.hero.chips.priceV}</b></span></div>
+        <div className="lp-hero-art lp-hero-phones" aria-hidden="true">
+          <img className="lp-hero-ph lp-hero-ph-back" src={shot(lang, '3-station')} alt="" width={540} height={1169} decoding="async" />
+          <img className="lp-hero-ph lp-hero-ph-front" src={shot(lang, '2-map')} alt="" width={540} height={1169} decoding="async" fetchPriority="high" />
         </div>
       </div>
     </section>
-  );
-}
-
-function Marquee({ c }: { c: LandingCopy }) {
-  const row = c.marquee.flatMap((w, i) => [
-    <span key={`w${i}`} className="lp-mq-w">{w}</span>,
-    <span key={`s${i}`} className="lp-mq-s" aria-hidden="true"><Zap size={22} /></span>,
-  ]);
-  return (
-    <div className="lp-mq" aria-label={c.marquee.join(' · ')}>
-      <div className="lp-mq-track" aria-hidden="true">
-        <div>{row}</div>
-        <div>{row}</div>
-      </div>
-    </div>
   );
 }
 
@@ -452,8 +374,6 @@ function HomePage({ c, lang }: { c: LandingCopy; lang: Lang }) {
   return (
     <>
       <Hero c={c} lang={lang} />
-      <Stage copy={c.stage as StageCopy} />
-      <Marquee c={c} />
       <Pains c={c} />
       <HowTo c={c} />
       <Showcase c={c} lang={lang} />
@@ -469,27 +389,61 @@ const PILLAR_ICON: Record<string, ReactNode> = {
   find: <MapIcon size={22} />, charge: <ScanLine size={22} />, road: <Navigation size={22} />, care: <Sparkles size={22} />,
 };
 
+/**
+ * A city map drawn in the app's own style: quarters, avenues, a canal,
+ * station markers. Static SVG — nothing runs after it is drawn.
+ */
+const MAP_STREETS = (() => {
+  const d: string[] = [];
+  for (let x = -40; x < 700; x += 74) d.push(`M${x} -40 L${x + 70} 520`);
+  for (let y = -20; y < 560; y += 62) d.push(`M-40 ${y} L700 ${y - 60}`);
+  return d.join(' ');
+})();
+type MapPin = { x: number; y: number; free?: boolean; big?: boolean; label?: string };
+function CityMap({ pins, route, me, children }: { pins: MapPin[]; route?: string; me?: [number, number]; children?: ReactNode }) {
+  return (
+    <div className="lp-cmap">
+      <svg viewBox="0 0 640 480" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <rect width="640" height="480" fill="#EFEDE6" />
+        <path d="M410 -10 C440 90 520 120 560 200 S 600 380 660 430" className="lp-cmap-water" />
+        <path d="M60 300 l90 -14 l18 70 l-92 18 z M470 300 l70 -10 l12 52 l-70 12 z" className="lp-cmap-park" />
+        <path d={MAP_STREETS} className="lp-cmap-street" />
+        <g className="lp-cmap-avenue">
+          <path d="M-20 120 C160 110 330 70 660 40" />
+          <path d="M-20 360 C180 330 360 380 660 330" />
+          <path d="M210 -20 C230 140 190 300 240 500" />
+          <path d="M470 -20 C440 160 500 300 460 500" />
+        </g>
+        {route && <><path d={route} pathLength={1} className="lp-cmap-route-case" /><path d={route} pathLength={1} className="lp-cmap-route" /></>}
+        {me && <g transform={`translate(${me[0]} ${me[1]})`}><circle r="22" className="lp-cmap-me-halo" /><circle r="8" className="lp-cmap-me" /></g>}
+        {pins.map((p, i) => (
+          <g key={i} transform={`translate(${p.x} ${p.y})`} className={`lp-cmap-pin${p.free ? ' is-free' : ''}${p.big ? ' is-big' : ''}`} style={{ '--i': i } as CSSProperties}>
+            <path d="M0 0 C-4 -9 -14 -14 -14 -26 A14 14 0 1 1 14 -26 C14 -14 4 -9 0 0 Z" />
+            <path d="M1.5 -34 L-5 -24 L-0.5 -24 L-2 -17 L5 -28 L0.5 -28 Z" className="lp-cmap-bolt" />
+            {p.label && <g transform="translate(16 -46)"><rect width="64" height="26" rx="13" className="lp-cmap-tag" /><text x="32" y="17.5" textAnchor="middle">{p.label}</text></g>}
+          </g>
+        ))}
+      </svg>
+      {children}
+    </div>
+  );
+}
+
 function PillarVisual({ id, ui }: { id: string; ui: string[] }) {
   if (id === 'find')
     return (
       <div className="lp-pv lp-pv-find">
-        <svg viewBox="0 0 320 240" className="lp-pv-roads" preserveAspectRatio="xMidYMid slice">
-          <path d="M-10 60 C80 70 140 20 330 50" />
-          <path d="M-10 170 C90 150 170 210 330 180" />
-          <path d="M90 -10 C100 80 70 160 110 250" />
-          <path d="M230 -10 C210 90 250 170 220 250" />
-          <path d="M38 206 C70 196 92 178 96 150 S 104 104 150 96 S 216 66 226 44" className="lp-pv-route" />
-        </svg>
-        {[[18, 22, 1], [46, 30, 0], [30, 62, 1], [82, 55, 0], [58, 70, 1]].map(([x, y, f], i) => (
-          <span key={i} className={`lp-pv-pin ${f ? 'is-free' : ''}`} style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${i * 0.3}s` }}><Zap size={11} /></span>
-        ))}
-        <span className="lp-pv-me" style={{ left: '12%', top: '86%' }} />
-        <span className="lp-pv-pin is-free is-target" style={{ left: '70.6%', top: '18.3%' }}><Zap size={11} /></span>
-        <div className="lp-pv-card">
-          <span className="lp-pv-badge"><Check size={13} strokeWidth={3} />{ui[0]}</span>
-          <b>{ui[1]}</b>
-          <small>{ui[2]}</small>
-        </div>
+        <CityMap
+          me={[96, 420]}
+          route="M96 420 C150 400 200 380 214 352 C226 300 214 220 226 140 C232 104 330 94 448 70"
+          pins={[{ x: 120, y: 160 }, { x: 330, y: 230, free: true }, { x: 560, y: 120 }, { x: 214, y: 352, free: true }, { x: 520, y: 270 }, { x: 448, y: 70, free: true, big: true }]}
+        >
+          <div className="lp-pv-card">
+            <span className="lp-pv-badge"><Check size={13} strokeWidth={3} />{ui[0]}</span>
+            <b>{ui[1]}</b>
+            <small>{ui[2]}</small>
+          </div>
+        </CityMap>
       </div>
     );
   if (id === 'charge')
@@ -782,21 +736,14 @@ function PromoVisual({ mock }: { mock: LandingCopy['promo']['mock'] }) {
   return (
     <div className="lp-promo-art rv" style={delay(120)} aria-hidden="true">
       <div className="lp-promo-map">
-        <svg viewBox="0 0 320 240" className="lp-pv-roads" preserveAspectRatio="xMidYMid slice">
-          <path d="M-10 70 C90 80 170 40 330 60" />
-          <path d="M-10 180 C100 160 190 200 330 170" />
-          <path d="M120 -10 C130 90 110 160 140 250" />
-        </svg>
-        {[[16, 30], [34, 68], [72, 22], [84, 64], [52, 82]].map(([x, y], i) => <span key={i} className="lp-promo-dot" style={{ left: `${x}%`, top: `${y}%` }} />)}
-        <div className="lp-promo-pin">
-          <span className="lp-promo-tag">{mock.deal}</span>
-          <LogoMark size={60} />
-        </div>
-        <div className="lp-promo-card"><b>{mock.name}</b><small>{mock.deal} · {mock.note}</small></div>
+        <CityMap pins={[{ x: 110, y: 150 }, { x: 250, y: 330 }, { x: 520, y: 120 }, { x: 560, y: 300 }, { x: 330, y: 190, free: true, big: true, label: mock.deal }]}>
+          <div className="lp-promo-card"><b>{mock.name}</b><small>{mock.deal} · {mock.note}</small></div>
+        </CityMap>
       </div>
       <div className="lp-promo-load">
         <span>{mock.load}</span>
-        <div className="lp-promo-bars">{bars.map((v, i) => <i key={i} style={{ height: `${v * 11}%`, animationDelay: `${i * 35}ms` }} />)}</div>
+        <div className="lp-promo-bars">{bars.map((v, i) => <i key={i} className={i >= 10 && i <= 15 ? 'is-deal' : ''} style={{ height: `${v * 11}%`, '--i': i } as CSSProperties} />)}</div>
+        <div className="lp-promo-axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>
       </div>
     </div>
   );
@@ -1491,7 +1438,7 @@ function Cta({ c }: { c: LandingCopy }) {
           <h2 className="lp-cta-t">{c.cta.title}</h2>
           <p className="lp-cta-sub">{c.cta.sub}</p>
           <div className="lp-hero-cta">
-            <PageLink to="join" className="lp-btn lp-btn-dark lp-btn-lg"><BellRing size={18} />{c.cta.join}</PageLink>
+            <PageLink to="join" className="lp-btn lp-btn-dark lp-btn-lg">{c.cta.join}<ArrowRight size={18} /></PageLink>
           </div>
         </div>
       </div>
@@ -1540,8 +1487,8 @@ export default function Landing() {
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [vt] = useState(canTransition);
-  // The opening plays once a visit, on the front page only.
-  const [intro, setIntro] = useState(() => pageFromUrl() === 'home' && !docFromUrl() && introDue());
+  // The charging opening plays once a visit, on the front page only.
+  const [intro, setIntro] = useState(() => pageFromUrl() === 'home' && !docFromUrl() && loadIntroDue());
   const fc = useForecast();
   useReveal(root, `${lang}:${page}:${doc}`);
 
@@ -1642,8 +1589,8 @@ export default function Landing() {
             : isCity(page) ? <CityPage c={c} lang={lang} id={page} />
             : <HomePage key={intro ? 'behind' : 'in'} c={c} lang={lang} />}
         </main>
-        {intro && <Intro tagline={c.intro} onDone={() => setIntro(false)} />}
         <Footer c={c} />
+        {intro && <LoadIntro lang={lang} onDone={() => setIntro(false)} />}
       </div>
     </GoCtx.Provider>
   );

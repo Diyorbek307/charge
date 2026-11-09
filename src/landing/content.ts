@@ -61,18 +61,18 @@ const ru = {
   marquee: ['Все зарядки', 'Одно приложение', 'Подключайся и поехали!', 'Payme', 'Click', 'Uzum', 'Humo', 'Ночью ×0,7', 'UZ · RU · EN'],
   pains: {
     kicker: 'Как сейчас',
-    title: 'Электромобиль уже есть. Спокойной зарядки — пока нет.',
+    title: 'Электромобилей становится больше. Зарядная инфраструктура остаётся разрозненной.',
     items: [
-      { t: 'Пять приложений вместо одного', d: 'У каждой сети свой вход и свой баланс.' },
-      { t: 'Приехал — а разъём занят', d: 'Свободна ли станция, видно только на месте.' },
-      { t: 'Цена — сюрприз', d: 'Сколько стоила зарядка, узнаёшь уже после неё.' },
-      { t: 'Страшно ехать по трассе', d: 'Никто не подскажет, где следующая станция и работает ли она.' },
+      { t: 'Отдельное приложение для каждой сети', d: 'У каждой сети свой аккаунт, свой баланс и свои правила.' },
+      { t: 'Нет данных о свободных разъёмах', d: 'Узнать, свободна ли станция, можно только по приезде.' },
+      { t: 'Непрозрачная стоимость', d: 'Итоговая цена зарядки известна только после её окончания.' },
+      { t: 'Сложно планировать поездки', d: 'Нет единой информации о станциях на трассах и их работе.' },
     ],
-    answer: `${B} решает всё это в одном приложении.`,
+    answer: `${B} объединяет все сети в одном приложении.`,
   },
   howTo: {
-    kicker: 'Как это работает',
-    title: 'Пара минут — и всё понятно.',
+    kicker: 'Порядок работы',
+    title: 'Как это работает',
     tabs: { driver: 'Водителю', network: 'Сети зарядки' },
     driver: [
       { t: 'Войдите по номеру телефона', d: 'Код придёт в SMS. Добавьте автомобиль и паспорт — получите по 50 000 сум бонуса.' },
@@ -198,8 +198,8 @@ const ru = {
   },
   showcase: {
     kicker: 'Приложение',
-    title: 'Вот так выглядит Voli. Без прикрас.',
-    sub: 'Это настоящие экраны приложения, а не картинки. Нажмите на любой раздел — или просто смотрите, они листаются сами.',
+    title: 'Интерфейс приложения',
+    sub: 'Реальные экраны приложения Voli. Выберите раздел, чтобы посмотреть подробнее.',
     tabs: [
       { id: '2-map', t: 'Карта' },
       { id: '3-station', t: 'Станция' },
@@ -431,8 +431,8 @@ const ru = {
     ],
   },
   cta: {
-    title: 'Подключайся и поехали!',
-    sub: 'Оставьте номер — и вы первыми узнаете о запуске.',
+    title: 'Запуск в Ташкенте — IV квартал 2026',
+    sub: 'Оставьте номер телефона, и мы сообщим о запуске приложения.',
     join: 'Сообщить о запуске',
   },
   phone: { kw: 'кВт' },
@@ -500,18 +500,18 @@ const uz: LandingCopy = {
   marquee: ['Barcha zaryadlash', 'Bitta ilova', 'Ulan va yo‘lga chiq!', 'Payme', 'Click', 'Uzum', 'Humo', 'Tunda ×0,7', 'UZ · RU · EN'],
   pains: {
     kicker: 'Hozir qanday',
-    title: 'Elektromobil bor. Xotirjam zaryadlash — hali yo‘q.',
+    title: 'Elektromobillar ko‘paymoqda. Zaryadlash infratuzilmasi esa tarqoq.',
     items: [
       { t: 'Bitta o‘rniga beshta ilova', d: 'Har bir tarmoqning o‘z kirishi va o‘z balansi bor.' },
       { t: 'Yetib keldim — ulagich band', d: 'Stansiya bo‘shligini faqat joyida bilasiz.' },
       { t: 'Narx — kutilmagan', d: 'Zaryadlash qancha turganini undan keyin bilasiz.' },
       { t: 'Trassada xavotir', d: 'Keyingi stansiya qayerda va ishlayaptimi — hech kim aytmaydi.' },
     ],
-    answer: `${B} bularning hammasini bitta ilovada hal qiladi.`,
+    answer: `${B} barcha tarmoqlarni bitta ilovada birlashtiradi.`,
   },
   howTo: {
-    kicker: 'Qanday ishlaydi',
-    title: 'Bir necha daqiqa — va hammasi tushunarli.',
+    kicker: 'Ish tartibi',
+    title: 'Qanday ishlaydi',
     tabs: { driver: 'Haydovchiga', network: 'Zaryadlash tarmog‘iga' },
     driver: [
       { t: 'Telefon raqamingiz bilan kiring', d: 'Kod SMS orqali keladi. Avtomobil va pasportni qo‘shing — har biri uchun 50 000 so‘m bonus oling.' },
@@ -637,7 +637,7 @@ const uz: LandingCopy = {
   },
   showcase: {
     kicker: 'Ilova',
-    title: 'Voli aynan shunday ko‘rinadi.',
+    title: 'Ilova interfeysi',
     sub: 'Bu rasmlar emas, ilovaning haqiqiy ekranlari. Istalgan bo‘limni bosing — yoki shunchaki kuzating, ular o‘zi almashadi.',
     tabs: [
       { id: '2-map', t: 'Xarita' },
@@ -870,8 +870,8 @@ const uz: LandingCopy = {
     ],
   },
   cta: {
-    title: 'Ulan va yo‘lga chiq!',
-    sub: 'Raqamingizni qoldiring — ishga tushish haqida birinchilardan bo‘lib xabar beramiz.',
+    title: 'Toshkentda ishga tushish — 2026-yil IV chorak',
+    sub: 'Telefon raqamingizni qoldiring, ilova ishga tushganda xabar beramiz.',
     join: 'Ishga tushganda xabar bering',
   },
   phone: { kw: 'kVt' },
@@ -937,18 +937,18 @@ const en: LandingCopy = {
   marquee: ['Every charger', 'One app', 'Plug in and go!', 'Payme', 'Click', 'Uzum', 'Humo', '×0.7 at night', 'UZ · RU · EN'],
   pains: {
     kicker: 'Today',
-    title: 'The electric car is here. Stress-free charging isn’t — yet.',
+    title: 'EV adoption is growing. Charging infrastructure remains fragmented.',
     items: [
       { t: 'Five apps instead of one', d: 'Every network has its own sign-in and its own balance.' },
       { t: 'You arrive and it’s taken', d: 'You only find out if a charger is free once you get there.' },
       { t: 'The price is a surprise', d: 'You learn what the charge cost after it’s done.' },
       { t: 'The highway feels risky', d: 'Nobody tells you where the next charger is or whether it works.' },
     ],
-    answer: `${B} fixes all of this in one app.`,
+    answer: `${B} brings every network together in one app.`,
   },
   howTo: {
-    kicker: 'How it works',
-    title: 'A couple of minutes and you’re set.',
+    kicker: 'Process',
+    title: 'How it works',
     tabs: { driver: 'For drivers', network: 'For networks' },
     driver: [
       { t: 'Sign in with your phone number', d: 'The code arrives by text. Add your car and your passport and get a 50,000 UZS bonus for each.' },
@@ -1074,8 +1074,8 @@ const en: LandingCopy = {
   },
   showcase: {
     kicker: 'The app',
-    title: 'This is what Voli looks like. No mock-ups.',
-    sub: 'These are the app’s real screens, not drawings. Tap any part — or just watch, they turn by themselves.',
+    title: 'The app interface',
+    sub: 'Real screens of the Voli app. Select a section to take a closer look.',
     tabs: [
       { id: '2-map', t: 'Map' },
       { id: '3-station', t: 'Station' },
@@ -1307,8 +1307,8 @@ const en: LandingCopy = {
     ],
   },
   cta: {
-    title: 'Plug in and go!',
-    sub: 'Leave your number and be among the first to hear about the launch.',
+    title: 'Launching in Tashkent — Q4 2026',
+    sub: 'Leave your phone number and we will let you know when the app launches.',
     join: 'Tell me at launch',
   },
   phone: { kw: 'kW' },
