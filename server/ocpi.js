@@ -422,7 +422,10 @@ ocpiApi.use(express.json({ limit: '2mb' }));
 /** Identifies the calling partner by the token B we issued them. */
 function partnerAuth(req, res, next) {
   const token = tokenFrom(req);
-  const partner = token && partners().find(p => p.tokenB === token && p.status === 'connected');
+  // Compared as hashes in constant time, so the token cannot be guessed by timing.
+  const digest = v => crypto.createHash('sha256').update(String(v)).digest();
+  const given = token ? digest(token) : null;
+  const partner = given && partners().find(p => p.status === 'connected' && p.tokenB && crypto.timingSafeEqual(digest(p.tokenB), given));
   if (!partner) return res.status(401).json(envelope(null, 2000, 'Unknown or missing token'));
   req.partner = partner;
   next();

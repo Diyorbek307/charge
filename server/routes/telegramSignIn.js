@@ -1,5 +1,6 @@
 // Telegram Mini App: one-tap sign-in for drivers who linked their account
 // (Moved out of server/api.js; registered by server.js after the core routes.)
+import crypto from 'node:crypto';
 import { db, publicAccount } from '../db.js';
 import { isBlocked } from '../analytics.js';
 import { verifyInitData, accountByTelegram, telegramConfigured } from '../telegram.js';
@@ -18,6 +19,14 @@ api.post('/auth/telegram', (req, res) => {
   // Not linked yet: the app shows the usual sign-in and links afterwards.
   if (!account) return res.status(404).json({ error: 'Telegram ещё не привязан к аккаунту', telegram: { firstName: checked.user.firstName } });
   if (isBlocked(account.id)) return res.status(403).json({ error: 'Аккаунт заблокирован — обратитесь в поддержку' });
+  // Telegram proves who holds the Telegram account, not the authenticator: 2FA still applies.
+  if (account.twoFactor?.enabled) {
+    const challenge = crypto.randomBytes(18).toString('hex');
+    db.data.challenges.unshift({ challenge, accountId: account.id, expires: Date.now() + 5 * 60_000 });
+    if (db.data.challenges.length > 50) db.data.challenges.length = 50;
+    db.save();
+    return res.json({ requires2fa: true, challenge });
+  }
   const token = db.issueToken(account, req);
   db.update('accounts', account.id, { lastLogin: new Date().toISOString() });
   res.json({ token, user: publicAccount(db.byId('accounts', account.id)) });

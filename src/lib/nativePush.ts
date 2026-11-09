@@ -34,7 +34,8 @@ export async function enableNativePush(): Promise<boolean> {
     // A tap on a notice opens the screen it is about.
     await PushNotifications.addListener('pushNotificationActionPerformed', a => {
       const url = (a.notification.data as { url?: string } | undefined)?.url;
-      if (url && url.startsWith('/')) window.location.href = url;
+      // Our own screens only: "//other.site" is another site, not a path.
+      if (url && /^\/(?![/\\])/.test(url)) window.location.href = url;
     });
   }
 

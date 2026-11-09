@@ -9,7 +9,11 @@ import { api, emit, requireAuth, viewerOf, visibleEvents } from '../api.js';
 
 api.get('/reports', requireAuth(), (req, res) => {
   const name = typeof req.query.name === 'string' ? req.query.name : null;
-  const list = (db.data.reports ?? []).filter(r => !name || r.name === name);
+  // Who exported what is the team's own business: a network or a fleet sees its own
+  // exports, a driver theirs, and only the admin sees everyone's.
+  const me = req.account;
+  const mine = r => me.portal === 'admin' || r.accountId === me.id || (!!me.orgId && r.portal === me.portal && r.orgId === me.orgId);
+  const list = (db.data.reports ?? []).filter(r => mine(r) && (!name || r.name === name));
   res.json(list.slice(0, Math.min(Number(req.query.limit) || 20, 100)));
 });
 
@@ -27,6 +31,8 @@ api.post('/reports', requireAuth(), (req, res) => {
     rows: Number.isFinite(Number(rows)) ? Number(rows) : 0,
     actor: req.account.name,
     portal: req.account.portal,
+    accountId: req.account.id,
+    orgId: req.account.orgId ?? null,
     ts: new Date().toISOString(),
   };
   db.data.reports.unshift(report);

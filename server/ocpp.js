@@ -38,8 +38,19 @@ function accountFor(station, idTag) {
  */
 
 const DEMO_MODE = process.env.DEMO_MODE !== 'false';
-// Outside the demo there is no default password: an unset key refuses everyone.
-const PASSWORD = process.env.OCPP_PASSWORD || (DEMO_MODE ? 'ocpp-demo-key' : '');
+const REAL_SERVER = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
+// The demo key is written in the source code: only on a laptop or a test run, never on
+// the live server. Without OCPP_PASSWORD there no charge point is let in at all.
+const PASSWORD = process.env.OCPP_PASSWORD || (DEMO_MODE && !REAL_SERVER ? 'ocpp-demo-key' : '');
+
+/**
+ * Each station's own key: HMAC(OCPP_PASSWORD, station id). Given to that station's
+ * network, it opens that station only, so one network cannot speak for another's
+ * chargers (`node scripts/ocpp-key.mjs <station id>` prints it). The shared
+ * OCPP_PASSWORD itself still works off the live server, or with OCPP_SHARED_KEY=true.
+ */
+export const stationKey = (stationId, master = PASSWORD) => !master ? null : crypto.createHmac('sha256', master).update(`ocpp:${stationId}`).digest('base64url').slice(0, 32);
+const SHARED_OK = !REAL_SERVER || process.env.OCPP_SHARED_KEY === 'true';
 
 const CALL = 2;
 const RESULT = 3;
@@ -108,8 +119,11 @@ function authenticate(req, stationId) {
   if (colon < 0) return false;
   // Compare both halves so a wrong station id and a wrong key cost the same.
   const userOk = safeEqual(decoded.slice(0, colon), stationId);
-  const passOk = safeEqual(decoded.slice(colon + 1), PASSWORD);
-  return userOk && passOk;
+  const given = decoded.slice(colon + 1);
+  const own = stationKey(stationId);
+  const ownOk = !!own && safeEqual(given, own);
+  const sharedOk = safeEqual(given, PASSWORD) && SHARED_OK;
+  return userOk && (ownOk || sharedOk);
 }
 
 const connectorByIndex = (station, n) => station.connectors[Number(n) - 1] ?? null;

@@ -129,7 +129,7 @@ export function DemoReset() {
           <span className="text-sm text-slate-700">Точно сбросить? Все пользователи будут разлогинены.</span>
           <button
             disabled={busy}
-            onClick={async () => { setBusy(true); try { await actions.resetDemo('admin'); await refresh(); setDone(true); } finally { setBusy(false); setConfirm(false); } }}
+            onClick={async () => { setBusy(true); try { await actions.resetDemo('admin'); await refresh(); setDone(true); } catch { /* closed on the live server */ } finally { setBusy(false); setConfirm(false); } }}
             className="px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-semibold disabled:opacity-50"
           >
             Да, сбросить

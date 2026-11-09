@@ -17,6 +17,14 @@ export function initMonitoring() {
         environment: import.meta.env.MODE,
         sendDefaultPii: false,
         tracesSampleRate: 0,
+        // Fetches and page changes: the path only, never ?ticket= or a code in the link.
+        beforeBreadcrumb(b) {
+          for (const k of ['url', 'from', 'to'] as const) {
+            const v = b.data?.[k];
+            if (typeof v === 'string') b.data![k] = v.split(/[?#]/)[0];
+          }
+          return b;
+        },
         beforeSend(event) {
           delete event.user;
           if (event.request) {

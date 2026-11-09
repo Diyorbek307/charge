@@ -138,6 +138,13 @@ describe('OCPP connection', () => {
     await assert.rejects(ChargePoint.connect('st-999'), e => e.status === 404);
   });
 
+  test("a station's own key opens that station and no other", async () => {
+    const own = crypto.createHmac('sha256', OCPP_PASSWORD).update('ocpp:st-003').digest('base64url').slice(0, 32);
+    const cp = await ChargePoint.connect('st-003', { password: own });
+    await cp.close();
+    await assert.rejects(ChargePoint.connect('st-004', { password: own }), e => e.status === 401);
+  });
+
   test('a connection without the ocpp1.6 subprotocol is closed', async () => {
     const closed = await new Promise(resolve => {
       const auth = Buffer.from(`st-003:${OCPP_PASSWORD}`).toString('base64');

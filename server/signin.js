@@ -60,7 +60,7 @@ async function keysOf(provider) {
   const res = await fetch(PROVIDERS[provider].jwks, { signal: AbortSignal.timeout(10_000) });
   if (!res.ok) throw new Error(`keys ${res.status}`);
   const { keys } = await res.json();
-  keyCache.set(provider, { keys, until: Date.now() + 3_600_000 });
+  keyCache.set(provider, { keys, at: Date.now(), until: Date.now() + 3_600_000 });
   return keys;
 }
 
@@ -82,7 +82,8 @@ export async function verifyIdToken(provider, token) {
   if (header.alg !== 'RS256') return { error: 'Некорректный ответ входа' };
   let jwk = (await keysOf(provider)).find(k => k.kid === header.kid);
   // Keys rotate: one we have not seen yet means a fresh list.
-  if (!jwk) {
+  // At most once a minute, so made-up key ids cannot turn us into a flood at Google or Apple.
+  if (!jwk && Date.now() - (keyCache.get(provider)?.at ?? 0) > 60_000) {
     keyCache.delete(provider);
     jwk = (await keysOf(provider)).find(k => k.kid === header.kid);
   }

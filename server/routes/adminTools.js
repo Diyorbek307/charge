@@ -1,7 +1,7 @@
 // Admin tools: risk signals, charge-record checks, tariff windows, health
 // (Moved out of server/api.js; registered by server.js after the core routes.)
 import { realPaymentKeys, mixedMode } from '../money.js';
-import { db } from '../db.js';
+import { db, REAL_SERVER } from '../db.js';
 import { alertsStatus, testAlert } from '../alerts.js';
 import { fcmConfigured } from '../fcm.js';
 import { smsConfigured } from '../sms.js';
@@ -144,8 +144,9 @@ api.post('/admin/users/:id/status', requireAuth('admin'), (req, res) => {
 });
 
 api.post('/admin/reset', requireAuth('admin'), (req, res) => {
-  // Wiping every account and charge is a demo tool, never a production button.
-  if (!DEMO_MODE) return res.status(404).json({ error: 'Not found' });
+  // Wiping every account and charge is a demo tool, never a production button: on the
+  // live server real drivers sign up even while DEMO_MODE is still on.
+  if (!DEMO_MODE || REAL_SERVER) return res.status(404).json({ error: 'Not found' });
   db.reset();
   emit({
     type: 'system.reset',

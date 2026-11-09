@@ -8,7 +8,7 @@ import { tokenOf, clearSessionCookie } from './session.js';
 import { alertsStatus, testAlert } from './alerts.js';
 import { fcmConfigured } from './fcm.js';
 import { DEMO_ACCOUNTS } from './seed.js';
-import { generateSecret, verifyTotp, otpauthUri } from './totp.js';
+import { generateSecret, verifyTotp, totpStep, otpauthUri } from './totp.js';
 import { hashPassword } from './seed.js';
 import { normalizePhone, issueCode, consumeCode, PURPOSES, smsConfigured } from './sms.js';
 import { submitLead, listLeads, updateLead, LEAD_KINDS } from './leads.js';
@@ -464,6 +464,7 @@ function emit({ type, portal, actor, message, entity = null, payload = {} }) {
   event.scope = scopeOf(event);
   db.data.events.unshift(event);
   if (db.data.events.length > 300) db.data.events.length = 300;
+  recordAudit(event);
   recordDeliveries(event);
   db.save();
   broadcast(event);
@@ -476,6 +477,31 @@ function emit({ type, portal, actor, message, entity = null, payload = {} }) {
     }
   }
   return event;
+}
+
+/**
+ * The staff audit trail: what the team, networks and fleets did, under whose
+ * name and from where. The activity feed keeps only the last 300 events of all
+ * kinds; this keeps staff actions much longer, apart from the drivers' traffic.
+ */
+const STAFF_PORTALS = new Set(['admin', 'operator', 'business', 'api']);
+const AUDIT_KEEP = 3000;
+function recordAudit(event) {
+  const who = actingAccount();
+  if (!STAFF_PORTALS.has(event.portal) && !STAFF_PORTALS.has(who?.portal)) return;
+  const req = requestContext.getStore()?.req;
+  const list = (db.data.audit ??= []);
+  list.unshift({
+    ts: event.ts,
+    type: event.type,
+    portal: event.portal,
+    actor: event.actor,
+    accountId: who?.id ?? null,
+    ip: req ? String(req.ip ?? '').replace(/^::ffff:/, '') : null,
+    message: String(event.message ?? '').slice(0, 300),
+    entity: event.entity,
+  });
+  if (list.length > AUDIT_KEEP) list.length = AUDIT_KEEP;
 }
 
 /** Other parts of the server that act on what happens (server/idle.js). */
@@ -720,9 +746,23 @@ api.post('/auth/2fa/verify', (req, res) => {
   }
 
   const account = db.byId('accounts', entry.accountId);
-  if (!account || !verifyTotp(account.twoFactor.secret, code)) {
+  // Each challenge allows five guesses, but whoever knows the password can ask for
+  // more challenges: the account itself gets 10 wrong codes per 15 minutes in all.
+  const accountKey = `2fa-account:${entry.accountId}`;
+  const stop = blocked(accountKey, 10, 15 * 60_000);
+  if (stop) {
+    db.data.challenges.splice(idx, 1);
+    db.save();
+    return tooMany(res, stop, 'Слишком много неверных кодов');
+  }
+  const step = account ? totpStep(account.twoFactor?.secret, code) : null;
+  // A code seen once is spent: someone who watched it typed cannot use it again.
+  if (step === null || step <= (account.twoFactor.lastStep ?? -1)) {
+    attempt(accountKey, 10, 15 * 60_000);
     return res.status(401).json({ error: 'Неверный код подтверждения' });
   }
+  account.twoFactor.lastStep = step;
+  forgive(accountKey);
 
   // One challenge, one login.
   db.data.challenges.splice(idx, 1);
@@ -755,6 +795,8 @@ api.post('/auth/2fa/setup', requireAuth(), (req, res) => {
 api.post('/auth/2fa/enable', requireAuth(), (req, res) => {
   const pending = req.account.twoFactor?.pending;
   if (!pending) return res.status(400).json({ error: 'Сначала запросите секрет' });
+  const tries = attempt(`2fa-enable:${req.account.id}`, 10, 15 * 60_000);
+  if (!tries.ok) return tooMany(res, tries);
   if (!verifyTotp(pending, req.body?.code)) {
     return res.status(401).json({ error: 'Код не совпал — проверьте время на телефоне' });
   }
@@ -773,7 +815,10 @@ api.post('/auth/2fa/enable', requireAuth(), (req, res) => {
 
 api.post('/auth/2fa/disable', requireAuth(), (req, res) => {
   if (!req.account.twoFactor?.enabled) return res.json({ enabled: false });
-  // Disabling is privileged too — require a current code.
+  // Disabling is privileged too — require a current code, with few guesses: a stolen
+  // sign-in must not be able to try codes until the second factor falls away.
+  const tries = attempt(`2fa-disable:${req.account.id}`, 5, 15 * 60_000);
+  if (!tries.ok) return tooMany(res, tries);
   if (!verifyTotp(req.account.twoFactor.secret, req.body?.code)) {
     return res.status(401).json({ error: 'Неверный код подтверждения' });
   }
@@ -1067,9 +1112,15 @@ api.put('/me/car', requireAuth('driver'), (req, res) => {
  * ПИНФЛ in an index that says which account already used it. The full number
  * and the ПИНФЛ itself are not stored.
  */
-const pinflKey = pinfl => crypto.createHash('sha256').update(`${process.env.PINFL_SALT ?? 'voli-pinfl-v1'}:${pinfl}`).digest('hex');
+// The default salt is in the source code; a real server needs its own, or the hashes can be reversed.
+if (PRODUCTION && !process.env.PINFL_SALT) console.warn('[security] PINFL_SALT is not set — set a long random value in Render');
+const pinflKey = pinfl =>crypto.createHash('sha256').update(`${process.env.PINFL_SALT ?? 'voli-pinfl-v1'}:${pinfl}`).digest('hex');
 
 api.put('/me/passport', requireAuth('driver'), (req, res) => {
+  // Few tries a day: the answer "already linked to another account" must not become
+  // a way to check whose passport numbers are on Voli.
+  const tries = attempt(`passport:${req.account.id}`, 5, 24 * 3600_000);
+  if (!tries.ok) return tooMany(res, tries);
   const b = req.body ?? {};
   const series = String(b.series ?? '').toUpperCase().replace(/[^A-Z]/g, '');
   const number = String(b.number ?? '').replace(/\D/g, '');
@@ -1223,6 +1274,14 @@ api.get('/sos/mine', requireAuth('driver'), (req, res) => res.json(sosFor(req.ac
 
 // Platform control: every number and switch, changed at run time and logged.
 api.get('/admin/settings', requireAuth('admin'), (_req, res) => res.json(settingsView()));
+// The staff audit trail (recordAudit), newest first; ?portal= and ?q= narrow it.
+api.get('/admin/audit', requireAuth('admin'), (req, res) => {
+  const portal = typeof req.query.portal === 'string' ? req.query.portal : null;
+  const q = typeof req.query.q === 'string' ? req.query.q.toLowerCase().slice(0, 60) : '';
+  const limit = Math.min(Math.max(Number(req.query.limit) || 200, 1), 1000);
+  const list = (db.data.audit ?? []).filter(a => (!portal || a.portal === portal) && (!q || `${a.actor} ${a.message} ${a.type}`.toLowerCase().includes(q)));
+  res.json(list.slice(0, limit));
+});
 api.put('/admin/settings', requireAuth('admin'), (req, res) => {
   const r = updateSettings(req.body?.changes, req.account);
   if (r.error) return res.status(400).json({ error: r.error });
@@ -2432,7 +2491,8 @@ export function meterSession(session, energyKwh) {
 api.post('/wallets/:id/balance', requireAuth('admin'), (req, res) => {
   const balance = Number(req.body?.balance);
   if (!Number.isFinite(balance) || balance < 0) return res.status(400).json({ error: 'Некорректный баланс' });
-  const wallet = db.data.wallets[req.params.id];
+  // Own keys only: "__proto__" is not a wallet.
+  const wallet = Object.hasOwn(db.data.wallets, req.params.id) ? db.data.wallets[req.params.id] : null;
   if (!wallet) return res.status(404).json({ error: 'Кошелёк не найден' });
 
   wallet.balance = balance;

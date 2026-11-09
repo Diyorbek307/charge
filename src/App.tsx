@@ -371,7 +371,8 @@ function MainApp() {
     if (!inTelegram() || sessions.driver) return;
     void telegramInitData().then(initData => {
       if (!initData) return;
-      actions.telegramSignIn(initData).then(r => adoptSession('driver', r.token, r.user)).catch(() => {
+      // With 2FA on there is no token yet: the regular sign-in asks for the code.
+      actions.telegramSignIn(initData).then(r => { if (r.token && r.user) adoptSession('driver', r.token, r.user); }).catch(() => {
         /* not linked yet: the regular sign-in links it afterwards */
       });
     });

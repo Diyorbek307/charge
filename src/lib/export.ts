@@ -18,8 +18,9 @@ export type CsvValue = string | number | null | undefined;
 
 function csvCell(value: CsvValue): string {
   const text = value === null || value === undefined ? '' : String(value);
-  // Excel treats a leading =, +, - or @ as a formula; prefix to neutralise it.
-  const safe = /^[=+\-@]/.test(text) ? `'${text}` : text;
+  // Excel treats a leading =, +, - or @ (also after a tab or line break) as a formula;
+  // prefix text to neutralise it. Real numbers, such as a refund of -5000, stay numbers.
+  const safe = typeof value === 'string' && /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
   return `"${safe.replace(/"/g, '""')}"`;
 }
 

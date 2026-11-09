@@ -75,17 +75,22 @@ export function totp(secretBase32, step = Math.floor(Date.now() / 1000 / STEP_SE
  * clock does not lock the user out. Compared in constant time.
  */
 export function verifyTotp(secretBase32, code, window = 1) {
+  return totpStep(secretBase32, code, window) !== null;
+}
+
+/** The time step a valid code belongs to (so a used code can be refused a second time), or null. */
+export function totpStep(secretBase32, code, window = 1) {
   const candidate = String(code ?? '').replace(/\s/g, '');
-  if (!/^\d{6}$/.test(candidate)) return false;
+  if (!secretBase32 || !/^\d{6}$/.test(candidate)) return null;
 
   const now = Math.floor(Date.now() / 1000 / STEP_SECONDS);
   for (let drift = -window; drift <= window; drift++) {
     const expected = totp(secretBase32, now + drift);
     const a = Buffer.from(expected);
     const b = Buffer.from(candidate);
-    if (a.length === b.length && crypto.timingSafeEqual(a, b)) return true;
+    if (a.length === b.length && crypto.timingSafeEqual(a, b)) return now + drift;
   }
-  return false;
+  return null;
 }
 
 /** otpauth:// URI that authenticator apps import. */

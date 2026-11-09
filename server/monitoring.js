@@ -9,14 +9,33 @@ import { alertTeam, describe } from './alerts.js';
 const DSN = process.env.SENTRY_DSN || '';
 export const monitoring = !!DSN;
 
+/**
+ * Addresses the server calls can carry secrets: the Telegram bot token sits in
+ * the path, keys and codes in the query. Breadcrumbs and messages keep only
+ * the host and a path with any token cut out.
+ */
+export const scrubUrl = url => String(url ?? '').split(/[?#]/)[0].replace(/\/bot[^/]+/g, '/bot***');
+export const scrubText = text => String(text ?? '').replace(/bot\d+:[\w-]+/g, 'bot***').replace(/(Bearer|Token|Basic)\s+[\w.+/=-]+/gi, '$1 ***').replace(/\+?998\d{9}/g, '+998*********');
+
+function scrubBreadcrumb(b) {
+  if (b?.data?.url) b.data.url = scrubUrl(b.data.url);
+  if (b?.message) b.message = scrubText(b.message);
+  return b;
+}
+
 if (DSN) {
   Sentry.init({
     dsn: DSN,
     environment: process.env.DEMO_MODE === 'false' ? 'production' : 'demo',
     sendDefaultPii: false,
     tracesSampleRate: 0,
+    beforeBreadcrumb: scrubBreadcrumb,
     beforeSend(event) {
+      event.breadcrumbs = event.breadcrumbs?.map(scrubBreadcrumb);
+      if (event.message) event.message = scrubText(event.message);
+      for (const ex of event.exception?.values ?? []) if (ex.value) ex.value = scrubText(ex.value);
       if (event.request) {
+        if (event.request.url) event.request.url = scrubUrl(event.request.url);
         delete event.request.headers;
         delete event.request.cookies;
         delete event.request.data;

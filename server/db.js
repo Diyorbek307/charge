@@ -379,7 +379,10 @@ class Database {
   /** The stored sign-in for a raw token; one kept in plain text from before is hashed on the way. */
   #entryOf(raw) {
     const hash = hashToken(raw);
-    const entry = this.data.tokens.find(t => t.token === hash) ?? this.data.tokens.find(t => t.token === raw);
+    // A plain-text token from before hashing was 48 hex characters. A stored hash
+    // (64) must never work as a token itself, or a leaked backup would sign anyone in.
+    const legacy = String(raw).length !== 64 ? this.data.tokens.find(t => t.token === raw && t.token.length !== 64) : null;
+    const entry = this.data.tokens.find(t => t.token === hash) ?? legacy;
     if (entry && entry.token !== hash) {
       entry.token = hash;
       this.save();

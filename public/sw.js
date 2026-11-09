@@ -84,6 +84,9 @@ self.addEventListener('fetch', event => {
   // The SSE channel must stream — caching or proxying it would break sync.
   if (url.pathname === '/api/stream') return;
 
+  // The admin's data, sign-in answers and backups are never kept on the device.
+  if (/^\/api\/(admin|auth)\//.test(url.pathname)) return;
+
   // Build assets are content-hashed, so cache-first is always safe.
   if (isAsset(url)) {
     event.respondWith(
@@ -172,7 +175,9 @@ self.addEventListener('push', event => {
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const target = new URL(event.notification.data?.url || '/', self.location.origin).href;
+  // Our own site only: a notice can never send the driver somewhere else.
+  const wanted = new URL(event.notification.data?.url || '/', self.location.origin);
+  const target = wanted.origin === self.location.origin ? wanted.href : self.location.origin + '/';
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windows => {
       const open = windows.find(w => new URL(w.url).origin === self.location.origin);

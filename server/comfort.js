@@ -96,15 +96,16 @@ api.delete('/stations/:id/gallery/:photoId', requireAuth('operator', 'admin'), (
 });
 
 api.get('/stations/:id/gallery/:photoId', (req, res) => {
-  const data = db.data.stationGallery?.[req.params.id]?.find(p => p.id === req.params.photoId)?.data;
-  if (!data) return res.status(404).end();
+  const list = Object.hasOwn(db.data.stationGallery ?? {}, req.params.id) ? db.data.stationGallery[req.params.id] : null;
+  const data = Array.isArray(list) ? list.find(p => p.id === req.params.photoId)?.data : null;
+  if (typeof data !== 'string') return res.status(404).end();
   const [, type, b64] = data.match(/^data:(image\/\w+);base64,(.+)$/);
   res.set('Content-Type', type).set('Cache-Control', 'public, max-age=86400').send(Buffer.from(b64, 'base64'));
 });
 
 api.get('/stations/:id/photo', (req, res) => {
-  const data = db.data.stationPhotos?.[req.params.id];
-  if (!data) return res.status(404).end();
+  const data = Object.hasOwn(db.data.stationPhotos ?? {}, req.params.id) ? db.data.stationPhotos[req.params.id] : null;
+  if (typeof data !== 'string') return res.status(404).end();
   const [, type, b64] = data.match(/^data:(image\/\w+);base64,(.+)$/);
   res.set('Content-Type', type).set('Cache-Control', 'public, max-age=86400').send(Buffer.from(b64, 'base64'));
 });
