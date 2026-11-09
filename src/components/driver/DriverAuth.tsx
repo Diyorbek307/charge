@@ -232,7 +232,7 @@ export default function DriverAuth() {
     run(async () => {
       await loadScript('https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/ru_RU/appleid.auth.js');
       const a = (window as unknown as { AppleID?: AppleId }).AppleID;
-      if (!a || !providers.apple) throw new Error('Вход через Apple сейчас недоступен');
+      if (!a?.auth?.init || !providers.apple) throw new Error('Вход через Apple сейчас недоступен');
       a.auth.init({ clientId: providers.apple, scope: 'name email', redirectURI: `${window.location.origin}/`, usePopup: true });
       let r;
       try {

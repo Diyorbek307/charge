@@ -10,6 +10,8 @@ export function initMonitoring() {
   if (!dsn) return;
   window.addEventListener('load', () => {
     void import('@sentry/browser').then(Sentry => {
+      // A blocked or half-loaded library (ad blockers, page-checking robots) must not throw.
+      if (typeof Sentry?.init !== 'function') return;
       Sentry.init({
         dsn,
         environment: import.meta.env.MODE,
