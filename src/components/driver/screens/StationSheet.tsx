@@ -304,17 +304,17 @@ export function StationDetailSheet({ station, onClose, onStartCharging, onBook, 
                 <ConnectorTile letter={String.fromCharCode(65 + i)} dc={c.power >= 50} />
                 <div className="flex-1 min-w-0">
                   <p className="text-[15px] font-bold text-slate-900 leading-tight">{`${c.power >= 50 ? 'DC' : 'AC'} ${c.type}`}<span className="ml-1.5 text-[13px] font-semibold text-slate-600">{`${c.power} кВт`}</span></p>
-                  <p className="text-[12px] text-slate-500 tabular-nums mt-0.5 whitespace-nowrap">
+                  <p className="text-[12px] text-slate-500 tabular-nums mt-0.5 flex flex-wrap items-center gap-x-1">
                     {(promo || tariffK < 1) && <span className="text-slate-400 line-through mr-1">{c.price.toLocaleString('ru-RU')}</span>}
                     <span className={`font-semibold ${promo || tariffK < 1 ? 'px-1.5 rounded-md bg-[#C6F432] text-[#111]' : 'text-slate-700'}`}>{priceNow(c.price, tariffK, promo?.percent).toLocaleString('ru-RU')}</span>
-                    {' сум/кВт·ч'}
+                    <span className="whitespace-nowrap">{' сум/кВт·ч'}</span>
                   </p>
                   <p className="text-xs font-semibold inline-flex items-center gap-1 mt-0.5" style={{ color: look.color }}>
                     <span className="w-1.5 h-1.5 rounded-full" style={{ background: look.color }} />{look.text}
                   </p>
                 </div>
                 {isFree && canStart ? (
-                  <button onClick={() => onStartCharging(c.id)} className="shrink-0 px-4 py-3 rounded-xl text-sm font-bold text-[#111] active:scale-95 transition-transform" style={{ background: 'linear-gradient(135deg,#D9F77A,#8FD61A)', boxShadow: '0 4px 12px rgba(143,214,26,0.3)' }}>
+                  <button onClick={() => onStartCharging(c.id)} className="shrink-0 px-3.5 py-3 rounded-xl text-sm font-bold text-[#111] active:scale-95 transition-transform" style={{ background: 'linear-gradient(135deg,#D9F77A,#8FD61A)', boxShadow: '0 4px 12px rgba(143,214,26,0.3)' }}>
                     Зарядиться
                   </button>
                 ) : (

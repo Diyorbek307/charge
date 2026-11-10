@@ -271,7 +271,7 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
                     <p className="text-sm font-semibold text-slate-800 truncate">{s.name}</p>
                     <p className="text-xs text-slate-400">{`${s.city}${d !== null ? ` · ${d < 10 ? d.toFixed(1) : Math.round(d)} км` : ''} · ${open.length}/${s.connectors.length} свободно · до ${fastest} кВт`}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <p className="text-sm font-bold tabular-nums text-slate-800">{cheapest.toLocaleString('ru-RU')}</p>
                     <p className="text-xs text-slate-400">сум/кВт·ч</p>
                   </div>

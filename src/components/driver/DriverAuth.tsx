@@ -296,7 +296,7 @@ export default function DriverAuth() {
 
       {/* The greeting, a shine running through it */}
       <div className="relative px-6 pt-[150px] sp5-in" style={{ animationDelay: '.4s' }}>
-        <h1 key={title} className="text-[36px] leading-[1.05] font-extrabold tracking-tight pg-reveal">
+        <h1 key={title} className="text-[clamp(28px,8.6vw,36px)] leading-[1.05] font-extrabold tracking-tight pg-reveal">
           <span className="bg-clip-text text-transparent sp4-shimmer" style={{ backgroundImage: 'linear-gradient(100deg, #FFFFFF 0%, #FFFFFF 40%, #DEF88C 50%, #FFFFFF 60%, #FFFFFF 100%)' }}>{title}</span><span className="text-[#C6F432]">.</span>
         </h1>
         <p className="mt-2 text-sm text-white/60 max-w-[330px]">{sub}</p>
