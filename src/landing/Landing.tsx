@@ -384,7 +384,6 @@ function HomePage({ c, lang }: { c: LandingCopy; lang: Lang }) {
       <Pains c={c} />
       <HowTo c={c} />
       <Showcase c={c} lang={lang} />
-      <NextPages c={c} />
       <Cta c={c} />
     </>
   );
@@ -1475,11 +1474,10 @@ function Footer({ c }: { c: LandingCopy }) {
         <div>
           <p className="lp-footer-h">{c.footer.pages}</p>
           {(['home', 'drivers', 'networks', 'prices', 'guide', 'faq', 'about', 'join'] as Page[]).map(p => <PageLink key={p} to={p}>{c.nav[p]}</PageLink>)}
-          {CITY_IDS.map(p => <PageLink key={p} to={p}>{c.nav[p]}</PageLink>)}
         </div>
         <div>
           <p className="lp-footer-h">{c.footer.company}</p>
-          {(['info', 'partners', 'business', 'support', 'hr'] as const).map(k => (
+          {(['info', 'partners', 'support'] as const).map(k => (
             <a key={k} href={`mailto:${BRAND.emails[k]}`}><Send size={14} /><span>{c.footer.mail[k]}<span className="lp-footer-muted"> · {BRAND.emails[k]}</span></span></a>
           ))}
           {LEGAL_IDS.map(d => <a key={d} href={legalHref(d)}><ScrollText size={14} />{c.legal[d]}</a>)}
