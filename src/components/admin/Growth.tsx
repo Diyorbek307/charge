@@ -9,7 +9,7 @@ import { Card, Kpi, Loading, ErrorNote } from './ui';
 const weekLabel = (iso: string) => new Date(`${iso}T00:00:00+05:00`).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: 'Asia/Tashkent' });
 
 /** Yellow by how many came back: a pale cell is a leak, a deep one is a habit. */
-const cellStyle = (pct: number) => ({ background: `rgba(255, 200, 61, ${0.08 + (Math.min(pct, 100) / 100) * 0.85})`, color: pct > 55 ? '#111' : '#3f3a2a' });
+const cellStyle = (pct: number) => ({ background: `rgba(198,244,50, ${0.08 + (Math.min(pct, 100) / 100) * 0.85})`, color: pct > 55 ? '#111' : '#3f3a2a' });
 
 /**
  * Growth of the driver base: who is active, how far new drivers get from
@@ -46,7 +46,7 @@ export default function Growth() {
                   <span className="tabular-nums text-slate-900 font-semibold">{num(row.count)}</span>
                 </div>
                 <div className="mt-1 h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                  <div className="h-full rounded-full pg-bar" style={{ width: `${Math.max(row.ofFirst, 2)}%`, background: 'linear-gradient(90deg, #FFB000, #FFC83D)' }} />
+                  <div className="h-full rounded-full pg-bar" style={{ width: `${Math.max(row.ofFirst, 2)}%`, background: 'linear-gradient(90deg, #8FD61A, #C6F432)' }} />
                 </div>
                 {i > 0 && (
                   <p className={`mt-0.5 text-[11px] tabular-nums ${row.ofPrev < 50 ? 'text-red-600' : 'text-slate-400'}`}>

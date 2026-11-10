@@ -19,28 +19,28 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const pub = join(root, 'public');
 const url = process.env.URL ?? 'http://localhost:3000/';
 
-// Same drawing as LogoMark in src/landing/Logo.tsx: a white stroke and a
-// yellow blade on black.
-const STROKE = 'M32.5 28.5 L52 64.5 L62 50';
-const BLADE = 'M50.5 52 L66.5 22.5 C70 16.5 74 14.5 80 14.5 L91 14.5 C92.8 14.5 93.6 16.3 92.7 17.8 L66 63 C62 69 57.5 70 54 69 C49.5 67.5 48 58 50.5 52 Z';
-const SHINE = 'M58 56 L71 31 C74 25.5 78 23 84 23 L87.5 23 L66.5 59.5 C63.5 64 59.5 63 58 56 Z';
-const INK = '#111111';
+// The owner's own logo (public/brand/voli-mark.png, transparent) on near-black,
+// as LogoMark in src/landing/Logo.tsx shows it.
+const INK = '#060B0A';
+const png = f => 'data:image/png;base64,' + readFileSync(join(pub, 'brand', f)).toString('base64');
+const MARK = png('voli-mark.png');
+const MARK_SMALL = png('voli-mark-160.png');
+const RATIO = 837 / 608; // width / height of the mark
 
 /**
  * The mark as SVG. `bleed` fills the whole square with no rounding (launchers
  * and iOS round it themselves); `scale` shrinks the V into the maskable safe
  * zone; `bg: false` leaves the square transparent (Android's foreground layer).
  */
-const mark = ({ bleed = false, scale = 1, bg = true, size } = {}) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"${size ? ` width="${size}" height="${size}"` : ''}>
-<defs><linearGradient id="b" x1="0.2" y1="1" x2="0.8" y2="0"><stop offset="0" stop-color="#E09A00"/><stop offset="0.45" stop-color="#FFC83D"/><stop offset="1" stop-color="#FFE58A"/></linearGradient></defs>
+const mark = ({ bleed = false, scale = 1, bg = true, size, small = false } = {}) => {
+  const w = 40 * scale, h = w / RATIO;
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 48 48"${size ? ` width="${size}" height="${size}"` : ''}>
 ${bg ? `<rect width="48" height="48"${bleed ? '' : ' rx="12"'} fill="${INK}"/>` : ''}
-<g transform="translate(24 24.5) scale(${0.6 * scale}) translate(-58.5 -44.5)">
-<path d="${STROKE}" fill="none" stroke="#FFFFFF" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="${BLADE}" fill="url(#b)"/><path d="${SHINE}" fill="#FFF3C4" opacity="0.45"/>
-</g>
+<image href="${small ? MARK_SMALL : MARK}" x="${24 - w / 2}" y="${24.5 - h / 2}" width="${w}" height="${h}"/>
 </svg>`;
+};
 
-writeFileSync(join(pub, 'favicon.svg'), mark());
+writeFileSync(join(pub, 'favicon.svg'), mark({ small: true }));
 
 const browser = await chromium.launch({
   channel: process.env.PW_CHANNEL,

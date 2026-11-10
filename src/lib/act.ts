@@ -56,7 +56,7 @@ function drawAct(inv: ActInvoice) {
   const ctx = canvas.getContext('2d')!;
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#FFC83D';
+  ctx.fillStyle = '#C6F432';
   ctx.fillRect(0, 0, W, 14);
 
   ctx.fillStyle = INK;
@@ -101,7 +101,7 @@ function drawAct(inv: ActInvoice) {
     const top = y + i * rowH;
     const last = i === rows.length - 1;
     if (last) {
-      ctx.fillStyle = '#FFF4D2';
+      ctx.fillStyle = '#F1FCD6';
       ctx.fillRect(M, top, W - M * 2, rowH);
     }
     ctx.strokeRect(M, top, W - M * 2, rowH);

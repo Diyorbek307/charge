@@ -6,7 +6,7 @@ import { useI18n } from '../lib/i18n';
 type PaneId = 'driver' | 'operator' | 'admin' | 'business' | 'api' | 'architecture';
 
 const PANES: { id: PaneId; label: string; color: string }[] = [
-  { id: 'driver', label: 'Driver App', color: '#FFC83D' },
+  { id: 'driver', label: 'Driver App', color: '#C6F432' },
   { id: 'operator', label: 'Operator Portal', color: '#34D399' },
   { id: 'admin', label: 'Admin Center', color: '#8DA2FF' },
   { id: 'business', label: 'Business Portal', color: '#818CF8' },
@@ -86,7 +86,7 @@ export default function SplitView({ onClose }: { onClose: () => void }) {
         <div className="flex items-center gap-2 min-w-0">
           <div
             className="w-7 h-7 rounded-lg grid place-items-center shrink-0"
-            style={{ background: 'linear-gradient(135deg,#FFC83D,#FFB000)' }}
+            style={{ background: 'linear-gradient(135deg,#C6F432,#8FD61A)' }}
           >
             <Zap size={14} className="text-[#111]" />
           </div>

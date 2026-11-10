@@ -163,8 +163,8 @@ export function BookingScreen({ station, onBack, onConfirm }: { station: Station
         )}
         {inPast && <p className="text-xs text-amber-800 bg-amber-50 rounded-xl px-3 py-2 mb-2 pg-reveal">Это время уже прошло — выберите позже</p>}
         <button onClick={submit} disabled={submitting || !freeConnectors[connector] || inPast}
-          className="w-full disabled:opacity-50 text-[#111] rounded-2xl py-4 font-bold text-base transition-colors flex items-center justify-center gap-2 shadow-[0_8px_22px_rgba(255,176,0,0.3)] disabled:shadow-none"
-          style={{ background: 'linear-gradient(135deg,#FFD66B,#FFB000)' }}>
+          className="w-full disabled:opacity-50 text-[#111] rounded-2xl py-4 font-bold text-base transition-colors flex items-center justify-center gap-2 shadow-[0_8px_22px_rgba(143,214,26,0.3)] disabled:shadow-none"
+          style={{ background: 'linear-gradient(135deg,#D9F77A,#8FD61A)' }}>
           <CalendarCheck size={18} />{submitting ? 'Бронируем…' : plusFree ? 'Подтвердить бронь · бесплатно с Plus' : `Подтвердить бронь · ${fee.toLocaleString('ru-RU')} сум`}
         </button>
       </div>

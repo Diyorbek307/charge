@@ -93,7 +93,7 @@ export default function AdminOperators({ onNavigate }: { onNavigate: (page: stri
                 </div>
               </div>
 
-              <button onClick={() => setSetup(setup === o.id ? null : o.id)} aria-expanded={setup === o.id} className="mt-3 text-xs font-semibold text-[#8a5b00] hover:underline">
+              <button onClick={() => setSetup(setup === o.id ? null : o.id)} aria-expanded={setup === o.id} className="mt-3 text-xs font-semibold text-[#3d6b00] hover:underline">
                 {setup === o.id ? 'Скрыть подключение и оплату' : 'Подключение и оплата'}
               </button>
               {setup === o.id && <OperatorSetup operatorId={o.id} onChanged={reload} />}

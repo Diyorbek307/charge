@@ -115,11 +115,11 @@ export function FinanceScreen({ onBack }: { onBack: () => void }) {
               <YAxis tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} formatter={(v, n) => [`${v} кВт·ч`, n === 'dc' ? 'Быстрая DC' : 'Медленная AC']} />
               <Bar dataKey="ac" stackId="e" fill="#4F6BFF" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="dc" stackId="e" fill="#FFB000" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="dc" stackId="e" fill="#8FD61A" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
           <div className="flex justify-between text-[11px] text-slate-500 mt-1">
-            <span><span className="inline-block w-2 h-2 rounded-full bg-[#FFB000] mr-1" />{`Быстрая DC ${Math.round(dcShare)}%`}</span>
+            <span><span className="inline-block w-2 h-2 rounded-full bg-[#8FD61A] mr-1" />{`Быстрая DC ${Math.round(dcShare)}%`}</span>
             <span><span className="inline-block w-2 h-2 rounded-full bg-[#4F6BFF] mr-1" />{`Медленная AC ${Math.round(100 - dcShare)}%`}</span>
             <span>{`Ночью: ${night}`}</span>
           </div>
@@ -127,7 +127,7 @@ export function FinanceScreen({ onBack }: { onBack: () => void }) {
 
         <div className="rounded-2xl p-4 text-white" style={{ background: 'linear-gradient(135deg,#2A2416,#111111)' }}>
           <p className="text-xs text-white/80 flex items-center gap-1.5"><Fuel size={13} />По сравнению с бензиновой машиной</p>
-          <p className="text-2xl font-bold mt-1 tabular-nums text-[#FFC83D]">{saved > 0 ? `≈ ${sum(saved)} экономии` : '—'}</p>
+          <p className="text-2xl font-bold mt-1 tabular-nums text-[#C6F432]">{saved > 0 ? `≈ ${sum(saved)} экономии` : '—'}</p>
           <p className="text-xs text-white/80 mt-1">{`Бензин на ${Math.round(km)} км: ≈ ${sum(petrol)} · электричество: ${sum(allCost)}`}</p>
         </div>
         <div className="bg-white rounded-2xl border border-slate-100 p-3 grid grid-cols-2 gap-2">

@@ -101,7 +101,7 @@ export default function AdminHealth() {
         </ul>
       </Card>
 
-      <Card title={<span className="inline-flex items-center gap-2"><Bell size={15} />Письма команде</span>} right={<button onClick={testMail} disabled={testing || !data.mail?.configured} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#FFC83D] text-[#111] text-xs font-semibold disabled:opacity-50">{testing ? <LoaderCircle size={13} className="animate-spin" /> : <Send size={13} />}Отправить тестовое письмо</button>}>
+      <Card title={<span className="inline-flex items-center gap-2"><Bell size={15} />Письма команде</span>} right={<button onClick={testMail} disabled={testing || !data.mail?.configured} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#C6F432] text-[#111] text-xs font-semibold disabled:opacity-50">{testing ? <LoaderCircle size={13} className="animate-spin" /> : <Send size={13} />}Отправить тестовое письмо</button>}>
         <p className="text-sm text-slate-600">
           {data.mail?.via === 'resend' ? 'Отправка через Resend (HTTPS)' : data.mail?.via === 'smtp' ? `Отправка по SMTP: ${data.mail.host}` : 'Отправка не настроена: задайте RESEND_API_KEY или SMTP_HOST, SMTP_USER и SMTP_PASS'}
         </p>
@@ -117,7 +117,7 @@ export default function AdminHealth() {
         )}
       </Card>
 
-      <Card title={<span className="inline-flex items-center gap-2"><Siren size={15} />Сигналы о сбоях в Telegram</span>} right={<button onClick={() => void testAlert()} disabled={alertTest?.busy} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#FFC83D] text-[#111] text-xs font-semibold disabled:opacity-50">{alertTest?.busy ? <LoaderCircle size={13} className="animate-spin" /> : <Send size={13} />}Проверить сигнал</button>}>
+      <Card title={<span className="inline-flex items-center gap-2"><Siren size={15} />Сигналы о сбоях в Telegram</span>} right={<button onClick={() => void testAlert()} disabled={alertTest?.busy} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#C6F432] text-[#111] text-xs font-semibold disabled:opacity-50">{alertTest?.busy ? <LoaderCircle size={13} className="animate-spin" /> : <Send size={13} />}Проверить сигнал</button>}>
         <p className="text-sm text-slate-600">{data.alerts?.telegram ? 'Бот и чат заданы. Кнопка отправит тестовое сообщение и покажет ответ Telegram.' : 'Не настроено: задайте ALERT_TELEGRAM_TOKEN (токен бота) и ALERT_TELEGRAM_CHAT (номер группы, с минусом).'}</p>
         {alertTest?.result && <p role="status" className={`mt-2 text-sm rounded-xl px-3 py-2 ${alertTest.result.startsWith('Отправлено') ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50'}`}>{alertTest.result}</p>}
         {alertTest?.result && !alertTest.result.startsWith('Отправлено') && <p className="mt-2 text-xs text-slate-500">«chat not found» — неверный номер группы или бот не в группе; «Unauthorized» — неверный токен; «bot was kicked» — бота удалили из группы.</p>}

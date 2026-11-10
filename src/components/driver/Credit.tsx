@@ -78,12 +78,12 @@ export function FaceCapture({ title, hint, busy, error, onShot, onClose }: { tit
         <p className="font-bold flex-1">{title}</p>
       </div>
       <div className="flex-1 flex flex-col items-center justify-center px-6 gap-4">
-        <div className="relative w-64 h-80 rounded-[50%] overflow-hidden border-4 border-[#FFC83D] bg-black/60 grid place-items-center">
+        <div className="relative w-64 h-80 rounded-[50%] overflow-hidden border-4 border-[#C6F432] bg-black/60 grid place-items-center">
           <video ref={video} playsInline muted className={`absolute inset-0 w-full h-full object-cover -scale-x-100 ${live === 'on' ? '' : 'hidden'}`} />
           {live !== 'on' && <ScanFace size={72} className="text-white/30" />}
           {busy && (
             <div className="absolute inset-0 bg-black/50 grid place-items-center">
-              <LoaderCircle size={36} className="animate-spin text-[#FFC83D]" />
+              <LoaderCircle size={36} className="animate-spin text-[#C6F432]" />
             </div>
           )}
         </div>
@@ -95,11 +95,11 @@ export function FaceCapture({ title, hint, busy, error, onShot, onClose }: { tit
       </div>
       <div className="px-4 pb-8 pt-2 space-y-2">
         {live === 'on' ? (
-          <button onClick={snap} disabled={busy} className="w-full py-4 rounded-2xl bg-[#FFC83D] text-[#111] font-bold inline-flex items-center justify-center gap-2 disabled:opacity-50">
+          <button onClick={snap} disabled={busy} className="w-full py-4 rounded-2xl bg-[#C6F432] text-[#111] font-bold inline-flex items-center justify-center gap-2 disabled:opacity-50">
             <Camera size={18} />Сделать фото
           </button>
         ) : (
-          <button onClick={() => file.current?.click()} disabled={busy || live === 'starting'} className="w-full py-4 rounded-2xl bg-[#FFC83D] text-[#111] font-bold inline-flex items-center justify-center gap-2 disabled:opacity-50">
+          <button onClick={() => file.current?.click()} disabled={busy || live === 'starting'} className="w-full py-4 rounded-2xl bg-[#C6F432] text-[#111] font-bold inline-flex items-center justify-center gap-2 disabled:opacity-50">
             <Upload size={18} />Сделать селфи
           </button>
         )}
@@ -202,7 +202,7 @@ export function CreditScreen({ onBack }: { onBack: () => void }) {
           <>
             <div className="rounded-2xl p-4 bg-[#111] text-white">
               <p className="text-xs text-white/60">Зарядитесь сейчас — заплатите потом. Лимит:</p>
-              <p className="text-2xl font-bold mt-1 text-[#FFC83D]">{sum(c.limit)}</p>
+              <p className="text-2xl font-bold mt-1 text-[#C6F432]">{sum(c.limit)}</p>
               <p className="text-sm text-white/70 mt-1">{`${c.days} дней на оплату · без процентов · подтверждение лицом`}</p>
             </div>
             <div className="bg-white rounded-2xl p-4 border border-slate-100">
@@ -214,7 +214,7 @@ export function CreditScreen({ onBack }: { onBack: () => void }) {
                   ['3', 'Заряжаетесь, а оплачиваете из кошелька, когда удобно — в пределах срока'],
                 ].map(([n, t]) => (
                   <div key={n} className="flex gap-3 items-start">
-                    <span className="w-6 h-6 rounded-full bg-[#FFC83D] text-[#111] text-xs font-bold grid place-items-center shrink-0">{n}</span>
+                    <span className="w-6 h-6 rounded-full bg-[#C6F432] text-[#111] text-xs font-bold grid place-items-center shrink-0">{n}</span>
                     <p className="text-sm text-slate-600">{t}</p>
                   </div>
                 ))}
@@ -226,11 +226,11 @@ export function CreditScreen({ onBack }: { onBack: () => void }) {
               <p className="text-xs text-slate-400 mt-3">{`Редакция ${c.termsVersion}`}</p>
             </div>
             <label className="flex gap-3 items-start bg-white rounded-2xl p-4 border border-slate-100 cursor-pointer">
-              <input type="checkbox" checked={agreeTerms} onChange={e => setAgreeTerms(e.target.checked)} className="mt-0.5 w-5 h-5 accent-[#FFB000]" />
+              <input type="checkbox" checked={agreeTerms} onChange={e => setAgreeTerms(e.target.checked)} className="mt-0.5 w-5 h-5 accent-[#8FD61A]" />
               <span className="text-sm text-slate-700">Я прочитал(а) условия и принимаю их</span>
             </label>
             <label className="flex gap-3 items-start bg-white rounded-2xl p-4 border border-slate-100 cursor-pointer">
-              <input type="checkbox" checked={agreeFace} onChange={e => setAgreeFace(e.target.checked)} className="mt-0.5 w-5 h-5 accent-[#FFB000]" />
+              <input type="checkbox" checked={agreeFace} onChange={e => setAgreeFace(e.target.checked)} className="mt-0.5 w-5 h-5 accent-[#8FD61A]" />
               <span className="text-sm text-slate-700">Согласен(на) на сохранение и обработку фото моего лица для подтверждения зарядок в долг</span>
             </label>
             {c.provider === 'sandbox' && (
@@ -250,12 +250,12 @@ export function CreditScreen({ onBack }: { onBack: () => void }) {
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <p className="text-xs text-white/60">Доступно в долг</p>
-                  <p className="text-2xl font-bold text-[#FFC83D] tabular-nums">{sum(c.available)}</p>
+                  <p className="text-2xl font-bold text-[#C6F432] tabular-nums">{sum(c.available)}</p>
                   <p className="text-xs text-white/60 mt-0.5">{`Лимит в долг: ${sum(c.limit)}`}</p>
                 </div>
               </div>
               <div className="h-2 rounded-full bg-white/15 mt-3 overflow-hidden">
-                <div className="h-full bg-[#FFC83D]" style={{ width: `${Math.min(100, (c.debt / Math.max(1, c.limit)) * 100)}%` }} />
+                <div className="h-full bg-[#C6F432]" style={{ width: `${Math.min(100, (c.debt / Math.max(1, c.limit)) * 100)}%` }} />
               </div>
               <div className="flex justify-between text-sm mt-3">
                 <span>{`Долг: ${sum(c.debt)}`}</span>
@@ -268,7 +268,7 @@ export function CreditScreen({ onBack }: { onBack: () => void }) {
                 <button
                   onClick={() => run(() => actions.repayCredit(), 'Долг погашен из кошелька')}
                   disabled={busy || balance <= 0}
-                  className="w-full py-3 rounded-xl bg-[#FFC83D] text-[#111] font-bold disabled:opacity-50"
+                  className="w-full py-3 rounded-xl bg-[#C6F432] text-[#111] font-bold disabled:opacity-50"
                 >
                   {balance >= c.debt ? `Погасить ${sum(c.debt)}` : `Погасить ${sum(balance)} из кошелька`}
                 </button>
@@ -312,7 +312,7 @@ export function CreditScreen({ onBack }: { onBack: () => void }) {
           <button
             onClick={() => { setError(null); setCamera(true); }}
             disabled={!agreeTerms || !agreeFace}
-            className="w-full py-4 rounded-2xl bg-[#FFC83D] text-[#111] font-bold inline-flex items-center justify-center gap-2 disabled:bg-slate-200 disabled:text-slate-400"
+            className="w-full py-4 rounded-2xl bg-[#C6F432] text-[#111] font-bold inline-flex items-center justify-center gap-2 disabled:bg-slate-200 disabled:text-slate-400"
           >
             <ScanFace size={18} />Сохранить лицо и подключить
           </button>

@@ -103,7 +103,7 @@ export function OperatorSetup({ operatorId, onChanged }: { operatorId: string; o
         <div className="grid sm:grid-cols-2 gap-2" role="radiogroup" aria-label="Способ подключения">
           {TYPES.map(t => (
             <button key={t.id} role="radio" aria-checked={type === t.id} disabled={t.id === 'OCPI 2.2.1' && integration?.type !== 'OCPI 2.2.1'} onClick={() => setType(t.id)}
-              className={`text-left px-3 py-2 rounded-xl border text-sm disabled:opacity-50 ${type === t.id ? 'border-[#FFB000] bg-amber-50 font-semibold text-slate-900' : 'border-slate-200 bg-white text-slate-600'}`}>
+              className={`text-left px-3 py-2 rounded-xl border text-sm disabled:opacity-50 ${type === t.id ? 'border-[#8FD61A] bg-amber-50 font-semibold text-slate-900' : 'border-slate-200 bg-white text-slate-600'}`}>
               {t.label}
             </button>
           ))}
@@ -127,7 +127,7 @@ export function OperatorSetup({ operatorId, onChanged }: { operatorId: string; o
           </div>
         )}
         <div className="flex flex-wrap gap-2">
-          <button onClick={saveIntegration} disabled={busy !== null || type === 'OCPI 2.2.1'} className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#FFC83D] text-[#111] text-sm font-semibold disabled:opacity-50">
+          <button onClick={saveIntegration} disabled={busy !== null || type === 'OCPI 2.2.1'} className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#C6F432] text-[#111] text-sm font-semibold disabled:opacity-50">
             {busy === 'int' && <LoaderCircle size={14} className="animate-spin" />}Сохранить подключение
           </button>
           {integration?.type === 'Network API' && (
@@ -142,7 +142,7 @@ export function OperatorSetup({ operatorId, onChanged }: { operatorId: string; o
         <p className="text-sm font-semibold text-slate-800 inline-flex items-center gap-2"><Wallet size={15} />Куда идут деньги водителей</p>
         <div className="grid sm:grid-cols-2 gap-2" role="radiogroup" aria-label="Расчёты">
           {([['platform', 'Через платформу', 'Водитель платит из кошелька Voli, сети — выплата за вычетом комиссии.'], ['direct', 'Напрямую сети', 'У водителя баланс этой сети; пополнение идёт в кассу сети в Payme или Click, мы видим каждый платёж.']] as const).map(([id, label, text]) => (
-            <button key={id} role="radio" aria-checked={mode === id} onClick={() => setMode(id)} className={`text-left px-3 py-2 rounded-xl border ${mode === id ? 'border-[#FFB000] bg-amber-50' : 'border-slate-200 bg-white'}`}>
+            <button key={id} role="radio" aria-checked={mode === id} onClick={() => setMode(id)} className={`text-left px-3 py-2 rounded-xl border ${mode === id ? 'border-[#8FD61A] bg-amber-50' : 'border-slate-200 bg-white'}`}>
               <span className="block text-sm font-semibold text-slate-800">{label}</span>
               <span className="block text-xs text-slate-500">{text}</span>
             </button>
@@ -183,7 +183,7 @@ export function OperatorSetup({ operatorId, onChanged }: { operatorId: string; o
             {payout?.sandbox && <p className="text-xs text-slate-500 bg-slate-100 rounded-xl px-3 py-2">Демо-касса: платежи проходят весь путь подтверждения, но деньги не списываются.</p>}
           </>
         )}
-        <button onClick={savePayout} disabled={busy !== null} className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#FFC83D] text-[#111] text-sm font-semibold disabled:opacity-50">
+        <button onClick={savePayout} disabled={busy !== null} className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#C6F432] text-[#111] text-sm font-semibold disabled:opacity-50">
           {busy === 'pay' && <LoaderCircle size={14} className="animate-spin" />}Сохранить расчёты
         </button>
       </section>

@@ -40,7 +40,7 @@ export default function BusinessDashboard({ onNavigate }: { onNavigate: (page: s
           <div><p className="text-3xl font-bold tabular-nums">{num(budgetShare, 0)}%</p><p className="text-white/80 text-xs">бюджета месяца</p></div>
           <div><p className="text-3xl font-bold tabular-nums">{near.length}</p><p className="text-white/80 text-xs">у лимита</p></div>
         </div>
-        <button onClick={() => onNavigate('billing')} className="px-4 py-2 rounded-xl bg-[#FFC83D] text-[#111] text-sm font-semibold hover:bg-[#FFB000]">Пополнить</button>
+        <button onClick={() => onNavigate('billing')} className="px-4 py-2 rounded-xl bg-[#C6F432] text-[#111] text-sm font-semibold hover:bg-[#8FD61A]">Пополнить</button>
       </div>
 
       {lowBalance && (

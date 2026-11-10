@@ -11,7 +11,7 @@
 .vi.is-out { opacity: 0; transform: translateY(-3%); pointer-events: none; }
 .vi::before {
   content: ''; position: absolute; left: 50%; top: 50%; width: 760px; height: 760px; margin: -380px 0 0 -380px;
-  border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 200, 61, 0.14), rgba(255, 200, 61, 0));
+  border-radius: 50%; background: radial-gradient(closest-side, rgba(198,244,50, 0.14), rgba(198,244,50, 0));
   opacity: 0; transition: opacity 1.2s ease;
 }
 .vi.is-full::before { opacity: 1; }
@@ -19,12 +19,12 @@
 .vi-stage { display: grid; justify-items: center; width: min(560px, calc(100vw - 32px)); }
 
 /* The mark: the dark stroke draws itself, the yellow blade slides in. */
-.vi-logo { width: 84px; height: 74px; overflow: visible; margin-bottom: 44px; }
+.vi-logo { width: 96px; height: auto; margin-bottom: 44px; opacity: 0; transform: translate(10px, 10px); animation: vi-blade 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s forwards; }
 .vi-logo-stroke {
   fill: none; stroke: #f5f5f0; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round;
   stroke-dasharray: 80; stroke-dashoffset: 80; animation: vi-draw 0.7s cubic-bezier(0.4, 0, 0.2, 1) 0.1s forwards;
 }
-.vi-logo-blade { fill: #ffc83d; opacity: 0; transform: translate(10px, 10px); animation: vi-blade 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.5s forwards; }
+.vi-logo-blade { fill: #c6f432; opacity: 0; transform: translate(10px, 10px); animation: vi-blade 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.5s forwards; }
 
 /* Cable → plug → battery, in one row. */
 .vi-row { display: flex; align-items: center; width: 100%; }
@@ -44,19 +44,19 @@
   border: 3px solid #f5f5f0; border-radius: 16px; padding: 6px; overflow: hidden;
 }
 .vi-bat-fill {
-  position: absolute; inset: 6px; border-radius: 10px; background: linear-gradient(90deg, #f2ae00, #ffc83d 70%, #ffe58a);
+  position: absolute; inset: 6px; border-radius: 10px; background: linear-gradient(90deg, #4cc72e, #c6f432 70%, #e9fb8f);
   transform-origin: 0 50%; transform: scaleX(0);
 }
 .vi-bat-cap { position: absolute; right: -14px; top: 50%; width: 9px; height: 26px; margin-top: -13px; border-radius: 0 5px 5px 0; background: #f5f5f0; }
 .vi-bat { overflow: visible; }
 .vi-bat-bolt { position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; fill: #f5f5f0; transition: fill 0.3s ease; }
 .vi.is-full .vi-bat-bolt { fill: #111; animation: vi-pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1); }
-.vi.is-full .vi-bat { border-color: #ffc83d; }
-.vi.is-full .vi-bat-cap { background: #ffc83d; }
+.vi.is-full .vi-bat { border-color: #c6f432; }
+.vi.is-full .vi-bat-cap { background: #c6f432; }
 
 .vi-pct { margin: 34px 0 0; font-size: 15px; font-weight: 600; color: #8a8980; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
 .vi-pct b { font-size: 56px; font-weight: 700; color: #f5f5f0; letter-spacing: -0.03em; margin-right: 2px; }
-.vi.is-full .vi-pct b { color: #ffc83d; }
+.vi.is-full .vi-pct b { color: #c6f432; }
 .vi-step { margin: 6px 0 0; height: 22px; font-size: 15px; font-weight: 500; color: #b9b7ae; animation: vi-step 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .vi-skip { position: absolute; bottom: max(24px, env(safe-area-inset-bottom)); left: 0; right: 0; text-align: center; font-size: 12.5px; color: #5c5b55; }
 

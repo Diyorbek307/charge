@@ -86,7 +86,7 @@ function TabMarker({ slot }: { slot: number }) {
   return (
     <span ref={ref} aria-hidden="true" className="absolute top-2 bottom-2 left-0 w-1/5 px-1.5 pointer-events-none z-[1]"
       style={{ transform: `translateX(${slot * 100}%)` }}>
-      <span className="block h-full rounded-[20px] shadow-[0_6px_16px_rgba(255,176,0,0.4)]" style={{ background: 'linear-gradient(145deg,#FFD66B,#FFC83D)' }} />
+      <span className="block h-full rounded-[20px] shadow-[0_6px_16px_rgba(143,214,26,0.4)]" style={{ background: 'linear-gradient(145deg,#D9F77A,#C6F432)' }} />
     </span>
   );
 }
@@ -94,7 +94,7 @@ function TabMarker({ slot }: { slot: number }) {
 interface Toast { id: string; icon: string; title: string; body: string; color: string; }
 
 function LoaderCircleIcon() {
-  return <span className="w-4 h-4 rounded-full border-2 border-amber-300 border-t-[#FFB000] animate-spin shrink-0" aria-hidden="true" />;
+  return <span className="w-4 h-4 rounded-full border-2 border-amber-300 border-t-[#8FD61A] animate-spin shrink-0" aria-hidden="true" />;
 }
 
 function PushToast({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
@@ -316,7 +316,7 @@ export default function DriverApp() {
       // Only what happened in the last minute: older events are history, not news.
       if (Date.now() - Date.parse(e.ts) > 60_000) continue;
       const look = {
-        'session.progress': { icon: '⏳', title: 'Зарядка почти готова', color: '#FFB000' },
+        'session.progress': { icon: '⏳', title: 'Зарядка почти готова', color: '#8FD61A' },
         'session.goal': { icon: '✅', title: 'Зарядка завершена', color: '#22C55E' },
         'schedule.started': { icon: '🌙', title: 'Отложенная зарядка началась', color: '#22C55E' },
         'schedule.failed': { icon: '⚠️', title: 'Отложенная зарядка не началась', color: '#F59E0B' },
@@ -386,7 +386,7 @@ export default function DriverApp() {
     const c = events.find(e => e.type === 'promo.campaign' && Date.now() - Date.parse(e.ts) < 60_000);
     if (!c || seenCampaign.current === c.id || !driverAccount) return;
     seenCampaign.current = c.id;
-    pushToast({ icon: '🎁', title: 'Новая акция Voli', body: c.message, color: '#FFB000' });
+    pushToast({ icon: '🎁', title: 'Новая акция Voli', body: c.message, color: '#8FD61A' });
     // pushToast is a stable local helper.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events, driverAccount]);
@@ -416,7 +416,7 @@ export default function DriverApp() {
       try {
         await actions.scheduleCharge({ stationId: station.id, connectorId: connector.id, payer, goal: options.goal, at: options.startAt });
         await refresh();
-        pushToast({ icon: '🌙', title: 'Зарядка начнётся в 23:00', body: `${station.name} · по ночному тарифу. Оставьте машину подключённой`, color: '#FFB000' });
+        pushToast({ icon: '🌙', title: 'Зарядка начнётся в 23:00', body: `${station.name} · по ночному тарифу. Оставьте машину подключённой`, color: '#8FD61A' });
         setActiveTab('charging');
         setScreen('map');
       } catch (err) {
@@ -433,7 +433,7 @@ export default function DriverApp() {
           return;
         }
         keepPending({ stationId: station.id, stationName: station.name, connectorId: connector.id, payer, goal: options.goal, at: Date.now() });
-        pushToast({ icon: '📡', title: 'Запустим, как только появится связь', body: `${station.name} · подключите кабель к машине`, color: '#FFB000' });
+        pushToast({ icon: '📡', title: 'Запустим, как только появится связь', body: `${station.name} · подключите кабель к машине`, color: '#8FD61A' });
         setScreen('map');
         return;
       }
@@ -523,7 +523,7 @@ export default function DriverApp() {
         // A station on OCPP or a partner network stops on its own time: the receipt
         // opens once its final record settles the session (the effect above).
         if ((r as { pending?: boolean }).pending) {
-          pushToast({ icon: '⏳', title: 'Останавливаем зарядку', body: 'Ждём подтверждения от станции — чек откроется сам', color: '#FFB000' });
+          pushToast({ icon: '⏳', title: 'Останавливаем зарядку', body: 'Ждём подтверждения от станции — чек откроется сам', color: '#8FD61A' });
           return;
         }
         watched.current = null;
@@ -682,7 +682,7 @@ export default function DriverApp() {
                   <div key="qr" className="relative z-[3] flex justify-center">
                     <button onClick={() => setScreen('qr-scan')} aria-label="Сканировать QR на станции" data-tour="qr"
                       className="pg-qr -mt-9 w-[64px] h-[64px] rounded-[22px] grid place-items-center text-[#111] border-[5px] border-white"
-                      style={{ background: 'linear-gradient(145deg,#FFE08A,#FFB000)', boxShadow: '0 10px 24px rgba(255,176,0,0.55)' }}>
+                      style={{ background: 'linear-gradient(145deg,#E2F99A,#8FD61A)', boxShadow: '0 10px 24px rgba(143,214,26,0.55)' }}>
                       <Scan size={26} strokeWidth={2.4} />
                     </button>
                   </div>

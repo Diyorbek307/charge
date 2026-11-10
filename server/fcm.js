@@ -66,7 +66,7 @@ export async function sendFcm(token, { title, body, url, tag }) {
           token,
           notification: { title, body },
           data: { url: url ?? '/?portal=driver', ...(tag ? { tag } : {}) },
-          android: { priority: 'high', notification: { ...(tag ? { tag } : {}), color: '#FFC83D', channel_id: 'voli' } },
+          android: { priority: 'high', notification: { ...(tag ? { tag } : {}), color: '#C6F432', channel_id: 'voli' } },
           apns: { payload: { aps: { sound: 'default', ...(tag ? { 'thread-id': tag } : {}) } } },
         },
       }),

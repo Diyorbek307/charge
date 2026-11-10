@@ -84,17 +84,17 @@ export default function Tour({ root, onDone }: { root: RefObject<HTMLElement | n
 
       {finale ? (
         <div className="absolute inset-x-5 top-1/2 -translate-y-1/2 bg-white rounded-[28px] p-6 text-center shadow-2xl pg-fr-pop">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-[#FFC83D] text-[#111] grid place-items-center mb-4"><PartyPopper size={30} /></div>
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-[#C6F432] text-[#111] grid place-items-center mb-4"><PartyPopper size={30} /></div>
           <h2 className="text-xl font-extrabold text-[#111]">Всё готово!</h2>
           <p className="text-sm text-slate-500 mt-2 leading-relaxed">Обучение можно пройти ещё раз в «Профиль → Настройки». Удачной дороги ⚡</p>
-          <button onClick={onDone} className="mt-5 w-full h-12 rounded-2xl bg-[#FFC83D] text-[#111] font-bold">К карте</button>
+          <button onClick={onDone} className="mt-5 w-full h-12 rounded-2xl bg-[#C6F432] text-[#111] font-bold">К карте</button>
         </div>
       ) : (
         stop && (
           <div key={stop.id} className="pg-tour-card absolute inset-x-4 bg-white rounded-3xl p-4 shadow-2xl pg-reveal"
             style={box ? (below ? { top: box.top + box.height + 14 } : { bottom: frameH - box.top + 14 }) : { top: '40%' }}>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[11px] font-bold text-[#8A5B00] tabular-nums">{`${i + 1} из ${stops.length}`}</span>
+              <span className="text-[11px] font-bold text-[#3D6B00] tabular-nums">{`${i + 1} из ${stops.length}`}</span>
               <button onClick={onDone} className="text-xs font-semibold text-slate-400 px-2 py-1 rounded-lg hover:bg-slate-100">Пропустить обучение</button>
             </div>
             <h2 className="text-base font-extrabold text-[#111]">{stop.title}</h2>

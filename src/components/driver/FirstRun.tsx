@@ -71,7 +71,7 @@ export default function FirstRun({ only, agreedVersion = 0, marketing: wasMarket
           <div className="flex-1 flex gap-1.5" aria-hidden="true">
             {steps.map((s, k) => (
               <span key={s} className="h-1 flex-1 rounded-full bg-slate-100 overflow-hidden">
-                <span className="block h-full bg-[#FFC83D] rounded-full transition-[width] duration-500 ease-out" style={{ width: k <= i ? '100%' : '0%' }} />
+                <span className="block h-full bg-[#C6F432] rounded-full transition-[width] duration-500 ease-out" style={{ width: k <= i ? '100%' : '0%' }} />
               </span>
             ))}
           </div>
@@ -90,7 +90,7 @@ export default function FirstRun({ only, agreedVersion = 0, marketing: wasMarket
 function PrimaryButton({ children, onClick, disabled }: { children: ReactNode; onClick: () => void; disabled?: boolean }) {
   return (
     <button onClick={onClick} disabled={disabled}
-      className="w-full h-14 rounded-2xl bg-[#FFC83D] text-[#111] font-bold text-base flex items-center justify-center gap-2 shadow-[0_8px_22px_rgba(255,176,0,0.35)] active:scale-[0.98] transition-all disabled:opacity-40 disabled:shadow-none">
+      className="w-full h-14 rounded-2xl bg-[#C6F432] text-[#111] font-bold text-base flex items-center justify-center gap-2 shadow-[0_8px_22px_rgba(143,214,26,0.35)] active:scale-[0.98] transition-all disabled:opacity-40 disabled:shadow-none">
       {children}
     </button>
   );
@@ -109,16 +109,16 @@ function Permission({ icon, title, text, points, allow, onAllow, onLater, note }
     <>
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-6 flex flex-col">
         <div className="self-center my-6 relative w-36 h-36 grid place-items-center">
-          <span className="absolute inset-0 rounded-full bg-[#FFC83D]/25 pg-fr-wave" />
-          <span className="absolute inset-0 rounded-full bg-[#FFC83D]/25 pg-fr-wave" style={{ animationDelay: '1.1s' }} />
-          <span className="relative w-24 h-24 rounded-[30px] bg-[#FFC83D] text-[#111] grid place-items-center shadow-[0_12px_30px_rgba(255,176,0,0.4)] pg-fr-pop">{icon}</span>
+          <span className="absolute inset-0 rounded-full bg-[#C6F432]/25 pg-fr-wave" />
+          <span className="absolute inset-0 rounded-full bg-[#C6F432]/25 pg-fr-wave" style={{ animationDelay: '1.1s' }} />
+          <span className="relative w-24 h-24 rounded-[30px] bg-[#C6F432] text-[#111] grid place-items-center shadow-[0_12px_30px_rgba(143,214,26,0.4)] pg-fr-pop">{icon}</span>
         </div>
         <h1 className="text-[26px] font-extrabold text-[#111] leading-tight tracking-tight text-center">{title}</h1>
         <p className="text-[15px] text-slate-500 mt-2 mb-5 leading-relaxed text-center">{text}</p>
         <ul className="space-y-2 pg-stagger">
           {points.map(p => (
             <li key={p} className="flex items-start gap-3 bg-slate-50 rounded-2xl px-4 py-3">
-              <span className="mt-0.5 w-5 h-5 rounded-full bg-[#111] text-[#FFC83D] grid place-items-center shrink-0"><Check size={12} strokeWidth={3} /></span>
+              <span className="mt-0.5 w-5 h-5 rounded-full bg-[#111] text-[#C6F432] grid place-items-center shrink-0"><Check size={12} strokeWidth={3} /></span>
               <span className="text-sm text-slate-700 leading-snug">{p}</span>
             </li>
           ))}
@@ -225,7 +225,7 @@ function Consent({ renewed, onAccept }: { renewed: boolean; onAccept: (marketing
   return (
     <>
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-6">
-        <div className="w-14 h-14 rounded-2xl bg-[#FFF4D1] text-[#8A5B00] grid place-items-center mb-5 pg-fr-pop"><FileText size={26} /></div>
+        <div className="w-14 h-14 rounded-2xl bg-[#F1FCD6] text-[#3D6B00] grid place-items-center mb-5 pg-fr-pop"><FileText size={26} /></div>
         <h1 className="text-[26px] font-extrabold text-[#111] leading-tight tracking-tight">{renewed ? 'Мы обновили соглашение' : 'Коротко о правилах'}</h1>
         <p className="text-[15px] text-slate-500 mt-2 mb-5 leading-relaxed">
           {renewed ? 'Чтобы продолжить, прочитайте и примите новую редакцию. Главное — ниже.' : 'Главное из пользовательского соглашения. Полный текст — по ссылке ниже.'}
@@ -268,7 +268,7 @@ function Consent({ renewed, onAccept }: { renewed: boolean; onAccept: (marketing
 function Check3({ checked, onChange, children, required, strong }: { checked: boolean; onChange: () => void; children: ReactNode; required?: boolean; strong?: boolean }) {
   return (
     <button role="checkbox" aria-checked={checked} onClick={onChange} className={`w-full flex items-start gap-3 px-4 py-3.5 text-left ${strong ? 'bg-slate-50' : 'bg-white'}`}>
-      <span className={`mt-0.5 w-[22px] h-[22px] rounded-[7px] grid place-items-center shrink-0 transition-all duration-200 ${checked ? 'bg-[#FFC83D] text-[#111] scale-100' : 'border-2 border-slate-300 scale-95'}`}>
+      <span className={`mt-0.5 w-[22px] h-[22px] rounded-[7px] grid place-items-center shrink-0 transition-all duration-200 ${checked ? 'bg-[#C6F432] text-[#111] scale-100' : 'border-2 border-slate-300 scale-95'}`}>
         {checked && <Check size={14} strokeWidth={3} className="pg-fr-tick" />}
       </span>
       <span className={`text-sm leading-snug ${strong ? 'font-bold text-[#111]' : 'text-slate-700'}`}>

@@ -13,7 +13,6 @@ import { promoNow, isNight, networkLook, discounted, useDriverPromos } from '../
 import { useTariffNow, priceNow } from '../lib/tariff';
 import { NetworkBadge } from './driver/NetworkBadge';
 import { ChargerFriend } from './driver/Illustration';
-import { V_BLADE, V_STROKE } from '../landing/Logo';
 import { fetchRoute, pointAt, type Route } from '../lib/nav';
 
 const statusColor: Record<string, string> = {
@@ -59,16 +58,16 @@ let askedOnce = false;
 
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
-// The Voli mark in the drop: the V on a white disc, its blade amber so it reads on white.
-const MARK = `<svg class="pg-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="#fff"/><g transform="translate(24 25) scale(.42) translate(-58.5 -44.5)"><path d="${V_STROKE}" fill="none" stroke="#111" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/><path d="${V_BLADE}" fill="#F2AE00"/></g></svg>`;
+// The Voli mark in the drop: the logo on a near-black disc, like the app icon.
+const MARK = `<svg class="pg-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="#0B110D"/><circle cx="24" cy="24" r="22.5" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width="1.5"/><image href="/brand/voli-mark-160.png" x="8" y="13.2" width="32" height="23.2"/></svg>`;
 const PCT = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18"/><circle cx="7" cy="7" r="2.3"/><circle cx="17" cy="17" r="2.3"/></svg>';
 const MOON = '<svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>';
 
 const TONES = {
-  free: ['#34D399', '#059669'],
-  busy: ['#FB7185', '#DC2626'],
-  off: ['#CBD5E1', '#94A3B8'],
-  promo: ['#FFE08A', '#FF9F0A'],
+  free: ['#E8FF1F', '#5FD12A'],
+  busy: ['#FDA4AF', '#E11D48'],
+  off: ['#E2E8F0', '#94A3B8'],
+  promo: ['#3A423D', '#0B110D'],
 } as const;
 
 /**
@@ -85,11 +84,11 @@ function stationIcon(s: Station, promo: Promo | null, labelled: boolean, m: PinM
   const look = networkLook(s.operator);
   const kind = kindOf(s, promo);
   const [a, b] = TONES[kind];
-  const tone = kind === 'free' ? '#059669' : kind === 'busy' ? '#DC2626' : '#64748B';
+  const tone = kind === 'free' ? '#3D6B00' : kind === 'busy' ? '#E11D48' : '#64748B';
   const chip = withChip
     ? `<span class="pg-chip"><i style="background:${look.color}">${look.initials}</i><span class="pg-chip-name">${esc(s.operator)}</span>${promo ? `<em>${isNight(promo) ? MOON : ''}−${promo.percent}%</em>` : ''}</span>`
     : '';
-  const badge = labelled ? `<span class="pg-badge"><b style="color:${promo ? tone : b}">${free}</b>/${total}</span>` : '';
+  const badge = labelled ? `<span class="pg-badge"><b style="color:${promo ? tone : kind === 'free' ? '#3D6B00' : b}">${free}</b>/${total}</span>` : '';
   const [fx, fy] = m.fan ?? [0, 0];
   const motion = m.anim === 'none' ? '' : `pg-${m.anim}`;
   const vars = `--d:${m.delay ?? 0}ms;--dx:${m.dx ?? 0}px;--dy:${m.dy ?? 0}px;--fx:${fx}px;--fy:${fy}px`;
@@ -97,7 +96,7 @@ function stationIcon(s: Station, promo: Promo | null, labelled: boolean, m: PinM
     <svg viewBox="0 0 40 50" width="40" height="50"><defs><linearGradient id="pg-g-${kind}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs>
     <path d="M20 48C20 48 4 31 4 19a16 16 0 0 1 32 0c0 12-16 29-16 29z" fill="url(#pg-g-${kind})" stroke="#fff" stroke-width="3"/>
     <ellipse cx="14.5" cy="12" rx="6" ry="3.4" fill="#fff" opacity=".35" transform="rotate(-30 14.5 12)"/></svg>
-    <span class="pg-drop-ic" style="color:${kind === 'promo' ? '#111' : '#fff'}">${promo ? PCT : MARK}</span>${badge}</div><span class="pg-ground"></span></div>`;
+    <span class="pg-drop-ic" style="color:${kind === 'promo' ? '#C6F432' : '#fff'}">${promo ? PCT : MARK}</span>${badge}</div><span class="pg-ground"></span></div>`;
   return L.divIcon({ html, className: 'pg-pin-wrap', iconSize: [0, 0], iconAnchor: [0, 0] });
 }
 
@@ -105,7 +104,7 @@ function stationIcon(s: Station, promo: Promo | null, labelled: boolean, m: PinM
 function clusterIcon(count: number, free: number, total: number, promo: boolean) {
   const size = count >= 10 ? 54 : 48;
   const share = total ? Math.round((free / total) * 360) : 0;
-  const html = `<div class="pg-cluster" style="width:${size}px;height:${size}px;background:conic-gradient(#10B981 ${share}deg,#E4E4DD ${share}deg)">
+  const html = `<div class="pg-cluster" style="width:${size}px;height:${size}px;background:conic-gradient(#8FD61A ${share}deg,#E4E4DD ${share}deg)">
     <div class="pg-cluster-in"><b>${count}</b><span>${free} своб.</span></div>${promo ? '<i class="pg-cluster-pct">%</i>' : ''}
   </div>`;
   return L.divIcon({ html, className: '', iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
@@ -326,7 +325,7 @@ function RoutePreview({ station, from }: { station: Station | null; from: { lat:
   return (
     <>
       <Polyline key={`${station.id}-o`} positions={line} pathOptions={{ color: '#111111', weight: 9, opacity: 0.9, lineCap: 'round', lineJoin: 'round', className: 'pg-route-draw' }} />
-      <Polyline key={`${station.id}-i`} positions={line} pathOptions={{ color: '#FFC83D', weight: 5, opacity: 1, lineCap: 'round', lineJoin: 'round', className: 'pg-route-draw' }} />
+      <Polyline key={`${station.id}-i`} positions={line} pathOptions={{ color: '#C6F432', weight: 5, opacity: 1, lineCap: 'round', lineJoin: 'round', className: 'pg-route-draw' }} />
       <Marker position={[mid.lat, mid.lng]} icon={bubble} interactive={false} zIndexOffset={900} />
     </>
   );
@@ -419,7 +418,7 @@ function MapBridge({ target }: { target: Target | null }) {
 const chip = (on: boolean, tone: 'dark' | 'green' | 'yellow' = 'dark') =>
   `shrink-0 h-9 px-3.5 rounded-2xl text-[13px] font-semibold border transition-colors inline-flex items-center gap-1.5 ${
     on
-      ? tone === 'green' ? 'bg-emerald-600 text-white border-emerald-600' : tone === 'yellow' ? 'bg-[#FFC83D] text-[#111] border-[#FFC83D]' : 'bg-[#111] text-white border-[#111]'
+      ? tone === 'green' ? 'bg-emerald-600 text-white border-emerald-600' : tone === 'yellow' ? 'bg-[#C6F432] text-[#111] border-[#C6F432]' : 'bg-[#111] text-white border-[#111]'
       : 'bg-slate-50 text-slate-700 border-slate-100 hover:bg-slate-100'
   }`;
 
@@ -608,11 +607,11 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
           <div className="absolute top-3 left-3 right-3 z-[1000] flex items-start justify-between gap-2 pointer-events-none">
             {onOpenWallet && sessions.driver ? (
               <button onClick={onOpenWallet} aria-label="Кошелёк" data-tour="wallet" className="pointer-events-auto flex items-center gap-2.5 pl-2 pr-4 py-2 rounded-2xl bg-white/95 backdrop-blur shadow-[0_4px_20px_rgba(15,23,42,0.12)]">
-                <span className="w-9 h-9 rounded-xl bg-[#FFC83D] text-[#111] grid place-items-center"><Wallet size={18} /></span>
+                <span className="w-9 h-9 rounded-xl bg-[#C6F432] text-[#111] grid place-items-center"><Wallet size={18} /></span>
                 <span className="text-left leading-tight">
                   <span className="block text-[11px] text-slate-500">Баланс</span>
                   <span className="block text-[15px] font-bold text-slate-900 tabular-nums">{`${balance.toLocaleString('ru-RU')} сум`}</span>
-                  {bonus > 0 && <span className="block text-[11px] font-bold text-[#946300] tabular-nums">{`+${bonus.toLocaleString('ru-RU')} бонус`}</span>}
+                  {bonus > 0 && <span className="block text-[11px] font-bold text-[#3D6B00] tabular-nums">{`+${bonus.toLocaleString('ru-RU')} бонус`}</span>}
                 </span>
               </button>
             ) : <span />}
@@ -628,9 +627,9 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
                   <p className="flex items-center gap-2"><span className="pg-legend" style={{ background: '#16A34A' }} />Есть свободные</p>
                   <p className="flex items-center gap-2"><span className="pg-legend" style={{ background: '#EF4444' }} />Все заняты</p>
                   <p className="flex items-center gap-2"><span className="pg-legend" style={{ background: '#94A3B8' }} />Не работает</p>
-                  <p className="flex items-center gap-2"><span className="px-1.5 py-0.5 rounded-md bg-[#FFC83D] text-[#111] font-black text-[10px]">−20%</span>Скидка от сети</p>
+                  <p className="flex items-center gap-2"><span className="px-1.5 py-0.5 rounded-md bg-[#C6F432] text-[#111] font-black text-[10px]">−20%</span>Скидка от сети</p>
                   <p className="flex items-center gap-2 pt-2 border-t border-slate-100"><b className="text-slate-900">2/4</b>свободно / всего</p>
-                  <p className="flex items-center gap-2"><span className="text-[#8a5b00]" dangerouslySetInnerHTML={{ __html: MOON }} />ночная скидка</p>
+                  <p className="flex items-center gap-2"><span className="text-[#3d6b00]" dangerouslySetInnerHTML={{ __html: MOON }} />ночная скидка</p>
                 </div>
               )}
             </div>
@@ -791,7 +790,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
                   >
                     <SlidersHorizontal size={18} />
                     {activeFilters + amen.length > 0 && (
-                      <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-[#FFC83D] text-[#111] text-[10px] font-bold grid place-items-center border-2 border-white">{activeFilters + amen.length}</span>
+                      <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-[#C6F432] text-[#111] text-[10px] font-bold grid place-items-center border-2 border-white">{activeFilters + amen.length}</span>
                     )}
                   </button>
                 </div>
@@ -811,13 +810,13 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
                   <div className="mt-2.5 px-3 flex gap-2 overflow-x-auto no-scrollbar" role="group" aria-label="Быстро">
                     {nearestFree && (
                       <button onClick={() => pick(nearestFree)} className="shrink-0 h-10 pl-2 pr-3.5 rounded-2xl bg-[#111] text-white text-sm font-semibold inline-flex items-center gap-2 active:scale-[0.97] transition-transform">
-                        <span className="w-6 h-6 rounded-lg bg-[#FFC83D] text-[#111] grid place-items-center"><Zap size={14} /></span>
+                        <span className="w-6 h-6 rounded-lg bg-[#C6F432] text-[#111] grid place-items-center"><Zap size={14} /></span>
                         {`Ближайшая свободная · ≈ ${fmtKm(away(nearestFree))}`}
                       </button>
                     )}
                     {cheapestNear && cheapestNear.s.id !== nearestFree?.id && (
-                      <button onClick={() => pick(cheapestNear.s)} className="shrink-0 h-10 pl-2 pr-3.5 rounded-2xl bg-[#FFF4D2] text-[#111] text-sm font-semibold inline-flex items-center gap-2 border border-[#FFC83D]/50 active:scale-[0.97] transition-transform">
-                        <span className="w-6 h-6 rounded-lg bg-[#FFC83D] grid place-items-center"><Percent size={13} /></span>
+                      <button onClick={() => pick(cheapestNear.s)} className="shrink-0 h-10 pl-2 pr-3.5 rounded-2xl bg-[#F1FCD6] text-[#111] text-sm font-semibold inline-flex items-center gap-2 border border-[#C6F432]/50 active:scale-[0.97] transition-transform">
+                        <span className="w-6 h-6 rounded-lg bg-[#C6F432] grid place-items-center"><Percent size={13} /></span>
                         {`Дешевле рядом · ${cheapestNear.price.toLocaleString('ru-RU')} сум`}
                       </button>
                     )}

@@ -119,7 +119,7 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
         {live && (
           <button onClick={onOpenCharge} className="w-full rounded-2xl p-4 text-left text-white flex items-center gap-3 relative overflow-hidden" style={{ background: 'linear-gradient(135deg,#2A2416,#111111)' }}>
             <span className="absolute inset-0 pointer-events-none opacity-30" style={{ background: 'linear-gradient(100deg,transparent 30%,rgba(255,255,255,.35) 50%,transparent 70%)', backgroundSize: '200% 100%', animation: 'pg-shine 2.4s linear infinite' }} />
-            <div className="w-10 h-10 rounded-xl bg-[#FFC83D] text-[#111] flex items-center justify-center pg-icon-charge"><Zap size={18} /></div>
+            <div className="w-10 h-10 rounded-xl bg-[#C6F432] text-[#111] flex items-center justify-center pg-icon-charge"><Zap size={18} /></div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold">Идёт зарядка</p>
               <p className="text-xs text-white/80 truncate">{`${live.stationName} · с ${time(live.start)}`}</p>
@@ -160,7 +160,7 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
 
         {scheduled.map(x => (
           <div key={x.id} className="bg-white rounded-2xl border border-amber-200 p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#111] flex items-center justify-center"><Moon size={17} className="text-[#FFC83D]" /></div>
+            <div className="w-10 h-10 rounded-xl bg-[#111] flex items-center justify-center"><Moon size={17} className="text-[#C6F432]" /></div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-800 truncate">{`Начнётся в ${time(x.at)} · ${x.stationName}`}</p>
               <p className="text-xs text-slate-500 truncate">{`${x.connector}${x.goal ? ` · ${goalLabel(x.goal)}` : ''} · ночной тариф`}</p>
@@ -177,7 +177,7 @@ export default function ChargingHubScreen({ onNavigate, onSelectStation, onOpenC
             <button
               onClick={() => lastConnector && onRepeat(lastStation, lastConnector.id, lastGoal)}
               disabled={!lastConnector}
-              className="mt-3 w-full py-2.5 rounded-xl bg-[#FFC83D] text-[#111] text-sm font-bold inline-flex items-center justify-center gap-1.5 disabled:bg-slate-100 disabled:text-slate-400"
+              className="mt-3 w-full py-2.5 rounded-xl bg-[#C6F432] text-[#111] text-sm font-bold inline-flex items-center justify-center gap-1.5 disabled:bg-slate-100 disabled:text-slate-400"
             >
               <Zap size={15} />{lastConnector ? 'Зарядить так же' : 'Сейчас все такие разъёмы заняты'}
             </button>

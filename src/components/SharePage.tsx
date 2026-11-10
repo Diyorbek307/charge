@@ -46,7 +46,7 @@ export default function SharePage({ token }: { token: string }) {
     <div className="min-h-full bg-[#f5f5f5] flex flex-col items-center px-4 py-8">
       <div className="flex items-center gap-2 mb-6">
         <LogoMark size={32} />
-        <span className="font-bold text-slate-900"><span className="text-[#8a5b00]">V</span>oli</span>
+        <span className="font-bold text-slate-900"><span className="text-[#3d6b00]">V</span>oli</span>
       </div>
       <div className="w-full max-w-sm bg-white rounded-3xl border border-slate-100 p-5 space-y-4 shadow-sm">
         {gone ? (
@@ -56,7 +56,7 @@ export default function SharePage({ token }: { token: string }) {
         ) : (
           <>
             <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 rounded-2xl grid place-items-center ${data.status === 'active' ? 'bg-[#FFC83D] text-[#111]' : 'bg-emerald-50 text-emerald-600'}`}>
+              <div className={`w-12 h-12 rounded-2xl grid place-items-center ${data.status === 'active' ? 'bg-[#C6F432] text-[#111]' : 'bg-emerald-50 text-emerald-600'}`}>
                 {data.status === 'active' ? <BatteryCharging size={22} /> : <CheckCircle size={22} />}
               </div>
               <div>
@@ -67,13 +67,13 @@ export default function SharePage({ token }: { token: string }) {
             {data.progress !== null && data.status === 'active' && (
               <div>
                 <div className="h-3 rounded-full bg-slate-100 overflow-hidden">
-                  <div className="h-full bg-[#FFC83D] transition-all" style={{ width: `${data.progress}%` }} />
+                  <div className="h-full bg-[#C6F432] transition-all" style={{ width: `${data.progress}%` }} />
                 </div>
                 <p className="text-xs text-slate-500 mt-1">{`${data.progress}% от цели · ${data.energy} кВт·ч`}</p>
               </div>
             )}
             {data.readyAt && data.status === 'active' && (
-              <p className="flex items-center gap-2 text-base font-semibold text-slate-900"><Clock size={18} className="text-[#8a5b00]" />{`Будет готова к ${clock(data.readyAt)}`}</p>
+              <p className="flex items-center gap-2 text-base font-semibold text-slate-900"><Clock size={18} className="text-[#3d6b00]" />{`Будет готова к ${clock(data.readyAt)}`}</p>
             )}
             <div className="rounded-2xl bg-slate-50 p-3">
               <p className="font-semibold text-slate-800">{data.station}</p>

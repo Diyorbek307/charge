@@ -74,9 +74,9 @@ export default function SupportChat({ portal = 'driver', tall = false }: { porta
         {(thread?.messages ?? []).length === 0 && <p className="text-center text-xs text-slate-400 py-4">Сообщений пока нет</p>}
         {thread?.messages.map(m => (
           <div key={m.id} className={`flex ${m.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[80%] rounded-2xl px-3 py-2 ${m.from === 'user' ? 'bg-[#FFC83D] text-[#111]' : 'bg-white border border-slate-100 text-slate-800'}`}>
+            <div className={`max-w-[80%] rounded-2xl px-3 py-2 ${m.from === 'user' ? 'bg-[#C6F432] text-[#111]' : 'bg-white border border-slate-100 text-slate-800'}`}>
               {m.from === 'support' && <p className="text-[10px] font-semibold text-slate-400 mb-0.5">Поддержка Voli</p>}
-              {m.from === 'ai' && <p className="text-[10px] font-semibold text-[#8A5B00] mb-0.5 inline-flex items-center gap-1"><Sparkles size={10} />{`ИИ-помощник · ${m.agentName ?? 'Voli'}`}</p>}
+              {m.from === 'ai' && <p className="text-[10px] font-semibold text-[#3D6B00] mb-0.5 inline-flex items-center gap-1"><Sparkles size={10} />{`ИИ-помощник · ${m.agentName ?? 'Voli'}`}</p>}
               {m.image && <img src={m.image} alt="Фото к сообщению" className="rounded-xl mb-1 max-h-48 object-cover" />}
               {m.text && <p className="text-sm whitespace-pre-wrap">{m.text}</p>}
               <p className={`text-[10px] mt-0.5 ${m.from === 'user' ? 'text-black/50' : 'text-slate-400'}`}>{time(m.at)}</p>
@@ -85,7 +85,7 @@ export default function SupportChat({ portal = 'driver', tall = false }: { porta
         ))}
         {thinking && (
           <div className="flex justify-start" aria-live="polite">
-            <div className="rounded-2xl px-3 py-2 bg-white border border-slate-100 text-xs text-slate-500 inline-flex items-center gap-1.5"><Sparkles size={12} className="text-[#8A5B00]" />Помощник отвечает…</div>
+            <div className="rounded-2xl px-3 py-2 bg-white border border-slate-100 text-xs text-slate-500 inline-flex items-center gap-1.5"><Sparkles size={12} className="text-[#3D6B00]" />Помощник отвечает…</div>
           </div>
         )}
         <div ref={end} />
@@ -102,7 +102,7 @@ export default function SupportChat({ portal = 'driver', tall = false }: { porta
         <input ref={file} type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && shrink(e.target.files[0]).then(setImage).catch(() => setError('Не удалось прочитать фото'))} />
         <textarea value={text} onChange={e => setText(e.target.value)} rows={1} placeholder="Сообщение" aria-label="Сообщение в поддержку"
           className="flex-1 resize-none border border-slate-200 rounded-xl px-3 py-2.5 text-sm max-h-28" />
-        <button onClick={send} disabled={busy || (!text.trim() && !image)} aria-label="Отправить" className="w-10 h-10 rounded-xl bg-[#FFC83D] text-[#111] grid place-items-center shrink-0 disabled:opacity-40">
+        <button onClick={send} disabled={busy || (!text.trim() && !image)} aria-label="Отправить" className="w-10 h-10 rounded-xl bg-[#C6F432] text-[#111] grid place-items-center shrink-0 disabled:opacity-40">
           {busy ? <LoaderCircle size={17} className="animate-spin" /> : <Send size={17} />}
         </button>
       </div>

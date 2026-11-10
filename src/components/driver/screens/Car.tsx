@@ -34,7 +34,7 @@ export function CarBonusBanner() {
   const reward = useSync().state?.rewards?.achievements.find(a => a.id === 'car');
   if (!reward || reward.grantedAt) return null;
   return (
-    <div className="relative overflow-hidden rounded-2xl px-4 py-3 flex items-center gap-3 text-[#111] pg-reveal" style={{ background: 'linear-gradient(135deg,#FFE08A,#FFC83D)' }}>
+    <div className="relative overflow-hidden rounded-2xl px-4 py-3 flex items-center gap-3 text-[#111] pg-reveal" style={{ background: 'linear-gradient(135deg,#E2F99A,#C6F432)' }}>
       <span className="text-2xl pg-float" aria-hidden="true">🎁</span>
       <span className="flex-1 min-w-0">
         <span className="block text-sm font-extrabold">{`+${reward.amount.toLocaleString('ru-RU')} сум на зарядку`}</span>
@@ -170,7 +170,7 @@ export function AddCarScreen({ onBack, onSave }: { onBack: () => void; onSave: (
         <div className="bg-white rounded-2xl border border-slate-100 p-4">
           <label htmlFor="car-plate" className="text-xs font-semibold text-slate-500">ГОСНОМЕР ИЗ ТЕХПАСПОРТА</label>
           <input id="car-plate" value={plate} onChange={e => setPlate(e.target.value.toUpperCase().replace(/[^A-Z0-9А-Я]/g, '').slice(0, 10))} placeholder="01A123BC" autoComplete="off"
-            className="mt-2 w-full h-11 rounded-xl border border-slate-200 px-3 text-base font-semibold tracking-wider text-slate-900 outline-none focus:border-[#FFC83D]" />
+            className="mt-2 w-full h-11 rounded-xl border border-slate-200 px-3 text-base font-semibold tracking-wider text-slate-900 outline-none focus:border-[#C6F432]" />
           <p className="text-[11px] text-slate-400 mt-1.5">Необязательно. Поможет сетям и автопарку узнавать машину</p>
         </div>
 

@@ -95,7 +95,7 @@ export function AdminCredit() {
                       {r.status === 'active' ? (
                         <button onClick={() => update(r.userId, { status: 'paused' })} className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">Приостановить</button>
                       ) : (
-                        <button onClick={() => update(r.userId, { status: 'active' })} className="px-3 py-1.5 rounded-lg bg-[#FFC83D] text-[#111] text-xs font-semibold">Возобновить</button>
+                        <button onClick={() => update(r.userId, { status: 'active' })} className="px-3 py-1.5 rounded-lg bg-[#C6F432] text-[#111] text-xs font-semibold">Возобновить</button>
                       )}
                     </td>
                   </tr>

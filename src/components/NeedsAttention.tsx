@@ -17,7 +17,7 @@ export default function NeedsAttention({ items, onNavigate, allClear = 'Всё �
         {waiting.map(i => (
           <button key={i.key} onClick={() => onNavigate(i.page)}
             className={`shrink-0 inline-flex items-center gap-2.5 pl-3 pr-2 py-2 rounded-2xl border text-sm font-semibold transition-colors ${i.urgent ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
-            <span className={`min-w-[26px] h-[26px] px-1.5 rounded-full grid place-items-center text-xs font-bold tabular-nums ${i.urgent ? 'bg-red-600 text-white' : 'bg-[#FFC83D] text-[#111]'}`}>{i.count}</span>
+            <span className={`min-w-[26px] h-[26px] px-1.5 rounded-full grid place-items-center text-xs font-bold tabular-nums ${i.urgent ? 'bg-red-600 text-white' : 'bg-[#C6F432] text-[#111]'}`}>{i.count}</span>
             {i.label}
             <ArrowRight size={14} className="opacity-60" />
           </button>

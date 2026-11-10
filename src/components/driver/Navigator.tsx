@@ -57,7 +57,7 @@ const carIcon = (heading: number) =>
     className: '',
     iconSize: [34, 34],
     iconAnchor: [17, 17],
-    html: `<div style="width:34px;height:34px;border-radius:50%;background:#111;border:3px solid #FFC83D;display:grid;place-items:center;box-shadow:0 2px 10px rgba(0,0,0,.35);transform:rotate(${heading}deg)"><svg width="16" height="16" viewBox="0 0 24 24" fill="#FFC83D"><path d="M12 2 20 21 12 16 4 21z"/></svg></div>`,
+    html: `<div style="width:34px;height:34px;border-radius:50%;background:#111;border:3px solid #C6F432;display:grid;place-items:center;box-shadow:0 2px 10px rgba(0,0,0,.35);transform:rotate(${heading}deg)"><svg width="16" height="16" viewBox="0 0 24 24" fill="#C6F432"><path d="M12 2 20 21 12 16 4 21z"/></svg></div>`,
   });
 const camIcon = (driver: boolean) =>
   L.divIcon({
@@ -70,13 +70,13 @@ const lightIcon = L.divIcon({
   className: '',
   iconSize: [14, 26],
   iconAnchor: [7, 13],
-  html: '<div style="width:14px;height:26px;border-radius:5px;background:#111;border:1.5px solid white;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;box-shadow:0 1px 4px rgba(0,0,0,.35)"><i style="width:6px;height:6px;border-radius:50%;background:#EF4444"></i><i style="width:6px;height:6px;border-radius:50%;background:#FFC83D"></i><i style="width:6px;height:6px;border-radius:50%;background:#22C55E"></i></div>',
+  html: '<div style="width:14px;height:26px;border-radius:5px;background:#111;border:1.5px solid white;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;box-shadow:0 1px 4px rgba(0,0,0,.35)"><i style="width:6px;height:6px;border-radius:50%;background:#EF4444"></i><i style="width:6px;height:6px;border-radius:50%;background:#C6F432"></i><i style="width:6px;height:6px;border-radius:50%;background:#22C55E"></i></div>',
 });
 const flagIcon = L.divIcon({
   className: '',
   iconSize: [34, 34],
   iconAnchor: [17, 30],
-  html: '<div style="width:34px;height:34px;border-radius:12px;background:#FFC83D;border:2px solid #111;display:grid;place-items:center"><svg width="18" height="18" viewBox="0 0 48 48"><path d="M28.5 6 L12.5 27.5 H22.5 L19 42 L35.5 19.5 H25.5 Z" fill="#111"/></svg></div>',
+  html: '<div style="width:34px;height:34px;border-radius:12px;background:#C6F432;border:2px solid #111;display:grid;place-items:center"><svg width="18" height="18" viewBox="0 0 48 48"><path d="M28.5 6 L12.5 27.5 H22.5 L19 42 L35.5 19.5 H25.5 Z" fill="#111"/></svg></div>',
 });
 
 /**
@@ -325,7 +325,7 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
         {/* Next manoeuvre */}
         <div className="absolute top-3 left-3 right-3 z-[1000] space-y-2">
           <div className="rounded-2xl bg-[#111] text-white p-3 flex items-center gap-3 shadow-xl">
-            <div className="w-14 h-14 rounded-xl bg-[#FFC83D] text-[#111] grid place-items-center shrink-0"><ManeuverIcon s={arrived ? { type: 'arrive' } as Step : next} /></div>
+            <div className="w-14 h-14 rounded-xl bg-[#C6F432] text-[#111] grid place-items-center shrink-0"><ManeuverIcon s={arrived ? { type: 'arrive' } as Step : next} /></div>
             <div className="flex-1 min-w-0">
               {!route ? (
                 <p className="text-sm flex items-center gap-2"><LoaderCircle size={16} className="animate-spin" />{error ?? 'Строим маршрут…'}</p>
@@ -355,7 +355,7 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
           )}
           {light && toLight <= 300 && !(cam && cam.at <= 500) && !arrived && (
             <div className="rounded-2xl px-3 py-2 flex items-center gap-2 bg-[#111]/90 text-white shadow-lg w-max max-w-full">
-              <span aria-hidden="true" className="w-3 h-6 rounded bg-black border border-white/40 flex flex-col items-center justify-evenly"><i className="w-1.5 h-1.5 rounded-full bg-red-500" /><i className="w-1.5 h-1.5 rounded-full bg-[#FFC83D]" /><i className="w-1.5 h-1.5 rounded-full bg-green-500" /></span>
+              <span aria-hidden="true" className="w-3 h-6 rounded bg-black border border-white/40 flex flex-col items-center justify-evenly"><i className="w-1.5 h-1.5 rounded-full bg-red-500" /><i className="w-1.5 h-1.5 rounded-full bg-[#C6F432]" /><i className="w-1.5 h-1.5 rounded-full bg-green-500" /></span>
               <span className="text-sm font-semibold">{word(lang, 'signal', { d: fmtDist(lang, toLight) })}</span>
             </div>
           )}
@@ -379,7 +379,7 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
         {arrived ? (
           <>
             <p className="text-base font-bold text-slate-900">{station.name}</p>
-            <button onClick={onArrive} className="w-full py-3.5 rounded-2xl bg-[#FFC83D] text-[#111] font-bold inline-flex items-center justify-center gap-2"><Zap size={18} />Начать зарядку</button>
+            <button onClick={onArrive} className="w-full py-3.5 rounded-2xl bg-[#C6F432] text-[#111] font-bold inline-flex items-center justify-center gap-2"><Zap size={18} />Начать зарядку</button>
           </>
         ) : (
           <div className="flex items-center gap-3">

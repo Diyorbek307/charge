@@ -40,7 +40,7 @@ export default function Backups() {
   return (
     <Card pad={false}
       title={<span className="inline-flex items-center gap-2"><Archive size={15} />Резервные копии</span>}
-      right={<button onClick={take} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#FFC83D] text-[#111] text-xs font-semibold disabled:opacity-50">{busy ? <LoaderCircle size={13} className="animate-spin" /> : <Archive size={13} />}Сделать копию сейчас</button>}>
+      right={<button onClick={take} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#C6F432] text-[#111] text-xs font-semibold disabled:opacity-50">{busy ? <LoaderCircle size={13} className="animate-spin" /> : <Archive size={13} />}Сделать копию сейчас</button>}>
       <p className="px-5 pt-3 text-xs text-slate-500">
         {`Каждую ночь в 3–6 утра, хранятся ${list?.keep ?? 14} последних; каждая сразу проверяется по базе. `}
         {list?.offsite ? 'Зашифрованная копия уходит письмом в отдельный ящик.' : 'Копии только на сервере — чтобы отправлять их зашифрованными в отдельный ящик, задайте BACKUP_KEY (и при желании BACKUP_EMAIL).'}

@@ -115,11 +115,11 @@ function letter(title, rows, link) {
   const filled = rows.filter(([, v]) => v !== undefined && v !== null && String(v).trim() !== '');
   const text = [title, '', ...filled.map(([k, v]) => `${k}: ${v}`), '', link ? `Открыть: ${SITE}${link}` : ''].join('\n');
   const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#111">
-<div style="background:#FFC83D;padding:16px 20px;border-radius:12px 12px 0 0;font-weight:bold;font-size:18px">Voli · ${esc(title)}</div>
+<div style="background:#C6F432;padding:16px 20px;border-radius:12px 12px 0 0;font-weight:bold;font-size:18px">Voli · ${esc(title)}</div>
 <table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #eee;border-top:0">
 ${filled.map(([k, v]) => `<tr><td style="padding:10px 20px;color:#777;width:35%;vertical-align:top;border-top:1px solid #f2f2f2">${esc(k)}</td><td style="padding:10px 20px;border-top:1px solid #f2f2f2;white-space:pre-wrap">${esc(v)}</td></tr>`).join('\n')}
 </table>
-${link ? `<p style="text-align:center;margin:20px 0"><a href="${SITE}${link}" style="background:#111;color:#FFC83D;padding:12px 22px;border-radius:10px;text-decoration:none;font-weight:bold">Открыть в админ-панели</a></p>` : ''}
+${link ? `<p style="text-align:center;margin:20px 0"><a href="${SITE}${link}" style="background:#111;color:#C6F432;padding:12px 22px;border-radius:10px;text-decoration:none;font-weight:bold">Открыть в админ-панели</a></p>` : ''}
 </div>`;
   return { text, html };
 }
@@ -144,7 +144,7 @@ export async function sendBackupLetter(to, subject, rows, filename, content) {
 export async function sendCodeLetter(to, code) {
   const text = `Ваш код для входа в Voli: ${code}\n\nКод действует 5 минут. Никому его не сообщайте — сотрудники Voli его не спрашивают.\n\nVoli’ga kirish kodi: ${code}. Hech kimga aytmang.`;
   const html = `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;color:#111;text-align:center">
-<div style="background:#111;color:#FFC83D;padding:18px;border-radius:14px 14px 0 0;font-weight:bold;font-size:20px">Voli</div>
+<div style="background:#111;color:#C6F432;padding:18px;border-radius:14px 14px 0 0;font-weight:bold;font-size:20px">Voli</div>
 <div style="background:#fff;border:1px solid #eee;border-top:0;padding:28px 20px;border-radius:0 0 14px 14px">
 <p style="margin:0 0 14px;color:#555">Ваш код для входа</p>
 <p style="margin:0;font-size:36px;font-weight:bold;letter-spacing:8px">${code}</p>

@@ -58,7 +58,7 @@ export default function AutochargeScreen({ onBack }: { onBack: () => void }) {
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         <div className="relative overflow-hidden rounded-3xl p-5 text-white" style={{ background: 'linear-gradient(150deg,#1F1F1F,#0A0A0A)' }}>
           <span className="absolute -right-8 -bottom-8 w-40 h-40 rounded-full opacity-25 pg-float" style={{ background: 'radial-gradient(circle,#34D399,transparent 65%)' }} aria-hidden="true" />
-          <Cable size={28} className="text-[#FFC83D]" />
+          <Cable size={28} className="text-[#C6F432]" />
           <p className="mt-2 text-lg font-bold">Без QR, без телефона</p>
           <p className="text-sm text-white/65 mt-1">Быстрая станция узнаёт вашу машину по кабелю и сама запускает зарядку. Оплата — с кошелька, чек придёт в приложение.</p>
         </div>
@@ -74,7 +74,7 @@ export default function AutochargeScreen({ onBack }: { onBack: () => void }) {
           </div>
         ) : ac?.linking ? (
           <div className="bg-white rounded-2xl border border-amber-200 p-4 pg-reveal">
-            <p className="text-sm font-bold text-slate-900 flex items-center gap-2"><LoaderCircle size={16} className="animate-spin text-[#FFB000]" />Ждём машину</p>
+            <p className="text-sm font-bold text-slate-900 flex items-center gap-2"><LoaderCircle size={16} className="animate-spin text-[#8FD61A]" />Ждём машину</p>
             <p className="text-sm text-slate-600 mt-1">{`Подключите кабель на станции ${linkingAt?.name ?? ''}. Станция передаст ID машины — и всё.`}</p>
             <p className="text-xs text-slate-400 mt-1">{`Окно открыто ещё ${left(ac.linking.until)} мин`}</p>
           </div>
@@ -88,8 +88,8 @@ export default function AutochargeScreen({ onBack }: { onBack: () => void }) {
               <div className="space-y-2">
                 {direct.map(({ s, d }) => (
                   <button key={s.id} onClick={() => void run(() => actions.linkAutocharge(s.id))} disabled={busy}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:border-[#FFB000] text-left disabled:opacity-50">
-                    <span className="w-9 h-9 rounded-xl bg-[#111] text-[#FFC83D] grid place-items-center shrink-0"><Zap size={16} /></span>
+                    className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:border-[#8FD61A] text-left disabled:opacity-50">
+                    <span className="w-9 h-9 rounded-xl bg-[#111] text-[#C6F432] grid place-items-center shrink-0"><Zap size={16} /></span>
                     <span className="flex-1 min-w-0">
                       <span className="block text-sm font-semibold text-slate-800 truncate">{s.name}</span>
                       <span className="block text-xs text-slate-500">{`${s.operator}${d !== null ? ` · ${fmtKm(d)}` : ''}`}</span>

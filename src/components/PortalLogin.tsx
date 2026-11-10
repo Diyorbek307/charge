@@ -6,7 +6,7 @@ import type { Portal } from '../lib/api';
 import DriverAuth from './driver/DriverAuth';
 
 // Every portal signs in under the same brand: a yellow button with near-black text.
-const BRAND_THEME = { grad: 'from-[#FFC83D] to-[#FFB000]', accent: 'text-[#FFC83D]', ring: 'focus:border-[#FFC83D]/60 focus:ring-[#FFC83D]/20', glow: 'rgba(255, 200, 61,0.3)' };
+const BRAND_THEME = { grad: 'from-[#C6F432] to-[#8FD61A]', accent: 'text-[#C6F432]', ring: 'focus:border-[#C6F432]/60 focus:ring-[#C6F432]/20', glow: 'rgba(198,244,50,0.3)' };
 const THEME: Record<Portal, typeof BRAND_THEME> = { driver: BRAND_THEME, operator: BRAND_THEME, admin: BRAND_THEME, business: BRAND_THEME, api: BRAND_THEME };
 
 interface Props {

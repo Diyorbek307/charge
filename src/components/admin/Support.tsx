@@ -237,13 +237,13 @@ export function AdminSupport() {
               <div className="mb-3 flex items-center gap-2 text-xs text-slate-500">
                 <Bot size={13} />
                 {held ? 'ИИ-агенты не отвечают в этом чате — отвечаете вы' : 'ИИ-агенты отвечают в этом чате'}
-                <button onClick={() => send(false, held)} disabled={busy} className="font-semibold text-[#8A5B00] hover:underline">{held ? 'Вернуть агентов' : 'Отвечу сам'}</button>
+                <button onClick={() => send(false, held)} disabled={busy} className="font-semibold text-[#3D6B00] hover:underline">{held ? 'Вернуть агентов' : 'Отвечу сам'}</button>
               </div>
               <div className="space-y-2 max-h-[50vh] overflow-y-auto bg-slate-50 rounded-xl p-3">
                 {t.messages.map(m => (
                   <div key={m.id} className={`flex ${m.from === 'user' ? 'justify-start' : 'justify-end'}`}>
-                    <div className={`max-w-[75%] rounded-2xl px-3 py-2 ${m.from === 'support' ? 'bg-[#FFC83D] text-[#111]' : m.from === 'ai' ? 'bg-amber-50 border border-amber-100 text-[#111]' : 'bg-white border border-slate-100'}`}>
-                      {m.from === 'ai' && <p className="text-[10px] font-semibold text-[#8A5B00] mb-0.5 inline-flex items-center gap-1"><Sparkles size={10} />{`ИИ · ${m.agentName ?? 'агент'}`}</p>}
+                    <div className={`max-w-[75%] rounded-2xl px-3 py-2 ${m.from === 'support' ? 'bg-[#C6F432] text-[#111]' : m.from === 'ai' ? 'bg-amber-50 border border-amber-100 text-[#111]' : 'bg-white border border-slate-100'}`}>
+                      {m.from === 'ai' && <p className="text-[10px] font-semibold text-[#3D6B00] mb-0.5 inline-flex items-center gap-1"><Sparkles size={10} />{`ИИ · ${m.agentName ?? 'агент'}`}</p>}
                       {m.image && <img src={m.image} alt="Фото от водителя" className="rounded-xl mb-1 max-h-64" />}
                       {m.text && <p className="text-sm whitespace-pre-wrap">{m.text}</p>}
                       <p className="text-[10px] text-slate-500 mt-0.5">{dateTime(m.at)}</p>
@@ -253,7 +253,7 @@ export function AdminSupport() {
               </div>
               <div className="mt-3 flex gap-2 items-end">
                 <textarea value={reply} onChange={e => setReply(e.target.value)} rows={2} placeholder="Ответ" aria-label="Ответ" className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-                <button onClick={() => send(false)} disabled={busy || !reply.trim()} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#FFC83D] text-[#111] text-sm font-semibold disabled:opacity-50">
+                <button onClick={() => send(false)} disabled={busy || !reply.trim()} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#C6F432] text-[#111] text-sm font-semibold disabled:opacity-50">
                   {busy ? <LoaderCircle size={14} className="animate-spin" /> : <Send size={14} />}Ответить
                 </button>
               </div>

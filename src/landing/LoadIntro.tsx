@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Lang } from '../lib/i18n';
-import { V_BLADE, V_STROKE } from './Logo';
+import { MARK_SRC } from './Logo';
 import './load-intro.css';
 
 /**
@@ -66,10 +66,7 @@ export default function LoadIntro({ lang, onDone }: { lang: Lang; onDone: () => 
   return createPortal(
     <div className={`vi${leaving ? ' is-out' : ''}${pct >= 100 ? ' is-full' : ''}`} onClick={finish} role="presentation" aria-hidden="true">
       <div className="vi-stage">
-        <svg className="vi-logo" viewBox="20 8 80 70">
-          <path d={V_STROKE} className="vi-logo-stroke" />
-          <path d={V_BLADE} className="vi-logo-blade" />
-        </svg>
+        <img className="vi-logo" src={MARK_SRC} alt="" />
 
         <div className="vi-row">
           <svg className="vi-cable" viewBox="0 0 400 60" preserveAspectRatio="none">

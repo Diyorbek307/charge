@@ -157,7 +157,7 @@ export default function AdminPlatform() {
         <div className="sticky bottom-4 z-20 flex items-center gap-3 bg-[#111] text-white rounded-2xl px-5 py-3 shadow-2xl">
           <span className="flex-1 text-sm">{`Изменено настроек: ${pending}`}</span>
           <button onClick={() => setDraft({})} className="px-3 py-2 rounded-xl text-sm text-white/70 hover:text-white">Отменить</button>
-          <button onClick={() => void save()} disabled={busy} className="px-4 py-2 rounded-xl bg-[#FFC83D] text-[#111] text-sm font-bold disabled:opacity-50">{busy ? 'Сохраняем…' : 'Сохранить и применить'}</button>
+          <button onClick={() => void save()} disabled={busy} className="px-4 py-2 rounded-xl bg-[#C6F432] text-[#111] text-sm font-bold disabled:opacity-50">{busy ? 'Сохраняем…' : 'Сохранить и применить'}</button>
         </div>
       )}
 

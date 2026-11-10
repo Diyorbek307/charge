@@ -73,12 +73,12 @@ async function drawCard(r: Recap, name: string): Promise<Blob | null> {
   g.fillStyle = '#111';
   g.fillRect(0, 0, W, H);
   const glow = g.createRadialGradient(W * 0.85, 120, 0, W * 0.85, 120, 700);
-  glow.addColorStop(0, 'rgba(255,200,61,0.35)');
-  glow.addColorStop(1, 'rgba(255,200,61,0)');
+  glow.addColorStop(0, 'rgba(198,244,50,0.35)');
+  glow.addColorStop(1, 'rgba(198,244,50,0)');
   g.fillStyle = glow;
   g.fillRect(0, 0, W, H);
 
-  g.fillStyle = '#FFC83D';
+  g.fillStyle = '#C6F432';
   g.font = font(800, 64);
   g.fillText('Voli', 80, 140);
   g.fillStyle = 'rgba(255,255,255,0.6)';
@@ -112,7 +112,7 @@ async function drawCard(r: Recap, name: string): Promise<Blob | null> {
     y += 120;
   }
 
-  g.fillStyle = '#FFC83D';
+  g.fillStyle = '#C6F432';
   g.beginPath();
   g.roundRect(80, 1080, W - 160, 150, 36);
   g.fill();
@@ -159,16 +159,16 @@ export default function MonthRecap({ sessions, name }: { sessions: Session[]; na
 
   return (
     <section aria-label="Итоги месяца" className="relative overflow-hidden rounded-3xl bg-[#111] text-white p-5 pg-reveal">
-      <div aria-hidden="true" className="absolute -top-24 -right-20 w-64 h-64 rounded-full bg-[#FFC83D]/25 blur-3xl" />
+      <div aria-hidden="true" className="absolute -top-24 -right-20 w-64 h-64 rounded-full bg-[#C6F432]/25 blur-3xl" />
       <div className="relative">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold text-[#FFC83D] tracking-wide uppercase">{`Итоги месяца · ${MONTH[r.month]}`}</p>
+            <p className="text-xs font-semibold text-[#C6F432] tracking-wide uppercase">{`Итоги месяца · ${MONTH[r.month]}`}</p>
             <p className="mt-2 text-4xl font-extrabold tabular-nums leading-none">{num(r.km)}</p>
             <p className="text-sm text-white/70 mt-1">км на электричестве</p>
           </div>
           <button onClick={share} disabled={busy} aria-label="Поделиться итогами месяца"
-            className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-[#FFC83D] text-[#111] text-xs font-bold px-3 py-2 disabled:opacity-60">
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-[#C6F432] text-[#111] text-xs font-bold px-3 py-2 disabled:opacity-60">
             <Share2 size={14} />{busy ? 'Готовим…' : 'Поделиться'}
           </button>
         </div>
@@ -188,7 +188,7 @@ export default function MonthRecap({ sessions, name }: { sessions: Session[]; na
         {r.byTariff > 0 && r.byDiscounts > 0 && (
           <p className="text-[11px] text-white/50 mt-2">{`${num(r.byTariff)} сум на ночном и дневном тарифе, ${num(r.byDiscounts)} сум на скидках и бонусах`}</p>
         )}
-        <p className="mt-3 rounded-2xl bg-[#FFC83D] text-[#111] px-3 py-2.5 text-xs font-semibold flex items-center gap-2">
+        <p className="mt-3 rounded-2xl bg-[#C6F432] text-[#111] px-3 py-2.5 text-xs font-semibold flex items-center gap-2">
           <Fuel size={14} />{`На бензине те же ${num(r.km)} км обошлись бы дороже на ${num(r.vsPetrol)} сум`}
           <Car size={14} className="ml-auto" aria-hidden="true" />
         </p>

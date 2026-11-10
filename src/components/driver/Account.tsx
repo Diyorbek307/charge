@@ -57,7 +57,7 @@ export function ProfileScreen({ onNavigate }: { onNavigate: (s: string) => void 
   const menu: { icon: ReactNode; label: string; badge?: string; screen: string }[] = [
     { icon: <Wallet size={16} className="text-emerald-500" />, label: 'Кошелёк', badge: sum(balance), screen: 'wallet' },
     { icon: <PieChart size={16} className="text-sky-500" />, label: 'Расходы и экономия', screen: 'finance' },
-    ...(on.plus || state?.plus?.active ? [{ icon: <span className="text-[11px] font-black leading-none px-1 py-0.5 rounded bg-[#FFC83D] text-[#111]" aria-hidden="true">+</span>, label: 'Voli Plus', badge: state?.plus?.active ? 'активен' : `−${state?.plus?.discount ?? 5}%`, screen: 'plus' }] : []),
+    ...(on.plus || state?.plus?.active ? [{ icon: <span className="text-[11px] font-black leading-none px-1 py-0.5 rounded bg-[#C6F432] text-[#111]" aria-hidden="true">+</span>, label: 'Voli Plus', badge: state?.plus?.active ? 'активен' : `−${state?.plus?.discount ?? 5}%`, screen: 'plus' }] : []),
     ...(on.rewards || (state?.rewards?.bonus.balance ?? 0) > 0 ? [{ icon: <span className="text-[15px] leading-none" aria-hidden="true">🎁</span>, label: 'Награды и бонусы', badge: state?.rewards?.bonus.balance ? sum(state.rewards.bonus.balance) : state?.rewards?.achievements.some(a => !a.grantedAt) ? 'новые' : undefined, screen: 'rewards' }] : []),
     ...(on.referral ? [{ icon: <span className="text-[15px] leading-none" aria-hidden="true">🤝</span>, label: 'Приведи друга', badge: 'бонусы', screen: 'referral' }] : []),
     ...(me.passport || passportReward ? [{ icon: <span className="text-[15px] leading-none" aria-hidden="true">🪪</span>, label: 'Паспорт', badge: me.passport ? 'указан' : passportReward && !passportReward.grantedAt ? `+${sum(passportReward.amount)}` : undefined, screen: 'passport' }] : []),
@@ -110,7 +110,7 @@ export function ProfileScreen({ onNavigate }: { onNavigate: (s: string) => void 
           ) : null}
           {car && on.autocharge ? (
             <button onClick={() => onNavigate('autocharge')} className="w-full px-4 py-3 flex items-center gap-3 text-left border-t border-slate-50 hover:bg-slate-50">
-              <span className="w-10 h-10 bg-[#111] rounded-xl flex items-center justify-center text-[#FFC83D] text-lg" aria-hidden="true">⚡</span>
+              <span className="w-10 h-10 bg-[#111] rounded-xl flex items-center justify-center text-[#C6F432] text-lg" aria-hidden="true">⚡</span>
               <span className="flex-1 text-sm font-semibold text-slate-800">Autocharge</span>
               <span className="text-xs text-slate-400">{state?.autocharge?.cars.length ? 'включён' : 'без QR и телефона'}</span>
               <ChevronRight size={16} className="text-slate-400" />
@@ -144,9 +144,9 @@ export function ProfileScreen({ onNavigate }: { onNavigate: (s: string) => void 
           <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">🌱</div>
           <div className="flex-1">
             <p className="text-sm font-bold">Эко-профиль</p>
-            <p className="text-xs text-[#FFE7A0]">CO₂, достижения, зелёные часы и лидеры</p>
+            <p className="text-xs text-[#E8FBB0]">CO₂, достижения, зелёные часы и лидеры</p>
           </div>
-          <ChevronRight size={16} className="text-[#FFC83D]" />
+          <ChevronRight size={16} className="text-[#C6F432]" />
         </button>
 
         <PushToggle portal="driver" />

@@ -21,7 +21,7 @@ const SLIDES = [
   { a: 'Одно касание.', b: 'Один кошелёк.', text: 'Payme, Click и бонусы Voli — платите за зарядку в любой сети.' },
 ];
 
-const YELLOW = 'linear-gradient(90deg, #FFE27A, #FFC83D 55%, #F5B000)';
+const YELLOW = 'linear-gradient(90deg, #DEF88C, #C6F432 55%, #A8E81F)';
 const SPARKS = Array.from({ length: 14 }, (_, i) => ({ x: (i * 37 + 11) % 100, s: 2 + (i % 3), d: (i * 0.53) % 4, t: 3.2 + (i % 4) * 0.7 }));
 const readRef = () => {
   try {
@@ -275,7 +275,7 @@ export default function DriverAuth() {
   const [title, sub] = head[step];
   const signingIn = busy && step !== 'start';
   const field = (bad: boolean) =>
-    `w-full h-[54px] rounded-2xl border text-[15px] text-white placeholder:text-white/35 outline-none transition-colors ${bad ? 'border-red-400/80 bg-red-500/10 focus:ring-4 focus:ring-red-500/20' : 'border-white/10 bg-white/[0.06] focus:border-[#FFC83D] focus:bg-white/[0.09] focus:ring-4 focus:ring-[#FFC83D]/15'}`;
+    `w-full h-[54px] rounded-2xl border text-[15px] text-white placeholder:text-white/35 outline-none transition-colors ${bad ? 'border-red-400/80 bg-red-500/10 focus:ring-4 focus:ring-red-500/20' : 'border-white/10 bg-white/[0.06] focus:border-[#C6F432] focus:bg-white/[0.09] focus:ring-4 focus:ring-[#C6F432]/15'}`;
 
   return (
     <div className="relative min-h-full w-full flex flex-col bg-[#070707] text-white overflow-hidden" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -284,7 +284,7 @@ export default function DriverAuth() {
         <img src="/welcome/welcome.jpg" alt="" className="w-full h-full object-cover object-[50%_74%] sp5-img-in" />
         <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(7,7,7,.55) 0%, rgba(7,7,7,.15) 35%, rgba(7,7,7,.75) 72%, #070707 100%)' }} />
         {SPARKS.map((sp, i) => (
-          <span key={i} className="absolute bottom-6 rounded-full sp4-float" style={{ left: `${sp.x}%`, width: sp.s, height: sp.s, background: '#FFE27A', boxShadow: '0 0 8px 2px rgba(255,200,61,.7)', animationDelay: `${sp.d}s`, animationDuration: `${sp.t}s` }} />
+          <span key={i} className="absolute bottom-6 rounded-full sp4-float" style={{ left: `${sp.x}%`, width: sp.s, height: sp.s, background: '#DEF88C', boxShadow: '0 0 8px 2px rgba(198,244,50,.7)', animationDelay: `${sp.d}s`, animationDuration: `${sp.t}s` }} />
         ))}
       </div>
 
@@ -297,19 +297,19 @@ export default function DriverAuth() {
       {/* The greeting, a shine running through it */}
       <div className="relative px-6 pt-[150px] sp5-in" style={{ animationDelay: '.4s' }}>
         <h1 key={title} className="text-[36px] leading-[1.05] font-extrabold tracking-tight pg-reveal">
-          <span className="bg-clip-text text-transparent sp4-shimmer" style={{ backgroundImage: 'linear-gradient(100deg, #FFFFFF 0%, #FFFFFF 40%, #FFE27A 50%, #FFFFFF 60%, #FFFFFF 100%)' }}>{title}</span><span className="text-[#FFC83D]">.</span>
+          <span className="bg-clip-text text-transparent sp4-shimmer" style={{ backgroundImage: 'linear-gradient(100deg, #FFFFFF 0%, #FFFFFF 40%, #DEF88C 50%, #FFFFFF 60%, #FFFFFF 100%)' }}>{title}</span><span className="text-[#C6F432]">.</span>
         </h1>
         <p className="mt-2 text-sm text-white/60 max-w-[330px]">{sub}</p>
       </div>
 
       {/* The glass card with the form */}
       <div className="relative mx-4 mt-6 mb-6 rounded-[28px] p-5 bg-white/[0.06] border border-white/10 backdrop-blur-xl pg-card-up" style={{ boxShadow: '0 24px 60px rgba(0,0,0,.55)', animationDelay: '.48s' }}>
-        <span className="absolute inset-x-8 top-0 h-px" style={{ background: 'linear-gradient(90deg, rgba(255,200,61,0), rgba(255,200,61,.7), rgba(255,200,61,0))' }} aria-hidden="true" />
+        <span className="absolute inset-x-8 top-0 h-px" style={{ background: 'linear-gradient(90deg, rgba(198,244,50,0), rgba(198,244,50,.7), rgba(198,244,50,0))' }} aria-hidden="true" />
         {(step === 'start' || step === 'password') && (
           <div className="grid grid-cols-2 gap-1 p-1 bg-white/[0.06] border border-white/[0.08] rounded-2xl mb-5" role="tablist" aria-label="Способ входа">
             {([['start', 'По коду'], ['password', 'По паролю']] as const).map(([k, label]) => (
               <button key={k} role="tab" aria-selected={step === k} onClick={() => { setError(null); setTouched(false); setStep(k); }}
-                className={`h-11 rounded-xl text-sm font-bold transition-colors ${step === k ? 'bg-[#FFC83D] text-[#111] shadow-[0_6px_20px_rgba(255,200,61,.35)]' : 'text-white/55 hover:text-white'}`}>{label}</button>
+                className={`h-11 rounded-xl text-sm font-bold transition-colors ${step === k ? 'bg-[#C6F432] text-[#111] shadow-[0_6px_20px_rgba(198,244,50,.35)]' : 'text-white/55 hover:text-white'}`}>{label}</button>
             ))}
           </div>
         )}
@@ -341,9 +341,9 @@ export default function DriverAuth() {
             <YellowButton busy={busy} disabled={busy}>Войти</YellowButton>
             <button type="button" onClick={() => { setError(null); setTouched(false); setStep('start'); }} className="w-full text-sm text-white/55 hover:text-white">Забыли пароль? Войдите по коду</button>
             {demo && (
-              <div className="rounded-2xl border border-[#FFC83D]/25 bg-[#FFC83D]/10 px-4 py-3 flex items-center justify-between gap-3 text-xs text-[#FFE7A0]">
+              <div className="rounded-2xl border border-[#C6F432]/25 bg-[#C6F432]/10 px-4 py-3 flex items-center justify-between gap-3 text-xs text-[#E8FBB0]">
                 <span>Демо-доступ: <b className="font-mono">{demo.login}</b></span>
-                <button type="button" onClick={() => { setTo(demo.login); setPassword(demo.password); }} className="font-bold text-[#FFC83D]">Заполнить</button>
+                <button type="button" onClick={() => { setTo(demo.login); setPassword(demo.password); }} className="font-bold text-[#C6F432]">Заполнить</button>
               </div>
             )}
           </form>
@@ -365,7 +365,7 @@ export default function DriverAuth() {
 
         {step === 'code' && sentTo && (
           <form onSubmit={checkCode} className="sp5-step">
-            {demoCode && <p className="text-xs text-[#FFE7A0] bg-[#FFC83D]/10 border border-[#FFC83D]/25 rounded-xl px-3 py-2.5 text-center">{sentTo.channel === 'email' ? 'Демо-режим: письмо не отправляется. Ваш код —' : 'Демо-режим: SMS не отправляется. Ваш код —'} <b className="font-mono tracking-widest">{demoCode}</b></p>}
+            {demoCode && <p className="text-xs text-[#E8FBB0] bg-[#C6F432]/10 border border-[#C6F432]/25 rounded-xl px-3 py-2.5 text-center">{sentTo.channel === 'email' ? 'Демо-режим: письмо не отправляется. Ваш код —' : 'Демо-режим: SMS не отправляется. Ваш код —'} <b className="font-mono tracking-widest">{demoCode}</b></p>}
             <CodeInput value={code} onChange={setCode} />
             <ErrorBox error={error} />
             <div className="mt-4"><YellowButton busy={busy} disabled={busy || code.length !== 6}>Продолжить</YellowButton></div>
@@ -431,7 +431,7 @@ function FieldError({ text }: { text: string | null }) {
 
 function YellowButton({ busy, disabled, children }: { busy: boolean; disabled: boolean; children: React.ReactNode }) {
   return (
-    <button type="submit" disabled={disabled} className="relative overflow-hidden w-full h-[54px] rounded-2xl text-[#111] font-bold text-[16px] inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50" style={{ background: YELLOW, boxShadow: '0 10px 30px rgba(255,200,61,.35)' }}>
+    <button type="submit" disabled={disabled} className="relative overflow-hidden w-full h-[54px] rounded-2xl text-[#111] font-bold text-[16px] inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50" style={{ background: YELLOW, boxShadow: '0 10px 30px rgba(198,244,50,.35)' }}>
       <span className="absolute inset-0 pg-flow opacity-70" aria-hidden="true" />
       <span className="relative inline-flex items-center gap-2">{busy ? <LoaderCircle size={20} className="animate-spin" /> : children}</span>
     </button>
@@ -468,7 +468,7 @@ function CodeInput({ value, onChange }: { value: string; onChange: (v: string) =
         className="absolute inset-0 w-full h-full opacity-0" aria-label="Код из 6 цифр" />
       <span className="grid grid-cols-6 gap-2 pointer-events-none" aria-hidden="true">
         {Array.from({ length: 6 }, (_, i) => (
-          <span key={i} className={`h-14 rounded-2xl border-2 grid place-items-center text-[22px] font-bold text-white transition-colors ${i === value.length ? 'border-[#FFC83D] bg-[#FFC83D]/10 shadow-[0_0_18px_rgba(255,200,61,.35)]' : 'border-white/10 bg-white/[0.06]'}`}>{value[i] ?? ''}</span>
+          <span key={i} className={`h-14 rounded-2xl border-2 grid place-items-center text-[22px] font-bold text-white transition-colors ${i === value.length ? 'border-[#C6F432] bg-[#C6F432]/10 shadow-[0_0_18px_rgba(198,244,50,.35)]' : 'border-white/10 bg-white/[0.06]'}`}>{value[i] ?? ''}</span>
         ))}
       </span>
     </label>
@@ -491,7 +491,7 @@ function LangChips() {
     <div className="absolute top-3 right-3 z-10 flex gap-1 p-1 rounded-full bg-black/35 border border-white/15 backdrop-blur-md" role="radiogroup" aria-label="Язык приложения">
       {LANGS.map(l => (
         <button key={l.id} role="radio" aria-checked={lang === l.id} aria-label={l.full} onClick={() => setLang(l.id)}
-          className={`h-7 min-w-[34px] px-2 rounded-full text-[11px] font-bold transition-colors ${lang === l.id ? 'bg-[#FFC83D] text-[#111]' : 'text-white/75 hover:text-white'}`}>
+          className={`h-7 min-w-[34px] px-2 rounded-full text-[11px] font-bold transition-colors ${lang === l.id ? 'bg-[#C6F432] text-[#111]' : 'text-white/75 hover:text-white'}`}>
           {l.label}
         </button>
       ))}
@@ -522,7 +522,7 @@ function Welcome({ slide, onSlide, onStart, onSignIn, logoHidden = false, leavin
         {/* Hidden while the splash's wordmark flies here, so the two never show at once */}
         <div data-welcome-logo style={{ opacity: logoHidden ? 0 : 1 }}><Logo size={64} ink="#FFFFFF" /></div>
         <h1 key={slide} className="mt-6 text-center text-[34px] font-extrabold leading-[1.1] tracking-tight pg-reveal" style={{ textShadow: "0 2px 18px rgba(0,0,0,.65)" }}>
-          {s.a}<br /><span className="text-[#FFC83D]">{s.b}</span>
+          {s.a}<br /><span className="text-[#C6F432]">{s.b}</span>
         </h1>
       </div>
 
@@ -530,11 +530,11 @@ function Welcome({ slide, onSlide, onStart, onSignIn, logoHidden = false, leavin
         <p key={`t${slide}`} className="text-center text-[15px] text-white/85 leading-snug min-h-[44px] pg-reveal">{s.text}</p>
         <div className="mt-5 flex justify-center gap-2" role="tablist" aria-label="О Voli">
           {SLIDES.map((_, i) => (
-            <button key={i} role="tab" aria-selected={i === slide} aria-label={`Страница ${i + 1}`} onClick={() => onSlide(i)} className={`h-2 rounded-full transition-all ${i === slide ? 'w-6 bg-[#FFC83D]' : 'w-2 bg-white/35'}`} />
+            <button key={i} role="tab" aria-selected={i === slide} aria-label={`Страница ${i + 1}`} onClick={() => onSlide(i)} className={`h-2 rounded-full transition-all ${i === slide ? 'w-6 bg-[#C6F432]' : 'w-2 bg-white/35'}`} />
           ))}
         </div>
-        <button onClick={onStart} className="mt-6 w-full h-[56px] rounded-2xl text-[#111] font-bold text-[17px] active:scale-[0.98] transition-transform" style={{ background: YELLOW, boxShadow: '0 10px 30px rgba(255,200,61,.3)' }}>Начать</button>
-        <p className="mt-4 text-center text-sm text-white/70">Уже есть аккаунт? <button onClick={onSignIn} className="font-bold text-[#FFC83D]">Войти</button></p>
+        <button onClick={onStart} className="mt-6 w-full h-[56px] rounded-2xl text-[#111] font-bold text-[17px] active:scale-[0.98] transition-transform" style={{ background: YELLOW, boxShadow: '0 10px 30px rgba(198,244,50,.3)' }}>Начать</button>
+        <p className="mt-4 text-center text-sm text-white/70">Уже есть аккаунт? <button onClick={onSignIn} className="font-bold text-[#C6F432]">Войти</button></p>
       </div>
     </div>
   );

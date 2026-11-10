@@ -64,7 +64,7 @@ export function DirectSettlement({ portal }: { portal: Extract<Portal, 'admin' |
                   <YAxis tickFormatter={v => money(v as number, false)} tick={{ fontSize: 11, fill: CHART.axis }} axisLine={false} tickLine={false} width={64} />
                   <Tooltip formatter={(v, n) => [money(Number(v ?? 0)), n === 'received' ? 'Поступило' : 'Списано']} />
                   <Bar dataKey="received" fill="#10B981" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="charged" fill="#FFB000" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="charged" fill="#8FD61A" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

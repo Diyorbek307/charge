@@ -109,7 +109,7 @@ export function OcpiPartners({ onChanged }: { onChanged: () => void }) {
           Токен от партнёра (token A)
           <input value={token} onChange={e => setToken(e.target.value)} autoComplete="off" className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-normal text-slate-800 font-mono" data-no-translate />
         </label>
-        <button type="submit" disabled={busy !== null || !url.trim() || !token.trim()} className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#FFC83D] text-[#111] text-sm font-semibold disabled:opacity-50">
+        <button type="submit" disabled={busy !== null || !url.trim() || !token.trim()} className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#C6F432] text-[#111] text-sm font-semibold disabled:opacity-50">
           {busy === 'new' ? <LoaderCircle size={15} className="animate-spin" /> : <Link2 size={15} />}Подключить сеть
         </button>
       </form>

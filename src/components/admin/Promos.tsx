@@ -127,7 +127,7 @@ export default function AdminPromos() {
                     const on = f.operatorIds.includes(o.id);
                     return (
                       <button key={o.id} type="button" aria-pressed={on} onClick={() => set('operatorIds', on ? f.operatorIds.filter(x => x !== o.id) : [...f.operatorIds, o.id])}
-                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border ${on ? 'bg-[#FFC83D] border-[#FFB000] text-[#111]' : 'bg-white border-slate-200 text-slate-600'}`}>
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border ${on ? 'bg-[#C6F432] border-[#8FD61A] text-[#111]' : 'bg-white border-slate-200 text-slate-600'}`}>
                         {o.name}
                       </button>
                     );
@@ -153,9 +153,9 @@ export default function AdminPromos() {
             </label>
             <label className="flex items-center gap-2 text-sm text-slate-700">
               <input type="checkbox" checked={f.announce} onChange={e => set('announce', e.target.checked)} />
-              <Bell size={14} className="text-[#8A5B00]" />{`Сообщить водителям (${num(data.driversReachable)})`}
+              <Bell size={14} className="text-[#3D6B00]" />{`Сообщить водителям (${num(data.driversReachable)})`}
             </label>
-            <button onClick={create} disabled={busy || !f.title.trim() || (!f.all && !f.operatorIds.length)} className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-xl bg-[#FFC83D] text-[#111] text-sm font-bold disabled:opacity-50">
+            <button onClick={create} disabled={busy || !f.title.trim() || (!f.all && !f.operatorIds.length)} className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-xl bg-[#C6F432] text-[#111] text-sm font-bold disabled:opacity-50">
               {busy ? <LoaderCircle size={15} className="animate-spin" /> : <Megaphone size={15} />}Запустить акцию
             </button>
           </div>
@@ -222,7 +222,7 @@ function PromoResults({ promos }: { promos: Row[] }) {
                     </td>
                     <td className="px-2">{num(p.uses ?? 0)}</td>
                     <td className="px-2">{num(p.drivers ?? 0)}</td>
-                    <td className="px-2 font-semibold text-[#8A5B00]">{(p.newDrivers ?? 0) > 0 ? `+${num(p.newDrivers ?? 0)}` : '—'}</td>
+                    <td className="px-2 font-semibold text-[#3D6B00]">{(p.newDrivers ?? 0) > 0 ? `+${num(p.newDrivers ?? 0)}` : '—'}</td>
                     <td className="px-2 font-semibold text-slate-900">{money(p.revenue ?? 0)}</td>
                     <td className="px-2 text-slate-500">{money(p.discount ?? 0)}{p.voliPaid ? <span className="block text-[11px] text-slate-400">{`Voli: ${money(p.voliPaid)}`}</span> : null}</td>
                     <td className={`px-2 font-semibold ${r === null ? 'text-slate-400' : r >= 5 ? 'text-emerald-700' : r >= 2 ? 'text-slate-800' : 'text-red-600'}`}>{r === null ? '—' : `${num(r, 1)} сум`}</td>
@@ -242,7 +242,7 @@ function PromoRow({ p, nameOf, onStop }: { p: Row; nameOf: (id: string) => strin
   const where = p.operatorId ? nameOf(p.operatorId) : p.operatorIds ? p.operatorIds.map(nameOf).join(', ') : 'Все сети';
   return (
     <div className="px-4 py-3 flex items-start gap-3">
-      <span className="shrink-0 w-12 h-12 rounded-2xl grid place-items-center text-sm font-black text-[#111]" style={{ background: 'linear-gradient(135deg,#FFE08A,#FFB000)' }}>{`−${p.percent}%`}</span>
+      <span className="shrink-0 w-12 h-12 rounded-2xl grid place-items-center text-sm font-black text-[#111]" style={{ background: 'linear-gradient(135deg,#E2F99A,#8FD61A)' }}>{`−${p.percent}%`}</span>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-slate-800 flex items-center gap-2 flex-wrap">
           {p.title}

@@ -59,7 +59,7 @@ export default function OfflineTrip({ id, name, from, to, stations, allStations 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 p-4">
       <div className="flex items-start gap-3">
-        <span className={`w-10 h-10 rounded-xl grid place-items-center shrink-0 ${saved ? 'bg-emerald-50 text-emerald-600' : 'bg-[#111] text-[#FFC83D]'}`}>
+        <span className={`w-10 h-10 rounded-xl grid place-items-center shrink-0 ${saved ? 'bg-emerald-50 text-emerald-600' : 'bg-[#111] text-[#C6F432]'}`}>
           {saved ? <CheckCircle size={19} className="pg-pop" /> : <WifiOff size={18} />}
         </span>
         <div className="flex-1 min-w-0">
@@ -78,13 +78,13 @@ export default function OfflineTrip({ id, name, from, to, stations, allStations 
             <span className="tabular-nums font-semibold text-slate-800">{`${progress}%`}</span>
           </div>
           <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-            <div className="h-full rounded-full transition-[width] duration-300" style={{ width: `${progress}%`, background: 'linear-gradient(90deg,#FFD66B,#FFB000)' }} />
+            <div className="h-full rounded-full transition-[width] duration-300" style={{ width: `${progress}%`, background: 'linear-gradient(90deg,#D9F77A,#8FD61A)' }} />
           </div>
           <button onClick={() => abort.current?.abort()} className="mt-2 text-xs text-slate-500 inline-flex items-center gap-1"><X size={12} />Отменить</button>
         </div>
       ) : (
         <div className="mt-3 flex gap-2">
-          <button onClick={() => void save()} className={`flex-1 py-2.5 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-1.5 ${saved ? 'bg-slate-100 text-slate-700' : 'text-[#111]'}`} style={saved ? undefined : { background: 'linear-gradient(135deg,#FFD66B,#FFB000)' }}>
+          <button onClick={() => void save()} className={`flex-1 py-2.5 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-1.5 ${saved ? 'bg-slate-100 text-slate-700' : 'text-[#111]'}`} style={saved ? undefined : { background: 'linear-gradient(135deg,#D9F77A,#8FD61A)' }}>
             <CloudDownload size={15} />{saved ? 'Обновить' : 'Сохранить для офлайна'}
           </button>
           {saved && (

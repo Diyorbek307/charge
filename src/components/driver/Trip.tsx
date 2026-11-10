@@ -227,7 +227,7 @@ export default function TripPlannerScreen({ onBack, onSelectStation }: { onBack:
             </div>
 
             {(weather !== 'mild' || pass) && (
-              <div className="rounded-2xl bg-[#FFF4D1] text-[#6b4600] px-4 py-3 text-xs space-y-1">
+              <div className="rounded-2xl bg-[#F1FCD6] text-[#2f5200] px-4 py-3 text-xs space-y-1">
                 {weather !== 'mild' && <p>{`${WEATHER[weather].label}: расход примерно на ${Math.round(WEATHER[weather].extra * 100)}% выше — остановки посчитаны с этим.`}</p>}
                 {pass && <p>{`Перевал Камчик (2 267 м): подъём съедает около ${KAMCHIK.kwh} кВт·ч — зарядитесь перед ним с запасом.`}</p>}
               </div>

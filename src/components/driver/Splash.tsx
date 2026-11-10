@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { V_BLADE, V_STROKE, WORD } from '../../landing/Logo';
+import { MARK_SRC } from '../../landing/Logo';
 
 /**
  * The first seconds of the app, as a charge: comets of energy stream in from
@@ -106,17 +106,17 @@ export default function Splash({ onDone }: { onDone: () => void }) {
     <div className="absolute inset-0 overflow-hidden grid place-items-center" onClick={onDone} role="img" aria-label="Voli">
       {/* The dark, the light and the energy: they melt away at the end */}
       <div className={`absolute inset-0 bg-[#050505] ${fly ? 'sp3-melt' : ''}`}>
-        <div className="absolute left-1/2 top-[46%] w-[640px] h-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full sp2-glow" style={{ background: 'radial-gradient(closest-side, rgba(255,200,61,.17), rgba(255,200,61,.05) 55%, rgba(255,200,61,0))' }} />
+        <div className="absolute left-1/2 top-[46%] w-[640px] h-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full sp2-glow" style={{ background: 'radial-gradient(closest-side, rgba(198,244,50,.17), rgba(198,244,50,.05) 55%, rgba(198,244,50,0))' }} />
         <div className="absolute left-1/2 top-[46%] w-0 h-0" aria-hidden="true">
           {comets.map((c, i) => (
-            <span key={i} className="absolute left-0 top-0 h-[2px] rounded-full sp3-comet" style={{ width: c.len, background: 'linear-gradient(90deg, #FFF3C4, rgba(255,200,61,.6) 40%, rgba(255,200,61,0))', boxShadow: '0 0 6px rgba(255,200,61,.8)', ['--a' as string]: `${c.a}deg`, ['--r' as string]: `${c.r}px`, animationDelay: `${c.d}s` }} />
+            <span key={i} className="absolute left-0 top-0 h-[2px] rounded-full sp3-comet" style={{ width: c.len, background: 'linear-gradient(90deg, #EFFCC9, rgba(198,244,50,.6) 40%, rgba(198,244,50,0))', boxShadow: '0 0 6px rgba(198,244,50,.8)', ['--a' as string]: `${c.a}deg`, ['--r' as string]: `${c.r}px`, animationDelay: `${c.d}s` }} />
           ))}
         </div>
-        <div className="absolute inset-0 sp2-flash pointer-events-none" style={{ background: 'radial-gradient(circle at 50% 46%, rgba(255,240,190,.75), rgba(255,200,61,.25) 30%, rgba(0,0,0,0) 60%)' }} />
-        <div className="absolute left-1/2 top-[46%] w-[200px] h-[200px] -ml-[100px] -mt-[100px] rounded-full border-[3px] border-[#FFE27A] sp2-shock" style={{ boxShadow: '0 0 30px rgba(255,200,61,.7), inset 0 0 30px rgba(255,200,61,.5)' }} />
+        <div className="absolute inset-0 sp2-flash pointer-events-none" style={{ background: 'radial-gradient(circle at 50% 46%, rgba(255,240,190,.75), rgba(198,244,50,.25) 30%, rgba(0,0,0,0) 60%)' }} />
+        <div className="absolute left-1/2 top-[46%] w-[200px] h-[200px] -ml-[100px] -mt-[100px] rounded-full border-[3px] border-[#DEF88C] sp2-shock" style={{ boxShadow: '0 0 30px rgba(198,244,50,.7), inset 0 0 30px rgba(198,244,50,.5)' }} />
         <div className="absolute left-1/2 top-[46%] w-0 h-0" aria-hidden="true">
           {burst.map((b, i) => (
-            <span key={i} className="absolute left-0 top-0 h-[3px] rounded-full sp2-spark" style={{ width: b.l, background: 'linear-gradient(90deg, rgba(255,226,122,0), #FFE27A)', ['--a' as string]: `${b.a}deg` }} />
+            <span key={i} className="absolute left-0 top-0 h-[3px] rounded-full sp2-spark" style={{ width: b.l, background: 'linear-gradient(90deg, rgba(255,226,122,0), #DEF88C)', ['--a' as string]: `${b.a}deg` }} />
           ))}
         </div>
       </div>
@@ -129,25 +129,24 @@ export default function Splash({ onDone }: { onDone: () => void }) {
           {/* The charge ring closing round the V */}
           <svg className={`absolute pointer-events-none overflow-visible ${full ? 'sp3-ring-out' : ''}`} style={{ left: V_PX.x - RING_R - 6, top: V_PX.y - RING_R - 6, width: RING_R * 2 + 12, height: RING_R * 2 + 12 }} viewBox={`${-RING_R - 6} ${-RING_R - 6} ${RING_R * 2 + 12} ${RING_R * 2 + 12}`} aria-hidden="true">
             <circle r={RING_R} fill="none" stroke="#FFFFFF" strokeOpacity=".07" strokeWidth="3" className="sp3-ring-in" />
-            <circle r={RING_R} fill="none" stroke="#FFC83D" strokeWidth="3" strokeLinecap="round" pathLength={1} strokeDasharray="1" strokeDashoffset={1 - pct / 100} transform="rotate(-90)" style={{ filter: 'drop-shadow(0 0 5px rgba(255,200,61,.9))' }} />
-            {pct > 0 && <circle cx={Math.cos(head) * RING_R} cy={Math.sin(head) * RING_R} r="4.5" fill="#FFF3C4" style={{ filter: 'drop-shadow(0 0 8px #FFC83D)' }} />}
+            <circle r={RING_R} fill="none" stroke="#C6F432" strokeWidth="3" strokeLinecap="round" pathLength={1} strokeDasharray="1" strokeDashoffset={1 - pct / 100} transform="rotate(-90)" style={{ filter: 'drop-shadow(0 0 5px rgba(198,244,50,.9))' }} />
+            {pct > 0 && <circle cx={Math.cos(head) * RING_R} cy={Math.sin(head) * RING_R} r="4.5" fill="#EFFCC9" style={{ filter: 'drop-shadow(0 0 8px #C6F432)' }} />}
           </svg>
 
           <svg ref={logo} viewBox="22 12 134 64" width={LOGO_W} className="relative block overflow-visible" aria-hidden="true">
             <defs>
               <linearGradient id="sp2-blade" x1="0.2" y1="1" x2="0.8" y2="0">
-                <stop offset="0" stopColor="#E09A00" />
-                <stop offset="0.45" stopColor="#FFC83D" />
-                <stop offset="1" stopColor="#FFE58A" />
+                <stop offset="0" stopColor="#1FA33A" />
+                <stop offset="0.45" stopColor="#C6F432" />
+                <stop offset="1" stopColor="#E9FB8F" />
               </linearGradient>
               <linearGradient id="sp2-liquid" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#FFF3C4" />
-                <stop offset="0.25" stopColor="#FFC83D" />
-                <stop offset="1" stopColor="#C98A00" />
+                <stop offset="0" stopColor="#EFFCC9" />
+                <stop offset="0.25" stopColor="#C6F432" />
+                <stop offset="1" stopColor="#1FA33A" />
               </linearGradient>
-              <mask id="sp2-vmask" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="100">
-                <path d={V_STROKE} fill="none" stroke="#fff" strokeWidth="17" strokeLinecap="round" strokeLinejoin="round" />
-                <path d={V_BLADE} fill="#fff" />
+              <mask id="sp2-vmask" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="100" style={{ maskType: 'alpha' }}>
+                <image href={MARK_SRC} x="22" y="22" width="60" height="43.6" />
               </mask>
             </defs>
 
@@ -164,24 +163,19 @@ export default function Splash({ onDone }: { onDone: () => void }) {
               </g>
             )}
             {/* The glowing outline drawn first, and the finished V at full charge */}
-            <path d={V_STROKE} pathLength={1} fill="none" stroke="#FFC83D" strokeWidth="17" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.12" className="sp2-trace" />
-            <path d={V_BLADE} pathLength={1} fill="none" stroke="#FFE27A" strokeWidth="1.3" className="sp2-line" style={{ filter: 'drop-shadow(0 0 3px #FFC83D)' }} />
+            <image href={MARK_SRC} x="22" y="22" width="60" height="43.6" opacity="0.14" />
             <g className={full ? 'sp2-final on' : 'sp2-final'}>
-              <path d={V_STROKE} fill="none" stroke="#FFFFFF" strokeWidth="17" strokeLinecap="round" strokeLinejoin="round" />
-              <path d={V_BLADE} fill="url(#sp2-blade)" />
+              <image href={MARK_SRC} x="22" y="22" width="60" height="43.6" />
             </g>
 
             {/* Arcs crackling round the V while it charges */}
-            <g fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 0 2.5px #FFC83D)' }}>
-              {arcs.map((d, i) => <path key={i} d={d} stroke={i ? '#FFE27A' : '#FFFFFF'} strokeWidth={i ? 0.9 : 1.3} />)}
+            <g fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 0 2.5px #C6F432)' }}>
+              {arcs.map((d, i) => <path key={i} d={d} stroke={i ? '#DEF88C' : '#FFFFFF'} strokeWidth={i ? 0.9 : 1.3} />)}
             </g>
 
             {/* The letters, once charged */}
             <g className={full ? 'sp2-word on' : 'sp2-word'}>
-              <path fillRule="evenodd" fill="#FFFFFF" d={WORD.o} className="sp2-letter" style={{ animationDelay: '0s' }} />
-              <rect x={WORD.l[0]} y={WORD.l[1]} width={WORD.l[2]} height={WORD.l[3]} rx="5" fill="#FFFFFF" className="sp2-letter" style={{ animationDelay: '.1s' }} />
-              <rect x={WORD.i[0]} y={WORD.i[1]} width={WORD.i[2]} height={WORD.i[3]} rx="5" fill="#FFFFFF" className="sp2-letter" style={{ animationDelay: '.2s' }} />
-              <circle cx={WORD.dot[0]} cy={WORD.dot[1]} r={WORD.dot[2]} fill="#FFC83D" className="sp2-dot" />
+              <text x="88" y="61" fill="#FFFFFF" fontSize="46" fontWeight="800" fontStyle="italic" letterSpacing="-1.4" fontFamily="Inter, system-ui, sans-serif" className="sp2-letter">voli</text>
             </g>
           </svg>
         </div>
@@ -189,7 +183,7 @@ export default function Splash({ onDone }: { onDone: () => void }) {
         {/* The counter while charging, the tagline once full */}
         <div className={`relative mt-9 h-[48px] w-[340px] ${fly ? 'sp3-fade' : ''}`}>
           <div className={`absolute inset-0 flex flex-col items-center transition-opacity duration-300 ${full ? 'opacity-0' : 'opacity-100'}`}>
-            <p className="text-[26px] font-extrabold tabular-nums text-white tracking-tight leading-none"><span className="text-[#FFC83D]">⚡</span> {pct}<span className="text-[16px] text-white/60 ml-0.5">%</span></p>
+            <p className="text-[26px] font-extrabold tabular-nums text-white tracking-tight leading-none"><span className="text-[#C6F432]">⚡</span> {pct}<span className="text-[16px] text-white/60 ml-0.5">%</span></p>
             <p className="mt-2 text-[10px] font-semibold tracking-[0.3em] uppercase text-white/40">Заряжаем</p>
           </div>
           <p className={`absolute inset-x-0 top-2 text-center text-[12px] font-semibold tracking-[0.32em] uppercase text-white/65 ${full ? 'sp2-tag on' : 'sp2-tag'}`}>Вся зарядка Узбекистана</p>

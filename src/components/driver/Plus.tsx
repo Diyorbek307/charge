@@ -44,12 +44,12 @@ export default function PlusScreen({ onBack, onTopUp }: { onBack: () => void; on
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         <div className="relative overflow-hidden rounded-3xl p-5 text-white" style={{ background: 'linear-gradient(150deg,#1F1F1F,#0A0A0A)' }}>
-          <span className="absolute -right-10 -top-10 w-44 h-44 rounded-full opacity-30 pg-float" style={{ background: 'radial-gradient(circle,#FFC83D,transparent 65%)' }} aria-hidden="true" />
-          <p className="text-2xl font-black tracking-tight"><span className="text-[#FFC83D]">V</span>oli <span className="px-2 py-0.5 rounded-lg bg-[#FFC83D] text-[#111] text-base align-middle">Plus</span></p>
+          <span className="absolute -right-10 -top-10 w-44 h-44 rounded-full opacity-30 pg-float" style={{ background: 'radial-gradient(circle,#C6F432,transparent 65%)' }} aria-hidden="true" />
+          <p className="text-2xl font-black tracking-tight"><span className="text-[#C6F432]">V</span>oli <span className="px-2 py-0.5 rounded-lg bg-[#C6F432] text-[#111] text-base align-middle">Plus</span></p>
           {plus?.active ? (
             <>
               <p className="mt-3 text-sm text-white/70">{plus.autoRenew ? `Подключён · продлится ${date(plus.renewsAt!)}` : `Действует до ${date(plus.renewsAt!)} · продление выключено`}</p>
-              <p className="mt-1 text-3xl font-black tabular-nums text-[#FFC83D] pg-pop">{sum(plus.savedThisMonth)}</p>
+              <p className="mt-1 text-3xl font-black tabular-nums text-[#C6F432] pg-pop">{sum(plus.savedThisMonth)}</p>
               <p className="text-xs text-white/50">сэкономлено в этом месяце</p>
             </>
           ) : (
@@ -63,7 +63,7 @@ export default function PlusScreen({ onBack, onTopUp }: { onBack: () => void; on
         <div className="bg-white rounded-2xl border border-slate-100 divide-y divide-slate-50 pg-stagger">
           {perks.map(p => (
             <div key={p.title} className="px-4 py-3 flex items-start gap-3">
-              <span className="w-9 h-9 rounded-xl bg-[#FFF3C4] text-[#8a5b00] grid place-items-center shrink-0">{p.icon}</span>
+              <span className="w-9 h-9 rounded-xl bg-[#EFFCC9] text-[#3d6b00] grid place-items-center shrink-0">{p.icon}</span>
               <div>
                 <p className="text-sm font-semibold text-slate-800">{p.title}</p>
                 <p className="text-xs text-slate-500">{p.text}</p>
@@ -77,8 +77,8 @@ export default function PlusScreen({ onBack, onTopUp }: { onBack: () => void; on
         {!plus?.active || !plus.autoRenew ? (
           <>
             <button onClick={() => void act(true)} disabled={busy || (!plus?.active && balance < price)}
-              className="w-full py-4 rounded-2xl font-bold text-base text-[#111] inline-flex items-center justify-center gap-2 disabled:opacity-50 shadow-[0_8px_22px_rgba(255,176,0,0.3)]"
-              style={{ background: 'linear-gradient(135deg,#FFD66B,#FFB000)' }}>
+              className="w-full py-4 rounded-2xl font-bold text-base text-[#111] inline-flex items-center justify-center gap-2 disabled:opacity-50 shadow-[0_8px_22px_rgba(143,214,26,0.3)]"
+              style={{ background: 'linear-gradient(135deg,#D9F77A,#8FD61A)' }}>
               {busy && <LoaderCircle size={16} className="animate-spin" />}
               {plus?.active ? 'Включить продление' : `Подключить за ${sum(price)}`}
             </button>

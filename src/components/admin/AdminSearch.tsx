@@ -113,7 +113,7 @@ export default function AdminSearch({ onOpen }: { onOpen: (page: string) => void
               {q.trim().length >= 2 && hits.length === 0 && <p className="px-4 py-6 text-center text-sm text-slate-400">Ничего не нашлось</p>}
               {hits.map((h, i) => (
                 <button key={`${h.kind}-${h.id}`} onClick={() => pick(h)} onMouseEnter={() => setCursor(i)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left ${i === cursor ? 'bg-[#FFF4D2]' : ''}`}>
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left ${i === cursor ? 'bg-[#F1FCD6]' : ''}`}>
                   <span className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 grid place-items-center shrink-0">{ICON[h.kind]}</span>
                   <span className="flex-1 min-w-0">
                     <span className="block text-sm font-semibold text-slate-900 truncate">{h.title}</span>

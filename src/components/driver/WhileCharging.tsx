@@ -39,7 +39,7 @@ export default function WhileCharging({ stationId, dark = false, minutes }: { st
   }, [actions, stationId]);
 
   const tone = dark
-    ? { card: 'bg-white/5 border-white/10', title: 'text-white/90', sub: 'text-white/45', chip: 'bg-white/10 text-white/80', chipOn: 'bg-[#FFC83D] text-[#111]', row: 'hover:bg-white/5', name: 'text-white/90' }
+    ? { card: 'bg-white/5 border-white/10', title: 'text-white/90', sub: 'text-white/45', chip: 'bg-white/10 text-white/80', chipOn: 'bg-[#C6F432] text-[#111]', row: 'hover:bg-white/5', name: 'text-white/90' }
     : { card: 'bg-white border-slate-100', title: 'text-slate-800', sub: 'text-slate-500', chip: 'bg-slate-100 text-slate-700', chipOn: 'bg-[#111] text-white', row: 'hover:bg-slate-50', name: 'text-slate-800' };
 
   if (!data) {
@@ -61,8 +61,8 @@ export default function WhileCharging({ stationId, dark = false, minutes }: { st
 
       {data.partners.map(p => (
         <a key={p.id} href={mapLink(p.lat, p.lng)} target="_blank" rel="noopener noreferrer" onClick={() => tap(p.id)}
-          className="mb-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-[#111]" style={{ background: 'linear-gradient(135deg,#FFF3C4,#FFE08A)' }}>
-          <span className="w-9 h-9 rounded-xl bg-[#111] text-[#FFC83D] grid place-items-center shrink-0"><Percent size={16} strokeWidth={2.6} /></span>
+          className="mb-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-[#111]" style={{ background: 'linear-gradient(135deg,#EFFCC9,#E2F99A)' }}>
+          <span className="w-9 h-9 rounded-xl bg-[#111] text-[#C6F432] grid place-items-center shrink-0"><Percent size={16} strokeWidth={2.6} /></span>
           <span className="flex-1 min-w-0">
             <span className="block text-sm font-extrabold truncate">{p.name}</span>
             <span className="block text-xs opacity-80">{p.offer}</span>

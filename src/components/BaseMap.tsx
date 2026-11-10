@@ -21,10 +21,10 @@ const PAINT: [string, string, string][] = [
   ['highway_major_inner', 'line-color', '#FFFFFF'],
   ['highway_major_subtle', 'line-color', '#FFFFFF'],
   ['highway_motorway_casing', 'line-color', '#F2C94C'],
-  ['highway_motorway_inner', 'line-color', '#FFE7A0'],
-  ['highway_motorway_subtle', 'line-color', '#FFE7A0'],
+  ['highway_motorway_inner', 'line-color', '#E8FBB0'],
+  ['highway_motorway_subtle', 'line-color', '#E8FBB0'],
   ['highway_motorway_bridge_casing', 'line-color', '#F2C94C'],
-  ['highway_motorway_bridge_inner', 'line-color', '#FFE7A0'],
+  ['highway_motorway_bridge_inner', 'line-color', '#E8FBB0'],
 ];
 
 const webgl = () => {

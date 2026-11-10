@@ -66,7 +66,7 @@ export default function AiAgents() {
 
       <Card>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="w-10 h-10 rounded-xl bg-[#FFC83D] grid place-items-center"><Bot size={20} className="text-[#111]" /></span>
+          <span className="w-10 h-10 rounded-xl bg-[#C6F432] grid place-items-center"><Bot size={20} className="text-[#111]" /></span>
           <div className="flex-1 min-w-[200px]">
             <p className="text-sm font-bold text-slate-900">{view.on ? 'ИИ-агенты отвечают водителям' : 'ИИ-агенты выключены — отвечают только люди'}</p>
             <p className="text-xs text-slate-500">
@@ -75,7 +75,7 @@ export default function AiAgents() {
                 : 'Базовый режим: отвечают на частые вопросы, остальное передают людям. Чтобы включить Claude, добавьте ANTHROPIC_API_KEY в переменные окружения Render'}
             </p>
           </div>
-          <button onClick={() => save({ on: !view.on })} disabled={busy} className={`px-4 py-2 rounded-xl text-sm font-semibold ${view.on ? 'bg-slate-100 text-slate-700' : 'bg-[#FFC83D] text-[#111]'}`}>
+          <button onClick={() => save({ on: !view.on })} disabled={busy} className={`px-4 py-2 rounded-xl text-sm font-semibold ${view.on ? 'bg-slate-100 text-slate-700' : 'bg-[#C6F432] text-[#111]'}`}>
             {view.on ? 'Выключить' : 'Включить'}
           </button>
         </div>
@@ -108,7 +108,7 @@ export default function AiAgents() {
                 </label>
                 <p className="text-xs text-slate-400">{`${num(a.answered)} ответов · ${num(a.handoffs)} передано людям`}</p>
                 {dirty && (
-                  <button onClick={() => save({ agents: [draft[a.id]] })} disabled={busy} className="w-full inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-[#111] text-[#FFC83D] text-sm font-semibold disabled:opacity-50">
+                  <button onClick={() => save({ agents: [draft[a.id]] })} disabled={busy} className="w-full inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-[#111] text-[#C6F432] text-sm font-semibold disabled:opacity-50">
                     <Save size={14} />Сохранить
                   </button>
                 )}
@@ -122,13 +122,13 @@ export default function AiAgents() {
         <p className="text-xs text-slate-500 -mt-1 mb-2">Задайте вопрос как водитель — увидите, кто из агентов ответит и позовёт ли он человека. Водителю ничего не отправляется.</p>
         <div className="flex gap-2 items-end">
           <textarea value={q} onChange={e => setQ(e.target.value)} rows={2} placeholder="Например: зарядка не начинается на станции в Чиланзаре" aria-label="Вопрос для проверки" className={`${field} flex-1`} />
-          <button onClick={ask} disabled={asking || !q.trim()} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#FFC83D] text-[#111] text-sm font-semibold disabled:opacity-50">
+          <button onClick={ask} disabled={asking || !q.trim()} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#C6F432] text-[#111] text-sm font-semibold disabled:opacity-50">
             {asking ? <LoaderCircle size={14} className="animate-spin" /> : <Send size={14} />}Спросить
           </button>
         </div>
         {answer && (
           <div className="mt-3 rounded-xl bg-slate-50 p-3">
-            <p className="text-xs font-semibold text-[#8A5B00] flex items-center gap-2 flex-wrap">
+            <p className="text-xs font-semibold text-[#3D6B00] flex items-center gap-2 flex-wrap">
               {`${answer.emoji} ${answer.agentName}`}
               <Pill tone="slate">{answer.source === 'claude' ? 'Claude' : 'базовый режим'}</Pill>
               {answer.handoff && <Pill tone="red"><span className="inline-flex items-center gap-1"><UserRound size={11} />позовёт человека</span></Pill>}

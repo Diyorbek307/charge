@@ -78,7 +78,7 @@ export default function Investor() {
                   <td className="px-5 py-2.5 font-semibold text-slate-900">{money(m.revenue)}</td>
                   <td className="px-5 py-2.5 text-emerald-700">{money(m.commission)}</td>
                   <td className="px-5 py-2.5">{num(m.sessions)}</td>
-                  <td className="px-5 py-2.5"><span className="inline-flex items-center gap-1"><Zap size={11} className="text-[#E09A00]" />{num(m.energy / 1000, 1)}</span></td>
+                  <td className="px-5 py-2.5"><span className="inline-flex items-center gap-1"><Zap size={11} className="text-[#1FA33A]" />{num(m.energy / 1000, 1)}</span></td>
                   <td className="px-5 py-2.5">{m.drivers === null ? '—' : num(m.drivers)}</td>
                   <td className="px-5 py-2.5">{money(m.avgCheck)}</td>
                 </tr>

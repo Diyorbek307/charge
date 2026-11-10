@@ -38,7 +38,7 @@ function Waiting({ p, onDecide }: { p: DriverPhoto; onDecide: (id: string, d: 'a
           <button onClick={() => void decide('reject')} disabled={!!busy} className="h-9 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 inline-flex items-center justify-center gap-1.5 disabled:opacity-50">
             {busy === 'reject' ? <LoaderCircle size={13} className="animate-spin" /> : <X size={13} />}Отклонить
           </button>
-          <button onClick={() => void decide('approve')} disabled={!!busy} className="h-9 rounded-xl bg-[#FFC83D] text-[#111] text-xs font-bold inline-flex items-center justify-center gap-1.5 disabled:opacity-50">
+          <button onClick={() => void decide('approve')} disabled={!!busy} className="h-9 rounded-xl bg-[#C6F432] text-[#111] text-xs font-bold inline-flex items-center justify-center gap-1.5 disabled:opacity-50">
             {busy === 'approve' ? <LoaderCircle size={13} className="animate-spin" /> : <Check size={13} />}Опубликовать
           </button>
         </div>

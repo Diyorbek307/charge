@@ -46,7 +46,7 @@ export default function PriceToday({ station, basePrice, promos }: { station: { 
           const cheap = p === low;
           return (
             <span key={h} title={`${hh(h)} — ${p.toLocaleString('ru-RU')} сум`} className="flex-1 rounded-t-[3px] relative"
-              style={{ height: `${28 + ((p - low) / (high - low)) * 72}%`, background: h === now ? '#111' : cheap ? '#FFC83D' : '#E8E5DC' }}>
+              style={{ height: `${28 + ((p - low) / (high - low)) * 72}%`, background: h === now ? '#111' : cheap ? '#C6F432' : '#E8E5DC' }}>
               {h === now && <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#111]" />}
             </span>
           );
@@ -54,7 +54,7 @@ export default function PriceToday({ station, basePrice, promos }: { station: { 
       </div>
       <div className="mt-1 flex justify-between text-[10px] text-slate-400 tabular-nums"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>
       <p className={`mt-2.5 text-[13px] flex items-start gap-1.5 ${cheapNow ? 'text-emerald-700' : 'text-slate-700'}`}>
-        <TrendingDown size={15} className="shrink-0 mt-px text-[#E09A00]" />
+        <TrendingDown size={15} className="shrink-0 mt-px text-[#1FA33A]" />
         {cheapNow
           ? `Сейчас самая низкая цена — ${low.toLocaleString('ru-RU')} сум до ${hh(from + length)}`
           : `Дешевле с ${hh(from)} до ${hh(from + length)}: ${low.toLocaleString('ru-RU')} сум, на ${saving}% меньше, чем сейчас`}

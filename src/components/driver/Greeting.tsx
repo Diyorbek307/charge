@@ -51,33 +51,33 @@ export default function Greeting({ onDone }: { onDone: () => void }) {
       <div className="px-7 pt-[18%]">
         <p className="text-white/60 text-lg font-semibold gr-in" style={{ animationDelay: '.05s' }}>{`${partOfDay()},`}</p>
         <h1 className="text-[40px] font-extrabold leading-[1.05] tracking-tight gr-in" style={{ animationDelay: '.15s' }}>
-          {first || 'водитель'}<span className="text-[#FFC83D]">.</span>
+          {first || 'водитель'}<span className="text-[#C6F432]">.</span>
         </h1>
         {car && <p className="mt-1 text-white/50 text-sm gr-in" data-no-translate style={{ animationDelay: '.25s' }}>{car}</p>}
       </div>
 
       {/* The car drives in from the right and settles, a charge line running under it */}
       <div className="relative mt-8 mx-auto w-[88%] gr-car" aria-hidden="true">
-        <svg viewBox="0 0 320 120" className="w-full block" style={{ filter: 'drop-shadow(0 0 14px rgba(255,200,61,.35))' }}>
-          <path d="M14 86 C12 76 22 68 44 65 L86 60 C106 42 134 30 172 28 C206 27 232 36 258 54 L292 60 C306 63 312 70 311 80 L310 88 C309 92 306 94 302 94 L284 94 A21 21 0 0 0 242 94 L96 94 A21 21 0 0 0 54 94 L22 94 C17 94 14 91 14 86 Z" fill="rgba(255,200,61,.10)" stroke="#FFD66B" strokeWidth="1.8" />
-          <path d="M98 60 C116 46 140 38 170 37 C196 37 216 43 238 57 Z" fill="rgba(0,0,0,.35)" stroke="#FFD66B" strokeOpacity=".55" strokeWidth="1.3" />
-          <path d="M290 66 L306 70" stroke="#FFF3C4" strokeWidth="2.6" strokeLinecap="round" />
+        <svg viewBox="0 0 320 120" className="w-full block" style={{ filter: 'drop-shadow(0 0 14px rgba(198,244,50,.35))' }}>
+          <path d="M14 86 C12 76 22 68 44 65 L86 60 C106 42 134 30 172 28 C206 27 232 36 258 54 L292 60 C306 63 312 70 311 80 L310 88 C309 92 306 94 302 94 L284 94 A21 21 0 0 0 242 94 L96 94 A21 21 0 0 0 54 94 L22 94 C17 94 14 91 14 86 Z" fill="rgba(198,244,50,.10)" stroke="#D9F77A" strokeWidth="1.8" />
+          <path d="M98 60 C116 46 140 38 170 37 C196 37 216 43 238 57 Z" fill="rgba(0,0,0,.35)" stroke="#D9F77A" strokeOpacity=".55" strokeWidth="1.3" />
+          <path d="M290 66 L306 70" stroke="#EFFCC9" strokeWidth="2.6" strokeLinecap="round" />
           {[75, 263].map(x => (
             <g key={x}>
-              <circle cx={x} cy="96" r="17" fill="#0d0d0d" stroke="#FFD66B" strokeOpacity=".8" strokeWidth="1.8" />
-              <circle cx={x} cy="96" r="7" fill="none" stroke="#FFD66B" strokeOpacity=".5" strokeWidth="1.2" className="gr-wheel" style={{ transformOrigin: `${x}px 96px` }} />
+              <circle cx={x} cy="96" r="17" fill="#0d0d0d" stroke="#D9F77A" strokeOpacity=".8" strokeWidth="1.8" />
+              <circle cx={x} cy="96" r="7" fill="none" stroke="#D9F77A" strokeOpacity=".5" strokeWidth="1.2" className="gr-wheel" style={{ transformOrigin: `${x}px 96px` }} />
             </g>
           ))}
         </svg>
         <div className="mt-2 h-[3px] rounded-full overflow-hidden bg-white/10">
-          <div className="h-full bg-[#FFC83D] gr-line" style={{ boxShadow: '0 0 10px rgba(255,200,61,.8)' }} />
+          <div className="h-full bg-[#C6F432] gr-line" style={{ boxShadow: '0 0 10px rgba(198,244,50,.8)' }} />
         </div>
       </div>
 
       <div className="mt-auto px-5 pb-10 grid grid-cols-3 gap-2">
         {tiles.map((t, i) => (
           <div key={t.label} className="rounded-2xl bg-white/[0.06] border border-white/10 px-3 py-3 gr-in" style={{ animationDelay: `${0.55 + i * 0.1}s` }}>
-            <span className="text-[#FFC83D]">{t.icon}</span>
+            <span className="text-[#C6F432]">{t.icon}</span>
             <p className="mt-1.5 text-[15px] font-bold tabular-nums leading-tight">{t.value}</p>
             <p className="text-[11px] text-white/50 leading-tight mt-0.5">{t.label}</p>
           </div>

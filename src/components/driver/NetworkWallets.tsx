@@ -64,14 +64,14 @@ export function NetworkTopUp({ wallet, onClose, need = 0 }: { wallet: NetworkWal
           <>
             <div className="grid grid-cols-4 gap-2">
               {[...new Set([suggested, 20000, 50000, 100000])].slice(0, 4).map(v => (
-                <button key={v} onClick={() => setAmount(v)} aria-pressed={amount === v} className={`py-2 rounded-xl text-sm font-semibold ${amount === v ? 'bg-[#FFC83D] text-[#111]' : 'bg-slate-100 text-slate-700'}`}>
+                <button key={v} onClick={() => setAmount(v)} aria-pressed={amount === v} className={`py-2 rounded-xl text-sm font-semibold ${amount === v ? 'bg-[#C6F432] text-[#111]' : 'bg-slate-100 text-slate-700'}`}>
                   {`${Math.round(v / 1000)}K`}
                 </button>
               ))}
             </div>
             <div className="grid grid-cols-2 gap-2">
               {offered.map(p => (
-                <button key={p.id} onClick={() => setProvider(p.id)} aria-pressed={provider === p.id} className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-sm font-bold ${provider === p.id ? 'border-[#FFB000] bg-amber-50 text-slate-900' : 'border-slate-100 text-slate-500'}`}>
+                <button key={p.id} onClick={() => setProvider(p.id)} aria-pressed={provider === p.id} className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-sm font-bold ${provider === p.id ? 'border-[#8FD61A] bg-amber-50 text-slate-900' : 'border-slate-100 text-slate-500'}`}>
                   <span className="w-6 h-6 rounded-lg grid place-items-center text-white text-xs" style={{ background: p.color }}>{p.letter}</span>
                   {p.name}
                 </button>
@@ -79,7 +79,7 @@ export function NetworkTopUp({ wallet, onClose, need = 0 }: { wallet: NetworkWal
             </div>
             <p className="text-[11px] text-slate-500">{`Платёж уходит в кассу ${wallet.name}. Этим балансом оплачиваются зарядки только на станциях этой сети.`}</p>
             {error && <p role="alert" className="text-xs text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
-            <button onClick={pay} disabled={busy || !offered.length} className="w-full py-3.5 rounded-2xl bg-[#FFC83D] text-[#111] font-bold text-sm inline-flex items-center justify-center gap-2 disabled:opacity-50">
+            <button onClick={pay} disabled={busy || !offered.length} className="w-full py-3.5 rounded-2xl bg-[#C6F432] text-[#111] font-bold text-sm inline-flex items-center justify-center gap-2 disabled:opacity-50">
               {busy ? <LoaderCircle size={16} className="animate-spin" /> : <ArrowRight size={16} />}
               {`Оплатить ${sum(amount)} через ${provider === 'payme' ? 'Payme' : 'Click'}`}
             </button>
@@ -110,7 +110,7 @@ export function NetworkWalletList() {
             <p className="text-xs text-slate-500 tabular-nums">{w.direct ? sum(w.balance) : `${sum(w.balance)} · сеть больше не принимает оплату напрямую — остаток вернёт сеть`}</p>
           </div>
           {w.direct && (
-            <button onClick={() => setOpen(w)} className="px-3 py-1.5 rounded-xl bg-[#FFC83D] text-[#111] text-xs font-semibold">Пополнить</button>
+            <button onClick={() => setOpen(w)} className="px-3 py-1.5 rounded-xl bg-[#C6F432] text-[#111] text-xs font-semibold">Пополнить</button>
           )}
         </div>
       ))}

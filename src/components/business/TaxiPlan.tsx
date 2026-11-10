@@ -42,7 +42,7 @@ export default function TaxiPlan() {
             <p className="text-sm text-slate-600">Скидка растёт с объёмом парка за последние 30 дней. Её платит Voli — сети получают свою цену. Водители парка встают в очередь раньше обычных водителей, вся зарядка — на один счёт компании.</p>
             <div className="flex gap-2 flex-wrap">
               {plan.tiers.map(t => (
-                <span key={t.kwh} className={`px-3 py-2 rounded-xl text-xs font-semibold ${plan.kwh30 >= t.kwh ? 'bg-[#FFF3C4] text-[#8a5b00]' : 'bg-slate-50 text-slate-500'}`}>
+                <span key={t.kwh} className={`px-3 py-2 rounded-xl text-xs font-semibold ${plan.kwh30 >= t.kwh ? 'bg-[#EFFCC9] text-[#3d6b00]' : 'bg-slate-50 text-slate-500'}`}>
                   {`${t.kwh ? `от ${num(t.kwh)} кВт·ч` : 'с первого кВт·ч'} · −${t.pct}%`}
                 </span>
               ))}
@@ -52,7 +52,7 @@ export default function TaxiPlan() {
                 <span>{`${num(plan.kwh30)} кВт·ч за 30 дней`}</span>
                 <span>{plan.next ? `до −${plan.next.pct}% осталось ${num(plan.next.kwh - plan.kwh30)} кВт·ч` : 'максимальная скидка'}</span>
               </div>
-              <div className="h-2 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${pct}%`, background: 'linear-gradient(90deg,#FFD66B,#FFB000)' }} /></div>
+              <div className="h-2 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${pct}%`, background: 'linear-gradient(90deg,#D9F77A,#8FD61A)' }} /></div>
             </div>
           </div>
           <div className="rounded-2xl bg-slate-50 p-4 flex flex-col justify-between gap-3">
@@ -60,7 +60,7 @@ export default function TaxiPlan() {
               <p className="text-xs text-slate-500">Сэкономлено в этом месяце</p>
               <p className="text-2xl font-black text-slate-900 tabular-nums">{money(plan.savedThisMonth)}</p>
             </div>
-            <button onClick={() => void toggle()} disabled={busy} className={`py-2.5 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 disabled:opacity-50 ${on ? 'bg-white border border-slate-200 text-slate-700' : 'text-[#111]'}`} style={on ? undefined : { background: 'linear-gradient(135deg,#FFD66B,#FFB000)' }}>
+            <button onClick={() => void toggle()} disabled={busy} className={`py-2.5 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 disabled:opacity-50 ${on ? 'bg-white border border-slate-200 text-slate-700' : 'text-[#111]'}`} style={on ? undefined : { background: 'linear-gradient(135deg,#D9F77A,#8FD61A)' }}>
               {busy && <LoaderCircle size={15} className="animate-spin" />}
               {on ? 'Вернуть обычный тариф' : `Подключить · сейчас −${plan.tierDiscount}%`}
             </button>
@@ -103,7 +103,7 @@ export default function TaxiPlan() {
                     <td className="px-5 py-2.5 text-right tabular-nums">{num(r.energy, 1)}</td>
                     <td className="px-5 py-2.5 text-right tabular-nums font-semibold">{money(r.cost)}</td>
                     <td className="px-5 py-2.5 text-right tabular-nums">{`${r.nightShare}%`}</td>
-                    <td className="px-5 py-2.5 text-slate-600 truncate max-w-[220px]"><span className="inline-flex items-center gap-1"><Zap size={12} className="text-[#FFB000]" />{r.topStation ?? '—'}</span></td>
+                    <td className="px-5 py-2.5 text-slate-600 truncate max-w-[220px]"><span className="inline-flex items-center gap-1"><Zap size={12} className="text-[#8FD61A]" />{r.topStation ?? '—'}</span></td>
                   </tr>
                 ))}
               </tbody>

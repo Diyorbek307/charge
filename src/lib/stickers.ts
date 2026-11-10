@@ -7,7 +7,17 @@
  * exports: jsPDF's built-in fonts have no Cyrillic.
  */
 import { BRAND } from '../brand';
-import { V_BLADE, V_STROKE, WORD } from '../landing/Logo';
+import { MARK_SRC } from '../landing/Logo';
+
+let markImg: HTMLImageElement | null = null;
+/** The logo picture, loaded once before a sticker is drawn. */
+const loadMark = () => new Promise<HTMLImageElement>((ok, fail) => {
+  if (markImg?.complete) return ok(markImg);
+  const img = new Image();
+  img.onload = () => ok((markImg = img));
+  img.onerror = fail;
+  img.src = MARK_SRC;
+});
 
 export interface StickerStation {
   id: string;
@@ -35,7 +45,7 @@ export function readStickerLink(text: string): { station: string; point: string 
 // A6 portrait at ~300 dpi.
 const W = 1240;
 const H = 1748;
-const YELLOW = '#FFC83D';
+const YELLOW = '#C6F432';
 const INK = '#111111';
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -58,44 +68,27 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, 
   return text;
 }
 
-/** The V of the logo centred on (cx, cy), `k` canvas pixels to a unit: white stroke, yellow blade. */
-function markV(ctx: CanvasRenderingContext2D, cx: number, cy: number, k: number, ink = '#fff') {
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.scale(k, k);
-  ctx.translate(-58.5, -44.5);
-  ctx.lineWidth = 17;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.strokeStyle = ink;
-  ctx.stroke(new Path2D(V_STROKE));
-  ctx.fillStyle = YELLOW;
-  ctx.fill(new Path2D(V_BLADE));
-  ctx.restore();
+/** The logo centred on (cx, cy), `k` canvas pixels to a unit (the V is about 70 units wide). */
+function markV(ctx: CanvasRenderingContext2D, cx: number, cy: number, k: number) {
+  if (!markImg) return;
+  const w = 70 * k, h = (w * markImg.naturalHeight) / markImg.naturalWidth;
+  ctx.drawImage(markImg, cx - w / 2, cy - h / 2, w, h);
 }
 
-/** The wordmark «Voli» in white on the black head, its top left at (x, y), `h` pixels tall. */
+/** The logo «voli» in white on the black head, its top left at (x, y), `h` pixels tall. */
 function wordmark(ctx: CanvasRenderingContext2D, x: number, y: number, h: number) {
   const k = h / 64;
+  markV(ctx, x + 37 * k, y + 32 * k, 1 * k);
   ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(k, k);
-  ctx.translate(-22, -12);
-  markV(ctx, 58.5, 44.5, 1);
   ctx.fillStyle = '#fff';
-  ctx.fill(new Path2D(WORD.o), 'evenodd');
-  for (const [rx, ry, rw, rh] of [WORD.l, WORD.i]) {
-    roundRect(ctx, rx, ry, rw, rh, 5);
-    ctx.fill();
-  }
-  ctx.fillStyle = YELLOW;
-  ctx.beginPath();
-  ctx.arc(WORD.dot[0], WORD.dot[1], WORD.dot[2], 0, Math.PI * 2);
-  ctx.fill();
+  ctx.font = `italic 800 ${Math.round(h * 0.78)}px Inter, Arial, sans-serif`;
+  ctx.textBaseline = 'middle';
+  ctx.fillText('voli', x + 80 * k, y + 34 * k);
   ctx.restore();
 }
 
 async function drawSticker(st: StickerStation, index: number, origin: string): Promise<HTMLCanvasElement> {
+  await loadMark().catch(() => null);
   const QR = await import('qrcode');
   const point = st.connectors[index];
   const letter = String.fromCharCode(65 + index);

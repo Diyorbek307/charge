@@ -61,9 +61,9 @@ export default function ReferralScreen({ onBack }: { onBack: () => void }) {
 
         {r && r.on && (
           <>
-            <div className="relative overflow-hidden rounded-3xl p-5 text-[#111] pg-reveal" style={{ background: 'linear-gradient(135deg,#FFE08A,#FFC83D 55%,#FFB000)' }}>
+            <div className="relative overflow-hidden rounded-3xl p-5 text-[#111] pg-reveal" style={{ background: 'linear-gradient(135deg,#E2F99A,#C6F432 55%,#8FD61A)' }}>
               <span className="absolute -right-6 -top-6 w-32 h-32 rounded-full bg-white/25" aria-hidden="true" />
-              <p className="text-xs font-bold uppercase tracking-wider text-[#5C3D00]">Вам и другу</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-[#3D6B00]">Вам и другу</p>
               <p className="text-[28px] leading-tight font-extrabold mt-1">{r.inviterBonus > 0 ? `${sum(r.inviterBonus)} вам и ${sum(r.friendBonus)} другу` : `${r.percent}% с каждой зарядки друга`}</p>
               <p className="text-sm mt-1.5 text-[#2A2A30]">{r.inviterBonus > 0
                 ? `Бонусом на зарядку, когда друг сделает первую зарядку.${r.percent > 0 ? ` И ещё ${r.percent}% с каждой его зарядки ${r.months} мес.` : ''}`
@@ -79,7 +79,7 @@ export default function ReferralScreen({ onBack }: { onBack: () => void }) {
                 </button>
               </div>
               <div className="mt-2.5 grid grid-cols-2 gap-2">
-                <button onClick={() => void share()} className="h-12 rounded-2xl bg-[#111] text-[#FFC83D] font-bold text-sm flex items-center justify-center gap-2"><Share2 size={16} />Поделиться</button>
+                <button onClick={() => void share()} className="h-12 rounded-2xl bg-[#111] text-[#C6F432] font-bold text-sm flex items-center justify-center gap-2"><Share2 size={16} />Поделиться</button>
                 <button onClick={() => void copy('link')} className="h-12 rounded-2xl bg-white/80 text-[#111] font-bold text-sm flex items-center justify-center gap-2">
                   {copied === 'link' ? <><Check size={16} />Скопировано</> : <><Copy size={16} />Ссылка</>}
                 </button>
@@ -93,7 +93,7 @@ export default function ReferralScreen({ onBack }: { onBack: () => void }) {
                 { icon: <Gift size={15} />, v: sum(r.earnedTotal), l: 'всего' },
               ].map(x => (
                 <div key={x.l} className="bg-white rounded-2xl border border-slate-100 p-3">
-                  <span className="text-[#8A5B00]">{x.icon}</span>
+                  <span className="text-[#3D6B00]">{x.icon}</span>
                   <p className="text-sm font-extrabold text-slate-900 mt-1 tabular-nums">{x.v}</p>
                   <p className="text-[11px] text-slate-500">{x.l}</p>
                 </div>
@@ -110,7 +110,7 @@ export default function ReferralScreen({ onBack }: { onBack: () => void }) {
                   ...(r.percent > 0 ? [`Каждый раз, когда друг оплачивает зарядку, вам приходит ${r.percent}% её стоимости — бонусом на зарядку`] : []),
                 ].map((t, i) => (
                   <li key={i} className="flex gap-3 items-start">
-                    <span className="w-6 h-6 rounded-full bg-[#FFC83D] text-[#111] text-xs font-bold grid place-items-center shrink-0">{i + 1}</span>
+                    <span className="w-6 h-6 rounded-full bg-[#C6F432] text-[#111] text-xs font-bold grid place-items-center shrink-0">{i + 1}</span>
                     <span className="text-sm text-slate-700 leading-snug">{t}</span>
                   </li>
                 ))}

@@ -7,7 +7,7 @@ import ExportButton from '../ExportButton';
 import { Card, Loading, ErrorNote, Empty } from './ui';
 
 const tone = (score: number) => (score >= 95 ? 'text-emerald-700' : score >= 85 ? 'text-amber-700' : 'text-red-600');
-const bar = (score: number) => (score >= 95 ? '#10B981' : score >= 85 ? '#FFB000' : '#EF4444');
+const bar = (score: number) => (score >= 95 ? '#10B981' : score >= 85 ? '#8FD61A' : '#EF4444');
 
 /**
  * Networks ranked by how dependable their stations are, and the stations
@@ -26,7 +26,7 @@ export default function ReliabilityCard() {
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-      <Card title={<span className="inline-flex items-center gap-2"><ShieldCheck size={15} className="text-[#E09A00]" />Рейтинг сетей</span>}>
+      <Card title={<span className="inline-flex items-center gap-2"><ShieldCheck size={15} className="text-[#1FA33A]" />Рейтинг сетей</span>}>
         <p className="text-xs text-slate-500 mb-3">Доля удачных запусков и время в работе за 30 дней. Счёт — меньшее из двух, взвешенное по числу зарядок.</p>
         {data.networks.length ? (
           <ol className="space-y-3">
@@ -47,7 +47,7 @@ export default function ReliabilityCard() {
       </Card>
 
       <Card
-        title={<span className="inline-flex items-center gap-2"><TriangleAlert size={15} className="text-[#E09A00]" />Станции, которые подводят</span>}
+        title={<span className="inline-flex items-center gap-2"><TriangleAlert size={15} className="text-[#1FA33A]" />Станции, которые подводят</span>}
         right={<ExportButton name="reliability" title="Надёжность станций" portal="admin" headers={['Станция', 'Город', 'Сеть', 'Надёжность, %', 'Удачных запусков, %', 'В работе, %', 'Зарядок']} rows={data.stations.map(s => [s.name, s.city, s.operator, s.score, s.starts ?? '', s.uptime ?? '', s.charges])} />}
       >
         {weak.length ? (

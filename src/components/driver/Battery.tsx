@@ -98,7 +98,7 @@ export default function BatteryScreen({ onBack, onAddCar }: { onBack: () => void
                   {h.acceptance.slice(-6).map(m => (
                     <div key={m.month} className="flex-1 flex flex-col items-center gap-1">
                       <span className="text-[11px] font-semibold text-slate-600 tabular-nums">{`${m.share}%`}</span>
-                      <div className="w-full rounded-t-lg pg-grow" style={{ height: `${Math.max(4, m.share * 0.6)}px`, background: 'linear-gradient(180deg,#FFD66B,#FFB000)' }} />
+                      <div className="w-full rounded-t-lg pg-grow" style={{ height: `${Math.max(4, m.share * 0.6)}px`, background: 'linear-gradient(180deg,#D9F77A,#8FD61A)' }} />
                       <span className="text-[10px] text-slate-400">{MONTHS[Number(m.month.slice(5, 7)) - 1]}</span>
                     </div>
                   ))}

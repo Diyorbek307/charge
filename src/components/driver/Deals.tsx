@@ -64,7 +64,7 @@ export default function DealsScreen({ onSelectStation, onRoute }: { onSelectStat
                   onClick={() => setOnly(on ? null : p.id)}
                   aria-pressed={on}
                   className={`snap-start shrink-0 w-[248px] text-left rounded-3xl p-4 relative overflow-hidden transition-transform active:scale-[0.98] ${on ? 'ring-2 ring-[#111]' : ''}`}
-                  style={{ background: 'linear-gradient(135deg,#FFD66B 0%,#FFB000 100%)' }}
+                  style={{ background: 'linear-gradient(135deg,#D9F77A 0%,#8FD61A 100%)' }}
                 >
                   <span className="absolute -right-6 -bottom-8 text-[110px] font-black text-white/25 leading-none select-none" aria-hidden="true">%</span>
                   <span className="flex items-center gap-2">
@@ -105,7 +105,7 @@ export default function DealsScreen({ onSelectStation, onRoute }: { onSelectStat
           return (
             <div key={s.id} role="listitem" className="rounded-3xl bg-white border border-slate-100 shadow-[0_2px_12px_rgba(15,23,42,0.04)] p-4">
               <button onClick={() => onSelectStation(s)} className="w-full flex items-start gap-3 text-left">
-                <span className="relative shrink-0 w-12 h-12 rounded-full grid place-items-center text-[#111]" style={{ background: 'linear-gradient(135deg,#FFC83D,#FF9F0A)' }}>
+                <span className="relative shrink-0 w-12 h-12 rounded-full grid place-items-center text-[#111]" style={{ background: 'linear-gradient(135deg,#C6F432,#8FD61A)' }}>
                   <Percent size={20} strokeWidth={2.8} />
                   <span className="absolute -bottom-1 -right-1"><NetworkBadge name={s.operator} size={22} /></span>
                 </span>
@@ -118,7 +118,7 @@ export default function DealsScreen({ onSelectStation, onRoute }: { onSelectStat
                 </span>
                 <span className="shrink-0 text-right">
                   <span className="block text-[11px] text-slate-400 line-through tabular-nums">{`${cheapest.toLocaleString('ru-RU')} сум`}</span>
-                  <span className="block px-2.5 py-1 rounded-xl border-2 border-[#FFB000] text-sm font-extrabold text-slate-900 tabular-nums">{`${discounted(cheapest, best).toLocaleString('ru-RU')}`}<span className="text-[10px] font-semibold text-slate-500"> сум</span></span>
+                  <span className="block px-2.5 py-1 rounded-xl border-2 border-[#8FD61A] text-sm font-extrabold text-slate-900 tabular-nums">{`${discounted(cheapest, best).toLocaleString('ru-RU')}`}<span className="text-[10px] font-semibold text-slate-500"> сум</span></span>
                 </span>
               </button>
               <div className="mt-3 flex items-center gap-2">
@@ -128,7 +128,7 @@ export default function DealsScreen({ onSelectStation, onRoute }: { onSelectStat
                   <span className={`shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold ${free ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>{free ? `${free} своб.` : 'занято'}</span>
                 </div>
                 <button onClick={() => onRoute(s)} aria-label={`Маршрут до ${s.name}`} className="shrink-0 h-10 pl-3 pr-3.5 rounded-2xl bg-[#111] text-white text-sm font-semibold inline-flex items-center gap-1.5">
-                  <Navigation size={15} className="text-[#FFC83D] fill-[#FFC83D]" />
+                  <Navigation size={15} className="text-[#C6F432] fill-[#C6F432]" />
                   {d !== null ? `${fmtKm(d)} · ${driveMinutes(d)} мин` : 'Маршрут'}
                 </button>
               </div>

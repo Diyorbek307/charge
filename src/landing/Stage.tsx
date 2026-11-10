@@ -94,7 +94,7 @@ export default function Stage({ copy }: { copy: StageCopy }) {
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(255, ${190 + Math.round(40 * s.life)}, ${Math.round(80 * s.life)}, ${s.life})`;
-        ctx.shadowColor = 'rgba(255,200,61,.9)';
+        ctx.shadowColor = 'rgba(198,244,50,.9)';
         ctx.shadowBlur = 8 * dpr;
         ctx.fill();
       }

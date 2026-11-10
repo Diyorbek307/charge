@@ -26,7 +26,7 @@ export default function DemandCard() {
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
       <Card
-        title={<span className="inline-flex items-center gap-2"><PlugZap size={15} className="text-[#E09A00]" />Не хватает разъёмов</span>}
+        title={<span className="inline-flex items-center gap-2"><PlugZap size={15} className="text-[#1FA33A]" />Не хватает разъёмов</span>}
         className="xl:col-span-2"
         right={<ExportButton name="demand-stations" title="Где не хватает разъёмов" portal="admin" headers={['Станция', 'Город', 'Сеть', 'Разъёмы', 'Часов всё занято', 'Открывали — всё занято']} rows={data.stations.map(s => [s.name, s.city, s.operator, s.connectors, s.fullHours, s.busyViews])} />}
       >
@@ -44,7 +44,7 @@ export default function DemandCard() {
         ) : <Empty text="Пока ни одна станция не была занята целиком" />}
       </Card>
 
-      <Card title={<span className="inline-flex items-center gap-2"><SearchX size={15} className="text-[#E09A00]" />Искали и не нашли</span>}>
+      <Card title={<span className="inline-flex items-center gap-2"><SearchX size={15} className="text-[#1FA33A]" />Искали и не нашли</span>}>
         <p className="text-xs text-slate-500 mb-3">{`${num(data.totals.lostSearches)} поисков без единой станции за ${data.days} дней`}</p>
         {data.searches.length ? (
           <ul className="space-y-1.5 text-sm">
@@ -62,7 +62,7 @@ export default function DemandCard() {
             <ul className="space-y-1.5 text-sm">
               {data.areas.map(a => (
                 <li key={`${a.lat},${a.lng}`} className="flex items-center justify-between gap-3">
-                  <a href={mapLink(a.lat, a.lng)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-slate-700 hover:text-[#8A5B00]">
+                  <a href={mapLink(a.lat, a.lng)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-slate-700 hover:text-[#3D6B00]">
                     <MapPin size={13} />{`${a.lat.toFixed(2)}, ${a.lng.toFixed(2)}`}
                   </a>
                   <span className="tabular-nums font-semibold text-slate-900">{a.count}</span>

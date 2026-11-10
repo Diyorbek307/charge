@@ -64,7 +64,7 @@ export default function Reconcile() {
   const field = 'border border-slate-200 rounded-xl px-3 py-2 text-sm';
 
   return (
-    <Card title={<span className="inline-flex items-center gap-2"><FileCheck2 size={16} className="text-[#E09A00]" />Сверка с провайдером</span>}>
+    <Card title={<span className="inline-flex items-center gap-2"><FileCheck2 size={16} className="text-[#1FA33A]" />Сверка с провайдером</span>}>
       {problems && problems.length > 0 && (
         <div className="mb-4 rounded-xl border border-red-100 bg-red-50 px-3 py-2.5">
           <p className="text-sm font-semibold text-red-700 flex items-center gap-1.5"><TriangleAlert size={15} />{`Требуют внимания: ${problems.length}`}</p>
@@ -87,7 +87,7 @@ export default function Reconcile() {
       </div>
       <textarea value={statement} onChange={e => setStatement(e.target.value)} rows={5} placeholder={'Транзакция;Заказ;Сумма;Статус\n6b1f…;PAY-1A2B3C;150000;Успешно'} className={`${field} mt-2 w-full font-mono text-xs`} />
       {error && <ErrorNote text={error} />}
-      <button onClick={() => void run()} disabled={busy || !statement.trim()} className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FFC83D] text-[#111] text-sm font-semibold disabled:opacity-50">
+      <button onClick={() => void run()} disabled={busy || !statement.trim()} className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#C6F432] text-[#111] text-sm font-semibold disabled:opacity-50">
         {busy && <LoaderCircle size={14} className="animate-spin" />}Сверить
       </button>
 

@@ -86,7 +86,7 @@ function ImportStations({ onClose, onDone }: { onClose: () => void; onDone: () =
                 {result.skipped.map((x, i) => <p key={i} className="text-xs text-amber-800">{`${x.name}: ${x.reason}`}</p>)}
               </div>
             )}
-            <button onClick={onClose} className="w-full py-3 rounded-2xl bg-[#FFC83D] text-[#111] font-bold">Готово</button>
+            <button onClick={onClose} className="w-full py-3 rounded-2xl bg-[#C6F432] text-[#111] font-bold">Готово</button>
           </div>
         ) : (
           <div className="space-y-3 text-sm text-slate-600">

@@ -118,7 +118,7 @@ export function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewa
           <p className="text-xs text-slate-400 mb-4">Пополнение через Payme, Click, Uzum или Humo · списывается за каждую зарядку по счётчику</p>
           <div className="flex gap-2">
             <button onClick={() => setShowTopUp(true)}
-              className="flex-1 py-2.5 bg-[#FFC83D] hover:bg-[#FFB000] text-[#111] rounded-2xl text-sm font-semibold transition-colors active:scale-95">
+              className="flex-1 py-2.5 bg-[#C6F432] hover:bg-[#8FD61A] text-[#111] rounded-2xl text-sm font-semibold transition-colors active:scale-95">
               Пополнить
             </button>
 
@@ -126,7 +126,7 @@ export function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewa
         </div>
 
         {(state?.rewards?.bonus.balance ?? 0) > 0 && (
-          <button onClick={onRewards} className="w-full rounded-2xl p-4 flex items-center gap-3 text-left text-[#111]" style={{ background: 'linear-gradient(135deg,#FFF3C4,#FFE08A)' }}>
+          <button onClick={onRewards} className="w-full rounded-2xl p-4 flex items-center gap-3 text-left text-[#111]" style={{ background: 'linear-gradient(135deg,#EFFCC9,#E2F99A)' }}>
             <span className="text-2xl" aria-hidden="true">🎁</span>
             <span className="flex-1 min-w-0">
               <span className="block text-xs font-semibold opacity-70">БОНУС VOLI</span>

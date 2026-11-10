@@ -40,7 +40,7 @@ export function ArrivalBlock({ station, etaMin, onBook, onOpen }: { station: Sta
     };
   }, [actions, station.id, etaMin, busyKey, state?.queues?.length]);
   if (!a) return null;
-  const look = a.verdict === 'likely' ? { text: 'Скорее всего свободно', color: '#16A34A', bg: '#F0FDF4' } : a.verdict === 'maybe' ? { text: 'Может быть занято', color: '#B45309', bg: '#FFFBEB' } : { text: 'Скорее всего займут', color: '#DC2626', bg: '#FEF2F2' };
+  const look = a.verdict === 'likely' ? { text: 'Скорее всего свободно', color: '#16A34A', bg: '#F0FDF4' } : a.verdict === 'maybe' ? { text: 'Может быть занято', color: '#B45309', bg: '#F7FEE7' } : { text: 'Скорее всего займут', color: '#DC2626', bg: '#FEF2F2' };
   const at = new Date(Date.now() + a.etaMin * 60_000).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tashkent' });
   return (
     <div className="mb-3 rounded-2xl border p-3.5 pg-reveal" style={{ background: look.bg, borderColor: `${look.color}33` }}>
@@ -131,7 +131,7 @@ export function StationDetailSheet({ station, onClose, onStartCharging, onBook, 
   const pointStatus: Record<string, { text: string; color: string; bg: string }> = {
     available: { text: 'Свободно', color: '#16A34A', bg: '#F0FDF4' },
     occupied: { text: 'Заряжается', color: '#EA580C', bg: '#FFF7ED' },
-    reserved: { text: 'Забронировано', color: '#D97706', bg: '#FFFBEB' },
+    reserved: { text: 'Забронировано', color: '#D97706', bg: '#F7FEE7' },
     unavailable: { text: 'Не работает', color: '#64748B', bg: '#F8FAFC' },
   };
   const maxKw = Math.max(0, ...station.connectors.map(c => c.power));
@@ -236,13 +236,13 @@ export function StationDetailSheet({ station, onClose, onStartCharging, onBook, 
         <h2 className="text-[26px] font-extrabold text-slate-900 leading-tight tracking-tight">{station.name}</h2>
         <div className="mt-1 flex items-start justify-between gap-3 text-sm">
           <p className="text-slate-500 min-w-0">{`${station.address}, ${station.city}`}</p>
-          {dist !== null && <span key={road ? 'road' : 'crow'} className={`shrink-0 inline-flex items-center gap-1 font-semibold text-slate-700 ${road ? 'pg-pop' : ''}`} title={road ? 'По дороге' : 'По прямой — уточняем по дорогам'}><Navigation size={13} className="text-[#C98A00]" />{`${road ? '' : '≈ '}${fmtKm(dist)}`}</span>}
+          {dist !== null && <span key={road ? 'road' : 'crow'} className={`shrink-0 inline-flex items-center gap-1 font-semibold text-slate-700 ${road ? 'pg-pop' : ''}`} title={road ? 'По дороге' : 'По прямой — уточняем по дорогам'}><Navigation size={13} className="text-[#3D6B00]" />{`${road ? '' : '≈ '}${fmtKm(dist)}`}</span>}
         </div>
         <div className="mt-2.5 flex items-center flex-wrap gap-2 text-sm">
           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${closed ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'}`}>
             <Clock size={12} />{closed ? `Закрыто · ${station.hours}` : `Открыто · ${station.hours}`}
           </span>
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-xs font-semibold text-slate-700"><Star size={12} className="fill-[#FFC83D] text-[#FFC83D]" />{station.rating.toFixed(1)}</span>
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-xs font-semibold text-slate-700"><Star size={12} className="fill-[#C6F432] text-[#C6F432]" />{station.rating.toFixed(1)}</span>
           {station.reliability && (
             <span title={`Удачных запусков за 30 дней${station.reliability.uptime !== null ? ` · в работе ${Math.round(station.reliability.uptime)}% времени` : ''}`}
               className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${station.reliability.score >= 95 ? 'bg-emerald-50 text-emerald-700' : station.reliability.score >= 85 ? 'bg-amber-50 text-amber-800' : 'bg-red-50 text-red-600'}`}>
@@ -264,8 +264,8 @@ export function StationDetailSheet({ station, onClose, onStartCharging, onBook, 
 
         {/* The network's own discount, now or later today */}
         {(promo || later) && (
-          <div className="mt-4 rounded-2xl px-3.5 py-3 flex items-center gap-3" style={{ background: promo ? 'linear-gradient(135deg,#FFE08A,#FFC83D)' : '#FFFBEB' }}>
-            <span className="w-10 h-10 rounded-xl bg-[#111] text-[#FFC83D] grid place-items-center shrink-0"><Percent size={19} strokeWidth={2.6} /></span>
+          <div className="mt-4 rounded-2xl px-3.5 py-3 flex items-center gap-3" style={{ background: promo ? 'linear-gradient(135deg,#E2F99A,#C6F432)' : '#F7FEE7' }}>
+            <span className="w-10 h-10 rounded-xl bg-[#111] text-[#C6F432] grid place-items-center shrink-0"><Percent size={19} strokeWidth={2.6} /></span>
             {promo ? (
               <span className="flex-1 min-w-0">
                 <span className="block text-sm font-extrabold text-[#111]">{`−${promo.percent}% · ${promo.title}`}</span>
@@ -285,7 +285,7 @@ export function StationDetailSheet({ station, onClose, onStartCharging, onBook, 
         {/* How to find it on site */}
         {station.findHint && (
           <div className="mt-3 flex gap-2 items-start rounded-xl bg-amber-50 border border-amber-100 px-3 py-2">
-            <MapPin size={15} className="text-[#8a5b00] mt-0.5 shrink-0" />
+            <MapPin size={15} className="text-[#3d6b00] mt-0.5 shrink-0" />
             <p className="text-sm text-slate-700"><span className="font-semibold">Как найти: </span>{station.findHint}</p>
           </div>
         )}
@@ -306,7 +306,7 @@ export function StationDetailSheet({ station, onClose, onStartCharging, onBook, 
                   <p className="text-[15px] font-bold text-slate-900 leading-tight">{`${c.power >= 50 ? 'DC' : 'AC'} ${c.type}`}<span className="ml-1.5 text-[13px] font-semibold text-slate-600">{`${c.power} кВт`}</span></p>
                   <p className="text-[12px] text-slate-500 tabular-nums mt-0.5 whitespace-nowrap">
                     {(promo || tariffK < 1) && <span className="text-slate-400 line-through mr-1">{c.price.toLocaleString('ru-RU')}</span>}
-                    <span className={`font-semibold ${promo || tariffK < 1 ? 'px-1.5 rounded-md bg-[#FFC83D] text-[#111]' : 'text-slate-700'}`}>{priceNow(c.price, tariffK, promo?.percent).toLocaleString('ru-RU')}</span>
+                    <span className={`font-semibold ${promo || tariffK < 1 ? 'px-1.5 rounded-md bg-[#C6F432] text-[#111]' : 'text-slate-700'}`}>{priceNow(c.price, tariffK, promo?.percent).toLocaleString('ru-RU')}</span>
                     {' сум/кВт·ч'}
                   </p>
                   <p className="text-xs font-semibold inline-flex items-center gap-1 mt-0.5" style={{ color: look.color }}>
@@ -314,7 +314,7 @@ export function StationDetailSheet({ station, onClose, onStartCharging, onBook, 
                   </p>
                 </div>
                 {isFree && canStart ? (
-                  <button onClick={() => onStartCharging(c.id)} className="shrink-0 px-4 py-3 rounded-xl text-sm font-bold text-[#111] active:scale-95 transition-transform" style={{ background: 'linear-gradient(135deg,#FFD66B,#FFB000)', boxShadow: '0 4px 12px rgba(255,176,0,0.3)' }}>
+                  <button onClick={() => onStartCharging(c.id)} className="shrink-0 px-4 py-3 rounded-xl text-sm font-bold text-[#111] active:scale-95 transition-transform" style={{ background: 'linear-gradient(135deg,#D9F77A,#8FD61A)', boxShadow: '0 4px 12px rgba(143,214,26,0.3)' }}>
                     Зарядиться
                   </button>
                 ) : (
@@ -367,7 +367,7 @@ export function StationDetailSheet({ station, onClose, onStartCharging, onBook, 
           ) : (
             <button onClick={() => onStartCharging()}
               className={`${myTurn ? 'bg-green-500 hover:bg-green-600 animate-pulse text-white' : 'text-[#111]'} rounded-2xl py-3.5 font-bold text-[15px] transition-transform active:scale-[0.98] flex items-center justify-center gap-2`}
-              style={myTurn ? undefined : { background: 'linear-gradient(135deg,#FFD66B,#FFB000)', boxShadow: '0 6px 18px rgba(255,176,0,0.35)' }}>
+              style={myTurn ? undefined : { background: 'linear-gradient(135deg,#D9F77A,#8FD61A)', boxShadow: '0 6px 18px rgba(143,214,26,0.35)' }}>
               <Scan size={16} />{myTurn ? 'Ваша очередь — начать' : 'Начать зарядку'}
             </button>
           )}
@@ -384,7 +384,7 @@ export function StationDetailSheet({ station, onClose, onStartCharging, onBook, 
         {/* Navigation inside the app: route, voice, cameras. */}
         <div className="flex gap-2 mb-2">
           {on.navigator && <button onClick={onNavigate} className="flex-1 min-w-0 bg-[#111] text-white rounded-2xl py-3.5 font-bold text-[15px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-            <Navigation size={17} className="text-[#FFC83D] fill-[#FFC83D] shrink-0" /><span className="truncate">{dist !== null && drive !== null ? `Маршрут · ${road ? '' : '≈ '}${fmtKm(dist)} · ${hm(drive)}` : 'Маршрут'}</span>
+            <Navigation size={17} className="text-[#C6F432] fill-[#C6F432] shrink-0" /><span className="truncate">{dist !== null && drive !== null ? `Маршрут · ${road ? '' : '≈ '}${fmtKm(dist)} · ${hm(drive)}` : 'Маршрут'}</span>
           </button>}
           {/* The same route in Yandex Navigator, for those who drive with it. */}
           <button onClick={() => openInYandex({ lat: station.geoLat, lng: station.geoLng }, station.name)} aria-label="Открыть в Яндекс Навигаторе" title="Открыть в Яндекс Навигаторе"

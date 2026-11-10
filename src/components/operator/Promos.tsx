@@ -73,7 +73,7 @@ export default function OperatorPromos() {
   };
 
   return (
-    <Card title={<span className="inline-flex items-center gap-2"><Percent size={15} className="text-[#8a5b00]" />Скидки и акции</span>} right={<span className="text-xs text-slate-400">скидку оплачивает сеть: водитель платит меньше</span>}>
+    <Card title={<span className="inline-flex items-center gap-2"><Percent size={15} className="text-[#3d6b00]" />Скидки и акции</span>} right={<span className="text-xs text-slate-400">скидку оплачивает сеть: водитель платит меньше</span>}>
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl bg-slate-50 p-4 space-y-3">
           <p className="text-sm font-semibold text-slate-800">Новая акция</p>
@@ -122,14 +122,14 @@ export default function OperatorPromos() {
             </div>
           </div>
           {error && <ErrorNote text={error} />}
-          <button onClick={create} disabled={busy || !percent} className="w-full py-2.5 rounded-xl bg-[#FFC83D] text-[#111] text-sm font-bold disabled:opacity-50">Запустить акцию</button>
+          <button onClick={create} disabled={busy || !percent} className="w-full py-2.5 rounded-xl bg-[#C6F432] text-[#111] text-sm font-bold disabled:opacity-50">Запустить акцию</button>
         </div>
 
         <div className="space-y-2">
           {list === null && <p className="text-sm text-slate-400">Загружаем…</p>}
           {list?.length === 0 && <p className="text-sm text-slate-500">Акций пока нет. Скидка ночью или на первую зарядку приводит новых водителей.</p>}
           {list?.map(p => (
-            <div key={p.id} className={`rounded-2xl border p-3 ${p.active ? 'border-[#FFC83D] bg-amber-50/40' : 'border-slate-100 opacity-60'}`}>
+            <div key={p.id} className={`rounded-2xl border p-3 ${p.active ? 'border-[#C6F432] bg-amber-50/40' : 'border-slate-100 opacity-60'}`}>
               <div className="flex items-start gap-3">
                 <span className="text-xl font-black text-slate-900 w-14 shrink-0">{`−${p.percent}%`}</span>
                 <div className="flex-1 min-w-0">

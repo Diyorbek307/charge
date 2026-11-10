@@ -256,22 +256,22 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
       {galleryInput}
       {header('Сканер QR-кода', 'Наклейка на зарядной станции', onBack)}
       <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4 pg-stagger">
-        <div className="rounded-3xl overflow-hidden relative" style={{ background: 'linear-gradient(145deg,#1F1F1F,#111111)', boxShadow: '0 12px 40px rgba(255,200,61,0.22)' }}>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full opacity-25 pointer-events-none" style={{ background: '#FFC83D', filter: 'blur(48px)' }} />
+        <div className="rounded-3xl overflow-hidden relative" style={{ background: 'linear-gradient(145deg,#1F1F1F,#111111)', boxShadow: '0 12px 40px rgba(198,244,50,0.22)' }}>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full opacity-25 pointer-events-none" style={{ background: '#C6F432', filter: 'blur(48px)' }} />
           <div className="relative px-6 py-8 flex flex-col items-center">
             <div className="relative mb-5 pg-float">
-              <div className="w-20 h-20 rounded-2xl grid place-items-center" style={{ background: 'rgba(255,200,61,0.14)', border: '1.5px solid rgba(255,200,61,0.35)' }}>
-                <Scan size={34} className="text-[#FFC83D]" style={{ filter: 'drop-shadow(0 0 8px #FFC83D)' }} />
+              <div className="w-20 h-20 rounded-2xl grid place-items-center" style={{ background: 'rgba(198,244,50,0.14)', border: '1.5px solid rgba(198,244,50,0.35)' }}>
+                <Scan size={34} className="text-[#C6F432]" style={{ filter: 'drop-shadow(0 0 8px #C6F432)' }} />
               </div>
               {[1, 2].map(i => (
-                <div key={i} className="absolute inset-0 rounded-2xl border border-[#FFC83D]/30" style={{ animation: `pulse-halo ${1.5 + i * 0.5}s ease-out infinite`, animationDelay: `${i * 0.4}s` }} />
+                <div key={i} className="absolute inset-0 rounded-2xl border border-[#C6F432]/30" style={{ animation: `pulse-halo ${1.5 + i * 0.5}s ease-out infinite`, animationDelay: `${i * 0.4}s` }} />
               ))}
             </div>
             <h2 className="text-white font-bold text-lg mb-1">Отсканируйте QR</h2>
             <p className="text-white/55 text-xs text-center mb-6">Он на корпусе станции, на кабеле или на табличке рядом</p>
             <button onClick={() => setPhase('camera')}
               className="w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 text-[#111]"
-              style={{ background: 'linear-gradient(135deg,#FFD66B,#FFB000)', boxShadow: '0 6px 24px rgba(255,200,61,0.35)' }}>
+              style={{ background: 'linear-gradient(135deg,#D9F77A,#8FD61A)', boxShadow: '0 6px 24px rgba(198,244,50,0.35)' }}>
               <Scan size={18} />Открыть камеру
             </button>
             <button onClick={() => gallery.current?.click()} className="mt-3 text-white/70 text-xs font-semibold inline-flex items-center gap-1.5">
@@ -327,7 +327,7 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
         </button>
         <p className="text-white font-semibold text-sm drop-shadow">Наведите на QR-код</p>
         {torch !== null ? (
-          <button onClick={() => setTorchOn(!torch)} aria-pressed={torch} aria-label="Фонарик" className={`w-10 h-10 rounded-full backdrop-blur grid place-items-center ${torch ? 'bg-[#FFC83D] text-[#111]' : 'bg-black/40 text-white'}`}>
+          <button onClick={() => setTorchOn(!torch)} aria-pressed={torch} aria-label="Фонарик" className={`w-10 h-10 rounded-full backdrop-blur grid place-items-center ${torch ? 'bg-[#C6F432] text-[#111]' : 'bg-black/40 text-white'}`}>
             <Flashlight size={18} />
           </button>
         ) : <span className="w-10" />}
@@ -337,11 +337,11 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
         <div className="relative pg-frame" style={{ width: 230, height: 230 }}>
           {/* Everything but the window is dimmed */}
           <div className="absolute inset-0 rounded-3xl" style={{ boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)' }} />
-          <div className="absolute left-3 right-3 h-0.5 pg-laser" style={{ background: 'linear-gradient(90deg,transparent,#FFC83D,#FFE58A,#FFC83D,transparent)', boxShadow: '0 0 12px #FFC83D' }} />
+          <div className="absolute left-3 right-3 h-0.5 pg-laser" style={{ background: 'linear-gradient(90deg,transparent,#C6F432,#E9FB8F,#C6F432,transparent)', boxShadow: '0 0 12px #C6F432' }} />
           {(['tl', 'tr', 'bl', 'br'] as const).map(c => (
             <span key={c} className="absolute w-8 h-8" style={{
               [c[0] === 't' ? 'top' : 'bottom']: -2, [c[1] === 'l' ? 'left' : 'right']: -2,
-              [`border${c[0] === 't' ? 'Top' : 'Bottom'}`]: '4px solid #FFC83D', [`border${c[1] === 'l' ? 'Left' : 'Right'}`]: '4px solid #FFC83D',
+              [`border${c[0] === 't' ? 'Top' : 'Bottom'}`]: '4px solid #C6F432', [`border${c[1] === 'l' ? 'Left' : 'Right'}`]: '4px solid #C6F432',
               [`border${c[0] === 't' ? 'Top' : 'Bottom'}${c[1] === 'l' ? 'Left' : 'Right'}Radius`]: 18,
             }} />
           ))}
@@ -383,7 +383,7 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
         {header(fromRecent ? 'Станция' : 'Станция найдена', null, reset)}
         <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
           <div className="flex flex-col items-center py-3">
-            <div className="w-16 h-16 rounded-2xl grid place-items-center mb-3 pg-pop" style={{ background: 'linear-gradient(135deg,#FFD66B,#FFB000)', boxShadow: '0 8px 24px rgba(255,200,61,0.45)' }}>
+            <div className="w-16 h-16 rounded-2xl grid place-items-center mb-3 pg-pop" style={{ background: 'linear-gradient(135deg,#D9F77A,#8FD61A)', boxShadow: '0 8px 24px rgba(198,244,50,0.45)' }}>
               <CheckCircle size={32} className="text-[#111]" />
             </div>
             <p className="font-bold text-[#111] text-base">{fromRecent ? 'Вы заряжались здесь' : 'QR распознан'}</p>
@@ -405,7 +405,7 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
             </div>
             <div className="border-t border-slate-50 px-4 py-3 grid grid-cols-2 gap-2">
               {found.connectors.map(c => (
-                <div key={c.id} className={`flex items-center gap-2 p-2.5 rounded-xl border ${c.status === 'available' ? 'border-emerald-200 bg-emerald-50' : 'border-slate-100 bg-slate-50 opacity-60'} ${c.id === point ? 'ring-2 ring-[#FFB000]' : ''}`}>
+                <div key={c.id} className={`flex items-center gap-2 p-2.5 rounded-xl border ${c.status === 'available' ? 'border-emerald-200 bg-emerald-50' : 'border-slate-100 bg-slate-50 opacity-60'} ${c.id === point ? 'ring-2 ring-[#8FD61A]' : ''}`}>
                   <span className="w-2 h-2 rounded-full shrink-0" style={{ background: STATUS[c.status]?.color }} />
                   <div className="min-w-0">
                     <p className="text-[12px] font-semibold text-slate-800 truncate">{c.type}</p>
@@ -428,8 +428,8 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
 
           <div className="space-y-2.5 pb-2">
             <button onClick={() => onStartCharging(found, point)} disabled={avail.length === 0}
-              className="w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 disabled:bg-slate-200 disabled:text-slate-400 text-[#111] shadow-[0_6px_20px_rgba(255,200,61,0.35)] disabled:shadow-none"
-              style={avail.length ? { background: 'linear-gradient(135deg,#FFD66B,#FFB000)' } : undefined}>
+              className="w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 disabled:bg-slate-200 disabled:text-slate-400 text-[#111] shadow-[0_6px_20px_rgba(198,244,50,0.35)] disabled:shadow-none"
+              style={avail.length ? { background: 'linear-gradient(135deg,#D9F77A,#8FD61A)' } : undefined}>
               <Zap size={18} />Начать зарядку
             </button>
             <div className="grid grid-cols-2 gap-2">
@@ -462,7 +462,7 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
         <div className="w-full space-y-2.5 pt-2">
           <button onClick={() => setPhase('camera')}
             className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 text-[#111]"
-            style={{ background: 'linear-gradient(135deg,#FFD66B,#FFB000)' }}>
+            style={{ background: 'linear-gradient(135deg,#D9F77A,#8FD61A)' }}>
             <Scan size={16} />{errorKind === 'camera' ? 'Попробовать ещё раз' : 'Сканировать ещё раз'}
           </button>
           <button onClick={() => { setManualCode(''); setPhase('manual'); }}
@@ -488,7 +488,7 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
     <div className="h-full flex flex-col bg-white">
       {header('Ввод кода станции', 'Код напечатан под QR', () => setPhase('idle'))}
       <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
-        <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 focus-within:border-[#FFB000] transition-colors">
+        <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 focus-within:border-[#8FD61A] transition-colors">
           <label htmlFor="qr-code" className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 block">Код станции</label>
           <input id="qr-code" ref={inputRef}
             value={manualCode}
@@ -510,7 +510,7 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
           <div className="flex flex-wrap gap-2">
             {nearest.slice(0, 6).map(st => (
               <button key={st.id} onClick={() => setManualCode(st.id.toUpperCase())} title={st.name}
-                className="px-3 py-1.5 bg-white rounded-xl border border-slate-200 text-xs font-bold mono text-slate-700 hover:border-[#FFB000]">
+                className="px-3 py-1.5 bg-white rounded-xl border border-slate-200 text-xs font-bold mono text-slate-700 hover:border-[#8FD61A]">
                 {st.id.toUpperCase()}
               </button>
             ))}
@@ -520,7 +520,7 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
       <div className="px-4 pb-6 pt-2 space-y-2">
         <button onClick={() => accept(typed)} disabled={!typed}
           className="w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 disabled:bg-slate-200 disabled:text-slate-400 text-[#111]"
-          style={typed ? { background: 'linear-gradient(135deg,#FFD66B,#FFB000)', boxShadow: '0 6px 20px rgba(255,200,61,0.35)' } : undefined}>
+          style={typed ? { background: 'linear-gradient(135deg,#D9F77A,#8FD61A)', boxShadow: '0 6px 20px rgba(198,244,50,0.35)' } : undefined}>
           <CheckCircle size={18} />Найти станцию
         </button>
         <button onClick={() => setPhase('camera')} className="w-full py-3 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 bg-slate-100 text-slate-600">

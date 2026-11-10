@@ -83,7 +83,7 @@ export function AppSettingsScreen({ onBack, onReplayTour }: { onBack: () => void
       aria-checked={value}
       aria-label={label}
       onClick={onChange}
-      className={`relative w-11 h-6 rounded-full transition-colors duration-300 shrink-0 ${value ? 'bg-[#FFB000]' : 'bg-slate-200'}`}
+      className={`relative w-11 h-6 rounded-full transition-colors duration-300 shrink-0 ${value ? 'bg-[#8FD61A]' : 'bg-slate-200'}`}
     >
       <span className={`absolute top-1 left-0 w-4 h-4 rounded-full bg-white shadow transition-transform duration-300 ease-[cubic-bezier(.34,1.56,.64,1)] ${value ? 'translate-x-6' : 'translate-x-1'}`} />
     </button>

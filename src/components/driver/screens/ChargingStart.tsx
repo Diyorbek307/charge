@@ -14,14 +14,14 @@ import { useTariffForecast, priceNow } from '../../../lib/tariff';
 export function ConnectorTile({ letter, dc }: { letter: string; dc: boolean }) {
   return (
     <span className="relative w-12 h-14 rounded-xl bg-[#111] grid place-items-center shrink-0" aria-hidden="true">
-      <svg viewBox="0 0 24 32" width="22" height="30" fill="none" stroke="#FFC83D" strokeWidth="1.8">
+      <svg viewBox="0 0 24 32" width="22" height="30" fill="none" stroke="#C6F432" strokeWidth="1.8">
         <circle cx="12" cy="11" r="8" />
-        <circle cx="9" cy="9" r="1.4" fill="#FFC83D" stroke="none" />
-        <circle cx="15" cy="9" r="1.4" fill="#FFC83D" stroke="none" />
-        <circle cx="12" cy="14" r="1.6" fill="#FFC83D" stroke="none" />
-        {dc ? <><circle cx="12" cy="25" r="5" /><circle cx="10" cy="25" r="1.2" fill="#FFC83D" stroke="none" /><circle cx="14" cy="25" r="1.2" fill="#FFC83D" stroke="none" /></> : <path d="M9 25h6" strokeLinecap="round" />}
+        <circle cx="9" cy="9" r="1.4" fill="#C6F432" stroke="none" />
+        <circle cx="15" cy="9" r="1.4" fill="#C6F432" stroke="none" />
+        <circle cx="12" cy="14" r="1.6" fill="#C6F432" stroke="none" />
+        {dc ? <><circle cx="12" cy="25" r="5" /><circle cx="10" cy="25" r="1.2" fill="#C6F432" stroke="none" /><circle cx="14" cy="25" r="1.2" fill="#C6F432" stroke="none" /></> : <path d="M9 25h6" strokeLinecap="round" />}
       </svg>
-      <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#FFC83D] text-[#111] text-[10px] font-black grid place-items-center ring-2 ring-white">{letter}</span>
+      <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#C6F432] text-[#111] text-[10px] font-black grid place-items-center ring-2 ring-white">{letter}</span>
     </span>
   );
 }
@@ -215,7 +215,7 @@ export function ChargingStartScreen({ station, preferConnector, onBack, onConfir
                   <span className="text-right">
                     {(promo || plusOn || tariffK < 1) && <span className="block text-[11px] text-slate-400 line-through tabular-nums">{c.price.toLocaleString('ru-RU')}</span>}
                     <span className="block text-sm font-bold mono text-slate-700">{`${Math.round(priceNow(c.price, tariffK, promo?.percent) * plusK).toLocaleString('ru-RU')} сум/кВт·ч`}</span>
-                    {plusOn && <span className="block text-[10px] font-bold text-[#946300]">{`Plus −${state?.plus?.discount ?? 5}%`}</span>}
+                    {plusOn && <span className="block text-[10px] font-bold text-[#3D6B00]">{`Plus −${state?.plus?.discount ?? 5}%`}</span>}
                   </span>
                 </button>
               ))}
@@ -230,7 +230,7 @@ export function ChargingStartScreen({ station, preferConnector, onBack, onConfir
             <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-xl mb-3" role="radiogroup" aria-label="Цель зарядки">
               {([['percent', 'До %'], ['sum', 'На сумму'], ['km', 'На км']] as const).map(([k, label]) => (
                 <button key={k} role="radio" aria-checked={goalKind === k} onClick={() => setGoalKind(k)}
-                  className={`py-1.5 rounded-lg text-xs font-semibold ${goalKind === k ? 'bg-[#FFC83D] text-[#111] shadow-sm' : 'text-slate-500'}`}>{label}</button>
+                  className={`py-1.5 rounded-lg text-xs font-semibold ${goalKind === k ? 'bg-[#C6F432] text-[#111] shadow-sm' : 'text-slate-500'}`}>{label}</button>
               ))}
             </div>
             {goalKind === 'percent' && (
@@ -241,7 +241,7 @@ export function ChargingStartScreen({ station, preferConnector, onBack, onConfir
                 </div>
                 <input type="range" min={minPct} max={100} step={5} value={targetPct} aria-label="Зарядить до, %"
                   onChange={e => setTargetPct(Number(e.target.value))}
-                  className="w-full accent-[#FFB000] mb-3" />
+                  className="w-full accent-[#8FD61A] mb-3" />
               </>
             )}
             {goalKind !== 'percent' && (
@@ -250,7 +250,7 @@ export function ChargingStartScreen({ station, preferConnector, onBack, onConfir
                   const active = goalKind === 'sum' ? goalSum === v : goalKm === v;
                   return (
                     <button key={v} onClick={() => (goalKind === 'sum' ? setGoalSum(v) : setGoalKm(v))} aria-pressed={active}
-                      className={`py-2 rounded-xl text-sm font-semibold ${active ? 'bg-[#FFC83D] text-[#111]' : 'bg-slate-100 text-slate-700'}`}>
+                      className={`py-2 rounded-xl text-sm font-semibold ${active ? 'bg-[#C6F432] text-[#111]' : 'bg-slate-100 text-slate-700'}`}>
                       {goalKind === 'sum' ? `${v / 1000}K` : `${v} км`}
                     </button>
                   );
@@ -277,11 +277,11 @@ export function ChargingStartScreen({ station, preferConnector, onBack, onConfir
                 <p className="text-xs font-semibold text-slate-500 mb-2">КОГДА НАЧАТЬ</p>
                 <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Когда начать">
                   <button role="radio" aria-checked={when === 'now'} onClick={() => setWhen('now')}
-                    className={`p-2.5 rounded-xl border-2 text-left ${when === 'now' ? 'border-[#FFB000] bg-amber-50' : 'border-slate-200'}`}>
+                    className={`p-2.5 rounded-xl border-2 text-left ${when === 'now' ? 'border-[#8FD61A] bg-amber-50' : 'border-slate-200'}`}>
                     <span className="block text-sm font-semibold text-slate-800">Сейчас</span>
                   </button>
                   <button role="radio" aria-checked={when === 'night'} onClick={() => setWhen('night')} disabled={payer === 'credit'}
-                    className={`p-2.5 rounded-xl border-2 text-left disabled:opacity-50 ${when === 'night' ? 'border-[#FFB000] bg-amber-50' : 'border-slate-200'}`}>
+                    className={`p-2.5 rounded-xl border-2 text-left disabled:opacity-50 ${when === 'night' ? 'border-[#8FD61A] bg-amber-50' : 'border-slate-200'}`}>
                     <span className="block text-sm font-semibold text-slate-800">Ночью в 23:00</span>
                     <span className="block text-[11px] text-emerald-700">на 30% дешевле</span>
                   </button>
@@ -298,13 +298,13 @@ export function ChargingStartScreen({ station, preferConnector, onBack, onConfir
           {netWallet ? (
             // A network paid directly: only the driver's balance at that network pays here.
             <div className="space-y-2">
-              <div className="flex items-center gap-3 p-3 rounded-xl border-2 border-[#FFB000] bg-amber-50">
+              <div className="flex items-center gap-3 p-3 rounded-xl border-2 border-[#8FD61A] bg-amber-50">
                 <span className="w-8 h-8 rounded-lg bg-white grid place-items-center text-lg" aria-hidden="true">{netWallet.logo}</span>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-slate-800">{`Баланс сети ${netWallet.name}`}</p>
                   <p className="text-xs text-slate-500">{`${netWallet.balance.toLocaleString('ru-RU')} сум · деньги поступают сети напрямую`}</p>
                 </div>
-                <button onClick={() => setNetTopUp(true)} className="px-3 py-1.5 rounded-xl bg-[#FFC83D] text-[#111] text-xs font-semibold">Пополнить</button>
+                <button onClick={() => setNetTopUp(true)} className="px-3 py-1.5 rounded-xl bg-[#C6F432] text-[#111] text-xs font-semibold">Пополнить</button>
               </div>
               {netShort > 0 && <p className="text-xs text-amber-800 bg-amber-50 rounded-xl px-3 py-2">{`Для старта нужно ещё ${netShort.toLocaleString('ru-RU')} сум на балансе этой сети`}</p>}
             </div>
@@ -359,9 +359,9 @@ export function ChargingStartScreen({ station, preferConnector, onBack, onConfir
                 aria-checked={payer === 'credit'}
                 onClick={() => { setPayer('credit'); setWhen('now'); }}
                 disabled={credit.available <= 0}
-                className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all disabled:opacity-50 ${payer === 'credit' ? 'border-[#FFB000] bg-amber-50' : 'border-slate-200'}`}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all disabled:opacity-50 ${payer === 'credit' ? 'border-[#8FD61A] bg-amber-50' : 'border-slate-200'}`}
               >
-                <div className="w-8 h-8 rounded-lg bg-[#111] text-[#FFC83D] flex items-center justify-center"><ScanFace size={16} /></div>
+                <div className="w-8 h-8 rounded-lg bg-[#111] text-[#C6F432] flex items-center justify-center"><ScanFace size={16} /></div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-slate-800">В долг · подтверждение лицом</p>
                   <p className="text-xs text-slate-400">
@@ -382,8 +382,8 @@ export function ChargingStartScreen({ station, preferConnector, onBack, onConfir
         )}
         <button onClick={() => (netWallet ? void confirm('self') : payer === 'credit' ? setFaceCheck(true) : void confirm(payer))}
           disabled={!canStart}
-          className={`w-full rounded-2xl py-4 font-bold text-base transition-colors flex items-center justify-center gap-2 ${canStart ? 'text-[#111] shadow-[0_8px_22px_rgba(255,176,0,0.35)]' : 'bg-slate-200 text-slate-400'}`}
-          style={canStart ? { background: 'linear-gradient(135deg,#FFD66B,#FFB000)' } : undefined}>
+          className={`w-full rounded-2xl py-4 font-bold text-base transition-colors flex items-center justify-center gap-2 ${canStart ? 'text-[#111] shadow-[0_8px_22px_rgba(143,214,26,0.35)]' : 'bg-slate-200 text-slate-400'}`}
+          style={canStart ? { background: 'linear-gradient(135deg,#D9F77A,#8FD61A)' } : undefined}>
           {confirming ? <span className="w-[18px] h-[18px] rounded-full border-2 border-[#111]/30 border-t-[#111] animate-spin" /> : <Zap size={18} />}
           {confirming ? 'Запускаем…' : when === 'night' && !nightNow ? 'Запланировать на 23:00' : 'Подтвердить и начать зарядку'}
         </button>

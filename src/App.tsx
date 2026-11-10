@@ -39,7 +39,7 @@ const SyncInspector = lazyPage(() => import('./components/SyncInspector'));
 type Portal = 'selector' | 'driver' | 'operator' | 'admin' | 'business' | 'api' | 'architecture';
 
 const FLOW_LABELS = [
-  { label: 'OCPP 2.0.1', color: '#FFC83D' },
+  { label: 'OCPP 2.0.1', color: '#C6F432' },
   { label: 'REST / OCPI', color: '#8DA2FF' },
   { label: 'OCPI 2.3.0', color: '#34D399' },
   { label: 'OCPP 2.0.1', color: '#FBBF24' },
@@ -293,7 +293,7 @@ function PortalLoading() {
       <div className="flex flex-col items-center gap-3">
         <div
           className="w-9 h-9 rounded-xl grid place-items-center"
-          style={{ background: 'linear-gradient(135deg,#FFC83D,#FFB000)', animation: 'pulse 1.6s ease-in-out infinite' }}
+          style={{ background: 'linear-gradient(135deg,#C6F432,#8FD61A)', animation: 'pulse 1.6s ease-in-out infinite' }}
         >
           <Zap size={17} className="text-[#111]" />
         </div>
@@ -428,7 +428,7 @@ function MainApp() {
         <div className="h-full flex items-center justify-center relative overflow-clip" style={{ background: 'radial-gradient(ellipse at 50% 30%, #0f1e3a 0%, #080d19 50%, #050810 100%)' }}>
           {/* Animated ambient orbs */}
           <div className="absolute pointer-events-none">
-            <div className="anim-orb-1" style={{ position: 'absolute', top: -200, left: -100, width: 500, height: 500, background: 'radial-gradient(circle, rgba(255, 200, 61,0.12) 0%, transparent 65%)', borderRadius: '50%', filter: 'blur(30px)' }} />
+            <div className="anim-orb-1" style={{ position: 'absolute', top: -200, left: -100, width: 500, height: 500, background: 'radial-gradient(circle, rgba(198,244,50,0.12) 0%, transparent 65%)', borderRadius: '50%', filter: 'blur(30px)' }} />
             <div className="anim-orb-3" style={{ position: 'absolute', bottom: -100, right: -100, width: 400, height: 400, background: 'radial-gradient(circle, rgba(52,211,153,0.08) 0%, transparent 65%)', borderRadius: '50%', filter: 'blur(30px)' }} />
           </div>
           {/* Dot grid overlay */}

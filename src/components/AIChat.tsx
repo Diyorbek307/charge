@@ -34,7 +34,7 @@ const CONFIG: Record<PortalType, { name: T3; accent: string; gradient: string; g
   },
   operator: {
     name: ['Ассистент оператора', 'Operator assistant', 'Operator yordamchisi'],
-    accent: '#FFC83D',
+    accent: '#C6F432',
     gradient: 'linear-gradient(135deg, #2A2A2A, #111111)',
     greeting: [
       'Подскажу по вашей сети на живых данных: выручка, лучшие станции, загрузка, проблемные разъёмы, прогноз.',

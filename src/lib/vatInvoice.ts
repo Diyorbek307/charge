@@ -31,7 +31,7 @@ function drawInvoice(m: CompanyMonth) {
   const ctx = canvas.getContext('2d')!;
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#FFC83D';
+  ctx.fillStyle = '#C6F432';
   ctx.fillRect(0, 0, W, 14);
 
   const number = `SF-${m.month.replace('-', '')}`;

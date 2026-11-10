@@ -28,7 +28,7 @@ export default function OperatorDashboard({ onNavigate }: { onNavigate: (page: s
   return (
     <Page title={`${greeting()}, ${me?.org ?? 'оператор'}`} subtitle={<>{todayLong()} · ваша сеть, показатели за 30 дней</>}>
       <NeedsAttention items={inbox?.items ?? null} onNavigate={onNavigate} allClear="Всё в порядке: сбоев и неработающих разъёмов нет" />
-      <div className="relative overflow-hidden rounded-2xl px-5 py-4 flex flex-wrap items-center justify-between gap-4 text-[#111] bg-gradient-to-r from-[#FFC83D] to-[#FFB000]" style={{ boxShadow: '0 4px 24px rgba(255,176,0,0.25)' }}>
+      <div className="relative overflow-hidden rounded-2xl px-5 py-4 flex flex-wrap items-center justify-between gap-4 text-[#111] bg-gradient-to-r from-[#C6F432] to-[#8FD61A]" style={{ boxShadow: '0 4px 24px rgba(143,214,26,0.25)' }}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-black/10 rounded-xl flex items-center justify-center"><Zap size={20} /></div>
           <div>

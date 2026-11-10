@@ -80,7 +80,7 @@ export default function StationInfo({ station }: { station: Station }) {
         <div className="flex flex-wrap gap-1.5">
           {AMENITIES.map(a => (
             <button key={a} onClick={() => setAmen(v => (v.includes(a) ? v.filter(x => x !== a) : [...v, a]))} aria-pressed={amen.includes(a)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${amen.includes(a) ? 'bg-[#FFC83D] text-[#111] border-[#FFC83D]' : 'bg-white text-slate-600 border-slate-200'}`}>{a}</button>
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${amen.includes(a) ? 'bg-[#C6F432] text-[#111] border-[#C6F432]' : 'bg-white text-slate-600 border-slate-200'}`}>{a}</button>
           ))}
         </div>
       </div>
@@ -114,7 +114,7 @@ export default function StationInfo({ station }: { station: Station }) {
           )}
         </div>
       </div>
-      <button onClick={save} disabled={busy} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FFC83D] text-[#111] text-sm font-semibold disabled:opacity-50">
+      <button onClick={save} disabled={busy} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#C6F432] text-[#111] text-sm font-semibold disabled:opacity-50">
         {busy && <LoaderCircle size={14} className="animate-spin" />}Сохранить
       </button>
     </div>

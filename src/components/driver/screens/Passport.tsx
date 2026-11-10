@@ -36,7 +36,7 @@ export default function PassportScreen({ onBack, onSaved }: { onBack: () => void
     }
   };
 
-  const field = 'w-full h-12 rounded-xl border border-slate-200 bg-white px-3 text-base text-slate-900 outline-none focus:border-[#FFC83D] focus:ring-2 focus:ring-[#FFC83D]/40';
+  const field = 'w-full h-12 rounded-xl border border-slate-200 bg-white px-3 text-base text-slate-900 outline-none focus:border-[#C6F432] focus:ring-2 focus:ring-[#C6F432]/40';
 
   return (
     <div className="h-full flex flex-col bg-slate-50">
@@ -51,7 +51,7 @@ export default function PassportScreen({ onBack, onSaved }: { onBack: () => void
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         {saved ? (
           <div className="bg-white rounded-2xl border border-slate-100 p-4 flex items-start gap-3">
-            <span className="w-10 h-10 rounded-xl bg-[#FFF3C4] grid place-items-center shrink-0"><ShieldCheck size={20} className="text-[#8A5B00]" /></span>
+            <span className="w-10 h-10 rounded-xl bg-[#EFFCC9] grid place-items-center shrink-0"><ShieldCheck size={20} className="text-[#3D6B00]" /></span>
             <div className="min-w-0">
               <p className="text-sm font-bold text-slate-900">Паспорт указан</p>
               <p className="text-sm text-slate-600 mt-0.5" data-no-translate>{`${saved.series} ••••${saved.last}`}</p>
@@ -62,7 +62,7 @@ export default function PassportScreen({ onBack, onSaved }: { onBack: () => void
         ) : (
           <>
             {reward && !reward.grantedAt && (
-              <div className="relative overflow-hidden rounded-2xl px-4 py-3 flex items-center gap-3 text-[#111]" style={{ background: 'linear-gradient(135deg,#FFE08A,#FFC83D)' }}>
+              <div className="relative overflow-hidden rounded-2xl px-4 py-3 flex items-center gap-3 text-[#111]" style={{ background: 'linear-gradient(135deg,#E2F99A,#C6F432)' }}>
                 <span className="text-2xl" aria-hidden="true">🎁</span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-extrabold">{`+${sum(reward.amount)} на зарядку`}</span>
@@ -90,7 +90,7 @@ export default function PassportScreen({ onBack, onSaved }: { onBack: () => void
                 <input id="passport-birth" type="date" className={`${field} mt-1`} value={birth} onChange={e => setBirth(e.target.value)} required />
               </label>
               {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
-              <button type="submit" disabled={saving} className="w-full h-12 rounded-xl bg-[#111] text-[#FFC83D] font-bold text-sm disabled:opacity-60">
+              <button type="submit" disabled={saving} className="w-full h-12 rounded-xl bg-[#111] text-[#C6F432] font-bold text-sm disabled:opacity-60">
                 {saving ? 'Сохраняем…' : reward && !reward.grantedAt ? 'Сохранить и получить бонус' : 'Сохранить'}
               </button>
             </form>

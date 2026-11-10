@@ -59,13 +59,13 @@ export default function HeroCanvas({
             <stop offset="1" stopColor="#151412" />
           </linearGradient>
           <linearGradient id="lp-beam-g" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="#FFC83D" stopOpacity="0" />
-            <stop offset="0.5" stopColor="#FFC83D" stopOpacity="0.22" />
-            <stop offset="1" stopColor="#FFC83D" stopOpacity="0" />
+            <stop offset="0" stopColor="#C6F432" stopOpacity="0" />
+            <stop offset="0.5" stopColor="#C6F432" stopOpacity="0.22" />
+            <stop offset="1" stopColor="#C6F432" stopOpacity="0" />
           </linearGradient>
           <radialGradient id="lp-glow-g">
-            <stop offset="0" stopColor="#FFC83D" stopOpacity="0.55" />
-            <stop offset="1" stopColor="#FFC83D" stopOpacity="0" />
+            <stop offset="0" stopColor="#C6F432" stopOpacity="0.55" />
+            <stop offset="1" stopColor="#C6F432" stopOpacity="0" />
           </radialGradient>
           <filter id="lp-blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="6" /></filter>
         </defs>

@@ -120,13 +120,13 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
         </button>
       </div>
       <p className="relative text-center text-white/45 text-[11px] -mt-0.5 z-10 truncate px-12">{`${session.stationName} · ${session.connector} · ${power} кВт`}</p>
-      {shared && <p role="status" className="relative text-center text-xs text-[#FFC83D] mt-1 z-10">{shared}</p>}
+      {shared && <p role="status" className="relative text-center text-xs text-[#C6F432] mt-1 z-10">{shared}</p>}
 
       <div className="flex-1 overflow-y-auto no-scrollbar relative z-10 px-4">
         <ChargeHero battery={battery} target={TARGET} />
 
         <div className="mt-3 mx-auto w-fit flex items-center gap-1.5 bg-white/[0.06] border border-white/10 px-3 py-1.5 rounded-full">
-          <Clock size={11} className="text-[#FFC83D]" />
+          <Clock size={11} className="text-[#C6F432]" />
           <p className="text-white/70 text-xs">{goalLine}</p>
         </div>
         {idleRule?.on && (
@@ -151,7 +151,7 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
           <p className="text-white font-extrabold text-[24px] tabular-nums mt-0.5">{sum(cost)}</p>
           <p className="text-white/40 text-[11px] mt-1 flex items-center justify-center gap-1.5 flex-wrap">
             {`${price.toLocaleString('ru-RU')} сум/кВт·ч`}
-            {band && <span className="inline-flex items-center gap-1 text-[#FFC83D]"><Moon size={10} />{band}</span>}
+            {band && <span className="inline-flex items-center gap-1 text-[#C6F432]"><Moon size={10} />{band}</span>}
             <span className="inline-flex items-center gap-1">· {payer}</span>
           </p>
         </div>
@@ -171,7 +171,7 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
             onClick={() => setAskStop(true)}
             disabled={stopping}
             className="w-full text-[#111] rounded-2xl py-4 font-bold text-[16px] active:scale-[0.98] transition-transform disabled:opacity-60 inline-flex items-center justify-center gap-2"
-            style={{ background: 'linear-gradient(90deg, #FFE27A, #FFC83D 55%, #F5B000)', boxShadow: '0 8px 28px rgba(255,200,61,0.28)' }}
+            style={{ background: 'linear-gradient(90deg, #DEF88C, #C6F432 55%, #A8E81F)', boxShadow: '0 8px 28px rgba(198,244,50,0.28)' }}
           >
             {stopping && <LoaderCircle size={16} className="animate-spin" />}
             {stopping ? 'Завершаем…' : 'Завершить зарядку'}
@@ -199,14 +199,14 @@ function ChargeHero({ battery, target }: { battery: number; target: number }) {
   const stop = BOTTOM - (span * target) / 100;
   return (
     <div className="relative mt-3 mx-auto w-[200px] select-none" aria-hidden="true">
-      <div className="absolute inset-x-[-40px] top-[20%] h-[60%] rounded-full blur-3xl" style={{ background: 'radial-gradient(closest-side, rgba(255,200,61,.28), rgba(255,200,61,0))' }} />
+      <div className="absolute inset-x-[-40px] top-[20%] h-[60%] rounded-full blur-3xl" style={{ background: 'radial-gradient(closest-side, rgba(198,244,50,.28), rgba(198,244,50,0))' }} />
       <svg viewBox="0 0 200 340" className="relative w-full block overflow-visible">
         <defs>
           <clipPath id="pg-car-clip"><path d={BODY} /></clipPath>
           <linearGradient id="pg-energy" x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0" stopColor="#C98A00" />
-            <stop offset=".55" stopColor="#FFC83D" />
-            <stop offset="1" stopColor="#FFE27A" />
+            <stop offset="0" stopColor="#1FA33A" />
+            <stop offset=".55" stopColor="#C6F432" />
+            <stop offset="1" stopColor="#DEF88C" />
           </linearGradient>
           <linearGradient id="pg-shell" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0" stopColor="#1d1d1d" />
@@ -225,23 +225,23 @@ function ChargeHero({ battery, target }: { battery: number; target: number }) {
           {/* The energy, its surface moving */}
           <g style={{ transform: `translateY(${level}px)`, transition: 'transform 1s linear' }}>
             <path className="pg-wave" d="M-200 0 Q-175 -7 -150 0 T-100 0 T-50 0 T0 0 T50 0 T100 0 T150 0 T200 0 T250 0 T300 0 T350 0 T400 0 V400 H-200 Z" fill="url(#pg-energy)" />
-            <path className="pg-wave pg-wave-slow" d="M-200 2 Q-175 -4 -150 2 T-100 2 T-50 2 T0 2 T50 2 T100 2 T150 2 T200 2 T250 2 T300 2 T350 2 T400 2 V400 H-200 Z" fill="#FFE27A" opacity=".35" />
+            <path className="pg-wave pg-wave-slow" d="M-200 2 Q-175 -4 -150 2 T-100 2 T-50 2 T0 2 T50 2 T100 2 T150 2 T200 2 T250 2 T300 2 T350 2 T400 2 V400 H-200 Z" fill="#DEF88C" opacity=".35" />
           </g>
           {battery < 99.5 && [36, 70, 104, 132, 158].map((x, i) => (
-            <circle key={x} className="pg-bubble" cx={x + 8} cy={BOTTOM - 6} r={2 + (i % 3)} fill="#FFF3C4" style={{ animationDelay: `${i * 0.55}s`, ['--rise' as string]: `${Math.max(20, BOTTOM - level - 10)}px` }} />
+            <circle key={x} className="pg-bubble" cx={x + 8} cy={BOTTOM - 6} r={2 + (i % 3)} fill="#EFFCC9" style={{ animationDelay: `${i * 0.55}s`, ['--rise' as string]: `${Math.max(20, BOTTOM - level - 10)}px` }} />
           ))}
         </g>
 
         {/* Glass over the energy: windscreen, roof, rear window */}
-        <path d="M46 100 C66 86 134 86 154 100 L146 140 C124 132 76 132 54 140 Z" fill="#0d0d0d" fillOpacity=".78" stroke="#FFD66B" strokeOpacity=".35" />
-        <rect x="56" y="146" width="88" height="96" rx="20" fill="#0d0d0d" fillOpacity=".55" stroke="#FFD66B" strokeOpacity=".25" />
-        <path d="M54 250 C76 258 124 258 146 250 L152 280 C126 290 74 290 48 280 Z" fill="#0d0d0d" fillOpacity=".78" stroke="#FFD66B" strokeOpacity=".35" />
+        <path d="M46 100 C66 86 134 86 154 100 L146 140 C124 132 76 132 54 140 Z" fill="#0d0d0d" fillOpacity=".78" stroke="#D9F77A" strokeOpacity=".35" />
+        <rect x="56" y="146" width="88" height="96" rx="20" fill="#0d0d0d" fillOpacity=".55" stroke="#D9F77A" strokeOpacity=".25" />
+        <path d="M54 250 C76 258 124 258 146 250 L152 280 C126 290 74 290 48 280 Z" fill="#0d0d0d" fillOpacity=".78" stroke="#D9F77A" strokeOpacity=".35" />
         {/* Headlights and tail lights */}
-        <path d="M54 34 C64 26 78 22 88 22" stroke="#FFF3C4" strokeWidth="3" strokeLinecap="round" fill="none" />
-        <path d="M146 34 C136 26 122 22 112 22" stroke="#FFF3C4" strokeWidth="3" strokeLinecap="round" fill="none" />
+        <path d="M54 34 C64 26 78 22 88 22" stroke="#EFFCC9" strokeWidth="3" strokeLinecap="round" fill="none" />
+        <path d="M146 34 C136 26 122 22 112 22" stroke="#EFFCC9" strokeWidth="3" strokeLinecap="round" fill="none" />
         <path d="M48 316 C70 322 130 322 152 316" stroke="#EF4444" strokeOpacity=".8" strokeWidth="3" strokeLinecap="round" fill="none" />
 
-        <path d={BODY} fill="none" stroke="#FFD66B" strokeOpacity=".7" strokeWidth="2" />
+        <path d={BODY} fill="none" stroke="#D9F77A" strokeOpacity=".7" strokeWidth="2" />
 
         {/* Where the charge stops */}
         {target < 100 && (
@@ -308,7 +308,7 @@ export function ChargingDoneScreen({ session, onClose }: { session: Session | nu
   return (
     <div className="h-full flex flex-col bg-slate-50">
       <div className="px-4 pt-6 pb-6 text-white text-center" style={{ background: 'radial-gradient(ellipse at 50% 0%, #2a2208 0%, #141414 60%, #0a0a0a 100%)' }}>
-        <div className="w-14 h-14 bg-[#FFC83D] text-[#111] rounded-full flex items-center justify-center mx-auto mb-3 pg-pop" style={{ boxShadow: '0 0 28px rgba(255,200,61,.45)' }}><CheckCircle size={30} /></div>
+        <div className="w-14 h-14 bg-[#C6F432] text-[#111] rounded-full flex items-center justify-center mx-auto mb-3 pg-pop" style={{ boxShadow: '0 0 28px rgba(198,244,50,.45)' }}><CheckCircle size={30} /></div>
         <h2 className="text-xl font-bold">Зарядка завершена</h2>
         <p className="text-white/60 text-sm mt-0.5">{session.stationName}</p>
         <div className="grid grid-cols-3 gap-2 mt-5">
@@ -323,7 +323,7 @@ export function ChargingDoneScreen({ session, onClose }: { session: Session | nu
             </div>
           ))}
         </div>
-        <p className="text-[#FFC83D] text-xs mt-3">{`≈ +${Math.round(session.energy / 0.18)} км запаса хода`}</p>
+        <p className="text-[#C6F432] text-xs mt-3">{`≈ +${Math.round(session.energy / 0.18)} км запаса хода`}</p>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
@@ -373,7 +373,7 @@ export function ChargingDoneScreen({ session, onClose }: { session: Session | nu
         >
           <Download size={14} />Чек PDF
         </button>
-        <button onClick={onClose} className="text-[#111] rounded-2xl py-3 font-bold text-sm" style={{ background: 'linear-gradient(90deg, #FFE27A, #FFC83D 55%, #F5B000)' }}>Готово</button>
+        <button onClick={onClose} className="text-[#111] rounded-2xl py-3 font-bold text-sm" style={{ background: 'linear-gradient(90deg, #DEF88C, #C6F432 55%, #A8E81F)' }}>Готово</button>
       </div>
     </div>
   );
