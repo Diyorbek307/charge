@@ -41,6 +41,17 @@ export default function RewardsScreen({ onBack, onAddCar, onPassport }: { onBack
           </p>
         </div>
 
+        {r?.topup && r.topup.left > 0 && (
+          <div className="bg-white rounded-2xl border border-slate-100 p-4">
+            <p className="text-sm font-bold text-slate-900">Бонус за пополнение</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {r.topup.toppedUp
+                ? `Бонус ${r.topup.perKwh} сум с кВт·ч: осталось зарядок — ${r.topup.left}`
+                : `Пополните кошелёк — и первые ${r.topup.left} зарядок принесут бонус ${r.topup.perKwh} сум с каждого кВт·ч`}
+            </p>
+          </div>
+        )}
+
         {left.length > 0 && <p className="text-xs font-semibold text-slate-500 px-1 pt-1">ЗАДАНИЯ</p>}
         <div className="space-y-2 pg-stagger">
           {left.map(a => {

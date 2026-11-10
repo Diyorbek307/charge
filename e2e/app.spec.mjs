@@ -158,6 +158,8 @@ test('a new driver opens on the welcome, signs up with a code, accepts the agree
 });
 
 test("a network prints a QR sticker and the driver's scanner reads it", async ({ page, browser }) => {
+  // Two portals and a QR decode in one test: it needs more than the default minute on a slow machine.
+  test.slow();
   // The network draws the sticker for its first station.
   await signIn(page, 'operator');
   await page.getByRole('button', { name: /^Станции/ }).first().click();

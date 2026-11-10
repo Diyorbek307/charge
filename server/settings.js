@@ -36,8 +36,10 @@ export const SCHEMA = [
   { key: 'legal.consentVersion', group: 'onboarding', label: 'Версия пользовательского согласия', hint: 'Увеличьте после изменения документа — каждый водитель примет его заново при следующем открытии', type: 'int', def: 1, min: 1, max: 1000 },
 
   // Bonuses and rewards (Voli pays them)
-  { key: 'rewards.carBonus', group: 'rewards', label: 'Бонус за данные автомобиля', hint: 'Марка, модель, батарея, разъём и номер из техпаспорта', type: 'money', def: n('CAR_BONUS_UZS', 50_000), min: 0, max: 1_000_000, unit: 'сум' },
-  { key: 'rewards.passportBonus', group: 'rewards', label: 'Бонус за паспорт водителя', hint: 'Один паспорт — один бонус, на любом числе аккаунтов', type: 'money', def: n('PASSPORT_BONUS_UZS', 50_000), min: 0, max: 1_000_000, unit: 'сум' },
+  { key: 'rewards.carBonus', group: 'rewards', label: 'Бонус за данные автомобиля', hint: 'Марка, модель, батарея, разъём и номер из техпаспорта', type: 'money', def: n('CAR_BONUS_UZS', 0), min: 0, max: 1_000_000, unit: 'сум' },
+  { key: 'rewards.passportBonus', group: 'rewards', label: 'Бонус за паспорт водителя', hint: 'Один паспорт — один бонус, на любом числе аккаунтов', type: 'money', def: n('PASSPORT_BONUS_UZS', 0), min: 0, max: 1_000_000, unit: 'сум' },
+  { key: 'rewards.topupPerKwh', group: 'rewards', label: 'Бонус после пополнения', hint: 'Сколько сум бонусом с каждого кВт·ч; только водителям, которые пополнили кошелёк. 0 — выключено', type: 'money', def: 50, min: 0, max: 5000, unit: 'сум/кВт·ч' },
+  { key: 'rewards.topupCharges', group: 'rewards', label: 'Бонус после пополнения — на сколько зарядок', type: 'int', def: 5, min: 0, max: 1000, unit: 'зарядок' },
   { key: 'rewards.bonusDays', group: 'rewards', label: 'Срок жизни бонуса', type: 'int', def: n('BONUS_DAYS', 60), min: 1, max: 365, unit: 'дней' },
   { key: 'rewards.monthBudget', group: 'rewards', label: 'Бюджет наград в месяц', hint: 'Сверх него награды в этом месяце не начисляются', type: 'money', def: n('REWARDS_MONTH_BUDGET_UZS', 50_000_000), min: 0, max: 10_000_000_000, unit: 'сум' },
   ...[
@@ -68,7 +70,7 @@ export const SCHEMA = [
   { key: 'plus.discount', group: 'plus', label: 'Скидка на зарядку', hint: 'Её платит Voli, сеть получает полную цену', type: 'percent', def: n('PLUS_DISCOUNT_PCT', 5), min: 0, max: 50, unit: '%' },
 
   // Fleets
-  { key: 'fleet.tiers', group: 'fleet', label: 'Скидка тарифа для такси по объёму', hint: 'От скольких кВт·ч за 30 дней — какая скидка', type: 'tiers', def: [{ kwh: 0, pct: 3 }, { kwh: 500, pct: 5 }, { kwh: 2000, pct: 8 }, { kwh: 5000, pct: 10 }] },
+  { key: 'fleet.tiers', group: 'fleet', label: 'Скидка тарифа для такси по объёму', hint: 'От скольких кВт·ч за 30 дней — какая скидка', type: 'tiers', def: [{ kwh: 0, pct: 3 }, { kwh: 500, pct: 5 }] },
 
   // Charging, bookings, queue
   { key: 'charge.minPrepaidKwh', group: 'charging', label: 'Минимум на балансе для старта', hint: 'Сколько кВт·ч по цене разъёма должно быть на счёте', type: 'int', def: 5, min: 0, max: 100, unit: 'кВт·ч' },

@@ -32,7 +32,7 @@ import {
   directOperatorOf, netBalance, chargeNetwork, refundNetwork, networkWalletsFor, publicPayout, setPayout, directReport,
 } from './direct.js';
 import { promoFor, publicPromos, createPromo, createCampaign, stopPromo, promosOf } from './promos.js';
-import { syncRewards, rewardsFor, bonusFor, spendBonus, rewardsOverview, grantManual } from './rewards.js';
+import { syncRewards, rewardsFor, bonusFor, spendBonus, rewardsOverview, grantManual, topupBonus } from './rewards.js';
 import { batteryHealthFor } from './battery.js';
 import { setting, feature, updateSettings, settingsView, publicSettings } from './settings.js';
 import { attempt, blocked, forgive, hashPasswordAsync, verifyPasswordAsync } from './guard.js';
@@ -1974,6 +1974,10 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
   promoteQueue(session.stationId, session.connectorId);
   const driver = db.byId('accounts', session.userId);
   if (driver && !simulated) announceRewards(driver, syncRewards(driver));
+  if (driver && !simulated) {
+    const g = topupBonus(session);
+    if (g) announceRewards(driver, [g]);
+  }
   // Brought by a friend: the welcome bonus, and the friend's share. A charge on credit is not paid yet.
   if (driver && !simulated && !session.credit) {
     for (const g of onFriendPaid(session)) announceRewards(db.byId('accounts', g.userId ?? driver.id), [g]);

@@ -17,7 +17,8 @@ const BONUS_DAYS = () => setting('rewards.bonusDays');
 const MONTH_BUDGET = () => setting('rewards.monthBudget');
 const amountOf = a => (a.id === 'car' ? setting('rewards.carBonus') : a.id === 'passport' ? setting('rewards.passportBonus') : setting(`rewards.${a.id}.amount`));
 const goalOf = a => (a.goal > 1 ? setting(`rewards.${a.id}.goal`) : a.goal);
-const enabled = a => a.id === 'car' || a.id === 'passport' || setting(`rewards.${a.id}.on`);
+// The car and passport gifts are off while their amount is 0.
+const enabled = a => (a.id === 'car' || a.id === 'passport' ? amountOf(a) > 0 : setting(`rewards.${a.id}.on`));
 
 const store = () => (db.data.bonuses ??= {});
 const ledger = () => (db.data.bonusLedger ??= []);
@@ -79,6 +80,21 @@ export function syncRewards(account) {
   return fresh;
 }
 
+const hasTopUp = userId => (db.data.payments ?? []).some(o => o.userId === userId && o.status === 'paid');
+const topupUsed = userId => (store()[userId]?.grants ?? []).filter(g => g.kind.startsWith('topup-')).length;
+
+/**
+ * The welcome bonus: a little back per kWh on a driver's first charges, and
+ * only once real money has come in.
+ * The driver's own charges only; not a company's, a relative's or one on credit.
+ */
+export function topupBonus(session) {
+  const perKwh = setting('rewards.topupPerKwh');
+  if (!feature('rewards') || perKwh <= 0 || session.corporate || session.familyOwner || session.credit || !(session.cost > 0)) return null;
+  if (topupUsed(session.userId) >= setting('rewards.topupCharges') || !hasTopUp(session.userId)) return null;
+  return grantBonus(session.userId, `topup-${session.id}`, 'Бонус за зарядку после пополнения', (session.energy ?? 0) * perKwh);
+}
+
 /** The rewards screen: the bonus and each milestone's progress. */
 export function rewardsFor(account) {
   const sessions = done(account);
@@ -86,6 +102,7 @@ export function rewardsFor(account) {
   return {
     bonus: bonusFor(account.id),
     bonusDays: BONUS_DAYS(),
+    topup: feature('rewards') && setting('rewards.topupPerKwh') > 0 ? { perKwh: setting('rewards.topupPerKwh'), left: Math.max(0, setting('rewards.topupCharges') - topupUsed(account.id)), charges: setting('rewards.topupCharges'), toppedUp: hasTopUp(account.id) } : null,
     // A milestone switched off is hidden unless the driver already got it.
     achievements: ACHIEVEMENTS.filter(a => feature('rewards') && (enabled(a) || grants.some(g => g.kind === a.id))).map(a => {
       const g = grants.find(x => x.kind === a.id);

@@ -75,7 +75,7 @@ const ru = {
     title: 'Как это работает',
     tabs: { driver: 'Водителю', network: 'Сети зарядки' },
     driver: [
-      { t: 'Войдите по номеру телефона', d: 'Код придёт в SMS. Добавьте автомобиль и паспорт — получите по 50 000 сум бонуса.' },
+      { t: 'Войдите по номеру телефона', d: 'Код придёт в SMS. Пополните кошелёк — и первые 5 зарядок вернут по 50 сум бонусом с каждого кВт·ч.' },
       { t: 'Найдите станцию', d: 'Карта покажет все сети, путь по дорогам и где будет свободно к вашему приезду. Разъём можно забронировать.' },
       { t: 'Подключите кабель и отсканируйте QR', d: 'Цену вы видите заранее, а ход зарядки — даже на экране блокировки.' },
       { t: 'Оплатите и поезжайте', d: 'Деньги спишутся из кошелька по факту, чек останется в приложении. Ночью на 30% дешевле.' },
@@ -166,7 +166,7 @@ const ru = {
       },
       {
         id: 'care', n: '04', t: 'Выгода и забота', lead: 'Платите меньше, а батарея служит дольше.',
-        points: ['Ночью дешевле на 30%', 'Бонусы: по 50 000 сум за машину и паспорт, по 20 000 вам и другу', 'Награды и подписка Voli Plus', 'Контроль здоровья батареи', 'Подсказки, чем заняться во время зарядки', 'Автопарки и семьи, три языка, Telegram'],
+        points: ['Ночью дешевле на 30%', 'Бонусы: 50 сум с кВт·ч на первых 5 зарядках после пополнения, по 20 000 вам и другу', 'Награды и подписка Voli Plus', 'Контроль здоровья батареи', 'Подсказки, чем заняться во время зарядки', 'Автопарки и семьи, три языка, Telegram'],
         ui: ['Ночью ×0,7', '+50 000 сум', 'Батарея 96%'],
       },
     ],
@@ -224,7 +224,7 @@ const ru = {
       { id: '5b-receipt', t: 'Оплата и чек', d: 'Когда зарядка закончится, деньги спишутся по факту, а электронный чек останется в приложении. Оцените станцию — это поможет другим водителям.' },
       { id: '6-booking', t: 'Бронь и очередь', d: 'Выберите разъём, время и длительность — место будет ждать вас. Если всё занято, встаньте в очередь: мы сообщим, когда разъём освободится.' },
       { id: '7-navigator', t: 'Навигатор и офлайн-трасса', d: 'Кнопка «Маршрут» запускает навигатор с голосовыми подсказками и камерами. Сохраните трассу заранее — она будет работать и без связи.' },
-      { id: '8-rewards', t: 'Награды и бонусы', d: 'Задания за ночные зарядки, отзывы и данные автомобиля приносят бонусы. Бонусы тратятся на зарядку раньше денег из кошелька.' },
+      { id: '8-rewards', t: 'Награды и бонусы', d: 'Задания за ночные зарядки и отзывы приносят бонусы. Бонусы тратятся на зарядку раньше денег из кошелька.' },
     ],
   },
   devices: {
@@ -288,7 +288,7 @@ const ru = {
   facts: [
     { n: '×0,7', t: 'ночью, с 23:00 до 07:00' },
     { n: '0 сум', t: 'за регистрацию — платите только за зарядку' },
-    { n: '50 000', t: 'сум за данные машины и столько же за паспорт' },
+    { n: '50 сум', t: 'бонусом с каждого кВт·ч на первых 5 зарядках после пополнения' },
     { n: '14 дней', t: 'на оплату зарядки в долг, без процентов' },
   ],
   green: {
@@ -402,7 +402,7 @@ const ru = {
         t: 'Водителям',
         items: [
           { q: `Что такое ${B}?`, a: `${B} — одно приложение для всех зарядных станций Узбекистана. Мы не строим свои станции, а подключаем сети-партнёров. Карта, запуск, оплата и очередь работают одинаково в любой сети.` },
-          { q: 'Подойдёт ли моя машина?', a: 'Приложение показывает тип и мощность каждого разъёма, а фильтр оставляет только подходящие станции. Добавьте данные автомобиля и получите бонус 50 000 сум.' },
+          { q: 'Подойдёт ли моя машина?', a: 'Приложение показывает тип и мощность каждого разъёма, а фильтр оставляет только подходящие станции.' },
           { q: 'Что если все разъёмы заняты?', a: 'Встаньте в очередь или забронируйте разъём заранее. Когда он освободится, мы придержим его для вас и пришлём уведомление.' },
           { q: 'Что если на трассе нет интернета?', a: 'Сохраните маршрут заранее: карта, станции и навигатор с камерами будут работать офлайн. На крайний случай есть кнопка SOS.' },
           { q: 'Работает ли Voli в машине?', a: 'Да, через Android Auto и CarPlay: карта и навигатор появятся на экране автомобиля.' },
@@ -516,7 +516,7 @@ const uz: LandingCopy = {
     title: 'Qanday ishlaydi',
     tabs: { driver: 'Haydovchiga', network: 'Zaryadlash tarmog‘iga' },
     driver: [
-      { t: 'Telefon raqamingiz bilan kiring', d: 'Kod SMS orqali keladi. Avtomobil va pasportni qo‘shing — har biri uchun 50 000 so‘m bonus oling.' },
+      { t: 'Telefon raqamingiz bilan kiring', d: 'Kod SMS orqali keladi. Hamyonni to‘ldiring — dastlabki 5 ta quvvatlashda har bir kVt·soat uchun 50 so‘m bonus qaytadi.' },
       { t: 'Stansiyani toping', d: 'Xarita barcha tarmoqlarni, yo‘l bo‘yicha masofani va yetib borganingizda qayer bo‘sh bo‘lishini ko‘rsatadi. Ulagichni band qilish mumkin.' },
       { t: 'Kabelni ulang va QR kodni skanerlang', d: 'Narxni oldindan ko‘rasiz, zaryadlash jarayonini esa hatto qulf ekranida.' },
       { t: 'To‘lang va yo‘lga chiqing', d: 'Pul hamyondan haqiqiy sarf bo‘yicha yechiladi, chek ilovada qoladi. Tunda 30% arzonroq.' },
@@ -607,7 +607,7 @@ const uz: LandingCopy = {
       },
       {
         id: 'care', n: '04', t: 'Foyda va g‘amxo‘rlik', lead: 'Kamroq to‘laysiz, batareya esa uzoqroq xizmat qiladi.',
-        points: ['Tunda 30% arzonroq', 'Bonuslar: mashina va pasport uchun 50 000 so‘mdan, sizga va do‘stingizga 20 000 so‘mdan', 'Mukofotlar va Voli Plus obunasi', 'Batareya salomatligi nazorati', 'Zaryadlash paytida nima qilish haqida maslahatlar', 'Avtoparklar va oilalar, uch til, Telegram'],
+        points: ['Tunda 30% arzonroq', 'Bonuslar: to‘ldirishdan keyingi dastlabki 5 ta quvvatlashda kVt·soat uchun 50 so‘m, sizga va do‘stingizga 20 000 so‘mdan', 'Mukofotlar va Voli Plus obunasi', 'Batareya salomatligi nazorati', 'Zaryadlash paytida nima qilish haqida maslahatlar', 'Avtoparklar va oilalar, uch til, Telegram'],
         ui: ['Tunda ×0,7', '+50 000 so‘m', 'Batareya 96%'],
       },
     ],
@@ -665,7 +665,7 @@ const uz: LandingCopy = {
       { id: '5b-receipt', t: 'To‘lov va chek', d: 'Zaryadlash tugagach, pul haqiqiy sarf bo‘yicha yechiladi, elektron chek esa ilovada qoladi. Stansiyani baholang — bu boshqa haydovchilarga yordam beradi.' },
       { id: '6-booking', t: 'Bron va navbat', d: 'Ulagich, vaqt va davomiylikni tanlang — joy sizni kutadi. Hammasi band bo‘lsa, navbatga turing: ulagich bo‘shaganda xabar beramiz.' },
       { id: '7-navigator', t: 'Navigator va oflayn trassa', d: '«Marshrut» tugmasi ovozli maslahatlar va kameralar bilan navigatorni ishga tushiradi. Trassani oldindan saqlang — u aloqasiz ham ishlaydi.' },
-      { id: '8-rewards', t: 'Mukofotlar va bonuslar', d: 'Tungi zaryadlashlar, sharhlar va avtomobil ma’lumotlari uchun topshiriqlar bonus keltiradi. Bonuslar zaryadlashga hamyondagi puldan oldin sarflanadi.' },
+      { id: '8-rewards', t: 'Mukofotlar va bonuslar', d: 'Tungi zaryadlashlar va sharhlar uchun topshiriqlar bonus keltiradi. Bonuslar zaryadlashga hamyondagi puldan oldin sarflanadi.' },
     ],
   },
   devices: {
@@ -729,7 +729,7 @@ const uz: LandingCopy = {
   facts: [
     { n: '×0,7', t: 'tunda, 23:00 dan 07:00 gacha' },
     { n: '0 so‘m', t: 'ro‘yxatdan o‘tish uchun — faqat zaryadlash uchun to‘laysiz' },
-    { n: '50 000', t: 'so‘m mashina ma’lumotlari uchun va shuncha pasport uchun' },
+    { n: '50 so‘m', t: 'to‘ldirishdan keyingi dastlabki 5 ta quvvatlashda har bir kVt·soat uchun bonus' },
     { n: '14 kun', t: 'qarzga zaryadlashni to‘lash uchun, foizsiz' },
   ],
   green: {
@@ -955,7 +955,7 @@ const en: LandingCopy = {
     title: 'How it works',
     tabs: { driver: 'For drivers', network: 'For networks' },
     driver: [
-      { t: 'Sign in with your phone number', d: 'The code arrives by text. Add your car and your passport and get a 50,000 UZS bonus for each.' },
+      { t: 'Sign in with your phone number', d: 'The code arrives by text. Top up your wallet and your first 5 charges earn 50 UZS back per kWh as a bonus.' },
       { t: 'Find a charger', d: 'The map shows every network, the route by road and what will be free when you arrive. You can book a connector.' },
       { t: 'Plug in and scan the QR code', d: 'You see the price up front and the charging progress even on your lock screen.' },
       { t: 'Pay and drive off', d: 'Your wallet pays for what you used, and the receipt stays in the app. 30% cheaper at night.' },
@@ -1046,7 +1046,7 @@ const en: LandingCopy = {
       },
       {
         id: 'care', n: '04', t: 'Savings and care', lead: 'Pay less, and keep your battery healthy for longer.',
-        points: ['30% cheaper at night', 'Bonuses: 50,000 UZS each for your car and passport, 20,000 each for you and a friend', 'Rewards and a Voli Plus subscription', 'Battery health tracking', 'Ideas for what to do while you charge', 'Fleets and families, three languages, Telegram'],
+        points: ['30% cheaper at night', 'Bonuses: 50 UZS per kWh on your first 5 charges after a top-up, 20,000 each for you and a friend', 'Rewards and a Voli Plus subscription', 'Battery health tracking', 'Ideas for what to do while you charge', 'Fleets and families, three languages, Telegram'],
         ui: ['×0.7 at night', '+50,000 UZS', 'Battery 96%'],
       },
     ],
@@ -1104,7 +1104,7 @@ const en: LandingCopy = {
       { id: '5b-receipt', t: 'Payment and receipt', d: 'When charging ends, you pay for what you used and the e-receipt stays in the app. Rate the charger — it helps other drivers.' },
       { id: '6-booking', t: 'Booking and the queue', d: 'Pick a connector, time and duration, and the spot waits for you. If everything is busy, join the queue and we’ll tell you when a connector frees up.' },
       { id: '7-navigator', t: 'Navigation and offline routes', d: 'The Route button starts navigation with voice guidance and speed cameras. Save the route in advance and it works without a signal.' },
-      { id: '8-rewards', t: 'Rewards and bonuses', d: 'Tasks for night charging, reviews and your car’s details earn bonuses. Bonuses are spent on charging before the money in your wallet.' },
+      { id: '8-rewards', t: 'Rewards and bonuses', d: 'Tasks for night charging and reviews earn bonuses. Bonuses are spent on charging before the money in your wallet.' },
     ],
   },
   devices: {
@@ -1168,7 +1168,7 @@ const en: LandingCopy = {
   facts: [
     { n: '×0.7', t: 'at night, 23:00 to 07:00' },
     { n: '0 UZS', t: 'to sign up — you pay only for charging' },
-    { n: '50,000', t: 'UZS for your car’s details, and as much for your passport' },
+    { n: '50 UZS', t: 'bonus per kWh on your first 5 charges after a top-up' },
     { n: '14 days', t: 'to pay for a charge on credit, interest-free' },
   ],
   green: {
@@ -1282,7 +1282,7 @@ const en: LandingCopy = {
         t: 'For drivers',
         items: [
           { q: `What is ${B}?`, a: `${B} is one app for every EV charger in Uzbekistan. We don’t build chargers — we connect partner networks. The map, starting, paying and queuing work the same on any network.` },
-          { q: 'Will my car work?', a: 'The app shows each connector’s type and power, and a filter keeps only compatible chargers. Add your car’s details and get a 50,000 UZS bonus.' },
+          { q: 'Will my car work?', a: 'The app shows each connector’s type and power, and a filter keeps only compatible chargers.' },
           { q: 'What if every connector is busy?', a: 'Join the queue or book a connector in advance. When it frees up, we hold it for you and send a notification.' },
           { q: 'What if there’s no signal on the highway?', a: 'Save the route in advance: the map, chargers and navigation with cameras all work offline. And for emergencies there’s an SOS button.' },
           { q: 'Does Voli work in the car?', a: 'Yes, through Android Auto and CarPlay: the map and navigation appear on your car’s screen.' },

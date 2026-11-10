@@ -4624,5 +4624,9 @@
 "Проверьте дату рождения": "Check the date of birth",
 "Паспорт уже указан. Чтобы изменить, напишите в поддержку": "The passport is already added. To change it, write to support",
 "Этот паспорт уже привязан к другому аккаунту Voli": "This passport is already linked to another Voli account",
-"Госномер — как в техпаспорте, например 01A123BC": "The plate as in the registration, such as 01A123BC"
+"Госномер — как в техпаспорте, например 01A123BC": "The plate as in the registration, such as 01A123BC",
+"Бонус за пополнение": "Top-up bonus",
+"Бонус {0} сум с кВт·ч: осталось зарядок — {1}": "Bonus of {0} UZS per kWh: charges left — {1}",
+"Пополните кошелёк — и первые {0} зарядок принесут бонус {1} сум с каждого кВт·ч": "Top up your wallet and your first {0} charges earn a bonus of {1} UZS per kWh",
+"Бонус за зарядку после пополнения": "Bonus for a charge after a top-up"
 }

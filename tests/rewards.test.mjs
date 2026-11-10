@@ -1,6 +1,7 @@
 /**
  * Voli's own rewards: the car bonus, milestones, and paying a charge with the bonus.
  */
+import { readFileSync } from 'node:fs';
 import { test, before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -34,7 +35,7 @@ const driver = () => login('driver', '+998901234567', 'Driver2026');
 before(async () => {
   dataDir = mkdtempSync(join(tmpdir(), 'oc-rewards-'));
   server = spawn(process.execPath, ['server.js'], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, DEMO_SIMULATION: 'false', DATABASE_URL: '' },
+    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, DEMO_SIMULATION: 'false', DATABASE_URL: '', CAR_BONUS_UZS: '50000', PASSPORT_BONUS_UZS: '50000' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   for (let i = 0; i < 150; i++) {
@@ -97,8 +98,50 @@ describe('Voli rewards', () => {
     const next = (await call('/state', { token })).data;
     // The charge itself may reach a milestone (a night charge, the tenth): its bonus is new money on top.
     const fresh = next.rewards.achievements.filter(x => x.grantedAt && !state.rewards.achievements.find(y => y.id === x.id)?.grantedAt).reduce((n, x) => n + x.amount, 0);
-    assert.equal(next.rewards.bonus.balance, bonus - used + fresh);
+    // The demo driver has a paid top-up, so this charge also earns the bonus per kWh.
+    const perKwh = Math.round(stop.data.session.energy * state.rewards.topup.perKwh);
+    assert.equal(next.rewards.bonus.balance, bonus - used + fresh + perKwh);
     assert.equal(next.wallets['acc-driver'].balance, wallet - (cost - used));
     assert.equal(next.transactions.find(t => t.sessionId === start.data.session.id).bonus ?? 0, used);
+  });
+
+  test('the bonus per kWh comes only after a paid top-up, on the first charges', async () => {
+    const phone = '+998935554077';
+    const code = (await call('/auth/sms/request', { method: 'POST', body: { phone, purpose: 'register' } })).data.demoCode;
+    const reg = await call('/auth/register', { method: 'POST', body: { phone, code, name: 'Aziz Karimov', password: 'Topup2026x', consent: { version: 1 } } });
+    assert.equal(reg.status, 201);
+    const token = reg.data.token;
+    const charge = async () => {
+      const state = (await call('/state', { token })).data;
+      const st = state.stations.find(s => !s.ocpi && s.connectors.some(c => c.status === 'available' && c.power >= 50));
+      const c = st.connectors.find(x => x.status === 'available' && x.power >= 50);
+      const start = await call('/sessions/start', { method: 'POST', token, body: { stationId: st.id, connectorId: c.id } });
+      assert.equal(start.status, 200, JSON.stringify(start.data));
+      const stop = await call(`/sessions/${start.data.session.id}/stop`, { method: 'POST', token });
+      assert.equal(stop.status, 200, JSON.stringify(stop.data));
+      return stop.data.session;
+    };
+
+    const before = (await call('/rewards', { token })).data.topup;
+    assert.equal(before.perKwh, 50);
+    assert.equal(before.charges, 5);
+    assert.equal(before.toppedUp, false);
+    assert.equal(before.left, 5);
+
+    const order = (await call('/payments/topup', { method: 'POST', token, body: { provider: 'payme', amount: 50000 } })).data.order;
+    await call(`/payments/order/${order.id}/sandbox-confirm`, { method: 'POST', token });
+    assert.equal((await call('/rewards', { token })).data.topup.toppedUp, true);
+
+    const session = await charge();
+    assert.ok(session.energy > 0);
+    const after = (await call('/rewards', { token })).data.topup;
+    assert.equal(after.left, 4, 'one of the five is used');
+  });
+
+  test('no gift for the car or the passport while their amount is 0, and taxis stop at -5%', async () => {
+    const source = readFileSync('server/settings.js', 'utf8');
+    assert.match(source, /n\('CAR_BONUS_UZS', 0\)/);
+    assert.match(source, /n\('PASSPORT_BONUS_UZS', 0\)/);
+    assert.match(source, /key: 'fleet\.tiers'.*def: \[\{ kwh: 0, pct: 3 \}, \{ kwh: 500, pct: 5 \}\]/);
   });
 });

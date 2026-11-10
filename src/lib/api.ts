@@ -371,6 +371,8 @@ export interface Rewards {
   /** Bonus money for charging only; it burns after `bonusDays`. */
   bonus: { balance: number; nextExpiry: string | null; nextExpiryAmount: number };
   bonusDays: number;
+  /** After a paid top-up: a bonus per kWh on the first charges. */
+  topup?: { perKwh: number; left: number; charges: number; toppedUp: boolean } | null;
   achievements: Achievement[];
 }
 /** Battery health from the driver's charges (server/battery.js). */

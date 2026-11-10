@@ -4624,5 +4624,9 @@
 "Проверьте дату рождения": "Tug‘ilgan sanani tekshiring",
 "Паспорт уже указан. Чтобы изменить, напишите в поддержку": "Pasport allaqachon kiritilgan. O‘zgartirish uchun qo‘llab-quvvatlashga yozing",
 "Этот паспорт уже привязан к другому аккаунту Voli": "Bu pasport boshqa Voli akkauntiga bog‘langan",
-"Госномер — как в техпаспорте, например 01A123BC": "Davlat raqami — texpasportdagidek, masalan 01A123BC"
+"Госномер — как в техпаспорте, например 01A123BC": "Davlat raqami — texpasportdagidek, masalan 01A123BC",
+"Бонус за пополнение": "To‘ldirish uchun bonus",
+"Бонус {0} сум с кВт·ч: осталось зарядок — {1}": "Har bir kVt·soat uchun {0} so‘m bonus: qolgan quvvatlashlar — {1}",
+"Пополните кошелёк — и первые {0} зарядок принесут бонус {1} сум с каждого кВт·ч": "Hamyonni to‘ldiring — dastlabki {0} ta quvvatlash har bir kVt·soat uchun {1} so‘m bonus keltiradi",
+"Бонус за зарядку после пополнения": "To‘ldirishdan keyingi quvvatlash uchun bonus"
 }

@@ -48,7 +48,7 @@ const bonus = async token => (await call('/state', { token })).data.rewards.bonu
 before(async () => {
   dataDir = mkdtempSync(join(tmpdir(), 'oc-ref-'));
   server = spawn(process.execPath, ['server.js'], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, DEMO_SIMULATION: 'false', DATABASE_URL: '' },
+    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, DEMO_SIMULATION: 'false', DATABASE_URL: '', CAR_BONUS_UZS: '50000', PASSPORT_BONUS_UZS: '50000' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   for (let i = 0; i < 150; i++) {
