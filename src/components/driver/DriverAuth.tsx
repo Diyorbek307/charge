@@ -56,8 +56,7 @@ type AppleId = { auth: { init: (o: object) => void; signIn: () => Promise<{ auth
  * gives a name after the code and is in; a password stays as a fallback.
  */
 export default function DriverAuth() {
-  const { actions, adoptSession, verify2fa, login, credentials } = useSync();
-  const demo = credentials.find(c => c.portal === 'driver');
+  const { actions, adoptSession, verify2fa, login } = useSync();
   const [step, setStep] = useState<Step>('welcome');
   const [splash, setSplash] = useState(() => !splashSeen());
   // The welcome's words leave first, then the sign-in takes the photo over; coming back, the photo opens up again.
@@ -340,12 +339,6 @@ export default function DriverAuth() {
             <ErrorBox error={error} />
             <YellowButton busy={busy} disabled={busy}>Войти</YellowButton>
             <button type="button" onClick={() => { setError(null); setTouched(false); setStep('start'); }} className="w-full text-sm text-white/55 hover:text-white">Забыли пароль? Войдите по коду</button>
-            {demo && (
-              <div className="rounded-2xl border border-[#C6F432]/25 bg-[#C6F432]/10 px-4 py-3 flex items-center justify-between gap-3 text-xs text-[#E8FBB0]">
-                <span>Демо-доступ: <b className="font-mono">{demo.login}</b></span>
-                <button type="button" onClick={() => { setTo(demo.login); setPassword(demo.password); }} className="font-bold text-[#C6F432]">Заполнить</button>
-              </div>
-            )}
           </form>
         )}
 
