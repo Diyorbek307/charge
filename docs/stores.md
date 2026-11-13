@@ -132,7 +132,7 @@ Voli — все зарядные станции для электромобил�
 • Оплата через Payme и Click, чеки и история зарядок
 • Скидки и акции — значком «%» на карте, применяются сами
 • Бронь разъёма и очередь, если всё занято
-• Бонусы: 50 000 сум за данные машины и 50 000 за паспорт, по 20 000 вам и другу за приглашение
+• Бонусы: 50 сум с каждого кВт·ч на первых 5 зарядках после пополнения, по 20 000 вам и другу за приглашение
 • Зарядка в долг: заряжайтесь сейчас — платите позже
 • Поиск станций по маршруту и офлайн-карты для трассы
 • Поддержка в чате: ИИ-помощник отвечает сразу, специалист — в сложных случаях
@@ -161,7 +161,7 @@ Endi har bir tarmoq uchun alohida ilova o‘rnatish shart emas. Voli’da hamkor
 • Payme va Click orqali to‘lov, cheklar va tarix
 • Chegirmalar va aksiyalar — xaritada «%» belgisi bilan
 • Ulagichni bron qilish va navbat
-• Bonuslar: mashina ma’lumotlari va pasport uchun 50 000 so‘mdan, taklif uchun sizga va do‘stingizga 20 000 so‘mdan
+• Bonuslar: to‘ldirishdan keyingi dastlabki 5 ta quvvatlashda har bir kVt·soat uchun 50 so‘m, taklif uchun sizga va do‘stingizga 20 000 so‘mdan
 • Qarzga zaryadlash: hozir zaryadlang — keyin to‘lang
 • Yo‘nalish bo‘yicha stansiyalar va oflayn xaritalar
 • Chatda yordam: SI-yordamchi darhol javob beradi
@@ -186,7 +186,7 @@ No more separate apps for every network. Voli gathers the stations of partner ne
 • Pay with Payme or Click; receipts and history
 • Deals and promotions, applied automatically
 • Book a connector or join the queue
-• Bonuses: 50,000 UZS each for your car’s details and your passport, 20,000 each for you and a friend you invite
+• Bonuses: 50 UZS per kWh on your first 5 charges after a top-up, 20,000 UZS each for you and a friend you invite
 • Charge now, pay later
 • Stations along your route and offline maps
 • Chat support: an AI assistant answers at once
@@ -206,7 +206,7 @@ No more separate apps for every network. Voli gathers the stations of partner ne
 | История покупок | да | зарядки и платежи | да |
 | Платёжные данные карты | нет — оплата у Payme/Click | — | — |
 | Сообщения в поддержку | да | поддержка | да |
-| Сведения об автомобиле (марка, модель, госномер) | да, по желанию | подбор разъёмов, бонус | да |
+| Сведения об автомобиле (марка, модель, госномер) | да, по желанию | подбор разъёмов | да |
 | Паспорт: серия, 3 последние цифры, дата рождения (ПИНФЛ — только хеш) | да, по желанию | бонус один раз на человека, защита от злоупотреблений | да |
 | Диагностика (ошибки) | да | стабильность (Sentry) | нет |
 
