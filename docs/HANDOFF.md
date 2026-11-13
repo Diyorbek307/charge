@@ -143,7 +143,11 @@ VK WorkSpace), `ADMIN_EMAIL`, `ADMIN_PASSWORD`. **Не заданы**: Payme/Cli
 2. **Первая сеть-партнёр** — пока станции демо, приложение держать в закрытом тестировании.
 3. **Оплата**: договоры Payme, Click (как «пополнение лицевого счёта»), Paynet (поставщик услуг), ключи в Render; `DEMO_MODE=false` на рабочем сервере
    (тогда выключатся демо-коды SMS и песочница оплаты).
-4. **SMS (Eskiz)**: начато. Eskiz работает только с юрлицами: добавить реквизиты VOLI ENERGY,
+4. **Коды на телефон без договора — Telegram Gateway** (выбор владельца 14.11.2026, данные ООО не нужны):
+   gateway.telegram.org → войти своим Telegram → пополнить баланс (~$0,01 за код) → скопировать токен API →
+   Render → `TELEGRAM_GATEWAY_TOKEN`. Код приходит в Telegram водителя (чат «Verification Codes»).
+   Нет Telegram — водитель входит по коду на почту или по паролю. Если позже задать Eskiz, коды пойдут SMS.
+   **SMS (Eskiz)**, на будущее: Eskiz работает только с юрлицами: добавить реквизиты VOLI ENERGY,
    «Запрос договора», шаблон `Voli: kod %d. Hech kimga aytmang. Никому не сообщайте код.` (62 знака — одна SMS),
    ник «Voli», затем `ESKIZ_EMAIL`, `ESKIZ_PASSWORD`, `ESKIZ_FROM` в Render — **только после**
    одобрения договора и шаблона.
@@ -205,7 +209,7 @@ npm run build && npx playwright test -c pw.local.tmp.mjs   # браузерны�
 | `server/seed.js` | демо-данные (смена `SCHEMA_VERSION` пересоздаёт базу — не трогать без нужды) |
 | `server/signin.js` | вход по коду, Google, Apple |
 | `server/adminBootstrap.js` | админ из переменных окружения |
-| `server/mail.js`, `server/sms.js` | письма (SMTP/Resend) и SMS (Eskiz) |
+| `server/mail.js`, `server/sms.js` | письма (SMTP/Resend), SMS (Eskiz) и коды в Telegram (Telegram Gateway) |
 | `server/aiSupport.js` | ИИ-агенты поддержки |
 | `src/components/DriverApp.tsx` | приложение водителя: навигация между экранами |
 | `src/components/driver/screens/*.tsx` | экраны водителя: станция, старт зарядки, кошелёк, бронь, машина, настройки, отзывы, избранное, поддержка |

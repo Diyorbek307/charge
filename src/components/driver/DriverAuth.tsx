@@ -75,7 +75,7 @@ export default function DriverAuth() {
   const [slide, setSlide] = useState(0);
   const [providers, setProviders] = useState<Providers>({ google: null, apple: null });
   const [to, setTo] = useState('');
-  const [sentTo, setSentTo] = useState<{ to: string; channel: 'sms' | 'email' } | null>(null);
+  const [sentTo, setSentTo] = useState<{ to: string; channel: 'sms' | 'email'; via?: string } | null>(null);
   const [demoCode, setDemoCode] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [ticket, setTicket] = useState('');
@@ -175,7 +175,7 @@ export default function DriverAuth() {
     e?.preventDefault();
     return run(async () => {
       const r = await actions.requestSignInCode(to.trim());
-      setSentTo({ to: r.to, channel: r.channel });
+      setSentTo({ to: r.to, channel: r.channel, via: r.via });
       setDemoCode(r.demoCode ?? null);
       setCode('');
       setCooldown(60);
@@ -266,7 +266,7 @@ export default function DriverAuth() {
   const head: Record<Exclude<Step, 'welcome'>, [string, string]> = {
     start: ['С возвращением', 'Войдите или создайте аккаунт — заряжайтесь во всех сетях'],
     password: ['С возвращением', 'Войдите или создайте аккаунт — заряжайтесь во всех сетях'],
-    code: ['Введите код', sentTo ? `${sentTo.channel === 'email' ? 'Отправили письмо на' : 'Отправили SMS на'} ${sentTo.to}` : ''],
+    code: ['Введите код', sentTo ? `${sentTo.channel === 'email' ? 'Отправили письмо на' : sentTo.via === 'telegram' ? 'Отправили код в Telegram на' : 'Отправили SMS на'} ${sentTo.to}` : ''],
     name: ['Как вас зовут?', 'Последний шаг — и аккаунт готов'],
     agree: ['Почти готово', 'Примите соглашение — и аккаунт готов'],
     totp: ['Код из приложения', 'Двухфакторная защита: 6 цифр из приложения-аутентификатора'],
@@ -319,7 +319,7 @@ export default function DriverAuth() {
             <FieldError text={toProblem} />
             <ErrorBox error={error} />
             <YellowButton busy={busy} disabled={busy}>Получить код</YellowButton>
-            <p className="text-center text-xs text-white/40">Номер +998… — код придёт по SMS, почта — письмом. Новый аккаунт создастся сам.</p>
+            <p className="text-center text-xs text-white/40">Номер +998… — код придёт на телефон, почта — письмом. Новый аккаунт создастся сам.</p>
           </form>
         )}
 

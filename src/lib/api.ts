@@ -930,7 +930,7 @@ export const apiClient = {
   requestSmsCode: (phone: string, purpose: 'register' | 'reset') =>
     post<{ sent: boolean; phone: string; demoCode?: string }>('/auth/sms/request', { phone, purpose }),
   authProviders: () => request<{ google: string | null; apple: string | null; sms: boolean; email: boolean }>('/auth/providers'),
-  requestSignInCode: (to: string) => post<{ sent: true; to: string; channel: 'sms' | 'email'; demoCode?: string }>('/auth/code/request', { to }),
+  requestSignInCode: (to: string) => post<{ sent: true; to: string; channel: 'sms' | 'email'; via?: 'sms' | 'telegram' | 'email'; demoCode?: string }>('/auth/code/request', { to }),
   verifySignInCode: (to: string, code: string) => post<SignInResult>('/auth/code/verify', { to, code }),
   finishSignUp: (ticket: string, name: string, consent: { version: number; marketing: boolean }, ref?: string) => post<{ token: string; user: Account }>('/auth/code/finish', { ticket, name, consent, ref }),
   oauthSignIn: (provider: 'google' | 'apple', idToken: string, extra: { name?: string; consent?: { version: number; marketing: boolean }; ref?: string }) => post<SignInResult>('/auth/oauth', { provider, idToken, ...extra }),

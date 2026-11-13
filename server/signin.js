@@ -199,7 +199,7 @@ api.post('/auth/code/request', async (req, res) => {
     if (result.retryAfter) res.set('Retry-After', String(result.retryAfter));
     return res.status(result.status).json({ error: result.error });
   }
-  res.json({ sent: true, to: t.target, channel: t.channel, ...(result.demoCode ? { demoCode: result.demoCode } : {}) });
+  res.json({ sent: true, to: t.target, channel: t.channel, ...(result.via ? { via: result.via } : {}), ...(result.demoCode ? { demoCode: result.demoCode } : {}) });
 });
 
 api.post('/auth/code/verify', (req, res) => {

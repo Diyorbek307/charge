@@ -9,7 +9,11 @@ import { mailConfigured, sendCodeLetter } from './mail.js';
  *
  * Codes are stored hashed, expire, allow a handful of guesses and are rate
  * limited per phone and per client. Delivery goes through Eskiz.uz — the
- * common SMS gateway in Uzbekistan — once its credentials are configured.
+ * common SMS gateway in Uzbekistan — once its credentials are configured, or
+ * else through Telegram Gateway (gateway.telegram.org): the code comes to the
+ * phone number's Telegram, from Telegram's own "Verification Codes" chat. It
+ * needs only a Telegram account and a balance, no company papers or SMS
+ * contract, and costs about a cent a code.
  * Until then the demo returns the code in the response so the flow stays
  * explorable; outside the demo an unconfigured gateway refuses to pretend.
  */
@@ -23,7 +27,17 @@ const ESKIZ = {
   from: process.env.ESKIZ_FROM || '4546',
   base: 'https://notify.eskiz.uz/api',
 };
-export const smsConfigured = () => Boolean(ESKIZ.email && ESKIZ.password);
+const eskizConfigured = () => Boolean(ESKIZ.email && ESKIZ.password);
+
+const TG_GATEWAY = {
+  token: process.env.TELEGRAM_GATEWAY_TOKEN || '',
+  base: (process.env.TELEGRAM_GATEWAY_URL || 'https://gatewayapi.telegram.org').replace(/\/$/, ''),
+};
+const tgConfigured = () => Boolean(TG_GATEWAY.token);
+
+export const smsConfigured = () => eskizConfigured() || tgConfigured();
+/** Where a code to a phone goes: 'sms' (Eskiz) or 'telegram' (Telegram Gateway). */
+export const phoneCodeVia = () => (eskizConfigured() || !tgConfigured() ? 'sms' : 'telegram');
 
 const CODE_TTL_MS = 5 * 60_000;
 const RESEND_AFTER_MS = 60_000;
@@ -90,8 +104,20 @@ async function eskizSend(phone, text, retried = false) {
   if (!res.ok) throw new Error(`Eskiz send failed (${res.status})`);
 }
 
+/** Sends our own code to the phone's Telegram; it expires there with ours, and an unread one is refunded. */
+async function tgSend(phone, code) {
+  const res = await fetch(`${TG_GATEWAY.base}/sendVerificationMessage`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${TG_GATEWAY.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone_number: phone, code, ttl: CODE_TTL_MS / 1000 }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data?.ok) throw new Error(`Telegram Gateway send failed (${res.status} ${data?.error ?? ''})`);
+}
+
 /**
- * Issues a code. Resolves to { ok, demoCode? } or { status, error }.
+ * Issues a code. Resolves to { ok, via, demoCode? } or { status, error }.
  * The caller decides whether the phone may receive one for this purpose.
  */
 export async function issueCode(phone, purpose, client) {
@@ -121,12 +147,13 @@ export async function issueCode(phone, purpose, client) {
       if (byMail) await sendCodeLetter(phone, code);
       // Exactly the template approved in Eskiz; with Cyrillic in it one SMS holds
       // 70 characters, and this is 62, so a code costs one SMS, not two.
-      else await eskizSend(phone, `Voli: kod ${code}. Hech kimga aytmang. Никому не сообщайте код.`);
+      else if (eskizConfigured()) await eskizSend(phone, `Voli: kod ${code}. Hech kimga aytmang. Никому не сообщайте код.`);
+      else await tgSend(phone, code);
     } catch (err) {
       console.warn(byMail ? '[mail]' : '[sms]', err.message);
       return { status: 502, error: byMail ? 'Не удалось отправить письмо — попробуйте позже' : 'Не удалось отправить SMS — попробуйте позже' };
     }
-    return { ok: true };
+    return { ok: true, via: byMail ? 'email' : phoneCodeVia() };
   }
   return { ok: true, demoCode: code };
 }
