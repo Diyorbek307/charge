@@ -5,7 +5,15 @@
  */
 const KEY = 'voli-build-reload';
 // The last two: a part of the old build paired with a part of the new one has no default export to read.
-const CHUNK = /dynamically imported module|Importing a module script failed|error loading dynamically imported module|Unable to preload CSS|of undefined \(reading 'default'\)|undefined is not an object \(evaluating '[^']*\.default'\)/i;
+const CHUNK = /dynamically imported module|Importing a module script failed|error loading dynamically imported module|Unable to preload CSS|of undefined \(reading 'default'\)|property 'default' of undefined|undefined is not an object \(evaluating '[^']*\.default'\)/i;
+
+let reloading = false;
+/**
+ * True once a reload for a new build has started. A file import whose load
+ * error was handled this way resolves to nothing, and the code waiting for it
+ * then throws "Cannot read 'default' of undefined" — noise, not a bug.
+ */
+export const reloadingForNewBuild = () => reloading;
 
 export function isMissingBuildFile(err: unknown) {
   return CHUNK.test(String((err as Error)?.message ?? err));
@@ -26,6 +34,7 @@ export function reloadForNewBuild(err: unknown) {
   } catch {
     /* see above */
   }
+  reloading = true;
   window.location.reload();
   return true;
 }

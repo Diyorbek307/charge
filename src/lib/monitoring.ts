@@ -1,4 +1,5 @@
 import { API_ORIGIN } from './site';
+import { isMissingBuildFile, reloadingForNewBuild } from './reloadForNewBuild';
 /**
  * Error reports from drivers' phones and browsers to Sentry, when the build
  * has VITE_SENTRY_DSN. The library is loaded only then, after the first
@@ -49,7 +50,9 @@ function reportToTeam() {
   if (import.meta.env.DEV) return;
   let left = 5;
   const send = (message: string, source = '') => {
-    if (left-- <= 0 || !message) return;
+    // A page reloading onto a new build, or a file of a build that a deploy just replaced: not a bug.
+    if (!message || reloadingForNewBuild() || isMissingBuildFile(message)) return;
+    if (left-- <= 0) return;
     try {
       void fetch(`${API_ORIGIN}/api/client-errors`, {
         method: 'POST',
