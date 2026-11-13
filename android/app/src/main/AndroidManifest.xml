@@ -50,7 +50,7 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="androidx.car.app.CarAppService" />
-                <category android:name="androidx.car.app.category.CHARGING" />
+                <category android:name="androidx.car.app.category.POI" />
             </intent-filter>
         </service>
         <meta-data
@@ -74,6 +74,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android Auto: the station list beside a map (PlaceListMapTemplate) for a POI app. -->
+    <uses-permission android:name="androidx.car.app.MAP_TEMPLATES" />
     <!-- Where the driver is, for the map and the stations nearby in the car -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />

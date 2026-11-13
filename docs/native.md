@@ -33,7 +33,7 @@ APK: `android/app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Android Auto
 
-- Сервис `VoliCarAppService` в категории `androidx.car.app.category.CHARGING`,
+- Сервис `VoliCarAppService` в категории `androidx.car.app.category.POI` (CHARGING устарела с Car App Library 1.3; Google Play её отклоняет),
   экран `StationsScreen`: до 6 станций рядом (свободные выше), «2/4 свободно ·
   до 150 кВт · от 1 800 сум», зелёные/красные метки на карте машины, по нажатию —
   навигация в приложении карт машины. Обновляется раз в минуту.
