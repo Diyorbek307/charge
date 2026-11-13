@@ -4,7 +4,8 @@
  * the new build. Once a minute at most, so a real outage does not loop.
  */
 const KEY = 'voli-build-reload';
-const CHUNK = /dynamically imported module|Importing a module script failed|error loading dynamically imported module|Unable to preload CSS/i;
+// The last two: a part of the old build paired with a part of the new one has no default export to read.
+const CHUNK = /dynamically imported module|Importing a module script failed|error loading dynamically imported module|Unable to preload CSS|of undefined \(reading 'default'\)|undefined is not an object \(evaluating '[^']*\.default'\)/i;
 
 export function isMissingBuildFile(err: unknown) {
   return CHUNK.test(String((err as Error)?.message ?? err));

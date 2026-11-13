@@ -33,6 +33,11 @@ window.addEventListener('vite:preloadError', event => {
   if (reloadForNewBuild((event as Event & { payload?: unknown }).payload)) event.preventDefault()
 })
 
+// The same when a half-old, half-new build throws while starting, in one of our own files.
+window.addEventListener('error', event => {
+  if ((event.filename ?? '').includes('/assets/')) reloadForNewBuild(event.error ?? event.message)
+})
+
 // Offline support. Registered after load so it never competes with the first
 // paint, and skipped on the dev server where it would cache stale modules.
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
