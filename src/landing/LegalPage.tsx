@@ -22,7 +22,7 @@ export default function LegalPage({ c, id }: { c: LandingCopy; id: LegalDocId })
           ))}
         </aside>
         <article className="lp-legal-doc" lang="ru">
-          <p className="lp-legal-draft" role="note"><TriangleAlert size={16} />{c.legal.draft}</p>
+          {doc.draft && <p className="lp-legal-draft" role="note"><TriangleAlert size={16} />{c.legal.draft}</p>}
           {c.legal.ruOnly && <p className="lp-legal-ru">{c.legal.ruOnly}</p>}
           <h1 className="lp-h2">{doc.title}</h1>
           <p className="lp-legal-updated">{c.legal.updated} {doc.updated}</p>
