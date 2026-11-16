@@ -105,8 +105,13 @@ class PostgresStore {
       this.pool = new pg.Pool({
         connectionString: this.url,
         max: 3,
+        // Idle connections the database closes on its side are dropped here first, and kept alive meanwhile.
+        idleTimeoutMillis: 60_000,
+        keepAlive: true,
         ssl: local ? false : { rejectUnauthorized: process.env.PGSSL_NO_VERIFY !== 'true' },
       });
+      // A pooled connection that dies while idle must not take the server down.
+      this.pool.on('error', err => console.warn('[db] idle connection closed:', err.message));
       this.client = { query: (text, params) => this.pool.query(text, params) };
     }
     await this.client.query(
@@ -126,6 +131,16 @@ class PostgresStore {
   }
 
   async write(json) {
+    try {
+      await this.#upsert(json);
+    } catch (err) {
+      // A connection the database had already closed: the pool opens a fresh one, so try once more.
+      if (!/terminated|ECONNRESET|Connection|socket|closed/i.test(String(err?.message))) throw err;
+      await this.#upsert(json);
+    }
+  }
+
+  async #upsert(json) {
     const client = await this.#connect();
     await client.query(
       `INSERT INTO onecharge_state (id, doc, updated_at) VALUES (1, $1::jsonb, now())
