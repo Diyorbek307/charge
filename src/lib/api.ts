@@ -556,6 +556,8 @@ export interface PlatformSettings {
   queueHoldMin: number;
   minPrepaidKwh: number;
   onboarding: { askLocation: boolean; askPush: boolean; tour: boolean; consentVersion: number };
+  /** True while stations and payments are the demo's (before the launch with real networks). */
+  preview?: boolean;
 }
 /** One setting in the admin's Platform control. */
 export interface SettingItem { key: string; group: string; label: string; hint?: string; type: 'bool' | 'int' | 'money' | 'percent' | 'tiers'; def: unknown; min?: number; max?: number; unit?: string; value: unknown; changed: boolean }

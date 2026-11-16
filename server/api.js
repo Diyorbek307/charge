@@ -334,7 +334,8 @@ function stateFor(viewer) {
     queues: queues.map(anonQueue),
     bookings: activeBookings.map(anonBooking),
     promos: publicPromos(),
-    platform: publicSettings(),
+    // preview: stations and money are the demo's until real networks and payments are connected.
+    platform: { ...publicSettings(), preview: playMoney() },
     events: visibleEvents(viewer),
     stats: statsFor(viewer),
     serverTime: new Date().toISOString(),

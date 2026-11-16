@@ -604,6 +604,12 @@ export default function DriverApp() {
       <div className="relative w-full h-full">
         <DriverMap onSelectStation={handleSelectStation} onOpenWallet={() => { walletFrom.current = 'map'; setScreen('wallet'); }} onSos={() => setSos(true)} hideChrome={screen !== 'map'} selected={screen === 'station' ? selectedStation : null} autoLocate={!showOnboarding} />
         {sos && <SosSheet onClose={() => setSos(false)} />}
+        {/* Before the launch the stations and the money are examples: say so, so no one drives to one. */}
+        {screen === 'map' && state?.platform?.preview && (
+          <p role="note" className="absolute left-3 right-[68px] top-[76px] z-[1000] max-w-[300px] rounded-xl bg-[#111]/85 backdrop-blur px-3 py-2 text-center text-[11px] leading-snug font-medium text-white pointer-events-none">
+            Предварительная версия: станции и оплата — для примера. Запуск в Ташкенте — IV квартал 2026
+          </p>
+        )}
         {screen === 'station' && selectedStation && (
           <StationDetailSheet station={selectedStation} onClose={handleBack} onStartCharging={id => { preferPoint.current = id ?? null; setScreen('charging-start'); }} onBook={() => setScreen('booking')} onReviews={() => setScreen('reviews')} onReport={() => { reportFrom.current = 'station'; setScreen('report'); }} onNavigate={() => setScreen('navigate')} onOpenStation={id => { const s = liveStationsById(id); if (s) handleSelectStation(s); }} />
         )}
