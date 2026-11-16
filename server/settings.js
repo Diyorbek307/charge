@@ -31,6 +31,8 @@ export const SCHEMA = [
 
   // First launch: what a new driver goes through before and after signing in
   { key: 'onboarding.askLocation', group: 'onboarding', label: 'Просить доступ к геолокации', hint: 'Отдельный экран с объяснением, зачем она нужна', type: 'bool', def: true },
+  // Before the launch: the store app is public, but only invited drivers get in (server/inviteOnly.js).
+  { key: 'access.inviteOnly', group: 'onboarding', label: 'Вход только по приглашению', hint: 'Регистрация закрыта; войти может аккаунт REVIEW_EMAIL и номера или почты из INVITE_LOGINS в Render. Выключите в день запуска', type: 'bool', def: process.env.INVITE_ONLY ? process.env.INVITE_ONLY === 'true' : !!process.env.RENDER },
   { key: 'onboarding.askPush', group: 'onboarding', label: 'Просить разрешение на уведомления', type: 'bool', def: true },
   { key: 'onboarding.tour', group: 'onboarding', label: 'Обучение после первого входа', hint: 'Подсказки поверх карты: баланс, поиск, QR, разделы', type: 'bool', def: true },
   { key: 'legal.consentVersion', group: 'onboarding', label: 'Версия пользовательского согласия', hint: 'Увеличьте после изменения документа — каждый водитель примет его заново при следующем открытии', type: 'int', def: 1, min: 1, max: 1000 },

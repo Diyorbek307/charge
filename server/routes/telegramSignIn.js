@@ -5,6 +5,7 @@ import { db, publicAccount } from '../db.js';
 import { isBlocked } from '../analytics.js';
 import { verifyInitData, accountByTelegram, telegramConfigured } from '../telegram.js';
 import { api, requireAuth } from '../api.js';
+import { invitedAccount, refuseUninvited } from '../inviteOnly.js';
 
 // ---------------------------------------------------------------------------
 // Telegram Mini App: one-tap sign-in for drivers who linked their account
@@ -18,6 +19,7 @@ api.post('/auth/telegram', (req, res) => {
   const account = accountByTelegram(checked.user.id);
   // Not linked yet: the app shows the usual sign-in and links afterwards.
   if (!account) return res.status(404).json({ error: 'Telegram ещё не привязан к аккаунту', telegram: { firstName: checked.user.firstName } });
+  if (refuseUninvited(res, invitedAccount(account))) return;
   if (isBlocked(account.id)) return res.status(403).json({ error: 'Аккаунт заблокирован — обратитесь в поддержку' });
   // Telegram proves who holds the Telegram account, not the authenticator: 2FA still applies.
   if (account.twoFactor?.enabled) {

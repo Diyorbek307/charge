@@ -34,6 +34,7 @@ import "./server/aiSupport.js";
 import "./server/accountDeletion.js";
 import "./server/signin.js";
 import "./server/adminBootstrap.js";
+import "./server/reviewerBootstrap.js";
 import "./server/demand.js";
 import { startReliability } from "./server/reliability.js";
 import { startBackups } from "./server/backup.js";

@@ -8,6 +8,7 @@ import { tokenOf, clearSessionCookie } from './session.js';
 import { alertsStatus, testAlert } from './alerts.js';
 import { fcmConfigured } from './fcm.js';
 import { DEMO_ACCOUNTS } from './seed.js';
+import { invitedLogin, invitedAccount, refuseUninvited } from './inviteOnly.js';
 import { generateSecret, verifyTotp, totpStep, otpauthUri } from './totp.js';
 import { hashPassword } from './seed.js';
 import { normalizePhone, issueCode, consumeCode, PURPOSES, smsConfigured } from './sms.js';
@@ -663,6 +664,7 @@ api.post('/auth/login', async (req, res) => {
   const stop = blocked(failKey, 8, 15 * 60_000) ?? blocked(ipKey, 100, 10 * 60_000);
   if (stop) return tooMany(res, stop, 'Слишком много неверных попыток входа');
   if (portal === 'admin' && adminIpRefused(req)) return res.status(403).json({ error: 'Вход в админ-панель с этого адреса закрыт' });
+  if (portal === 'driver' && refuseUninvited(res, invitedLogin(loginKey))) return;
   const account = db.find('accounts', a => a.portal === portal && a.login === loginKey);
   // The demo driver's password is public too: once real money is taken, it opens nothing.
   if (portal === 'driver' && !playMoney() && DEMO_ACCOUNTS.some(d => d.portal === 'driver' && d.login === loginKey && d.password === password)) {
@@ -861,6 +863,7 @@ api.post('/auth/sms/request', async (req, res) => {
   const purpose = req.body?.purpose;
   if (!phone) return res.status(400).json({ error: 'Введите номер в формате +998 XX XXX XX XX' });
   if (!PURPOSES.includes(purpose)) return res.status(400).json({ error: 'Некорректный запрос' });
+  if (refuseUninvited(res, invitedLogin(phone))) return;
 
   const exists = !!findDriver(phone);
   if (purpose === 'register' && exists) {
@@ -888,6 +891,7 @@ api.post('/auth/register', async (req, res) => {
   if (weak) return res.status(400).json({ error: weak });
   const consent = consentFrom(req.body?.consent);
   if (!consent) return res.status(400).json({ error: 'Примите пользовательское соглашение' });
+  if (refuseUninvited(res, invitedLogin(phone))) return;
   if (findDriver(phone)) return res.status(409).json({ error: 'Номер уже зарегистрирован' });
 
   const check = consumeCode(phone, 'register', req.body?.code);

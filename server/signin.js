@@ -7,6 +7,7 @@ import { isBlocked } from './analytics.js';
 import { joinByCode } from './referrals.js';
 import { mailConfigured } from './mail.js';
 import { issueCode, consumeCode, normalizePhone, normalizeEmail, smsConfigured } from './sms.js';
+import { invitedLogin, invitedAccount, refuseUninvited } from './inviteOnly.js';
 
 /**
  * Driver sign-in without a password: a code to the phone or to the email,
@@ -144,6 +145,7 @@ async function createDriver(req, { login, phone = null, email = null, name, cons
 
 /** Signs an existing driver in, asking for the 2FA code first where it is on. */
 function signIn(req, res, account, how) {
+  if (refuseUninvited(res, invitedAccount(account))) return;
   if (isBlocked(account.id)) return res.status(403).json({ error: 'Аккаунт заблокирован — обратитесь в поддержку' });
   if (account.twoFactor?.enabled) {
     const challenge = crypto.randomBytes(18).toString('hex');
@@ -194,6 +196,8 @@ api.get('/auth/providers', (_req, res) => {
 api.post('/auth/code/request', async (req, res) => {
   const t = targetOf(req.body?.to);
   if (!t) return res.status(400).json({ error: 'Введите номер +998 XX XXX XX XX или адрес почты' });
+  // No code is sent, and paid for, to someone who could not get in anyway.
+  if (refuseUninvited(res, invitedLogin(t.target))) return;
   const result = await issueCode(t.target, 'signin', clientKey(req));
   if (!result.ok) {
     if (result.retryAfter) res.set('Retry-After', String(result.retryAfter));
@@ -225,6 +229,7 @@ api.post('/auth/code/finish', async (req, res) => {
   if (!consent) return res.status(400).json({ error: 'Примите пользовательское соглашение' });
   tickets.delete(String(req.body.ticket));
   const { target } = ticket;
+  if (refuseUninvited(res, invitedLogin(target))) return;
   const phone = target.includes('@') ? null : target;
   // The same address may have signed up in another tab meanwhile.
   const existing = phone ? byPhone(phone) : byEmail(target);
@@ -256,6 +261,7 @@ api.post('/auth/oauth', async (req, res) => {
 
   const consent = consentFrom(req.body?.consent);
   if (!consent) return res.status(400).json({ error: 'Примите пользовательское соглашение' });
+  if (refuseUninvited(res, who.email && who.emailVerified && invitedLogin(who.email))) return;
   // Apple gives the name only to the app, and only the first time.
   const name = cleanName(who.name || req.body?.name) || 'Водитель Voli';
   const email = who.email && who.emailVerified ? who.email : null;
