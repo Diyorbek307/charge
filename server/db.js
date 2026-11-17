@@ -106,7 +106,7 @@ class PostgresStore {
         connectionString: this.url,
         max: 3,
         // Idle connections the database closes on its side are dropped here first, and kept alive meanwhile.
-        idleTimeoutMillis: 60_000,
+        idleTimeoutMillis: 15_000,
         keepAlive: true,
         ssl: local ? false : { rejectUnauthorized: process.env.PGSSL_NO_VERIFY !== 'true' },
       });
@@ -131,12 +131,15 @@ class PostgresStore {
   }
 
   async write(json) {
-    try {
-      await this.#upsert(json);
-    } catch (err) {
-      // A connection the database had already closed: the pool opens a fresh one, so try once more.
-      if (!/terminated|ECONNRESET|Connection|socket|closed/i.test(String(err?.message))) throw err;
-      await this.#upsert(json);
+    // A connection the database had already closed: the pool drops it and opens a
+    // fresh one. Several pooled connections may be dead at once, so a few tries, spaced out.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.#upsert(json);
+      } catch (err) {
+        if (attempt >= 3 || !/terminated|ECONNRESET|EPIPE|ETIMEDOUT|Connection|socket|closed/i.test(String(err?.message))) throw err;
+        await new Promise(r => setTimeout(r, 300 * 2 ** attempt));
+      }
     }
   }
 
@@ -273,10 +276,14 @@ class Database {
       .then(() => this.store.write(json))
       .then(() => {
         this.saveError = null;
+        this.saveReported = false;
       })
       .catch(err => {
-        // Reported once per failing streak, not on every write.
-        if (!this.saveError) report(err, 'db.save');
+        // A single blip is retried below; the team hears only when the retry fails too.
+        if (this.saveError && !this.saveReported) {
+          report(err, 'db.save');
+          this.saveReported = true;
+        }
         this.saveError = err;
         console.warn('[db] persist failed:', err.message);
         // The database may be restarting (Render maintenance): try again shortly, so
