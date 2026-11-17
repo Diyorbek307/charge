@@ -43,6 +43,80 @@ const PAYME = {
   live: Boolean(process.env.PAYME_KEY),
 };
 
+/**
+ * Payme Subscribe API (receipts): our server creates a receipt, the driver pays
+ * it at checkout.paycom.uz/<receipt id> (button or QR), and we ask Payme for its
+ * state until it is 4 — paid. No callback from Payme is needed. It is on when
+ * the cashbox ID and its key-password are set; PAYME_TEST=false switches from
+ * Payme's test server to the real one.
+ */
+const PAYME_RECEIPTS = {
+  id: process.env.PAYME_CASHBOX_ID || '',
+  key: process.env.PAYME_CASHBOX_KEY || '',
+  api: process.env.PAYME_API_URL || (process.env.PAYME_TEST === 'false' ? 'https://checkout.paycom.uz/api' : 'https://checkout.test.paycom.uz/api'),
+  checkout: process.env.PAYME_TEST === 'false' ? 'https://checkout.paycom.uz' : 'https://checkout.test.paycom.uz',
+};
+const receiptsOn = () => Boolean(PAYME_RECEIPTS.id && PAYME_RECEIPTS.key);
+
+class PaymeApiError extends Error {}
+let paymeRequestId = 0;
+async function paymeApi(method, params) {
+  const res = await fetch(PAYME_RECEIPTS.api, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Auth': `${PAYME_RECEIPTS.id}:${PAYME_RECEIPTS.key}` },
+    body: JSON.stringify({ id: ++paymeRequestId, method, params }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  const body = await res.json().catch(() => null);
+  if (!body) throw new PaymeApiError(`Payme ${method}: HTTP ${res.status}`);
+  if (body.error) {
+    const err = new PaymeApiError(body.error.message?.ru ?? body.error.message ?? `Payme ${method}: ${body.error.code}`);
+    err.code = body.error.code;
+    throw err;
+  }
+  return body.result;
+}
+
+// Receipt states (Payme): 4 paid, 50 cancelled, 21 queued for cancellation.
+const RECEIPT_PAID = 4;
+const RECEIPT_CANCELLED = 50;
+const checking = new Set();
+
+/** Asks Payme about one receipt and credits the order once it is paid. */
+async function syncReceipt(order) {
+  if (!order.receipt?.id || order.status !== 'pending' || checking.has(order.id)) return order;
+  checking.add(order.id);
+  try {
+    const { state } = await paymeApi('receipts.check', { id: order.receipt.id });
+    order.receipt.state = state;
+    order.receipt.checkedAt = new Date().toISOString();
+    if (order.status !== 'pending') return order;
+    if (state === RECEIPT_PAID) {
+      order.payme = { id: order.receipt.id, state: 2, performTime: Date.now() };
+      credit(order, 'payme');
+    } else if (state === RECEIPT_CANCELLED) {
+      order.status = 'cancelled';
+      db.save();
+    } else if (state === 0 && Date.now() - new Date(order.created).getTime() > ORDER_TTL_MS) {
+      // Nobody paid it within a day: close it at Payme too, so it cannot be paid later.
+      order.status = 'expired';
+      db.save();
+      paymeApi('receipts.cancel', { id: order.receipt.id }).catch(() => {});
+    }
+  } catch (err) {
+    console.error('[payme receipts]', err.message);
+  } finally {
+    checking.delete(order.id);
+  }
+  return order;
+}
+
+/** Every pending receipt gets checked in the background, so money arrives even if the app was closed. */
+async function sweepReceipts() {
+  for (const o of orders().filter(o => o.receipt?.id && o.status === 'pending').slice(0, 50)) await syncReceipt(o);
+}
+if (receiptsOn()) setInterval(() => { sweepReceipts().catch(() => {}); }, 30_000).unref();
+
 const CLICK = {
   serviceId: process.env.CLICK_SERVICE_ID || (DEMO_MODE ? '10001' : ''),
   merchantId: process.env.CLICK_MERCHANT_ID || (DEMO_MODE ? '20001' : ''),
@@ -122,7 +196,7 @@ function safeEqual(a, b) {
 function expireStale() {
   const now = Date.now();
   for (const o of orders()) {
-    if (o.status === 'pending' && !o.payme?.id && !o.click && now - new Date(o.created).getTime() > ORDER_TTL_MS) {
+    if (o.status === 'pending' && !o.payme?.id && !o.click && !o.receipt && now -new Date(o.created).getTime() > ORDER_TTL_MS) {
       o.status = 'expired';
     }
   }
@@ -171,6 +245,7 @@ function checkoutUrl(order) {
     const q = new URLSearchParams({ merchant: a.merchantId, order_id: order.id, amount: String(order.amount), return_url: back, sign });
     return `${a.checkout}?${q}`;
   }
+  if (order.receipt?.id) return `${PAYME_RECEIPTS.checkout}/${order.receipt.id}`;
   if (order.provider === 'payme') {
     const params = `m=${m.payme.merchantId};ac.order_id=${order.id};a=${order.amount * 100};c=${back}`;
     return `${PAYME.checkout}/${Buffer.from(params).toString('base64')}`;
@@ -201,13 +276,13 @@ const publicOrder = o => ({
 
 paymentsApi.get('/providers', (_req, res) => {
   res.json([
-    { id: 'payme', name: 'Payme', configured: Boolean(PAYME.key), live: PAYME.live },
+    { id: 'payme', name: 'Payme', configured: Boolean(PAYME.key) || receiptsOn(), live: PAYME.live || receiptsOn() },
     { id: 'click', name: 'Click', configured: Boolean(CLICK.secret), live: CLICK.live },
     ...Object.entries(ACQUIRERS).map(([id, a]) => ({ id, name: a.name, configured: Boolean(a.secret), live: a.live })),
   ].map(p => ({ ...p, enabled: setting(`payments.${p.id}`) })));
 });
 
-paymentsApi.post('/topup', (req, res) => {
+paymentsApi.post('/topup', async (req, res) => {
   const account = viewerOf(req);
   if (!account) return res.status(401).json({ error: 'Не авторизован' });
   if (!['driver', 'business'].includes(account.portal)) return res.status(403).json({ error: 'Нет доступа к этому порталу' });
@@ -223,7 +298,9 @@ paymentsApi.post('/topup', (req, res) => {
   if (operatorId && account.portal !== 'driver') return res.status(403).json({ error: 'Баланс сети пополняет водитель' });
   const merchant = merchantFor(operatorId);
   if (!merchant) return res.status(404).json({ error: 'Эта сеть не принимает оплату напрямую' });
-  if (!(ACQUIRERS[provider] ? ACQUIRERS[provider].secret : provider === 'payme' ? merchant.payme.key : merchant.click.secret)) {
+  // Our own Payme cashbox through receipts (Subscribe API), when its keys are set.
+  const byReceipt = provider === 'payme' && !operatorId && receiptsOn();
+  if (!byReceipt && !(ACQUIRERS[provider] ? ACQUIRERS[provider].secret : provider === 'payme' ? merchant.payme.key : merchant.click.secret)) {
     return res.status(503).json({ error: operatorId ? `${merchant.operator.name} не подключила ${provider === 'payme' ? 'Payme' : 'Click'} — выберите другой способ` : 'Платёжный провайдер не настроен' });
   }
   const amount = Number(req.body?.amount);
@@ -251,22 +328,42 @@ paymentsApi.post('/topup', (req, res) => {
     payme: null,
     click: null,
   };
+
+  if (byReceipt) {
+    try {
+      const { receipt } = await paymeApi('receipts.create', {
+        amount: amount * 100,
+        account: { order_id: order.id },
+        description: `Voli: пополнение баланса ${order.id}`,
+      });
+      if (!receipt?._id) throw new PaymeApiError('Payme не вернул номер чека');
+      order.receipt = { id: receipt._id, state: receipt.state ?? 0 };
+    } catch (err) {
+      console.error('[payme receipts]', err.message);
+      return res.status(502).json({ error: 'Payme сейчас не отвечает — попробуйте ещё раз или выберите другой способ' });
+    }
+  }
+
   orders().unshift(order);
   if (orders().length > 3000) orders().length = 3000;
   db.save();
 
-  const live = ACQUIRERS[provider] ? ACQUIRERS[provider].live : provider === 'payme' ? merchant.payme.live : merchant.click.live;
+  if (byReceipt) return res.json({ order: publicOrder(order), checkoutUrl: checkoutUrl(order), sandbox: false });
+  const live =ACQUIRERS[provider] ? ACQUIRERS[provider].live : provider === 'payme' ? merchant.payme.live : merchant.click.live;
   res.json({ order: publicOrder(order), checkoutUrl: checkoutUrl(order), sandbox: !live });
 });
 
-paymentsApi.get('/', (req, res) => {
+paymentsApi.get('/', async (req, res) => {
   const account = viewerOf(req);
   if (!account) return res.status(401).json({ error: 'Не авторизован' });
   expireStale();
-  res.json(orders().filter(o => o.userId === account.id).slice(0, 20).map(publicOrder));
+  const mine = orders().filter(o => o.userId === account.id).slice(0, 20);
+  // Back from Payme: the driver's open receipts are checked right away.
+  await Promise.all(mine.filter(o => o.receipt?.id && o.status === 'pending').slice(0, 5).map(syncReceipt));
+  res.json(mine.map(publicOrder));
 });
 
-paymentsApi.get('/order/:id', (req, res) => {
+paymentsApi.get('/order/:id', async (req, res) => {
   const account = viewerOf(req);
   if (!account) return res.status(401).json({ error: 'Не авторизован' });
   const order = findOrder(req.params.id);
@@ -274,7 +371,8 @@ paymentsApi.get('/order/:id', (req, res) => {
   if (!order || (order.userId !== account.id && account.portal !== 'admin')) {
     return res.status(404).json({ error: 'Счёт не найден' });
   }
-  res.json(publicOrder(order));
+  await syncReceipt(order);
+  res.json({ ...publicOrder(order), ...(order.receipt?.id && order.status === 'pending' ? { checkoutUrl: checkoutUrl(order) } : {}) });
 });
 
 // ---------------------------------------------------------------------------
