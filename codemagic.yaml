@@ -20,7 +20,7 @@ workflows:
       xcode: latest
       vars:
         # The app's Apple ID: App Store Connect → the app → App Information → Apple ID (digits).
-        APP_STORE_APPLE_ID: "0"
+        APP_STORE_APPLE_ID: "6836232117"
       ios_signing:
         distribution_type: app_store
         bundle_identifier: uz.voli.app
