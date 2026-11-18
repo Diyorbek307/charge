@@ -21,9 +21,12 @@ workflows:
       vars:
         # The app's Apple ID: App Store Connect → the app → App Information → Apple ID (digits).
         APP_STORE_APPLE_ID: "6836232117"
+      # By name, from Codemagic → Settings → Code signing identities.
       ios_signing:
-        distribution_type: app_store
-        bundle_identifier: uz.voli.app
+        provisioning_profiles:
+          - voli_appstore
+        certificates:
+          - voli_dist
     scripts:
       - name: Install and build the site
         script: npm ci
