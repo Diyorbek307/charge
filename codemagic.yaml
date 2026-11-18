@@ -34,8 +34,20 @@ workflows:
       # Certificate and profile straight from Apple with the API key; made there if missing.
       - name: Signing from Apple
         script: |
+          set -e
           keychain initialize
-          app-store-connect fetch-signing-files "uz.voli.app" --type IOS_APP_STORE --create
+          # The key as pasted into Codemagic, often on one line: rebuild a proper PEM file from it.
+          python3 - <<'PY'
+          import os, re, textwrap
+          raw = os.environ.get('CERTIFICATE_PRIVATE_KEY', '')
+          m = re.search(r'-----BEGIN ([A-Z ]+)-----(.*?)-----END ([A-Z ]+)-----', raw, re.S)
+          if not m:
+              raise SystemExit('CERTIFICATE_PRIVATE_KEY is empty or not a PEM key')
+          body = re.sub(r'\s+', '', m.group(2))
+          lines = '\n'.join(textwrap.wrap(body, 64))
+          open('/tmp/cert_key.pem', 'w').write(f'-----BEGIN {m.group(1)}-----\n{lines}\n-----END {m.group(3)}-----\n')
+          PY
+          app-store-connect fetch-signing-files "uz.voli.app" --type IOS_APP_STORE --create --certificate-key=@file:/tmp/cert_key.pem
           keychain add-certificates
           xcode-project use-profiles
       - name: Build number (one above the last in App Store Connect)
