@@ -58,7 +58,11 @@ workflows:
           xcode-project use-profiles
       - name: Build number (one above the last in App Store Connect)
         script: |
-          LATEST=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
+          # TestFlight holds every upload, the App Store only released ones: one above the larger.
+          TF=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
+          AS=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
+          TF=${TF//[^0-9]/}; AS=${AS//[^0-9]/}; TF=${TF:-0}; AS=${AS:-0}
+          LATEST=$(( TF > AS ? TF : AS ))
           cd ios/App && agvtool new-version -all $((LATEST + 1))
       - name: Build the .ipa
         script: xcode-project build-ipa --project "ios/App/App.xcodeproj" --scheme "App"
@@ -67,7 +71,8 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
+        # Upload only: the team tests it in TestFlight at once, without Apple's beta review.
+        submit_to_testflight: false
       email:
         recipients:
           - info@voli.uz
