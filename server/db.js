@@ -277,10 +277,13 @@ class Database {
       .then(() => {
         this.saveError = null;
         this.saveReported = false;
+        this.failingSince = null;
       })
       .catch(err => {
-        // A single blip is retried below; the team hears only when the retry fails too.
-        if (this.saveError && !this.saveReported) {
+        // A restart or recovery of the database takes seconds to a minute and is
+        // retried below; the team hears only when writes keep failing past a minute.
+        this.failingSince ??= Date.now();
+        if (Date.now() - this.failingSince > 60_000 && !this.saveReported) {
           report(err, 'db.save');
           this.saveReported = true;
         }
