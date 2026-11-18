@@ -2,6 +2,7 @@
 #
 # Set up once in Codemagic (codemagic.io), see docs/stores.md:
 #   - Teams → Integrations → Developer Portal: an App Store Connect API key, named "Voli ASC".
+#   - The app → Environment variables: CERTIFICATE_PRIVATE_KEY (group ios_signing, secret).
 #   - Teams → Code signing identities → Android keystores: the upload key, reference "voli_upload".
 #   - (later) Environment variables, group "google_play": GCLOUD_SERVICE_ACCOUNT_CREDENTIALS,
 #     to upload to Google Play by itself after the first release was uploaded by hand.
@@ -21,19 +22,22 @@ workflows:
       vars:
         # The app's Apple ID: App Store Connect → the app → App Information → Apple ID (digits).
         APP_STORE_APPLE_ID: "6836232117"
-      # By name, from Codemagic → Settings → Code signing identities.
-      ios_signing:
-        provisioning_profiles:
-          - voli_appstore
-        certificates:
-          - voli_dist
+      # The certificate's private key (signing/ios_cert_private_key.pem, never in git):
+      # Codemagic → the app → Environment variables → CERTIFICATE_PRIVATE_KEY, group ios_signing, secret.
+      groups:
+        - ios_signing
     scripts:
       - name: Install and build the site
         script: npm ci
       - name: Copy the site into the iOS project
         script: npx cap sync ios
-      - name: Signing profiles
-        script: xcode-project use-profiles
+      # Certificate and profile straight from Apple with the API key; made there if missing.
+      - name: Signing from Apple
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "uz.voli.app" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
       - name: Build number (one above the last in App Store Connect)
         script: |
           LATEST=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
