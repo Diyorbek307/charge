@@ -4644,5 +4644,10 @@
 "Не удалось получить станции UZGRID: {0}": "UZGRID stansiyalarini olib bo‘lmadi: {0}",
 "UZGRID не принял запуск на {0}: {1}": "UZGRID {0} da boshlashni qabul qilmadi: {1}",
 "Станция {0} не начала зарядку ({1})": "{0} stansiyasi zaryadlashni boshlamadi ({1})",
-"Станция {0} не остановила зарядку ({1})": "{0} stansiyasi zaryadlashni to‘xtatmadi ({1})"
+"Станция {0} не остановила зарядку ({1})": "{0} stansiyasi zaryadlashni to‘xtatmadi ({1})",
+"{0}: на этом разъёме сейчас нет цены — выберите другой": "{0}: bu ulagichda hozir narx yo‘q — boshqasini tanlang",
+"{0}: станция сейчас не на связи — попробуйте позже": "{0}: stansiya hozir aloqada emas — keyinroq urinib ko‘ring",
+"{0}: разъём занят или зарядка у этого владельца временно недоступна": "{0}: ulagich band yoki bu egasida zaryadlash vaqtincha mavjud emas",
+"{0}: разъём не найден — обновите карту": "{0}: ulagich topilmadi — xaritani yangilang",
+"{0}: зарядка здесь временно недоступна, мы уже разбираемся": "{0}: bu yerda zaryadlash vaqtincha mavjud emas, allaqachon hal qilyapmiz"
 }

@@ -98,12 +98,15 @@ export function ChargingStartScreen({ station, preferConnector, onBack, onConfir
   };
   // What the network charges right now, its discount included.
   // Voli Plus takes its share off what the network charges (not on OCPI partners, who bill themselves).
-  const plusOn = !!state?.plus?.active && !(station as Station & { ocpi?: unknown } | null)?.ocpi;
+  // A partner network (OCPI or the UZGRID hub) bills its own price: no Voli time bands, promos or Plus there (server/api.js).
+  const partnerStation = station as (Station & { ocpi?: unknown; uzgrid?: unknown }) | null;
+  const partnerNet = !!(partnerStation?.ocpi || partnerStation?.uzgrid);
+  const plusOn = !!state?.plus?.active && !partnerNet;
   const forecast = useTariffForecast();
-  const tariffK = forecast?.hours[forecast.currentHour]?.multiplier ?? 1;
-  const nightK = forecast?.hours[23]?.multiplier ?? 0.7;
+  const tariffK = partnerNet ? 1 : (forecast?.hours[forecast.currentHour]?.multiplier ?? 1);
+  const nightK = partnerNet ? 1 : (forecast?.hours[23]?.multiplier ?? 0.7);
   const plusK = plusOn ? 1 - (state?.plus?.discount ?? 5) / 100 : 1;
-  const price = Math.round(priceNow(selectedConnector?.price ?? 1800, tariffK, promo?.percent) * plusK);
+  const price = Math.round(priceNow(selectedConnector?.price ?? 1800, tariffK, partnerNet ? undefined : promo?.percent) * plusK);
   const kwNeeded = !selectedConnector ? 0
     : goalKind === 'percent' ? Math.max(0, ((targetPct - currentBattery) / 100) * pack)
     : goalKind === 'km' ? goalKm * 0.18
@@ -213,8 +216,8 @@ export function ChargingStartScreen({ station, preferConnector, onBack, onConfir
                     <p className="text-xs text-slate-400">{c.id} · {c.power} кВт</p>
                   </div>
                   <span className="text-right">
-                    {(promo || plusOn || tariffK < 1) && <span className="block text-[11px] text-slate-400 line-through tabular-nums">{c.price.toLocaleString('ru-RU')}</span>}
-                    <span className="block text-sm font-bold mono text-slate-700">{`${Math.round(priceNow(c.price, tariffK, promo?.percent) * plusK).toLocaleString('ru-RU')} сум/кВт·ч`}</span>
+                    {((promo && !partnerNet) || plusOn || tariffK < 1) && <span className="block text-[11px] text-slate-400 line-through tabular-nums">{c.price.toLocaleString('ru-RU')}</span>}
+                    <span className="block text-sm font-bold mono text-slate-700">{`${Math.round(priceNow(c.price, tariffK, partnerNet ? undefined : promo?.percent) * plusK).toLocaleString('ru-RU')} сум/кВт·ч`}</span>
                     {plusOn && <span className="block text-[10px] font-bold text-[#3D6B00]">{`Plus −${state?.plus?.discount ?? 5}%`}</span>}
                   </span>
                 </button>

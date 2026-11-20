@@ -4644,5 +4644,10 @@
 "Не удалось получить станции UZGRID: {0}": "Could not get UZGRID stations: {0}",
 "UZGRID не принял запуск на {0}: {1}": "UZGRID did not accept the start at {0}: {1}",
 "Станция {0} не начала зарядку ({1})": "Station {0} did not start charging ({1})",
-"Станция {0} не остановила зарядку ({1})": "Station {0} did not stop charging ({1})"
+"Станция {0} не остановила зарядку ({1})": "Station {0} did not stop charging ({1})",
+"{0}: на этом разъёме сейчас нет цены — выберите другой": "{0}: this connector has no price right now — choose another",
+"{0}: станция сейчас не на связи — попробуйте позже": "{0}: the station is offline right now — try later",
+"{0}: разъём занят или зарядка у этого владельца временно недоступна": "{0}: the connector is busy or charging with this owner is temporarily unavailable",
+"{0}: разъём не найден — обновите карту": "{0}: connector not found — refresh the map",
+"{0}: зарядка здесь временно недоступна, мы уже разбираемся": "{0}: charging here is temporarily unavailable, we are already on it"
 }

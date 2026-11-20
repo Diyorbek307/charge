@@ -261,6 +261,15 @@ export function syncStations() {
   return syncing;
 }
 
+/** Why a start was refused, in words for the driver (codes: UZGRID-VDA-001, section 8 and 12). */
+function driverReason(e) {
+  if (e.code === 'no_price' || e.code === 'no_plate') return 'на этом разъёме сейчас нет цены — выберите другой';
+  if (e.code === 'station_offline') return 'станция сейчас не на связи — попробуйте позже';
+  if (e.code === 'conflict' || e.code === 'connector_busy') return 'разъём занят или зарядка у этого владельца временно недоступна';
+  if (e.code === 'not_found') return 'разъём не найден — обновите карту';
+  return 'зарядка здесь временно недоступна, мы уже разбираемся';
+}
+
 function describe(e) {
   if (e instanceof UzgridError) {
     if (e.status === 401) return 'ключ не подходит (401): проверьте UZGRID_API_KEY и что он от той же среды, что UZGRID_API_URL';
@@ -301,7 +310,13 @@ async function startRemote(station, connector, account) {
     pending.set(cmd.command_id, { kind: 'start', accountId: account.id, stationId: station.id, connectorId: connector.id, at: Date.now() });
     return true;
   } catch (e) {
-    emit({ type: 'session.failed', portal: 'system', actor: NAME, message: `UZGRID не принял запуск на ${station.name}: ${describe(e)}`, entity: station.id, payload: { userId: account.id, code: e.code ?? null } });
+    // The driver gets a plain reason; a setup problem (key, rights) goes to the admin card.
+    if (e.status === 401 || e.status === 403) {
+      state().error = `запуск: ${describe(e)}`;
+      db.save();
+    }
+    console.warn('[uzgrid] start refused:', describe(e));
+    emit({ type: 'session.failed', portal: 'system', actor: NAME, message: `${station.name}: ${driverReason(e)}`, entity: station.id, payload: { userId: account.id, code: e.code ?? null } });
     return false;
   }
 }
@@ -440,8 +455,12 @@ async function poll() {
           console.warn('[uzgrid] event', e.type, err.message);
         }
       }
-      st.cursor = data?.next_after ?? st.cursor;
-      db.save();
+      // The whole state is one document: write only when the journal moved.
+      const next = data?.next_after ?? st.cursor;
+      if (next !== st.cursor) {
+        st.cursor = next;
+        db.save();
+      }
       if (!data?.has_more) break;
     }
     if (st.error?.startsWith('events')) st.error = null;
