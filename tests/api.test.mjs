@@ -62,7 +62,7 @@ before(async () => {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   // Wait for the server to accept requests.
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 300; i++) {
     try {
       const r = await fetch(`${BASE}/state`);
       if (r.ok) return;
