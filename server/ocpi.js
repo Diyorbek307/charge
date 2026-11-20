@@ -28,7 +28,8 @@ import { isBlocked } from './analytics.js';
  */
 
 export const OCPI_VERSION = '2.2.1';
-export const OUR_PARTY = { country_code: 'UZ', party_id: 'Z24' };
+// Our id in the roaming network, as the hub issued it (UZGRID: UZ*VOL).
+export const OUR_PARTY = { country_code: process.env.OCPI_COUNTRY_CODE || 'UZ', party_id: process.env.OCPI_PARTY_ID || 'VOL' };
 const ACTOR = { portal: 'system', name: 'OCPI' };
 
 const partners = () => (db.data.ocpiPartners ??= []);
@@ -56,10 +57,12 @@ export function publicPartner(p) {
 // Calling the partner
 // ---------------------------------------------------------------------------
 
-async function call(url, token, { method = 'GET', body } = {}) {
+async function call(url, token, { method = 'GET', body, to } = {}) {
+  // Through a hub (UZGRID) a message for one network names it: the hub routes by OCPI-to-*.
+  const route = to?.country_code && to?.party_id ? { 'OCPI-to-country-code': to.country_code, 'OCPI-to-party-id': to.party_id } : {};
   const res = await fetch(url, {
     method,
-    headers: { Authorization: auth(token), 'Content-Type': 'application/json', 'OCPI-from-country-code': OUR_PARTY.country_code, 'OCPI-from-party-id': OUR_PARTY.party_id },
+    headers: { Authorization: auth(token), 'Content-Type': 'application/json', 'OCPI-from-country-code': OUR_PARTY.country_code, 'OCPI-from-party-id': OUR_PARTY.party_id, ...route },
     body: body ? JSON.stringify(body) : undefined,
     signal: AbortSignal.timeout(15_000),
   });
@@ -362,7 +365,7 @@ function tokenFor(account) {
     ...OUR_PARTY,
     uid: account.id,
     type: 'APP_USER',
-    contract_id: `UZ-Z24-${account.id.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 20)}`,
+    contract_id: `${OUR_PARTY.country_code}-${OUR_PARTY.party_id}-${account.id.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 20)}`,
     issuer: 'Voli',
     valid: true,
     whitelist: 'NEVER',
@@ -379,6 +382,7 @@ async function startRemote(station, connector, account) {
   try {
     const { data } = await call(`${endpointUrl(partner, 'commands')}/START_SESSION`, partner.tokenC, {
       method: 'POST',
+      to: station.ocpi,
       body: {
         response_url: `${ourUrls(partner.base).commands}/START_SESSION/${uid}`,
         token: tokenFor(account),
@@ -403,6 +407,7 @@ async function stopRemote(session) {
   try {
     const { data } = await call(`${endpointUrl(partner, 'commands')}/STOP_SESSION`, partner.tokenC, {
       method: 'POST',
+      to: station.ocpi,
       body: { response_url: `${ourUrls(partner.base).commands}/STOP_SESSION/${uid}`, session_id: session.ocpiSessionId },
     });
     return data?.result === 'ACCEPTED';
