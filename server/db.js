@@ -2,12 +2,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import zlib from 'node:zlib';
+import { promisify } from 'node:util';
 import { seed, SCHEMA_VERSION, freshDemoPhotos, demoRatesAt5, DEMO_ACCOUNTS } from './seed.js';
 import { report } from './monitoring.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', '.data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
+const gzip = promisify(zlib.gzip);
+const gunzip = promisify(zlib.gunzip);
 
 /**
  * Collections holding real people's data rather than demo fixtures. A demo
@@ -121,13 +125,39 @@ class PostgresStore {
          updated_at timestamptz NOT NULL DEFAULT now()
        )`,
     );
+    // The state as gzipped JSON. Postgres only stores the bytes: parsing a
+    // multi-megabyte jsonb on every save took more memory than a small
+    // database has, and it restarted ("recovery mode") on deploys.
+    // onecharge_state keeps the last jsonb copy, read only until the first save here.
+    await this.client.query(
+      `CREATE TABLE IF NOT EXISTS onecharge_doc (
+         id integer PRIMARY KEY,
+         gz bytea NOT NULL,
+         size integer NOT NULL,
+         updated_at timestamptz NOT NULL DEFAULT now()
+       )`,
+    );
     return this.client;
   }
 
   async load() {
-    const client = await this.#connect();
-    const { rows } = await client.query('SELECT doc FROM onecharge_state WHERE id = 1');
-    return rows[0]?.doc ?? null;
+    // A database that is restarting ("recovery mode", a dropped connection) comes back
+    // within a minute or two: wait for it instead of crashing the server on start.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const client = await this.#connect();
+        const { rows } = await client.query('SELECT gz FROM onecharge_doc WHERE id = 1');
+        if (rows[0]?.gz) return JSON.parse((await gunzip(Buffer.from(rows[0].gz))).toString('utf8'));
+        // Not yet moved: the jsonb copy, as text so Postgres does not rebuild it.
+        const old = await client.query('SELECT doc::text AS doc FROM onecharge_state WHERE id = 1');
+        return old.rows[0]?.doc ? JSON.parse(old.rows[0].doc) : null;
+      } catch (err) {
+        const transient = /terminated|recovery mode|starting up|shutting down|ECONNRESET|ECONNREFUSED|EPIPE|ETIMEDOUT|Connection|socket|closed/i.test(String(err?.message));
+        if (attempt >= 8 || !transient) throw err;
+        console.warn(`[db] load failed (${err.message}), retrying`);
+        await new Promise(r => setTimeout(r, Math.min(15_000, 2000 * 2 ** attempt)));
+      }
+    }
   }
 
   async write(json) {
@@ -145,10 +175,11 @@ class PostgresStore {
 
   async #upsert(json) {
     const client = await this.#connect();
+    const gz = await gzip(Buffer.from(json, 'utf8'));
     await client.query(
-      `INSERT INTO onecharge_state (id, doc, updated_at) VALUES (1, $1::jsonb, now())
-       ON CONFLICT (id) DO UPDATE SET doc = EXCLUDED.doc, updated_at = now()`,
-      [json],
+      `INSERT INTO onecharge_doc (id, gz, size, updated_at) VALUES (1, $1, $2, now())
+       ON CONFLICT (id) DO UPDATE SET gz = EXCLUDED.gz, size = EXCLUDED.size, updated_at = now()`,
+      [gz, json.length],
     );
   }
 

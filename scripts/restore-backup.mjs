@@ -44,7 +44,9 @@ if (process.env.DATABASE_URL) {
   const host = new URL(process.env.DATABASE_URL).hostname;
   const local = /^(localhost|127\.0\.0\.1)$/.test(host) || !host.includes('.');
   const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, ssl: local ? false : { rejectUnauthorized: process.env.PGSSL_NO_VERIFY !== 'true' } });
-  await pool.query(`INSERT INTO onecharge_state (id, doc, updated_at) VALUES (1, $1::jsonb, now()) ON CONFLICT (id) DO UPDATE SET doc = EXCLUDED.doc, updated_at = now()`, [json]);
+  // The live state is gzipped JSON in onecharge_doc (server/db.js).
+  await pool.query('CREATE TABLE IF NOT EXISTS onecharge_doc (id integer PRIMARY KEY, gz bytea NOT NULL, size integer NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())');
+  await pool.query(`INSERT INTO onecharge_doc (id, gz, size, updated_at) VALUES (1, $1, $2, now()) ON CONFLICT (id) DO UPDATE SET gz = EXCLUDED.gz, size = EXCLUDED.size, updated_at = now()`, [zlib.gzipSync(json), json.length]);
   await pool.end();
   console.log('Written to the Postgres database.');
 } else {

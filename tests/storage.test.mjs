@@ -80,3 +80,32 @@ test('data and sessions survive a server restart on Postgres', async () => {
   assert.equal(after, before + 12345, 'top-up was lost across the restart');
   await stop(second.child);
 });
+
+test('a database still in the old jsonb format is read, then saved gzipped', async () => {
+  const port = 5600 + Math.floor(Math.random() * 300);
+  const { PGlite } = await import('@electric-sql/pglite');
+  const zlib = await import('node:zlib');
+
+  // Turn the store back into the old format: only the jsonb row, no gzipped one.
+  let pg = new PGlite(dataDir);
+  const { rows } = await pg.query('SELECT gz FROM onecharge_doc WHERE id = 1');
+  const doc = JSON.parse(zlib.gunzipSync(Buffer.from(rows[0].gz)).toString('utf8'));
+  doc.wallets['acc-driver'].balance = 777_777;
+  await pg.query('INSERT INTO onecharge_state (id, doc) VALUES (1, $1::jsonb) ON CONFLICT (id) DO UPDATE SET doc = EXCLUDED.doc', [JSON.stringify(doc)]);
+  await pg.query('DELETE FROM onecharge_doc');
+  await pg.close();
+
+  const server = await boot(port);
+  const token = (await json(server.base, '/auth/login', { method: 'POST', body: { portal: 'driver', login: '+998901234567', password: 'Driver2026' } })).data.token;
+  assert.equal((await json(server.base, '/state', { token })).data.wallets['acc-driver'].balance, 777_777, 'the old jsonb copy was not read');
+  assert.equal((await json(server.base, '/wallet/topup', { method: 'POST', token, body: { amount: 1000 } })).status, 200);
+  await stop(server.child);
+
+  pg = new PGlite(dataDir);
+  const moved = await pg.query('SELECT gz, size FROM onecharge_doc WHERE id = 1');
+  await pg.close();
+  assert.equal(moved.rows.length, 1, 'the state was not saved in the gzipped table');
+  const saved = JSON.parse(zlib.gunzipSync(Buffer.from(moved.rows[0].gz)).toString('utf8'));
+  assert.equal(saved.wallets['acc-driver'].balance, 778_777);
+  assert.ok(moved.rows[0].gz.length < moved.rows[0].size / 3, 'not compressed');
+});
