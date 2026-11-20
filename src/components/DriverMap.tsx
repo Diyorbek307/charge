@@ -10,7 +10,7 @@ import { locate as askLocation, samePort, openNow, km, fmtKm, useMyLocation, las
 import { plural } from '../lib/analytics';
 import BaseMap from './BaseMap';
 import { promoNow, isNight, networkLook, discounted, useDriverPromos } from '../lib/promos';
-import { useTariffNow, priceNow } from '../lib/tariff';
+import { useTariffNow, priceNow, partnerNetwork } from '../lib/tariff';
 import { NetworkBadge } from './driver/NetworkBadge';
 import { ChargerFriend } from './driver/Illustration';
 import { fetchRoute, pointAt, type Route } from '../lib/nav';
@@ -516,7 +516,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
   const cheapestNear = from
     ? [...stations]
         .filter(s => freeFor(s) && away(s) <= 15)
-        .map(s => ({ s, price: Math.min(...s.connectors.filter(c => c.status === 'available' && fits(c.type)).map(c => priceNow(c.price, tariffK, promoNow({ id: s.id, operatorId: opId(s) }, promos)?.percent))) }))
+        .map(s => ({ s, price: Math.min(...s.connectors.filter(c => c.status === 'available' && fits(c.type)).map(c => (partnerNetwork(s) ? c.price : priceNow(c.price, tariffK, promoNow({ id: s.id, operatorId: opId(s) }, promos)?.percent)))) }))
         .sort((a, b) => a.price - b.price)[0] ?? null
     : null;
   const lastId = (state?.sessions ?? []).filter(x => x.userId === sessions.driver?.id && x.status === 'completed').sort((a, b) => b.start.localeCompare(a.start))[0]?.stationId;

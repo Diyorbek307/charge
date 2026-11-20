@@ -18,7 +18,7 @@ import { useMyLocation, km, fmtKm, driveMinutes, openNow } from '../../../lib/ge
 import type { ArrivalChance } from '../../../lib/api';
 import PriceToday from '../PriceToday';
 import { API_ORIGIN } from '../../../lib/site';
-import { useTariffNow, priceNow } from '../../../lib/tariff';
+import { useTariffNow, priceNow, partnerNetwork } from '../../../lib/tariff';
 import { ConnectorTile } from './ChargingStart';
 import { hm, statusColor } from './shared';
 
@@ -124,9 +124,11 @@ export function StationDetailSheet({ station, onClose, onStartCharging, onBook, 
 
   const opRef = { id: station.id, operatorId: (station as Station & { operatorId?: string }).operatorId };
   const driverPromos = useDriverPromos();
-  const promo = promoNow(opRef, driverPromos);
+  const partner = partnerNetwork(station);
+  const promo = partner ? null : promoNow(opRef, driverPromos);
   // The time-of-day band the charge would start at, so the card shows what the driver will pay.
-  const tariffK = useTariffNow();
+  const bandNow = useTariffNow();
+  const tariffK = partner ? 1 : bandNow;
   const later = promo ? null : promosOf(opRef, driverPromos)[0] ?? null;
   const pointStatus: Record<string, { text: string; color: string; bg: string }> = {
     available: { text: 'Свободно', color: '#16A34A', bg: '#F0FDF4' },

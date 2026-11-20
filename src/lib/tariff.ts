@@ -50,5 +50,11 @@ export function useTariffNow() {
   return f?.hours[hourNow()]?.multiplier ?? 1;
 }
 
+/** A partner network (OCPI or the UZGRID hub) bills its own price: no Voli time bands, promos or Plus (server/api.js). */
+export const partnerNetwork = (station: unknown) => {
+  const s = station as { ocpi?: unknown; uzgrid?: unknown } | null | undefined;
+  return !!(s?.ocpi || s?.uzgrid);
+};
+
 /** A connector's price at this hour: the time-of-day band, then the promo. */
 export const priceNow = (base: number, multiplier: number, promoPercent = 0) => Math.round(base * multiplier * (1 - promoPercent / 100));

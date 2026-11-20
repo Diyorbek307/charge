@@ -8,7 +8,7 @@ import { NetworkTopUp } from '../NetworkWallets';
 import { promoNow, useDriverPromos } from '../../../lib/promos';
 import type { Payer, ChargeGoal } from '../../../lib/api';
 import { km } from '../../../lib/geo';
-import { useTariffForecast, priceNow } from '../../../lib/tariff';
+import { useTariffForecast, priceNow, partnerNetwork } from '../../../lib/tariff';
 
 /** A connector as on the charger: a black tile with the socket drawn on it and its letter. */
 export function ConnectorTile({ letter, dc }: { letter: string; dc: boolean }) {
@@ -99,8 +99,7 @@ export function ChargingStartScreen({ station, preferConnector, onBack, onConfir
   // What the network charges right now, its discount included.
   // Voli Plus takes its share off what the network charges (not on OCPI partners, who bill themselves).
   // A partner network (OCPI or the UZGRID hub) bills its own price: no Voli time bands, promos or Plus there (server/api.js).
-  const partnerStation = station as (Station & { ocpi?: unknown; uzgrid?: unknown }) | null;
-  const partnerNet = !!(partnerStation?.ocpi || partnerStation?.uzgrid);
+  const partnerNet = partnerNetwork(station);
   const plusOn = !!state?.plus?.active && !partnerNet;
   const forecast = useTariffForecast();
   const tariffK = partnerNet ? 1 : (forecast?.hours[forecast.currentHour]?.multiplier ?? 1);
