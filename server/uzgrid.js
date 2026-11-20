@@ -144,7 +144,7 @@ async function priceOf(tariffId) {
 /** A station's connector status. A running Voli session keeps its connector busy until the CDR settles it. */
 function applyStatus(station, connector, uzStatus, announce) {
   // No price of ours here: UZGRID refuses the start, so drivers should not be offered it.
-  const next = connector.uzgrid.tariffId ? STATUS[uzStatus] : 'unavailable';
+  const next = connector.uzgrid.tariffId && !connector.uzgrid.noPrice ? STATUS[uzStatus] : 'unavailable';
   if (!next || connector.status === next) return;
   const running = db.data.sessions.some(s => s.status === 'active' && s.stationId === station.id && s.connectorId === connector.id);
   if (running && next === 'available') return;
@@ -212,6 +212,8 @@ async function upsertStation(s) {
       c.power = power;
       c.price = price;
       c.uzgrid.tariffId = uc.tariff_id ?? null;
+      // A fresh list is the moment to offer a connector UZGRID refused for "no price" again.
+      delete c.uzgrid.noPrice;
     }
     seen.add(c.id);
     applyStatus(station, c, uc.status, false);
@@ -316,8 +318,14 @@ async function startRemote(station, connector, account) {
       db.save();
     }
     console.warn('[uzgrid] start refused:', describe(e));
-    emit({ type: 'session.failed', portal: 'system', actor: NAME, message: `${station.name}: ${driverReason(e)}`, entity: station.id, payload: { userId: account.id, code: e.code ?? null } });
-    return false;
+    // No price of ours here yet: not offered again until the next station list.
+    if (e.code === 'no_price' || e.code === 'no_plate') {
+      connector.uzgrid.noPrice = true;
+      applyStatus(station, connector, null, true);
+      db.save();
+    }
+    // Refused at once: the driver reads the reason in the answer to the start itself.
+    return { error: `${station.name}: ${driverReason(e)}` };
   }
 }
 

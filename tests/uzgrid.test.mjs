@@ -83,7 +83,7 @@ function hubApp() {
   r.post('/commands/start-session', (req, res) => {
     const { station_id, evse_uid, connector_id, token_uid } = req.body;
     if (station_id !== STATION) return res.status(404).json({ error: { code: 'not_found', message: 'Not found' } });
-    if (evse_uid === 'E2') return res.status(409).json({ error: { code: 'no_price', message: 'No price' } });
+    if (evse_uid === 'E2' || hub.noPrice) return res.status(409).json({ error: { code: 'no_price', message: 'No price of yours is in force on this station' } });
     const command_id = `cmd-${hub.seq}`;
     const session_id = `ses-${hub.seq}`;
     res.status(202).json({ command_id, type: 'start_session', status: 'pending', detail: null, session_id: null });
@@ -220,5 +220,18 @@ describe('UZGRID hub (Vendor API)', () => {
     const before = hub.calls.filter(x => x.includes('start-session')).length;
     assert.equal((await call('/sessions/start', { method: 'POST', token, body: { stationId: st.id, connectorId: st.connectors[1].id } })).status, 409);
     assert.equal(hub.calls.filter(x => x.includes('start-session')).length, before);
+  });
+
+  test('a "no price" refusal tells the driver why and hides the connector until the next station list', async () => {
+    const token = await driver();
+    const st = await hubStation(token);
+    hub.noPrice = true;
+    const r = await call('/sessions/start', { method: 'POST', token, body: { stationId: st.id, connectorId: st.connectors[0].id } });
+    hub.noPrice = false;
+    assert.equal(r.status, 409);
+    assert.match(r.data.error, /нет цены/);
+    assert.equal((await hubStation(token)).connectors[0].status, 'unavailable');
+    assert.equal((await call('/admin/uzgrid/sync', { method: 'POST', token: await admin() })).status, 200);
+    assert.equal((await hubStation(token)).connectors[0].status, 'available');
   });
 });

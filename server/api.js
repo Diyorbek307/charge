@@ -1817,7 +1817,8 @@ export async function startCharge(account, b = {}) {
     remember();
     const connector = roamingStation.connectors.find(c => c.id === connectorId);
     const accepted = await roaming.startRemote(roamingStation, connector, account);
-    if (!accepted) return { status: 502, body: { error: 'Сеть партнёра не приняла команду запуска' } };
+    // A roamer may say why it refused ({ error }); otherwise the generic answer.
+    if (!accepted || accepted.error) return { status: accepted?.error ? 409 : 502, body: { error: accepted?.error ?? 'Сеть партнёра не приняла команду запуска' } };
     return { status: 202, body: { pending: true, stats: statsFor(account) } };
   }
 
