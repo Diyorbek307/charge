@@ -1689,10 +1689,11 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
   if (dryRun) return { ok: true };
   companyIntent.delete(account.id);
 
-  const band = station.ocpi ? { multiplier: 1 } : tariffBand(tashkentHour());
+  const partnerNet = !!(station.ocpi || station.uzgrid);
+  const band = partnerNet ? { multiplier: 1 } : tariffBand(tashkentHour());
   // A network's own promo, paid by the network: the driver pays less, it earns less.
   // A campaign Voli pays for leaves the network its full price.
-  const promo = station.ocpi ? null : promoFor(station, account);
+  const promo = partnerNet ? null : promoFor(station, account);
   const session = {
     id: db.nextId('session', 'S-'),
     userId: account.id,
@@ -1714,9 +1715,9 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     // The network's own promo first; Voli Plus takes its share off what is left, and Voli pays it.
     networkPrice: Math.round(connector.price * band.multiplier * (1 - (promo && promo.funder !== 'voli' ? promo.percent : 0) / 100)),
     // A company charge on the taxi tariff takes the park's volume discount; a private one, Plus.
-    price: Math.round(connector.price * band.multiplier * (1 - (promo?.percent ?? 0) / 100) * (station.ocpi ? 1 : 1 - (corporate ? fleetDiscount() : plusActive(account.id) ? PLUS.discount : 0) / 100)),
-    ...(!station.ocpi && !corporate && plusActive(account.id) ? { plus: true } : {}),
-    ...(!station.ocpi && corporate && fleetDiscount() ? { fleetDiscount: fleetDiscount() } : {}),
+    price: Math.round(connector.price * band.multiplier * (1 - (promo?.percent ?? 0) / 100) * (partnerNet ? 1 : 1 - (corporate ? fleetDiscount() : plusActive(account.id) ? PLUS.discount : 0) / 100)),
+    ...(!partnerNet && !corporate && plusActive(account.id) ? { plus: true } : {}),
+    ...(!partnerNet && corporate && fleetDiscount() ? { fleetDiscount: fleetDiscount() } : {}),
     ...(promo ? { promo: { id: promo.id, title: promo.title, percent: promo.percent, funder: promo.funder ?? 'network' } } : {}),
     // Platform commission is locked at start too, so a rate change is not retroactive.
     commissionRate: db.byId('operators', station.operatorId)?.commission ?? DEFAULT_COMMISSION,
@@ -2080,7 +2081,7 @@ api.post('/sessions/:id/tick', requireAuth(), (req, res) => {
   const mayTick = a.portal === 'admin' || session.userId === a.id || (a.portal === 'business' && session.corporate) || (a.portal === 'operator' && session.operatorId === a.orgId);
   if (!mayTick) return res.status(404).json({ error: 'Нет активной сессии' });
   // A charge point connected over OCPP owns the meter for its sessions.
-  if (['ocpp', 'ocpi', 'network'].includes(session.source)) return res.json({ session });
+  if (['ocpp', 'ocpi', 'uzgrid', 'network'].includes(session.source)) return res.json({ session });
 
   const minutes = Math.max(0, (Date.now() - new Date(session.start).getTime()) / 60000);
   session.energy = demoEnergy(session.power ?? 50, minutes);

@@ -4632,5 +4632,17 @@
 "Отправили код в Telegram на {0}": "We sent the code to Telegram for {0}",
 "Номер +998… — код придёт на телефон, почта — письмом. Новый аккаунт создастся сам.": "A +998… number gets the code on the phone, an email by letter. A new account is created by itself.",
 "Предварительная версия: станции и оплата — для примера. Запуск в Ташкенте — IV квартал 2026": "Preview version: stations and payments are examples. Launch in Tashkent — Q4 2026",
-"Voli скоро запустится. Сейчас вход только по приглашению — оставьте номер на voli.uz, и мы сообщим о запуске.": "Voli launches soon. For now sign-in is by invitation only — leave your number at voli.uz and we will tell you when it starts."
+"Voli скоро запустится. Сейчас вход только по приглашению — оставьте номер на voli.uz, и мы сообщим о запуске.": "Voli launches soon. For now sign-in is by invitation only — leave your number at voli.uz and we will tell you when it starts.",
+"Хаб UZGRID": "UZGRID hub",
+"Подключён": "Connected",
+"Подключён · тест": "Connected · test",
+"Не подключён": "Not connected",
+"Сети, которые работают через хаб UZGRID (например, Pulse): станции, цены и статусы приходят от UZGRID, запуск и остановка зарядки идут через него.": "Networks that work through the UZGRID hub (for example, Pulse): stations, prices and statuses come from UZGRID, and charging starts and stops go through it.",
+"Чтобы подключить, впишите ключ из кабинета UZGRID в Render → Environment → UZGRID_API_KEY.": "To connect, put the key from the UZGRID cabinet into Render → Environment → UZGRID_API_KEY.",
+"UZGRID: обновлено станций — {0}": "UZGRID: stations updated — {0}",
+"UZGRID не подключён: в Render нет UZGRID_API_KEY": "UZGRID is not connected: UZGRID_API_KEY is missing in Render",
+"Не удалось получить станции UZGRID: {0}": "Could not get UZGRID stations: {0}",
+"UZGRID не принял запуск на {0}: {1}": "UZGRID did not accept the start at {0}: {1}",
+"Станция {0} не начала зарядку ({1})": "Station {0} did not start charging ({1})",
+"Станция {0} не остановила зарядку ({1})": "Station {0} did not stop charging ({1})"
 }

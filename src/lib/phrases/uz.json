@@ -4632,5 +4632,17 @@
 "Отправили код в Telegram на {0}": "Kod Telegram orqali {0} raqamiga yuborildi",
 "Номер +998… — код придёт на телефон, почта — письмом. Новый аккаунт создастся сам.": "Raqam +998… — kod telefonga keladi, pochta — xat orqali. Yangi akkaunt o‘zi yaratiladi.",
 "Предварительная версия: станции и оплата — для примера. Запуск в Ташкенте — IV квартал 2026": "Dastlabki versiya: stansiyalar va to‘lov — namuna uchun. Toshkentda ishga tushirish — 2026-yil IV chorak",
-"Voli скоро запустится. Сейчас вход только по приглашению — оставьте номер на voli.uz, и мы сообщим о запуске.": "Voli tez orada ishga tushadi. Hozircha kirish faqat taklif bilan — raqamingizni voli.uz saytida qoldiring, ishga tushganda xabar beramiz."
+"Voli скоро запустится. Сейчас вход только по приглашению — оставьте номер на voli.uz, и мы сообщим о запуске.": "Voli tez orada ishga tushadi. Hozircha kirish faqat taklif bilan — raqamingizni voli.uz saytida qoldiring, ishga tushganda xabar beramiz.",
+"Хаб UZGRID": "UZGRID xabi",
+"Подключён": "Ulangan",
+"Подключён · тест": "Ulangan · test",
+"Не подключён": "Ulanmagan",
+"Сети, которые работают через хаб UZGRID (например, Pulse): станции, цены и статусы приходят от UZGRID, запуск и остановка зарядки идут через него.": "UZGRID xabi orqali ishlaydigan tarmoqlar (masalan, Pulse): stansiyalar, narxlar va holatlar UZGRIDdan keladi, zaryadlashni boshlash va to‘xtatish u orqali o‘tadi.",
+"Чтобы подключить, впишите ключ из кабинета UZGRID в Render → Environment → UZGRID_API_KEY.": "Ulash uchun UZGRID kabinetidagi kalitni Render → Environment → UZGRID_API_KEY ga yozing.",
+"UZGRID: обновлено станций — {0}": "UZGRID: yangilangan stansiyalar — {0}",
+"UZGRID не подключён: в Render нет UZGRID_API_KEY": "UZGRID ulanmagan: Renderda UZGRID_API_KEY yo‘q",
+"Не удалось получить станции UZGRID: {0}": "UZGRID stansiyalarini olib bo‘lmadi: {0}",
+"UZGRID не принял запуск на {0}: {1}": "UZGRID {0} da boshlashni qabul qilmadi: {1}",
+"Станция {0} не начала зарядку ({1})": "{0} stansiyasi zaryadlashni boshlamadi ({1})",
+"Станция {0} не остановила зарядку ({1})": "{0} stansiyasi zaryadlashni to‘xtatmadi ({1})"
 }

@@ -140,7 +140,7 @@ api.get('/share/:token', (req, res) => {
   if (!s) return res.status(404).json({ error: 'Ссылка устарела' });
   const st = db.byId('stations', s.stationId);
   const minutes = Math.max(0, (Date.now() - Date.parse(s.start)) / 60000);
-  const energy = s.status === 'active' && !['ocpp', 'ocpi', 'network'].includes(s.source) ? demoEnergy(s.power ?? 50, minutes) : s.energy;
+  const energy = s.status === 'active' && !['ocpp', 'ocpi', 'uzgrid', 'network'].includes(s.source) ? demoEnergy(s.power ?? 50, minutes) : s.energy;
   const goalKwh = s.goal?.stopKwh ?? (s.goal?.stopCost ? s.goal.stopCost / (s.price || 1800) : null);
   const kw = Math.max(3, (s.power ?? 50) * 0.85);
   const readyAt = s.status === 'active' && goalKwh ? new Date(Date.now() + Math.max(0, goalKwh - energy) / kw * 3600_000).toISOString() : null;

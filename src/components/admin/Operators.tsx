@@ -6,6 +6,7 @@ import { useAnalytics, money, num, dateShort, plural } from '../../lib/analytics
 import { Page, Card, Kpi, Loading, ErrorNote, Pill, CHART } from './ui';
 import ExportButton from '../ExportButton';
 import { OcpiPartners } from './OcpiPartners';
+import { UzgridHub } from './UzgridHub';
 import { OperatorSetup } from './OperatorSetup';
 
 const STATUS = {
@@ -67,6 +68,7 @@ export default function AdminOperators({ onNavigate }: { onNavigate: (page: stri
         <Kpi label="Оборот сети" value={money(data.totals.revenue, false)} sub="сум за 30 дней" change={data.deltas.revenue} icon={<Wallet size={14} />} tone="violet" />
       </div>
 
+      <UzgridHub onChanged={reload} />
       <OcpiPartners onChanged={reload} />
 
       {failure && <ErrorNote text={failure} />}

@@ -32,7 +32,7 @@ export const goalText = g => (g ? GOAL_TEXT[g.kind]?.(g) ?? '' : '');
 
 /** Energy and cost right now: the meter for real chargers, the demo curve otherwise. */
 function current(session) {
-  if (['ocpp', 'ocpi', 'network'].includes(session.source)) return { energy: session.energy ?? 0, cost: session.cost ?? 0 };
+  if (['ocpp', 'ocpi', 'uzgrid', 'network'].includes(session.source)) return { energy: session.energy ?? 0, cost: session.cost ?? 0 };
   const minutes = Math.max(0, (Date.now() - Date.parse(session.start)) / 60000);
   const energy = demoEnergy(session.power ?? 50, minutes);
   return { energy, cost: Math.round(energy * (session.price ?? 1800)) };

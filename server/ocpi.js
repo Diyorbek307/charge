@@ -200,7 +200,7 @@ function operatorFor(partner) {
 // Locations → stations
 // ---------------------------------------------------------------------------
 
-const STANDARD = {
+export const STANDARD = {
   IEC_62196_T2: 'Type2',
   IEC_62196_T2_COMBO: 'CCS2',
   CHADEMO: 'CHAdeMO',
@@ -208,7 +208,7 @@ const STANDARD = {
   GBT_AC: 'Type2',
   IEC_62196_T1_COMBO: 'CCS2',
 };
-const STATUS = {
+export const STATUS = {
   AVAILABLE: 'available',
   CHARGING: 'occupied',
   BLOCKED: 'occupied',

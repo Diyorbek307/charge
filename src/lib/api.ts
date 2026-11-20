@@ -193,6 +193,8 @@ export interface OcpiPartner {
   id: string; name: string; status: 'connecting' | 'connected' | 'disconnected'; versionsUrl: string; country_code: string; party_id: string;
   operatorId: string; createdAt: string; lastSync: string | null; error: string | null; stations: number; endpoints: Record<string, string>;
 }
+/** UZGRID Vendor API hub (server/uzgrid.js): on when UZGRID_API_KEY is set in Render. */
+export interface UzgridStatus { enabled: boolean; sandbox: boolean; base: string; stations: number; lastSync: string | null; error: string | null }
 export interface OcpiOverview { partners: OcpiPartner[]; version: string; ourVersionsUrl: string; party: { country_code: string; party_id: string } }
 /** What a driver wants from a charge; the server stops it there. */
 export type ChargeGoal = { kind: 'percent'; value: number; fromPct?: number } | { kind: 'sum'; value: number } | { kind: 'km'; value: number };
@@ -974,6 +976,8 @@ export const apiClient = {
   rotateNetworkKey: (portal: Portal, operatorId: string) => post<IntegrationSettings>(`/admin/operators/${operatorId}/integration/rotate`, undefined, portal),
   ocpi: (portal: Portal) => request<OcpiOverview>('/admin/ocpi', { portal }),
   connectOcpi: (portal: Portal, versionsUrl: string, token: string) => post<{ partner: OcpiPartner; synced: number }>('/admin/ocpi', { versionsUrl, token }, portal),
+  uzgrid: (portal: Portal) => request<UzgridStatus>('/admin/uzgrid', { portal }),
+  syncUzgrid: (portal: Portal) => post<UzgridStatus & { stations: number }>('/admin/uzgrid/sync', undefined, portal),
   syncOcpi: (portal: Portal, id: string) => post<{ stations: number; partner: OcpiPartner }>('/admin/ocpi/' + encodeURIComponent(id) + '/sync', undefined, portal),
   adminCredit: (portal: Portal) => request<CreditOverview>('/admin/credit', { portal }),
   updateCredit: (portal: Portal, userId: string, body: { status?: 'active' | 'paused'; limit?: number }) => post<CreditOverview>(`/admin/credit/${userId}`, body, portal),
