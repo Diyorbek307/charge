@@ -3,6 +3,7 @@ import { Wallet, Zap, MapPin } from 'lucide-react';
 import { useSync } from '../../lib/sync';
 import { useLiveStations } from '../../lib/live';
 import { greeted } from '../../lib/greeting';
+import { useTopBar } from '../../lib/topBar';
 
 const partOfDay = () => {
   const h = new Date(Date.now() + 5 * 3600_000).getUTCHours(); // Tashkent
@@ -16,6 +17,7 @@ const sum = (n: number) => `${Math.round(n).toLocaleString('ru-RU')} сум`;
  * now. It holds a moment, then the app opens through it. A tap skips it.
  */
 export default function Greeting({ onDone }: { onDone: () => void }) {
+  useTopBar('#111111', true);
   const { sessions, state } = useSync();
   const me = sessions.driver;
   const stations = useLiveStations();

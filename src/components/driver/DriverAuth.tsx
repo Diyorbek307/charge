@@ -7,6 +7,7 @@ import { LANGS, useI18n } from '../../lib/i18n';
 import { greetNext } from '../../lib/greeting';
 import { AgreementChecks, NOTHING_AGREED, agreedEnough, type Agreed } from './Agreement';
 import { inNativeShell } from '../../lib/site';
+import { useTopBar } from '../../lib/topBar';
 import type { SignInResult } from '../../lib/api';
 import { Logo } from '../../landing/Logo';
 import ChargeScene from './ChargeScene';
@@ -55,9 +56,15 @@ type AppleId = { auth: { init: (o: object) => void; signIn: () => Promise<{ auth
  * everyone — Apple, Google, or a phone or email that gets a code. Someone new
  * gives a name after the code and is in; a password stays as a fallback.
  */
+/** The colours at the very top of the welcome and the sign-in, carried on under the phone's clock. */
+const WELCOME_TOP = '#1e375a';
+const SIGN_IN_TOP = '#070707';
+
 export default function DriverAuth() {
   const { actions, adoptSession, verify2fa, login } = useSync();
   const [step, setStep] = useState<Step>('welcome');
+  // Under the clock: the dusk sky over the welcome, the sign-in's own black over the sign-in.
+  useTopBar(step === 'welcome' ? WELCOME_TOP : SIGN_IN_TOP, true);
   const [splash, setSplash] = useState(() => !splashSeen());
   // The welcome's words leave first, then the sign-in takes the photo over; coming back, the photo opens up again.
   const [leaving, setLeaving] = useState(false);

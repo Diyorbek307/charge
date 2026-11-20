@@ -697,7 +697,8 @@ nav::-webkit-scrollbar { display: none; }
 
 /* Phones with a notch: keep the app below the status bar (the page uses viewport-fit=cover). */
 @media (max-width: 639px) {
-  .safe-top { padding-top: env(safe-area-inset-top); }
+  /* Older Android web views report no env() insets; the app shell passes them as --safe-area-inset-*. */
+  .safe-top { padding-top: max(env(safe-area-inset-top), var(--safe-area-inset-top, 0px)); }
 }
 
 /* ═══════════════════════════════════════════════════

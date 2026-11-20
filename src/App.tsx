@@ -27,6 +27,7 @@ import { greetingDue } from './lib/greeting';
 import { APP_URL, LANDING_URL, appElsewhere, landingElsewhere, inNativeShell } from './lib/site';
 import type { Portal as AuthPortal } from './lib/api';
 import { inTelegram, telegramInitData } from './lib/telegram';
+import { TopBar } from './lib/topBar';
 // Only what the first screen needs is in the main file: the landing, the
 // sign-in screens and the tools load on their own when they are shown.
 const Landing = lazyPage(() => import('./landing/Landing'));
@@ -440,7 +441,11 @@ function MainApp() {
             {/* Device body — only drawn around the app on wider screens */}
             <div className="absolute inset-0 sm:rounded-[42px] sm:shadow-[0_32px_80px_rgba(0,0,0,0.6),0_0_0_2px_rgba(255,255,255,0.08)] overflow-hidden" style={{ background: 'linear-gradient(135deg, #2a2a2e 0%, #1a1a1e 100%)' }}>
               <div className="absolute inset-0 sm:inset-[2px] bg-black sm:rounded-[40px] overflow-hidden">
-                <div className="relative w-full h-full bg-white sm:rounded-[40px] overflow-hidden safe-top">
+                <div className="relative w-full h-full bg-white sm:rounded-[40px] overflow-hidden safe-top" style={{ backgroundColor: `var(--topbar, ${darkMode ? '#1f1f1f' : '#ffffff'})` }}>
+                  {/* The strip under the phone's clock: the app's own colour, unless a screen on top says otherwise */}
+                  <TopBar color={darkMode ? '#1f1f1f' : '#ffffff'} dark={darkMode} />
+                  {/* Overlays fill this box, below the strip, so nothing slides under the clock */}
+                  <div className="relative w-full h-full">
                   {greeting && driverSession && <Suspense fallback={null}><Greeting onDone={() => setGreeting(false)} /></Suspense>}
                   {firstRun && driverSession && <FirstRun only={firstRun === 'consent' ? 'consent' : undefined} agreedVersion={driverSession.consent?.version ?? 0} marketing={!!driverSession.consent?.marketing} />}
                   {driverSession ? (
@@ -454,6 +459,7 @@ function MainApp() {
                       onBack={() => setPortal('selector')}
                     />
                   )}
+                  </div>
                 </div>
               </div>
             </div>
