@@ -30,7 +30,7 @@ function CopyLine({ label, value }: { label: string; value: string }) {
 const input = 'mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-normal text-slate-800';
 
 /** How a network connects, and where the drivers' money for it goes. */
-export function OperatorSetup({ operatorId, onChanged }: { operatorId: string; onChanged: () => void }) {
+export function OperatorSetup({ operatorId, onChanged, hub }: { operatorId: string; onChanged: () => void; hub?: string | null }) {
   const { actions } = useSync();
   const [integration, setIntegration] = useState<IntegrationSettings | null>(null);
   const [payout, setPayout] = useState<PayoutSettings | null>(null);
@@ -98,6 +98,12 @@ export function OperatorSetup({ operatorId, onChanged }: { operatorId: string; o
     <div className="mt-4 rounded-xl border border-slate-100 p-4 space-y-5 bg-slate-50/50">
       {note && <p role="status" className={`text-sm rounded-xl px-3 py-2 ${note.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>{note.text}</p>}
 
+      {hub ? (
+      <section className="space-y-2">
+        <p className="text-sm font-semibold text-slate-800 inline-flex items-center gap-2"><Plug size={15} />Как подключена сеть</p>
+        <p className="text-xs text-slate-500">{`Через ${hub} — настраивается в его блоке выше. Здесь способ подключения не меняется.`}</p>
+      </section>
+      ) : (
       <section className="space-y-2">
         <p className="text-sm font-semibold text-slate-800 inline-flex items-center gap-2"><Plug size={15} />Как подключена сеть</p>
         <div className="grid sm:grid-cols-2 gap-2" role="radiogroup" aria-label="Способ подключения">
@@ -137,6 +143,7 @@ export function OperatorSetup({ operatorId, onChanged }: { operatorId: string; o
           )}
         </div>
       </section>
+      )}
 
       <section className="space-y-2">
         <p className="text-sm font-semibold text-slate-800 inline-flex items-center gap-2"><Wallet size={15} />Куда идут деньги водителей</p>

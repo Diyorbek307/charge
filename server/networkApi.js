@@ -299,6 +299,8 @@ api.get('/admin/operators/:id/integration', requireAuth('admin'), (req, res) => 
 api.put('/admin/operators/:id/integration', requireAuth('admin'), (req, res) => {
   const op = db.byId('operators', req.params.id);
   if (!op) return res.status(404).json({ error: 'Оператор не найден' });
+  // A hub or OCPI network is wired by its own block; switching it here would cut it off.
+  if (op.uzgrid || op.ocpiPartnerId) return res.status(409).json({ error: 'Эта сеть подключена через хаб UZGRID или OCPI — способ подключения здесь не меняется' });
   const r = setIntegration(op, req.body ?? {});
   if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
   emit({ type: 'operator.integration', portal: 'admin', actor: req.account.name, message: `${op.name}: подключение — ${op.integration}`, entity: op.id });

@@ -98,7 +98,7 @@ export default function AdminOperators({ onNavigate }: { onNavigate: (page: stri
               <button onClick={() => setSetup(setup === o.id ? null : o.id)} aria-expanded={setup === o.id} className="mt-3 text-xs font-semibold text-[#3d6b00] hover:underline">
                 {setup === o.id ? 'Скрыть подключение и оплату' : 'Подключение и оплата'}
               </button>
-              {setup === o.id && <OperatorSetup operatorId={o.id} onChanged={reload} />}
+              {setup === o.id && <OperatorSetup operatorId={o.id} onChanged={reload} hub={(o as { uzgrid?: boolean }).uzgrid ? 'хаб UZGRID' : (o as { ocpiPartnerId?: string }).ocpiPartnerId ? 'OCPI' : null} />}
 
               <div className="grid grid-cols-4 gap-2 mt-4">
                 {[

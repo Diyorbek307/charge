@@ -4649,5 +4649,8 @@
 "{0}: станция сейчас не на связи — попробуйте позже": "{0}: stansiya hozir aloqada emas — keyinroq urinib ko‘ring",
 "{0}: разъём занят или зарядка у этого владельца временно недоступна": "{0}: ulagich band yoki bu egasida zaryadlash vaqtincha mavjud emas",
 "{0}: разъём не найден — обновите карту": "{0}: ulagich topilmadi — xaritani yangilang",
-"{0}: зарядка здесь временно недоступна, мы уже разбираемся": "{0}: bu yerda zaryadlash vaqtincha mavjud emas, allaqachon hal qilyapmiz"
+"{0}: зарядка здесь временно недоступна, мы уже разбираемся": "{0}: bu yerda zaryadlash vaqtincha mavjud emas, allaqachon hal qilyapmiz",
+"Через {0} — настраивается в его блоке выше. Здесь способ подключения не меняется.": "{0} orqali — yuqoridagi o‘z bo‘limida sozlanadi. Bu yerda ulanish usuli o‘zgarmaydi.",
+"Эта сеть подключена через хаб UZGRID или OCPI — способ подключения здесь не меняется": "Bu tarmoq UZGRID xabi yoki OCPI orqali ulangan — ulanish usuli bu yerda o‘zgarmaydi",
+"хаб UZGRID": "UZGRID xabi"
 }

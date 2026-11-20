@@ -4649,5 +4649,8 @@
 "{0}: станция сейчас не на связи — попробуйте позже": "{0}: the station is offline right now — try later",
 "{0}: разъём занят или зарядка у этого владельца временно недоступна": "{0}: the connector is busy or charging with this owner is temporarily unavailable",
 "{0}: разъём не найден — обновите карту": "{0}: connector not found — refresh the map",
-"{0}: зарядка здесь временно недоступна, мы уже разбираемся": "{0}: charging here is temporarily unavailable, we are already on it"
+"{0}: зарядка здесь временно недоступна, мы уже разбираемся": "{0}: charging here is temporarily unavailable, we are already on it",
+"Через {0} — настраивается в его блоке выше. Здесь способ подключения не меняется.": "Through {0} — set up in its block above. The connection method is not changed here.",
+"Эта сеть подключена через хаб UZGRID или OCPI — способ подключения здесь не меняется": "This network is connected through the UZGRID hub or OCPI — the connection method is not changed here",
+"хаб UZGRID": "the UZGRID hub"
 }
