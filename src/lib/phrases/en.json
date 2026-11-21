@@ -4652,5 +4652,11 @@
 "{0}: зарядка здесь временно недоступна, мы уже разбираемся": "{0}: charging here is temporarily unavailable, we are already on it",
 "Через {0} — настраивается в его блоке выше. Здесь способ подключения не меняется.": "Through {0} — set up in its block above. The connection method is not changed here.",
 "Эта сеть подключена через хаб UZGRID или OCPI — способ подключения здесь не меняется": "This network is connected through the UZGRID hub or OCPI — the connection method is not changed here",
-"хаб UZGRID": "the UZGRID hub"
+"хаб UZGRID": "the UZGRID hub",
+"команда отправлена, ждём станцию": "command sent, waiting for the station",
+"станция приняла команду": "the station accepted the command",
+"зарядка началась": "charging started",
+"станция отказала": "the station refused",
+"UZGRID отказал": "UZGRID refused",
+"Последний запуск: {0} · {1}": "Last start: {0} · {1}"
 }

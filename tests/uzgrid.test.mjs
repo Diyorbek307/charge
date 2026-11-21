@@ -52,6 +52,9 @@ function hubApp() {
     next();
   });
   const r = express.Router();
+  // Every answer carries X-Request-Id, as UZGRID's do.
+  let requests = 0;
+  r.use((_req, res, next) => { res.set('X-Request-Id', `req-${++requests}`); next(); });
   r.get('/stations', (_req, res) =>
     res.json({
       stations: [
@@ -83,7 +86,7 @@ function hubApp() {
   r.post('/commands/start-session', (req, res) => {
     const { station_id, evse_uid, connector_id, token_uid } = req.body;
     if (station_id !== STATION) return res.status(404).json({ error: { code: 'not_found', message: 'Not found' } });
-    if (evse_uid === 'E2' || hub.noPrice) return res.status(409).json({ error: { code: 'no_price', message: 'No price of yours is in force on this station' } });
+    if (evse_uid === 'E2' || hub.noPrice) return res.status(409).json({ error: { code: 'no_price', message: 'No price of yours is in force on this station', request_id: 'req-no-price' } });
     const command_id = `cmd-${hub.seq}`;
     const session_id = `ses-${hub.seq}`;
     res.status(202).json({ command_id, type: 'start_session', status: 'pending', detail: null, session_id: null });
@@ -204,6 +207,11 @@ describe('UZGRID hub (Vendor API)', () => {
     assert.equal(done.cost, 29150, 'the CDR total in tiyin, as sum');
     assert.equal((await hubStation(token)).connectors[0].status, 'available');
     assert.ok(hub.keys.size >= 2, 'every command carried an Idempotency-Key');
+    // The admin card shows how the last start went, with the ids UZGRID support asks for.
+    const last = (await call('/admin/uzgrid', { token: await admin() })).data.lastStart;
+    assert.equal(last.result, 'started');
+    assert.match(last.commandId, /^cmd-/);
+    assert.match(last.requestId, /^req-\d+$/);
   });
 
   test('a status UZGRID reports shows on the map', async () => {
@@ -230,6 +238,8 @@ describe('UZGRID hub (Vendor API)', () => {
     hub.noPrice = false;
     assert.equal(r.status, 409);
     assert.match(r.data.error, /нет цены/);
+    const last = (await call('/admin/uzgrid', { token: await admin() })).data.lastStart;
+    assert.deepEqual([last.result, last.code, last.requestId], ['refused', 'no_price', 'req-no-price']);
     assert.equal((await hubStation(token)).connectors[0].status, 'unavailable');
     assert.equal((await call('/admin/uzgrid/sync', { method: 'POST', token: await admin() })).status, 200);
     assert.equal((await hubStation(token)).connectors[0].status, 'available');

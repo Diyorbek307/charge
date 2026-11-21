@@ -1,9 +1,35 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Waypoints, RefreshCw, LoaderCircle } from 'lucide-react';
-import type { UzgridStatus } from '../../lib/api';
+import type { UzgridStart, UzgridStatus } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 import { dateTime } from '../../lib/analytics';
 import { Card, Pill } from './ui';
+
+const START_RESULT: Record<UzgridStart['result'], string> = {
+  sent: 'команда отправлена, ждём станцию',
+  accepted: 'станция приняла команду',
+  started: 'зарядка началась',
+  rejected: 'станция отказала',
+  refused: 'UZGRID отказал',
+};
+
+/** How the last start went, with what UZGRID support asks for: the time and the request_id. */
+function LastStart({ s }: { s: UzgridStart }) {
+  const bad = s.result === 'refused' || s.result === 'rejected';
+  return (
+    <div className="mt-2 text-xs">
+      <p className={bad ? 'text-red-600' : 'text-slate-600'}>
+        {`Последний запуск: ${dateTime(s.at)} · ${START_RESULT[s.result]}`}{s.code && <span className="font-mono" data-no-translate>{` (${s.code})`}</span>}
+      </p>
+      <p className="text-slate-400 truncate" title={s.where}>{s.where}</p>
+      {(s.requestId || s.commandId) && (
+        <p className="text-slate-400 font-mono select-all break-all" data-no-translate>
+          {[s.requestId && `request_id ${s.requestId}`, s.commandId && `command_id ${s.commandId}`].filter(Boolean).join(' · ')}
+        </p>
+      )}
+    </div>
+  );
+}
 
 /**
  * The UZGRID hub (Vendor API): networks such as Pulse come to Voli through it.
@@ -50,6 +76,7 @@ export function UzgridHub({ onChanged }: { onChanged: () => void }) {
             <p className="text-xs text-slate-500">{`Станций: ${data.stations} · обновлено ${data.lastSync ? dateTime(data.lastSync) : '—'}`}</p>
             <p className="text-xs text-slate-400 font-mono mt-0.5" data-no-translate>{data.base}</p>
             {data.error && <p className="text-xs text-red-600 mt-0.5">{data.error}</p>}
+            {data.lastStart && <LastStart s={data.lastStart} />}
           </div>
           <button onClick={sync} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
             {busy ? <LoaderCircle size={13} className="animate-spin" /> : <RefreshCw size={13} />}Обновить станции

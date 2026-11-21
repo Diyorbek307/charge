@@ -42,15 +42,20 @@ const now = () => new Date().toISOString();
 // ---------------------------------------------------------------------------
 
 class UzgridError extends Error {
-  constructor(status, code, message) {
+  constructor(status, code, message, requestId = null) {
     super(message);
     this.status = status;
     this.code = code;
+    // UZGRID support asks for it with every question about a request.
+    this.requestId = requestId;
   }
 }
 
-/** One request. A change carries an Idempotency-Key; a network error is retried once with the same key. */
-async function call(path, { method = 'GET', body, idempotencyKey } = {}) {
+/**
+ * One request. A change carries an Idempotency-Key; a network error is retried once with the same key.
+ * `meta` (optional) gets the answer's X-Request-Id, which UZGRID support asks for.
+ */
+async function call(path, { method = 'GET', body, idempotencyKey, meta } = {}) {
   const key = method === 'POST' ? (idempotencyKey ?? crypto.randomUUID()) : null;
   for (let attempt = 0; ; attempt++) {
     let res;
@@ -70,6 +75,8 @@ async function call(path, { method = 'GET', body, idempotencyKey } = {}) {
       if (attempt < 1) continue;
       throw new UzgridError(0, 'network', e.cause?.message ?? e.message);
     }
+    const requestId = res.headers.get('x-request-id');
+    if (meta) meta.requestId = requestId;
     const text = await res.text();
     let data = null;
     try {
@@ -82,7 +89,7 @@ async function call(path, { method = 'GET', body, idempotencyKey } = {}) {
       await new Promise(r => setTimeout(r, Math.min(10, Number(res.headers.get('retry-after')) || 2) * 1000));
       continue;
     }
-    throw new UzgridError(res.status, data?.error?.code ?? 'http_' + res.status, data?.error?.message ?? `HTTP ${res.status}`);
+    throw new UzgridError(res.status, data?.error?.code ?? 'http_' + res.status, data?.error?.message ?? `HTTP ${res.status}`, data?.error?.request_id ?? requestId);
   }
 }
 
@@ -301,17 +308,29 @@ async function ensureToken(account) {
 
 const pending = new Map(); // command_id -> { kind, accountId, stationId, connectorId, at }
 
+/** The last start for the admin card: when, where, how it went and the ids UZGRID support asks for. */
+function noteStart(fields) {
+  const st = state();
+  st.lastStart = { ...(fields.at ? {} : st.lastStart), ...fields };
+  db.save();
+}
+
 async function startRemote(station, connector, account) {
   if (!KEY || !connector?.uzgrid) return false;
+  const meta = {};
+  const where = `${station.name} · ${connector.type ?? ''} ${connector.uzgrid.evseId ?? connector.uzgrid.evseUid}`.replace(/\s+/g, ' ').trim();
   try {
     const token_uid = await ensureToken(account);
     const cmd = await call('/commands/start-session', {
       method: 'POST',
       body: { station_id: station.uzgrid.stationId, evse_uid: connector.uzgrid.evseUid, connector_id: connector.uzgrid.connectorId, token_uid },
+      meta,
     });
     pending.set(cmd.command_id, { kind: 'start', accountId: account.id, stationId: station.id, connectorId: connector.id, at: Date.now() });
+    noteStart({ at: now(), where, result: 'sent', code: null, detail: null, commandId: cmd.command_id ?? null, requestId: meta.requestId ?? null });
     return true;
   } catch (e) {
+    noteStart({ at: now(), where, result: 'refused', code: e.code ?? 'error', detail: e.message ?? null, commandId: null, requestId: e.requestId ?? meta.requestId ?? null });
     // The driver gets a plain reason; a setup problem (key, rights) goes to the admin card.
     if (e.status === 401 || e.status === 403) {
       state().error = `запуск: ${describe(e)}`;
@@ -360,6 +379,9 @@ const handlers = {
     if (!p) return;
     if (e.data.status === 'pending') return;
     pending.delete(e.data.command_id);
+    if (p.kind === 'start' && state().lastStart?.commandId === e.data.command_id && state().lastStart.result === 'sent') {
+      noteStart({ result: e.data.status === 'accepted' ? 'accepted' : 'rejected', code: e.data.status === 'accepted' ? null : e.data.status, detail: e.data.detail ?? null });
+    }
     if (e.data.status !== 'accepted') {
       const station = db.byId('stations', p.stationId);
       emit({
@@ -390,6 +412,7 @@ const handlers = {
       return;
     }
     r.session.uzgridSessionId = d.session_id;
+    if (d.command_id && state().lastStart?.commandId === d.command_id) noteStart({ result: 'started' });
     r.session.uzgridTariff = d.tariff_id ? { id: d.tariff_id, version: d.price_version ?? null } : null;
     if (d.command_id) pending.delete(d.command_id);
   },
@@ -518,6 +541,7 @@ export function uzgridStatus() {
     stations: op ? db.data.stations.filter(x => x.operatorId === op.id).length : 0,
     lastSync: st.lastSync,
     error: st.error,
+    lastStart: st.lastStart ?? null,
   };
 }
 

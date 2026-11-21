@@ -4652,5 +4652,11 @@
 "{0}: зарядка здесь временно недоступна, мы уже разбираемся": "{0}: bu yerda zaryadlash vaqtincha mavjud emas, allaqachon hal qilyapmiz",
 "Через {0} — настраивается в его блоке выше. Здесь способ подключения не меняется.": "{0} orqali — yuqoridagi o‘z bo‘limida sozlanadi. Bu yerda ulanish usuli o‘zgarmaydi.",
 "Эта сеть подключена через хаб UZGRID или OCPI — способ подключения здесь не меняется": "Bu tarmoq UZGRID xabi yoki OCPI orqali ulangan — ulanish usuli bu yerda o‘zgarmaydi",
-"хаб UZGRID": "UZGRID xabi"
+"хаб UZGRID": "UZGRID xabi",
+"команда отправлена, ждём станцию": "buyruq yuborildi, stansiyani kutyapmiz",
+"станция приняла команду": "stansiya buyruqni qabul qildi",
+"зарядка началась": "quvvatlash boshlandi",
+"станция отказала": "stansiya rad etdi",
+"UZGRID отказал": "UZGRID rad etdi",
+"Последний запуск: {0} · {1}": "Oxirgi ishga tushirish: {0} · {1}"
 }

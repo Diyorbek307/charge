@@ -194,7 +194,9 @@ export interface OcpiPartner {
   operatorId: string; createdAt: string; lastSync: string | null; error: string | null; stations: number; endpoints: Record<string, string>;
 }
 /** UZGRID Vendor API hub (server/uzgrid.js): on when UZGRID_API_KEY is set in Render. */
-export interface UzgridStatus { enabled: boolean; sandbox: boolean; base: string; stations: number; lastSync: string | null; error: string | null }
+/** The last charge start through UZGRID, with the ids its support asks for. */
+export interface UzgridStart { at: string; where: string; result: 'sent' | 'accepted' | 'rejected' | 'started' | 'refused'; code: string | null; detail: string | null; commandId: string | null; requestId: string | null }
+export interface UzgridStatus { enabled: boolean; sandbox: boolean; base: string; stations: number; lastSync: string | null; error: string | null; lastStart: UzgridStart | null }
 export interface OcpiOverview { partners: OcpiPartner[]; version: string; ourVersionsUrl: string; party: { country_code: string; party_id: string } }
 /** What a driver wants from a charge; the server stops it there. */
 export type ChargeGoal = { kind: 'percent'; value: number; fromPct?: number } | { kind: 'sum'; value: number } | { kind: 'km'; value: number };
