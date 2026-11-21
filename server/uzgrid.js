@@ -15,7 +15,7 @@ import { STANDARD, STATUS } from './ocpi.js';
  *              and cdr.created, whose CDR settles the session.
  *   commands   POST /commands/start-session and stop-session, each with its
  *              own Idempotency-Key; the answer comes later as events.
- *   tokens     a driver is the token VOLI-<account id> (type APP_USER).
+ *   tokens     a driver is the token VOLI-<15 hex of the account id hash>, 20 chars max (type APP_USER).
  *
  * Settings (Render → Environment):
  *   UZGRID_API_KEY  the key from the UZGRID cabinet, "API kalitlari" (uzk_live_…).
@@ -292,8 +292,11 @@ function describe(e) {
 // Drivers and commands
 // ---------------------------------------------------------------------------
 
-/** The driver's token at UZGRID: 1–36 of A–Z a–z 0–9 . _ : - */
-export const tokenUid = account => `VOLI-${String(account.id).replace(/[^A-Za-z0-9._:-]/g, '')}`.slice(0, 36);
+/**
+ * The driver's token at UZGRID. Stations take an idTag of at most 20 characters (OCPP),
+ * so it is VOLI- plus 15 hex characters of a hash of the account id: short, stable, unique enough.
+ */
+export const tokenUid = account => `VOLI-${crypto.createHash('sha256').update(String(account.id)).digest('hex').slice(0, 15).toUpperCase()}`;
 const accountByToken = uid => db.data.accounts.find(a => a.portal === 'driver' && tokenUid(a) === uid) ?? null;
 
 async function ensureToken(account) {

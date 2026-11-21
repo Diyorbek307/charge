@@ -192,6 +192,7 @@ describe('UZGRID hub (Vendor API)', () => {
     const started = await call('/sessions/start', { method: 'POST', token, body: { stationId: st.id, connectorId: c.id } });
     assert.equal(started.status, 202, JSON.stringify(started.data));
     assert.ok([...hub.tokens.keys()].some(k => k.startsWith('VOLI-')), 'the driver token was registered');
+    assert.ok([...hub.tokens.keys()].every(k => k.length <= 20), 'stations accept a token of at most 20 characters');
     const session = await until(async () => (await call('/state', { token })).data.sessions.find(s => s.status === 'active' && s.stationId === st.id), 'transaction.started');
     assert.equal(session.source, 'uzgrid');
     assert.equal(session.price, 2200);
