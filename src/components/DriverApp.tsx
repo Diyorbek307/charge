@@ -323,6 +323,11 @@ export default function DriverApp() {
         'session.failed': { icon: '⚠️', title: 'Зарядка не началась', color: '#F59E0B' },
       }[e.type as 'session.goal'];
       pushToast({ ...look, body: e.message });
+      // The station refused a start we are still waiting on: leave the spinner, back to the station.
+      const forMe = (e.payload as { userId?: string } | undefined)?.userId;
+      if (e.type === 'session.failed' && screen === 'charging-active' && !liveSession && (!forMe || forMe === driverAccount?.id)) {
+        setScreen(selectedStation ? 'station' : 'map');
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events]);
