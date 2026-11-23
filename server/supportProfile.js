@@ -63,8 +63,8 @@ function operatorProfile(a) {
 
 function businessProfile(a) {
   const wallet = db.data.wallets[a.orgId] ?? null;
-  const drivers = new Set(db.data.employees.map(e => e.driverId).filter(Boolean));
-  const month = recent(db.data.sessions.filter(s => s.corporate && drivers.has(s.userId) && s.status === 'completed'), 30);
+  const staff = db.data.employees.filter(e => (e.orgId ?? 'biz-001') === a.orgId);
+  const month = recent(db.data.sessions.filter(s => s.corporate && (s.orgId ?? 'biz-001') === a.orgId && s.status === 'completed'), 30);
   return {
     kind: 'business',
     id: a.id,
@@ -72,9 +72,9 @@ function businessProfile(a) {
     login: a.login,
     org: a.org ?? a.orgId,
     balance: wallet?.balance ?? 0,
-    employees: db.data.employees.length,
-    waiting: db.data.employees.filter(e => !e.driverId).length,
-    budget: sum(db.data.employees, 'limit'),
+    employees: staff.length,
+    waiting: staff.filter(e => !e.driverId).length,
+    budget: sum(staff, 'limit'),
     month: { sessions: month.length, spent: sum(month, 'cost') },
   };
 }

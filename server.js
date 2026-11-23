@@ -48,6 +48,7 @@ import { errorHandler } from "./server/monitoring.js";
 import "./server/clientErrors.js";
 import "./server/driverPhotos.js";
 import "./server/employees.js";
+import "./server/companies.js";
 import "./server/supportProfile.js";
 import "./server/supportActions.js";
 import { startPayoutWatch } from "./server/payouts.js";

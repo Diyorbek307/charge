@@ -37,6 +37,7 @@ import { syncRewards, rewardsFor, bonusFor, spendBonus, rewardsOverview, grantMa
 import { batteryHealthFor } from './battery.js';
 import { setting, feature, updateSettings, settingsView, publicSettings } from './settings.js';
 import { topupReady } from './payments.js';
+import { DEMO_ORG, orgOf, isCompany } from './org.js';
 import { attempt, blocked, forgive, hashPasswordAsync, verifyPasswordAsync } from './guard.js';
 
 /** Answers a refused try with when to try again. */
@@ -92,7 +93,7 @@ const stationOperator = id => db.byId('stations', id)?.operatorId ?? null;
 
 function sessionScope(id) {
   const s = db.byId('sessions', id);
-  return s ? { userId: s.userId, operatorId: s.operatorId, fleet: !!s.corporate, stationName: s.stationName } : {};
+  return s ? { userId: s.userId, operatorId: s.operatorId, fleet: s.corporate ? orgOf(s) : null, stationName: s.stationName } : {};
 }
 
 /** Who may see an event. Unknown types are admin-only by default. */
@@ -112,7 +113,7 @@ function scopeOf({ type, entity, payload = {} }) {
       return {
         userId: actor?.id,
         operatorId: actor?.portal === 'operator' ? actor.orgId : null,
-        fleet: actor?.portal === 'business',
+        fleet: actor?.portal === 'business' ? actor.orgId : null,
       };
     case 'session.start':
     case 'session.stop':
@@ -155,7 +156,7 @@ function scopeOf({ type, entity, payload = {} }) {
       return { userId: payload.userId, operatorId: stationOperator(payload.stationId) };
     case 'wallet.topup':
     case 'wallet.adjust':
-      return entity === 'biz-001' ? { fleet: true } : { userId: entity };
+      return isCompany(entity) ? { fleet: entity } : { userId: entity };
     case 'wallet.refund':
       // The driver who was refunded sees it; nobody else but the admin.
       return { userId: payload.userId };
@@ -163,7 +164,7 @@ function scopeOf({ type, entity, payload = {} }) {
     case 'booking.cancel':
     case 'booking.expire': {
       const b = db.byId('bookings', entity);
-      return { userId: b?.userId, operatorId: b?.operatorId, fleet: b?.walletId === 'biz-001' };
+      return { userId: b?.userId, operatorId: b?.operatorId, fleet: isCompany(b?.walletId) ? b.walletId : null };
     }
     case 'ocpp.command':
     case 'tariff.update':
@@ -186,13 +187,13 @@ function scopeOf({ type, entity, payload = {} }) {
     case 'operator.payout.undo':
       return { operatorId: payload.operatorId ?? null };
     case 'employee.added':
-      return { fleet: true, userId: payload.userId ?? null };
+      return { fleet: payload.orgId ?? DEMO_ORG, userId: payload.userId ?? null };
     case 'employee.removed':
     case 'employee.limit':
     case 'fleet.limit':
     case 'fleet.balance':
     case 'fleet.plan':
-      return { fleet: true };
+      return { fleet: payload.orgId ?? DEMO_ORG };
     case 'operator.status':
     case 'commission.update':
       return { operatorId: entity };
@@ -214,7 +215,8 @@ function entitled(viewer, event) {
   if (viewer.portal === 'admin') return true;
   if (viewer.portal === 'operator') return !!sc.operatorId && sc.operatorId === viewer.orgId;
   if (sc.userId && sc.userId === viewer.id) return true;
-  return viewer.portal === 'business' && !!sc.fleet;
+  // Each company sees its own fleet only; events from before companies had ids are the demo one's.
+  return viewer.portal === 'business' && !!sc.fleet && (sc.fleet === true ? viewer.orgId === DEMO_ORG : sc.fleet === viewer.orgId);
 }
 
 function canSee(viewer, event) {
@@ -379,13 +381,13 @@ function stateFor(viewer) {
   }
 
   if (viewer.portal === 'business') {
-    const sessions = recent(d.sessions.filter(s => s.corporate || s.userId === viewer.id));
+    const sessions = recent(d.sessions.filter(s => (s.corporate && orgOf(s) === viewer.orgId) || s.userId === viewer.id));
     return {
       ...base,
       sessions,
       transactions: txFor(sessions),
-      vehicles: d.vehicles,
-      employees: employeesNow(),
+      vehicles: d.vehicles.filter(v => orgOf(v) === viewer.orgId),
+      employees: employeesNow(viewer.orgId),
       fleetPlan: fleetPlanFor(viewer.orgId),
       wallets: d.wallets[viewer.orgId] ? { [viewer.orgId]: d.wallets[viewer.orgId] } : {},
       queues: queues.map(ownQueue),
@@ -415,9 +417,10 @@ function stateFor(viewer) {
 }
 
 /** Employees with this month's spending, which resets on the 1st. */
-function employeesNow() {
+function employeesNow(orgId) {
   const spentOf = monthSpendAll();
-  return db.data.employees.map(e => {
+  // A company's own people; the admin (no company) sees everyone.
+  return db.data.employees.filter(e => !orgId || orgOf(e) === orgId).map(e => {
     const spent = spentOf.get(e.driverId) ?? 0;
     return { ...e, spent, status: spent > e.limit ? 'warning' : 'active' };
   });
@@ -436,7 +439,7 @@ function employerOf(driverId) {
     }
   }
   if (!e) return null;
-  const company = db.find('accounts', a => a.portal === 'business' && a.orgId === 'biz-001');
+  const company = db.find('accounts', a => a.portal === 'business' && a.orgId === orgOf(e));
   const spent = monthSpend(driverId);
   return {
     org: company?.org ?? 'Компания',
@@ -1229,13 +1232,13 @@ api.get('/loyalty', requireAuth('driver'), (req, res) => res.json(loyaltyFor(req
 api.put('/fleet/plan', requireAuth('business'), (req, res) => {
   const r = setFleetPlan(req.account.orgId, req.body?.plan);
   if (r.error) return res.status(r.status).json({ error: r.error });
-  emit({ type: 'fleet.plan', portal: 'business', actor: req.account.name, message: r.plan.plan === 'taxi' ? `Тариф для такси подключён · скидка ${r.plan.discount}%` : 'Обычный тариф автопарка', entity: req.account.orgId });
+  emit({ type: 'fleet.plan', portal: 'business', actor: req.account.name, message: r.plan.plan === 'taxi' ? `Тариф для такси подключён · скидка ${r.plan.discount}%` : 'Обычный тариф автопарка', entity: req.account.orgId, payload: { orgId: req.account.orgId } });
   res.json(r.plan);
 });
 api.get('/fleet/report', requireAuth('business'), (req, res) => {
   const month = String(req.query.month ?? new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 7));
   if (!/^\d{4}-\d{2}$/.test(month)) return res.status(400).json({ error: 'Месяц в виде ГГГГ-ММ' });
-  res.json({ month, drivers: fleetDriverReport(month) });
+  res.json({ month, drivers: fleetDriverReport(month, req.account.orgId) });
 });
 
 // Autocharge: link the car once at a charger, then plug in and it starts.
@@ -1673,6 +1676,8 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
   const employee = account.portal === 'driver' ? db.find('employees', e => e.driverId === account.id) : null;
   if (wantsCompany && !employee) return { status: 403, error: 'Зарядка за счёт компании доступна только сотрудникам автопарка' };
   const corporate = account.portal === 'business' || (wantsCompany && !!employee);
+  // Whose money: the company of the manager or of the employee.
+  const orgId = corporate ? (account.portal === 'business' ? account.orgId : orgOf(employee)) : null;
   const minimum = connector.price * MIN_PREPAID_KWH();
   if (corporate && employee) {
     const left = employee.limit - monthSpend(account.id);
@@ -1710,7 +1715,7 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
 
   // Refuse to start what the wallet cannot pay for; otherwise settlement clamps
   // the balance at zero and the charge is effectively free.
-  const walletId = corporate ? 'biz-001' : familyOwner ?? account.id;
+  const walletId = corporate ? orgId : familyOwner ?? account.id;
   const wallet = db.data.wallets[walletId];
   // The driver's own bonus pays for charging too, so it counts towards the minimum.
   const bonus = walletId === account.id ? bonusFor(account.id).balance : 0;
@@ -1749,14 +1754,15 @@ export function beginSession(account, stationId, connectorId, opts = {}) {
     // The network's own promo first; Voli Plus takes its share off what is left, and Voli pays it.
     networkPrice: Math.round(connector.price * band.multiplier * (1 - (promo && promo.funder !== 'voli' ? promo.percent : 0) / 100)),
     // A company charge on the taxi tariff takes the park's volume discount; a private one, Plus.
-    price: Math.round(connector.price * band.multiplier * (1 - (promo?.percent ?? 0) / 100) * (partnerNet ? 1 : 1 - (corporate ? fleetDiscount() : plusActive(account.id) ? PLUS.discount : 0) / 100)),
+    price: Math.round(connector.price * band.multiplier * (1 - (promo?.percent ?? 0) / 100) * (partnerNet ? 1 : 1 - (corporate ? fleetDiscount(orgId) : plusActive(account.id) ? PLUS.discount : 0) / 100)),
     ...(!partnerNet && !corporate && plusActive(account.id) ? { plus: true } : {}),
-    ...(!partnerNet && corporate && fleetDiscount() ? { fleetDiscount: fleetDiscount() } : {}),
+    ...(!partnerNet && corporate && fleetDiscount(orgId) ? { fleetDiscount: fleetDiscount(orgId) } : {}),
     ...(promo ? { promo: { id: promo.id, title: promo.title, percent: promo.percent, funder: promo.funder ?? 'network' } } : {}),
     // Platform commission is locked at start too, so a rate change is not retroactive.
     commissionRate: db.byId('operators', station.operatorId)?.commission ?? DEFAULT_COMMISSION,
     status: 'active',
     corporate,
+    ...(corporate ? { orgId } : {}),
     ...(familyOwner && !corporate ? { familyOwner } : {}),
     ...(onCredit ? { credit: true } : {}),
     ...(directOp ? { direct: directOp.id } : {}),
@@ -1931,7 +1937,7 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
   };
   db.insert('transactions', transaction);
 
-  const walletId = session.corporate ? 'biz-001' : session.familyOwner ?? session.userId;
+  const walletId = session.corporate ? orgOf(session) : session.familyOwner ?? session.userId;
   const wallet = db.data.wallets[walletId];
   const balanceBefore = wallet?.balance ?? 0;
   // A credit charge is owed, not taken from the wallet.
@@ -1986,7 +1992,7 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
           ? `${employee.name}: лимит исчерпан — ${employee.spent.toLocaleString('ru-RU')} из ${employee.limit.toLocaleString('ru-RU')} сум`
           : `${employee.name}: израсходовано 80% лимита — ${employee.spent.toLocaleString('ru-RU')} из ${employee.limit.toLocaleString('ru-RU')} сум`,
         entity: employee.id,
-        payload: { share: crossed, spent: employee.spent, limit: employee.limit },
+        payload: { share: crossed, spent: employee.spent, limit: employee.limit, orgId: orgOf(employee) },
       });
     }
   }
@@ -1997,7 +2003,7 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
       actor: 'Платформа',
       message: `Баланс корпоративного счёта ниже порога: ${wallet.balance.toLocaleString('ru-RU')} сум`,
       entity: walletId,
-      payload: { balance: wallet.balance, threshold: wallet.threshold },
+      payload: { balance: wallet.balance, threshold: wallet.threshold, orgId: walletId },
     });
   }
 
@@ -2119,7 +2125,7 @@ api.post('/sessions/:id/tick', requireAuth(), (req, res) => {
   if (!session || session.status !== 'active') return res.status(404).json({ error: 'Нет активной сессии' });
   // The driver, their fleet, the station's network or the platform — nobody else moves this meter.
   const a = req.account;
-  const mayTick = a.portal === 'admin' || session.userId === a.id || (a.portal === 'business' && session.corporate) || (a.portal === 'operator' && session.operatorId === a.orgId);
+  const mayTick = a.portal === 'admin' || session.userId === a.id || (a.portal === 'business' && session.corporate && orgOf(session) === a.orgId) || (a.portal === 'operator' && session.operatorId === a.orgId);
   if (!mayTick) return res.status(404).json({ error: 'Нет активной сессии' });
   // A charge point connected over OCPP owns the meter for its sessions.
   if (['ocpp', 'ocpi', 'uzgrid', 'network'].includes(session.source)) return res.json({ session });
@@ -2266,7 +2272,7 @@ api.post('/stations/:id/bookings', requireAuth('driver', 'business'), featureOn(
   );
   if (clash) return res.status(409).json({ error: 'Это время уже забронировано' });
 
-  const walletId = account.portal === 'business' ? 'biz-001' : account.id;
+  const walletId = account.portal === 'business' ? account.orgId : account.id;
   const wallet = db.data.wallets[walletId];
   // Booking is free with Plus.
   const fee = account.portal === 'driver' && plusActive(account.id) ? 0 : BOOKING_FEE();
@@ -2562,7 +2568,8 @@ api.post('/employees/:id/limit', requireAuth('business', 'admin'), (req, res) =>
   const limit = Number(req.body?.limit);
   if (!Number.isFinite(limit) || limit < 0) return res.status(400).json({ error: 'Некорректный лимит' });
   const employee = db.byId('employees', req.params.id);
-  if (!employee) return res.status(404).json({ error: 'Сотрудник не найден' });
+  // A manager changes only their own company's people.
+  if (!employee || (req.account.portal === 'business' && orgOf(employee) !== req.account.orgId)) return res.status(404).json({ error: 'Сотрудник не найден' });
 
   employee.limit = limit;
   employee.spent = monthSpend(employee.driverId);
@@ -2575,6 +2582,7 @@ api.post('/employees/:id/limit', requireAuth('business', 'admin'), (req, res) =>
     actor: req.account.name,
     message: `Лимит ${employee.name} → ${limit.toLocaleString('ru-RU')} сум`,
     entity: employee.id,
+    payload: { orgId: orgOf(employee) },
   });
 
   res.json({ employee });

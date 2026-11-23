@@ -5,6 +5,7 @@ import { analyticsFor, growthFor, investorFor } from '../analytics.js';
 import { refundDebt } from '../credit.js';
 import { refundNetwork } from '../direct.js';
 import { returnBonus } from '../rewards.js';
+import { orgOf } from '../org.js';
 import { api, emit, requireAuth } from '../api.js';
 
 // ---------------------------------------------------------------------------
@@ -36,7 +37,7 @@ api.post('/transactions/:id/refund', requireAuth('admin'), (req, res) => {
     // Back to the driver's balance at that network.
     refundNetwork(session, txn.amount);
   } else {
-    const walletId = session?.corporate ? 'biz-001' : session?.familyOwner ?? txn.userId;
+    const walletId = session?.corporate ? orgOf(session) : session?.familyOwner ?? txn.userId;
     const wallet = (db.data.wallets[walletId] ??= { balance: 0, currency: 'UZS', autoTopUp: false, threshold: 0, card: null });
     // What the bonus paid goes back as bonus; only what the wallet paid goes back to the wallet.
     const bonus = Math.min(txn.amount, txn.bonus ?? 0);

@@ -1,5 +1,6 @@
 import { DEFAULT_COMMISSION } from './commission.js';
 import { db } from './db.js';
+import { orgOf } from './org.js';
 
 /**
  * Aggregates for the dashboards, computed from sessions on every request so
@@ -54,22 +55,33 @@ const minutesOf = s => {
   return (m.endT - m.t) / 60000;
 };
 
-/** What a fleet employee has charged to the company this month — limits are checked against it. */
+// The company a driver charges to now: a person who moved company starts the month afresh there.
+const employerOrg = driverId => {
+  const e = db.data.employees.find(x => x.driverId === driverId);
+  return e ? orgOf(e) : null;
+};
+
+/** What a fleet employee has charged to their company this month — limits are checked against it. */
 export function monthSpend(driverId, now = Date.now()) {
   const from = monthStart(now);
+  const org = employerOrg(driverId);
   let sum = 0;
   for (const s of db.data.sessions) {
-    if (s.userId === driverId && s.corporate && s.status === 'completed' && startOf(s) >= from) sum += s.cost;
+    if (s.userId === driverId && s.corporate && (!org || orgOf(s) === org) && s.status === 'completed' && startOf(s) >= from) sum += s.cost;
   }
   return sum;
 }
 
-/** monthSpend for everyone at once, in one pass: driverId → this month's company spend. */
+/** monthSpend for everyone at once, in one pass: driverId → this month's spend to their company. */
 export function monthSpendAll(now = Date.now()) {
   const from = monthStart(now);
+  const orgs = new Map(db.data.employees.filter(e => e.driverId).map(e => [e.driverId, orgOf(e)]));
   const out = new Map();
   for (const s of db.data.sessions) {
-    if (s.corporate && s.status === 'completed' && startOf(s) >= from) out.set(s.userId, (out.get(s.userId) ?? 0) + s.cost);
+    if (!s.corporate || s.status !== 'completed' || startOf(s) < from) continue;
+    const org = orgs.get(s.userId);
+    if (org && orgOf(s) !== org) continue;
+    out.set(s.userId, (out.get(s.userId) ?? 0) + s.cost);
   }
   return out;
 }
@@ -97,7 +109,7 @@ function scopeSessions(viewer) {
     case 'operator':
       return all.filter(s => s.operatorId === viewer.orgId);
     case 'business':
-      return all.filter(s => s.corporate);
+      return all.filter(s => s.corporate && orgOf(s) === viewer.orgId);
     case 'driver':
       return all.filter(s => s.userId === viewer.id);
     default:
@@ -426,7 +438,9 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
   if (viewer?.portal === 'business' || viewer?.portal === 'admin') {
     const corporate = groupBy(done.filter(s => s.corporate), 'userId');
     const spentMonthOf = monthSpendAll(now);
-    result.employees = db.data.employees.map(e => {
+    // A company sees its own people; the admin sees everyone's.
+    const staff = viewer.portal === 'business' ? db.data.employees.filter(e => orgOf(e) === viewer.orgId) : db.data.employees;
+    result.employees = staff.map(e => {
       const list = (e.driverId && corporate.get(e.driverId)) || [];
       return {
         id: e.id,
@@ -454,8 +468,9 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
 
   // A fleet sees every corporate charge of the period, with who and which car.
   if (viewer?.portal === 'business') {
-    const employees = new Map(db.data.employees.map(e => [e.driverId, e]));
-    const vehicles = new Map(db.data.vehicles.map(v => [v.driverId, v]));
+    const mine = db.data.employees.filter(e => orgOf(e) === viewer.orgId);
+    const employees = new Map(mine.map(e => [e.driverId, e]));
+    const vehicles = new Map(db.data.vehicles.filter(v => orgOf(v) === viewer.orgId).map(v => [v.driverId, v]));
     const cityOf = new Map(db.data.stations.map(st => [st.id, st.city]));
     result.trips = inRange
       .filter(s => s.status !== 'active')
@@ -484,9 +499,9 @@ export function analyticsFor(viewer, { days = 30 } = {}) {
         };
       });
     const wallet = db.data.wallets[viewer.orgId];
-    const budget = db.data.employees.reduce((n, e) => n + e.limit, 0);
+    const budget = mine.reduce((n, e) => n + e.limit, 0);
     const spentOf = monthSpendAll(now);
-    const spentMonth = db.data.employees.reduce((n, e) => n + (spentOf.get(e.driverId) ?? 0), 0);
+    const spentMonth = mine.reduce((n, e) => n + (spentOf.get(e.driverId) ?? 0), 0);
     result.account = {
       balance: wallet?.balance ?? 0,
       threshold: wallet?.threshold ?? 0,

@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { ArrowRight, Lock, LoaderCircle, ShieldCheck, TriangleAlert, Copy, Check, KeyRound } from 'lucide-react';
 import { useSync } from '../lib/sync';
 import { useI18n } from '../lib/i18n';
@@ -17,7 +17,84 @@ interface Props {
   onBack: () => void;
 }
 
-export default function PortalLogin({ portal, title, subtitle, icon, onBack }: Props) {
+/**
+ * A company's manager opens the link from the invitation letter
+ * (?portal=business&invite=…): sets a password, and is signed in.
+ */
+function InviteSetup({ token, onDone }: { token: string; onDone: () => void }) {
+  const { actions, login } = useSync();
+  const [info, setInfo] = useState<{ login: string; name: string; org: string } | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  const [password, setPassword] = useState('');
+  const [again, setAgain] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    actions.inviteInfo(token).then(setInfo).catch(e => setFailed((e as Error).message));
+  }, [actions, token]);
+  const leave = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('invite');
+    window.history.replaceState(null, '', url.toString());
+    onDone();
+  };
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (busy || !info) return;
+    if (password !== again) return setError('Пароли не совпадают');
+    setBusy(true);
+    setError(null);
+    try {
+      await actions.acceptInvite(token, password);
+      const url = new URL(window.location.href);
+      url.searchParams.delete('invite');
+      window.history.replaceState(null, '', url.toString());
+      await login('business', info.login, password);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не получилось');
+      setBusy(false);
+    }
+  };
+  const input = 'w-full px-4 py-3 rounded-xl border border-slate-200 text-[15px] outline-none focus:border-[#8FD61A]';
+  return (
+    <div className="min-h-full flex items-center justify-center p-5 bg-[#F6F7F3]">
+      <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
+        <div className="w-12 h-12 rounded-2xl bg-[#C6F432] text-[#111] grid place-items-center mb-4"><KeyRound size={22} /></div>
+        {failed ? (
+          <>
+            <h1 className="text-xl font-extrabold text-[#111]">Ссылка не подходит</h1>
+            <p className="text-sm text-slate-500 mt-2">{failed}</p>
+            <button onClick={leave} className="mt-5 w-full h-12 rounded-xl bg-[#111] text-white font-semibold">Ко входу</button>
+          </>
+        ) : !info ? (
+          <LoaderCircle className="animate-spin text-slate-400" />
+        ) : (
+          <form onSubmit={e => void submit(e)}>
+            <h1 className="text-xl font-extrabold text-[#111]">Кабинет компании</h1>
+            <p className="text-sm text-slate-500 mt-1">{`${info.org} · ${info.name}`}</p>
+            <p className="text-xs text-slate-400 mt-3">Логин</p>
+            <p className="text-sm font-semibold text-slate-800">{info.login}</p>
+            <label htmlFor="invite-password" className="block text-xs text-slate-500 mt-4 mb-1">Придумайте пароль — от 10 символов, буквы и цифры</label>
+            <input id="invite-password" type="password" autoComplete="new-password" className={input} value={password} onChange={e => setPassword(e.target.value)} />
+            <label htmlFor="invite-password2" className="block text-xs text-slate-500 mt-3 mb-1">Повторите пароль</label>
+            <input id="invite-password2" type="password" autoComplete="new-password" className={input} value={again} onChange={e => setAgain(e.target.value)} />
+            {error && <p role="alert" className="text-sm text-red-600 mt-3">{error}</p>}
+            <button type="submit" disabled={busy || password.length < 10} className="mt-5 w-full h-12 rounded-xl bg-[#C6F432] text-[#111] font-bold disabled:opacity-50">{busy ? 'Сохраняем…' : 'Сохранить и войти'}</button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function PortalLogin(props: Props) {
+  const invite = props.portal === 'business' && typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('invite') : null;
+  const [skipInvite, setSkipInvite] = useState(false);
+  if (invite && !skipInvite) return <InviteSetup token={invite} onDone={() => setSkipInvite(true)} />;
+  return <LoginForm {...props} />;
+}
+
+function LoginForm({ portal, title, subtitle, icon, onBack }: Props) {
   const { login, verify2fa, credentials } = useSync();
   const { t } = useI18n();
   const theme = THEME[portal];

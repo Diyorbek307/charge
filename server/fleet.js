@@ -9,24 +9,25 @@
 import { db } from './db.js';
 import { setting } from './settings.js';
 import { metaOf } from './analytics.js';
+import { DEMO_ORG, orgOf } from './org.js';
 
 const DAY = 86_400_000;
 /** The volume tiers, as the admin set them (server/settings.js). */
 const TAXI_TIERS_NOW = () => setting('fleet.tiers');
 const plans = () => (db.data.fleetPlans ??= {});
 
-const kwh30 = () => {
+const kwh30 = orgId => {
   const since = Date.now() - 30 * DAY;
-  return Math.round(db.data.sessions.filter(s => s.corporate && s.status === 'completed' && Date.parse(s.start) >= since).reduce((n, s) => n + (s.energy ?? 0), 0));
+  return Math.round(db.data.sessions.filter(s => s.corporate && orgOf(s) === orgId && s.status === 'completed' && Date.parse(s.start) >= since).reduce((n, s) => n + (s.energy ?? 0), 0));
 };
 
-export function fleetPlanFor(orgId = 'biz-001') {
+export function fleetPlanFor(orgId = DEMO_ORG) {
   const p = plans()[orgId];
-  const volume = kwh30();
+  const volume = kwh30(orgId);
   const TAXI_TIERS = TAXI_TIERS_NOW();
   const i = TAXI_TIERS.reduce((best, t, k) => (volume >= t.kwh ? k : best), 0);
   const month = new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 7);
-  const saved = db.data.sessions.filter(s => s.corporate && s.fleetCovered && new Date(Date.parse(s.start) + 5 * 3600_000).toISOString().startsWith(month)).reduce((n, s) => n + s.fleetCovered, 0);
+  const saved = db.data.sessions.filter(s => s.corporate && orgOf(s) === orgId && s.fleetCovered && new Date(Date.parse(s.start) + 5 * 3600_000).toISOString().startsWith(month)).reduce((n, s) => n + s.fleetCovered, 0);
   return {
     plan: p?.plan ?? 'standard',
     since: p?.since ?? null,
@@ -47,20 +48,23 @@ export function setFleetPlan(orgId, plan) {
 }
 
 /** The park's discount on a company charge right now, %. */
-export const fleetDiscount = (orgId = 'biz-001') => fleetPlanFor(orgId).discount;
+export const fleetDiscount = (orgId = DEMO_ORG) => fleetPlanFor(orgId).discount;
 
 /** A driver of a park on the taxi tariff stands ahead in queues. */
-export const fleetPriority = driverId => !!db.find('employees', e => e.driverId === driverId) && fleetPlanFor().plan === 'taxi';
+export const fleetPriority = driverId => {
+  const e = db.find('employees', x => x.driverId === driverId);
+  return !!e && fleetPlanFor(orgOf(e)).plan === 'taxi';
+};
 
 /** Per driver for a month (YYYY-MM, Tashkent): charges, energy, money, night share, typical stop, where. */
-export function fleetDriverReport(month) {
+export function fleetDriverReport(month, orgId = DEMO_ORG) {
   // The month's company charges, grouped by driver in one pass.
   const byDriver = new Map();
   for (const s of db.data.sessions) {
-    if (!s.corporate || s.status !== 'completed' || metaOf(s).month !== month) continue;
+    if (!s.corporate || orgOf(s) !== orgId || s.status !== 'completed' || metaOf(s).month !== month) continue;
     (byDriver.get(s.userId) ?? byDriver.set(s.userId, []).get(s.userId)).push(s);
   }
-  return db.data.employees.map(e => {
+  return db.data.employees.filter(e => orgOf(e) === orgId).map(e => {
     const list = (e.driverId && byDriver.get(e.driverId)) || [];
     const energy = list.reduce((n, s) => n + (s.energy ?? 0), 0);
     const cost = list.reduce((n, s) => n + (s.cost ?? 0), 0);

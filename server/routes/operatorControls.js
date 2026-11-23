@@ -92,7 +92,7 @@ api.post('/wallet/topup', requireAuth('driver', 'business'), (req, res) => {
   const amount = Number(req.body?.amount);
   if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ error: 'Некорректная сумма' });
 
-  const walletId = req.account.portal === 'business' ? 'biz-001' : req.account.id;
+  const walletId = req.account.portal === 'business' ? req.account.orgId : req.account.id;
   const wallet = db.data.wallets[walletId];
   if (!wallet) return res.status(404).json({ error: 'Кошелёк не найден' });
 

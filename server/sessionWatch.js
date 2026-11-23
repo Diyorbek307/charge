@@ -5,6 +5,7 @@ import { demoEnergy } from './history.js';
 import { pushLiveCharge } from './push.js';
 import { setting, feature } from './settings.js';
 import { bonusFor } from './rewards.js';
+import { orgOf } from './org.js';
 
 /**
  * Watches running charges and the clock, so the driver does not have to:
@@ -107,11 +108,11 @@ async function watchGoals() {
 async function watchFunds() {
   const live = db.data.sessions.filter(s => s.status === 'active' && !s.credit && !s.direct && !s.fundsStopped);
   for (const session of live) {
-    const walletId = session.corporate ? 'biz-001' : session.familyOwner ?? session.userId;
+    const walletId = session.corporate ? orgOf(session) : session.familyOwner ?? session.userId;
     const wallet = db.data.wallets[walletId];
     if (!wallet) continue;
     const bonus = walletId === session.userId ? bonusFor(session.userId).balance : 0;
-    const others = live.filter(s => s !== session && (s.corporate ? 'biz-001' : s.familyOwner ?? s.userId) === walletId).reduce((n, s) => n + current(s).cost, 0);
+    const others = live.filter(s => s !== session && (s.corporate ? orgOf(s) : s.familyOwner ?? s.userId) === walletId).reduce((n, s) => n + current(s).cost, 0);
     const funds = wallet.balance + bonus - others;
     const now = current(session);
     // Stop a little before the edge: the next reading comes a few seconds later.

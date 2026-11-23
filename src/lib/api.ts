@@ -387,6 +387,13 @@ export interface Prizes {
   items: { kwh: number; icon: string; title: string; left: number }[];
   taken: PrizeTaken[];
 }
+/** A company whose staff charge on its money (server/companies.js). */
+export interface Company {
+  id: string; name: string; inn: string | null; createdAt: string; createdBy: string; demo?: boolean;
+  balance: number; employees: number; monthSpend: number; monthKwh: number;
+  managers: { id: string; name: string; login: string; active: boolean; inviteExpires: string | null }[];
+}
+type InviteMail = { sent: boolean; error?: string };
 export interface PrizeTaken { id: string; kwh: number; icon: string; title: string; code: string; at: string; status: 'ready' | 'issued' | 'cancelled' }
 export interface PrizeAdmin extends PrizeTaken { userId: string; user: string; phone: string | null; issuedAt: string | null; issuedBy: string | null }
 /** Battery health from the driver's charges (server/battery.js). */
@@ -1031,6 +1038,12 @@ export const apiClient = {
   adminPrograms: () => request<any>('/admin/programs', { portal: 'admin' }),
   markPayout: (b: { invoiceId: string; operatorId: string; amount: number; paidAt: string; ref: string }) => post<{ paidAt: string }>('/admin/payouts', b, 'admin'),
   undoPayout: (invoiceId: string, operatorId: string) => request<{ removed: boolean }>(`/admin/payouts/${encodeURIComponent(invoiceId)}/${encodeURIComponent(operatorId)}`, { method: 'DELETE', portal: 'admin' }),
+  adminCompanies: () => request<Company[]>('/admin/companies', { portal: 'admin' }),
+  createCompany: (body: { name: string; inn: string; managerName: string; email: string }) => post<{ company: Company; link: string; mail: InviteMail }>('/admin/companies', body, 'admin'),
+  companyInvite: (id: string) => post<{ link: string; mail: InviteMail }>(`/admin/companies/${encodeURIComponent(id)}/invite`, {}, 'admin'),
+  companyCredit: (id: string, amount: number, reference: string) => post<{ company: Company; order: { id: string; amount: number } }>(`/admin/companies/${encodeURIComponent(id)}/credit`, { amount, reference }, 'admin'),
+  inviteInfo: (token: string) => request<{ login: string; name: string; org: string }>(`/auth/invite/${encodeURIComponent(token)}`),
+  acceptInvite: (token: string, password: string) => post<{ ok: true; login: string }>(`/auth/invite/${encodeURIComponent(token)}`, { password }),
   adminPrizeStatus: (id: string, status: 'issued' | 'ready' | 'cancelled') => post<{ prizes: PrizeAdmin[] }>(`/admin/prizes/${encodeURIComponent(id)}/status`, { status }, 'admin'),
   adminBonus: (phone: string, amount: number, reason: string) => post<BonusGrant>('/admin/bonus', { phone, amount, reason }, 'admin'),
   adminPartners: () => request<PartnerPlace[]>('/admin/partners', { portal: 'admin' }),

@@ -233,7 +233,8 @@ function recipients(event) {
     for (const a of db.data.accounts) if (a.portal === 'operator' && a.orgId === scope.operatorId) ids.add(a.id);
   }
   if ((event.type === 'wallet.topup' || event.type.startsWith('fleet.')) && scope.fleet) {
-    for (const a of db.data.accounts) if (a.portal === 'business') ids.add(a.id);
+    // The managers of that company only (true: from before companies had ids, the demo one).
+    for (const a of db.data.accounts) if (a.portal === 'business' && (scope.fleet === true ? a.orgId === 'biz-001' : a.orgId === scope.fleet)) ids.add(a.id);
   }
   return ids;
 }

@@ -153,6 +153,20 @@ export async function sendCodeLetter(to, code) {
   await send(to, `Voli · код для входа ${code}`, text, html);
 }
 
+/** A company's manager is invited to set a password; waits, so the admin hears whether it left. */
+export async function sendInviteLetter(to, company, name, link, days) {
+  const text = [`Здравствуйте, ${name}!`, '', `Для компании «${company}» открыт корпоративный кабинет Voli: сотрудники заряжаются за счёт компании, вы видите их зарядки, лимиты и отчёты.`, '', `Задайте пароль по ссылке (действует ${days} дней):`, link, '', `Логин: ${to}`, '', 'Если вы не ждали это письмо, просто проигнорируйте его.'].join('\n');
+  const html = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#111">
+<div style="background:#111;color:#C6F432;padding:18px 22px;border-radius:14px 14px 0 0;font-weight:bold;font-size:20px">Voli для бизнеса</div>
+<div style="background:#fff;border:1px solid #eee;border-top:0;padding:24px 22px;border-radius:0 0 14px 14px;line-height:1.5">
+<p style="margin:0 0 12px">Здравствуйте, ${esc(name)}!</p>
+<p style="margin:0 0 12px">Для компании <b>«${esc(company)}»</b> открыт корпоративный кабинет Voli: сотрудники заряжаются за счёт компании, вы видите их зарядки, лимиты и отчёты.</p>
+<p style="text-align:center;margin:22px 0"><a href="${esc(link)}" style="background:#C6F432;color:#111;padding:13px 24px;border-radius:12px;text-decoration:none;font-weight:bold">Задать пароль и войти</a></p>
+<p style="margin:0;color:#666;font-size:13px">Логин: ${esc(to)}<br>Ссылка действует ${days} дней. Если вы не ждали это письмо, просто проигнорируйте его.</p>
+</div></div>`;
+  await send(to, `Voli · кабинет компании «${company}»`, text, html);
+}
+
 /** The admin's test letter: waits for the answer, so the page can say what happened. */
 export async function sendTestLetter(to, actor) {
   if (!mailConfigured()) return { ok: false, error: 'Отправка не настроена: задайте RESEND_API_KEY или SMTP_HOST, SMTP_USER и SMTP_PASS в переменных окружения' };

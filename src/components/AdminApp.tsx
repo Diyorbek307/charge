@@ -9,6 +9,7 @@ import AdminOperators from './admin/Operators';
 import AdminUsers from './admin/Users';
 import AdminSessions from './admin/Sessions';
 import AdminPayments from './admin/Payments';
+import AdminCompanies from './admin/Companies';
 import AdminSettlement from './admin/Settlement';
 import AdminCommissions from './admin/Commissions';
 import AdminAnalytics from './admin/Analytics';
@@ -31,7 +32,7 @@ import {
   LayoutDashboard, MapPin, Users, Activity, DollarSign, BarChart2, Settings, LogOut, Shield,
   Building2, Brain, ScrollText, ClipboardCheck, Percent, UserCheck, Banknote, Tag, Menu, Inbox,
   Siren, Home, ScanFace, Landmark, MessageCircle, Coffee, SlidersHorizontal, Megaphone, TrendingUp,
-  Camera,
+  Camera, Briefcase,
 } from 'lucide-react';
 import { useI18n } from '../lib/i18n';
 import { useAdminInbox } from '../lib/inbox';
@@ -39,7 +40,7 @@ import SidebarThemeToggle from './SidebarThemeToggle';
 import AIChat from './AIChat';
 import { LogoMark } from '../landing/Logo';
 
-type Page = 'investor' | 'photos' | 'dashboard' | 'promos' | 'map' | 'sos' | 'hosts' | 'credit' | 'direct' | 'support' | 'operators' | 'leads' | 'users' | 'sessions' | 'payments' | 'settlement' | 'analytics' | 'ai' | 'fraud' | 'cdr' | 'commissions' | 'tariffs_global' | 'partners' | 'platform' | 'audit' | 'roles' | 'settings' | 'system_health';
+type Page = 'companies' | 'investor' | 'photos' | 'dashboard' | 'promos' | 'map' | 'sos' | 'hosts' | 'credit' | 'direct' | 'support' | 'operators' | 'leads' | 'users' | 'sessions' | 'payments' | 'settlement' | 'analytics' | 'ai' | 'fraud' | 'cdr' | 'commissions' | 'tariffs_global' | 'partners' | 'platform' | 'audit' | 'roles' | 'settings' | 'system_health';
 
 function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current: Page; onChange: (p: Page) => void; onBack: () => void; isOpen?: boolean; onClose?: () => void }) {
   const { t } = useI18n();
@@ -60,6 +61,7 @@ function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current:
       label: t('nav.group.operations'),
       items: [
         { id: 'operators' as Page, label: t('nav.operators'), icon: <Building2 size={14} /> },
+        { id: 'companies' as Page, label: 'Компании', icon: <Briefcase size={14} /> },
         { id: 'leads' as Page, label: 'Заявки', icon: <Inbox size={14} /> },
         { id: 'users' as Page, label: t('nav.users'), icon: <Users size={14} /> },
         { id: 'sessions' as Page, label: t('nav.sessions'), icon: <Activity size={14} /> },
@@ -194,7 +196,7 @@ export default function AdminApp({ onBack }: { onBack: () => void }) {
     const pages: Record<string, ReactNode> = {
       map: <AdminNetworkMap />, sos: <AdminSos />, support: <AdminSupport />, hosts: <AdminHosts />, credit: <AdminCredit />, photos: <AdminDriverPhotos />, operators: <AdminOperators onNavigate={go} />, leads: <LeadsPage />, users: <AdminUsers />,
       settlement: <AdminSettlement />, direct: <DirectSettlement portal="admin" />, commissions: <AdminCommissions />, tariffs_global: <AdminTariffs />, partners: <AdminPartners />, platform: <AdminPlatform />, promos: <AdminPromos />,
-      sessions: <AdminSessions />, payments: <AdminPayments />,
+      sessions: <AdminSessions />, payments: <AdminPayments />, companies: <AdminCompanies />,
       analytics: <AdminAnalytics />, investor: <Investor />, ai: <AdminInsights onNavigate={go} />, fraud: <AdminRisk />,
       cdr: <AdminCdr />, audit: <AdminAudit />, roles: <AdminRoles />,
       settings: <AccountSettings portal="admin"><DemoReset /></AccountSettings>,
