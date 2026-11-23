@@ -82,38 +82,66 @@ const RECEIPT_PAID = 4;
 const RECEIPT_CANCELLED = 50;
 const checking = new Set();
 
-/** Asks Payme about one receipt and credits the order once it is paid. */
+// An order closed on our side whose receipt may still have been paid: checked for this long.
+const LATE_PAYMENT_MS = 7 * 24 * 60 * 60_000;
+const recheckable = o => o.receipt?.id && (o.status === 'pending' || (o.status === 'expired' && Date.now() - new Date(o.created).getTime() < LATE_PAYMENT_MS));
+
+/**
+ * Asks Payme about one receipt and credits the order once it is paid. Payme is
+ * the source of truth: a receipt it says is paid is credited even if our side
+ * had already given up on it — money taken from a card always reaches the wallet.
+ */
 async function syncReceipt(order) {
-  if (!order.receipt?.id || order.status !== 'pending' || checking.has(order.id)) return order;
+  if (!recheckable(order) || checking.has(order.id)) return order;
   checking.add(order.id);
   try {
     const { state } = await paymeApi('receipts.check', { id: order.receipt.id });
     order.receipt.state = state;
     order.receipt.checkedAt = new Date().toISOString();
-    if (order.status !== 'pending') return order;
     if (state === RECEIPT_PAID) {
+      if (order.status === 'paid') return order;
+      if (order.status === 'expired') alertTeam(`payme-late:${order.id}`, 'Payme: чек оплачен после того, как мы его закрыли — деньги зачислены', [['Счёт', order.id], ['Сумма', `${order.amount} сум`]]);
+      order.status = 'pending';
       order.payme = { id: order.receipt.id, state: 2, performTime: Date.now() };
       credit(order, 'payme');
+    } else if (order.status !== 'pending') {
+      db.save();
     } else if (state === RECEIPT_CANCELLED) {
       order.status = 'cancelled';
       db.save();
     } else if (state === 0 && Date.now() - new Date(order.created).getTime() > ORDER_TTL_MS) {
-      // Nobody paid it within a day: close it at Payme too, so it cannot be paid later.
-      order.status = 'expired';
+      // Nobody paid it within a day: close it at Payme first, so it cannot be paid later.
+      // Only once Payme has taken the cancel is it closed here; until then it stays open and checked.
+      try {
+        await paymeApi('receipts.cancel', { id: order.receipt.id });
+        order.status = 'expired';
+      } catch (err) {
+        console.warn('[payme receipts] cancel failed, kept open:', err.message);
+      }
       db.save();
-      paymeApi('receipts.cancel', { id: order.receipt.id }).catch(() => {});
+    } else {
+      db.save();
     }
+    paymeFailures = 0;
   } catch (err) {
     console.error('[payme receipts]', err.message);
+    // Wrong keys or Payme down for a while: the team hears of it, not only the log.
+    if (++paymeFailures >= 5) alertTeam('payme-receipts', 'Payme не отвечает на проверку чеков', [['Ошибка', err.message], ['Подряд', String(paymeFailures)]]);
   } finally {
     checking.delete(order.id);
   }
   return order;
 }
+let paymeFailures = 0;
 
-/** Every pending receipt gets checked in the background, so money arrives even if the app was closed. */
+/**
+ * Every open receipt gets checked in the background, so money arrives even if
+ * the app was closed. The longest-unchecked first, so a crowd of abandoned
+ * receipts never hides an older one that was paid.
+ */
 async function sweepReceipts() {
-  for (const o of orders().filter(o => o.receipt?.id && o.status === 'pending').slice(0, 50)) await syncReceipt(o);
+  const due = orders().filter(recheckable).sort((a, b) => String(a.receipt.checkedAt ?? '').localeCompare(String(b.receipt.checkedAt ?? '')));
+  for (const o of due.slice(0, 60)) await syncReceipt(o);
 }
 if (receiptsOn()) setInterval(() => { sweepReceipts().catch(() => {}); }, 30_000).unref();
 
@@ -178,7 +206,8 @@ const sameMerchant = (order, operatorId) => (order.operatorId ?? null) === (oper
 const MIN_TOPUP_NOW = () => setting('topup.min');
 const MAX_TOPUP_NOW = () => setting('topup.max');
 const MAX_PENDING_PER_USER = 5;
-const ORDER_TTL_MS = 24 * 60 * 60_000;
+// A day; tests shorten it (ORDER_TTL_MS) to see what happens after.
+const ORDER_TTL_MS = Number(process.env.ORDER_TTL_MS) || 24 * 60 * 60_000;
 const PAYME_TIMEOUT_MS = 12 * 60 * 60_000;
 
 export const paymentsApi = express.Router();
@@ -347,6 +376,7 @@ paymentsApi.post('/topup', async (req, res) => {
       order.receipt = { id: receipt._id, state: receipt.state ?? 0 };
     } catch (err) {
       console.error('[payme receipts]', err.message);
+      alertTeam('payme-create', 'Payme: не удалось создать чек для пополнения', [['Ошибка', err.message], ['Сумма', `${amount} сум`]]);
       return res.status(502).json({ error: 'Payme сейчас не отвечает — попробуйте ещё раз или выберите другой способ' });
     }
   }
@@ -366,7 +396,7 @@ paymentsApi.get('/', async (req, res) => {
   expireStale();
   const mine = orders().filter(o => o.userId === account.id).slice(0, 20);
   // Back from Payme: the driver's open receipts are checked right away.
-  await Promise.all(mine.filter(o => o.receipt?.id && o.status === 'pending').slice(0, 5).map(syncReceipt));
+  await Promise.all(mine.filter(recheckable).slice(0, 5).map(syncReceipt));
   res.json(mine.map(publicOrder));
 });
 

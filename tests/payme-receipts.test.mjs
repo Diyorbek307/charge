@@ -21,6 +21,8 @@ let dataDir;
 const receipts = new Map();
 const seen = [];
 let fail = false;
+let cancelFails = false;
+const TTL = 4000;
 
 async function call(path, { method = 'GET', token, body } = {}) {
   const res = await fetch(`${BASE}${path}`, {
@@ -49,7 +51,11 @@ before(async () => {
       const r = receipts.get(body.params?.id);
       if (!r) return reply({ error: { code: -31602, message: 'Чек не найден' } });
       if (body.method === 'receipts.check') return reply({ result: { state: r.state } });
-      if (body.method === 'receipts.cancel') { r.state = 50; return reply({ result: { receipt: r } }); }
+      if (body.method === 'receipts.cancel') {
+        if (cancelFails) return reply({ error: { code: -32400, message: 'busy' } });
+        if (r.state !== 4) r.state = 50;
+        return reply({ result: { receipt: r } });
+      }
       reply({ error: { code: -32601, message: 'no method' } });
     });
   }).listen(PAYME_PORT);
@@ -58,7 +64,7 @@ before(async () => {
   server = spawn(process.execPath, ['server.js'], {
     env: {
       ...process.env, PORT: String(PORT), DATA_DIR: dataDir, DEMO_SIMULATION: 'false', DATABASE_URL: '', OSM_PLACES: 'false',
-      PAYME_CASHBOX_ID: 'cashbox-1', PAYME_CASHBOX_KEY: 'secret-1', PAYME_API_URL: `http://127.0.0.1:${PAYME_PORT}/api`,
+      PAYME_CASHBOX_ID: 'cashbox-1', PAYME_CASHBOX_KEY: 'secret-1', PAYME_API_URL: `http://127.0.0.1:${PAYME_PORT}/api`, ORDER_TTL_MS: String(TTL),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -124,4 +130,36 @@ test('when Payme is down the driver gets a clear error and no order is left', as
   assert.equal(r.status, 502);
   assert.match(r.data.error, /Payme/);
   assert.equal((await call('/payments', { token })).data.length, count);
+});
+
+test('an unpaid receipt is closed only once Payme takes the cancel; paid meanwhile, it is credited', async () => {
+  const token = await driver();
+  const balance = async () => (await call('/state', { token })).data.wallets['acc-driver'].balance;
+  const start = await balance();
+  const r = await call('/payments/topup', { method: 'POST', token, body: { provider: 'payme', amount: 30000 } });
+  const receiptId = [...receipts.keys()].at(-1);
+  await new Promise(res => setTimeout(res, TTL + 500));
+  // Past its time, but Payme refuses the cancel: the order stays open, not "expired".
+  cancelFails = true;
+  assert.equal((await call(`/payments/order/${r.data.order.id}`, { token })).data.status, 'pending');
+  cancelFails = false;
+  // The driver pays it after all: the money reaches the wallet.
+  receipts.get(receiptId).state = 4;
+  assert.equal((await call(`/payments/order/${r.data.order.id}`, { token })).data.status, 'paid');
+  assert.equal(await balance(), start + 30000);
+});
+
+test('a receipt Payme reports paid after we closed it is still credited, once', async () => {
+  const token = await driver();
+  const balance = async () => (await call('/state', { token })).data.wallets['acc-driver'].balance;
+  const start = await balance();
+  const r = await call('/payments/topup', { method: 'POST', token, body: { provider: 'payme', amount: 40000 } });
+  const receiptId = [...receipts.keys()].at(-1);
+  await new Promise(res => setTimeout(res, TTL + 500));
+  assert.equal((await call(`/payments/order/${r.data.order.id}`, { token })).data.status, 'expired');
+  // Paid at Payme in the same moment (Payme says 4): it must not be lost.
+  receipts.get(receiptId).state = 4;
+  assert.equal((await call(`/payments/order/${r.data.order.id}`, { token })).data.status, 'paid');
+  await call('/payments', { token });
+  assert.equal(await balance(), start + 40000);
 });
