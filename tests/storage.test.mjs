@@ -24,7 +24,8 @@ async function boot(port) {
   child.stdout.on('data', d => (log += d));
   child.stderr.on('data', d => (log += d));
   const base = `http://127.0.0.1:${port}/api`;
-  for (let i = 0; i < 150; i++) {
+  // PGlite starts slowly when the whole suite is running: up to 45 s, like the other suites.
+  for (let i = 0; i < 450; i++) {
     try {
       if ((await fetch(`${base}/state`)).ok) return { child, base, log: () => log };
     } catch {

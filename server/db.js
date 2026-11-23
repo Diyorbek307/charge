@@ -118,7 +118,18 @@ class PostgresStore {
       this.pool.on('error', err => console.warn('[db] idle connection closed:', err.message));
       this.client = { query: (text, params) => this.pool.query(text, params) };
     }
-    await this.client.query(
+    return this.client;
+  }
+
+  /**
+   * The tables, made on every load attempt and before the first write: a first
+   * attempt that failed half-way (a dropped connection, a file briefly locked)
+   * must not leave the next one reading a table that was never made.
+   */
+  async #tables() {
+    const client = await this.#connect();
+    if (this.tablesReady) return client;
+    await client.query(
       `CREATE TABLE IF NOT EXISTS onecharge_state (
          id integer PRIMARY KEY,
          doc jsonb NOT NULL,
@@ -137,7 +148,8 @@ class PostgresStore {
          updated_at timestamptz NOT NULL DEFAULT now()
        )`,
     );
-    return this.client;
+    this.tablesReady = true;
+    return client;
   }
 
   async load() {
@@ -145,15 +157,16 @@ class PostgresStore {
     // within a minute or two: wait for it instead of crashing the server on start.
     for (let attempt = 0; ; attempt++) {
       try {
-        const client = await this.#connect();
+        const client = await this.#tables();
         const { rows } = await client.query('SELECT gz FROM onecharge_doc WHERE id = 1');
         if (rows[0]?.gz) return JSON.parse((await gunzip(Buffer.from(rows[0].gz))).toString('utf8'));
         // Not yet moved: the jsonb copy, as text so Postgres does not rebuild it.
         const old = await client.query('SELECT doc::text AS doc FROM onecharge_state WHERE id = 1');
         return old.rows[0]?.doc ? JSON.parse(old.rows[0].doc) : null;
       } catch (err) {
-        const transient = /terminated|recovery mode|starting up|shutting down|ECONNRESET|ECONNREFUSED|EPIPE|ETIMEDOUT|Connection|socket|closed/i.test(String(err?.message));
+        const transient = /terminated|recovery mode|starting up|shutting down|ECONNRESET|ECONNREFUSED|EPIPE|ETIMEDOUT|Connection|socket|closed|does not exist/i.test(String(err?.message));
         if (attempt >= 8 || !transient) throw err;
+        this.tablesReady = false;
         console.warn(`[db] load failed (${err.message}), retrying`);
         await new Promise(r => setTimeout(r, Math.min(15_000, 2000 * 2 ** attempt)));
       }
@@ -174,7 +187,7 @@ class PostgresStore {
   }
 
   async #upsert(json) {
-    const client = await this.#connect();
+    const client = await this.#tables();
     const gz = await gzip(Buffer.from(json, 'utf8'));
     await client.query(
       `INSERT INTO onecharge_doc (id, gz, size, updated_at) VALUES (1, $1, $2, now())
