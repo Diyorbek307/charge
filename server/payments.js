@@ -148,6 +148,13 @@ const ACQUIRERS = {
   },
 };
 const PROVIDER_NAME = { payme: 'Payme', click: 'Click', uzum: 'Uzum', humo: 'Humo' };
+
+/** A way to top up that can take money now: its keys are set (or the demo's sandbox ones). */
+export function topupReady(id) {
+  if (id === 'payme') return Boolean(PAYME.key) || receiptsOn();
+  if (id === 'click') return Boolean(CLICK.secret);
+  return Boolean(ACQUIRERS[id]?.secret);
+}
 export function acquirerSign(provider, f) {
   return crypto.createHmac('sha256', ACQUIRERS[provider].secret).update(`${f.order_id}|${f.amount}|${f.status}|${f.transaction_id}`).digest('hex');
 }

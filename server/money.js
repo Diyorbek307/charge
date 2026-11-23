@@ -10,8 +10,14 @@ const DEMO_MODE = process.env.DEMO_MODE !== 'false';
 
 const REAL_KEYS = ['PAYME_KEY', 'CLICK_SECRET_KEY', 'UZUM_SECRET', 'HUMO_SECRET', 'PAYNET_PASSWORD'];
 
-/** Which real payment keys are set (names only). */
-export const realPaymentKeys = () => REAL_KEYS.filter(k => Boolean(process.env[k]));
+/**
+ * Which real payment keys are set (names only). The Payme cashbox key (receipts)
+ * is real only with PAYME_TEST=false; otherwise it talks to Payme's test server.
+ */
+export const realPaymentKeys = () => [
+  ...REAL_KEYS.filter(k => Boolean(process.env[k])),
+  ...(process.env.PAYME_CASHBOX_KEY && process.env.PAYME_TEST === 'false' ? ['PAYME_CASHBOX_KEY'] : []),
+];
 
 /** Some payment system takes real money here. */
 export const realMoney = () => realPaymentKeys().length > 0;

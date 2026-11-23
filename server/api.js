@@ -36,6 +36,7 @@ import { promoFor, publicPromos, createPromo, createCampaign, stopPromo, promosO
 import { syncRewards, rewardsFor, bonusFor, spendBonus, rewardsOverview, grantManual, topupBonus, prizesOverview, setPrizeStatus, claimPrize, newlyAffordable } from './rewards.js';
 import { batteryHealthFor } from './battery.js';
 import { setting, feature, updateSettings, settingsView, publicSettings } from './settings.js';
+import { topupReady } from './payments.js';
 import { attempt, blocked, forgive, hashPasswordAsync, verifyPasswordAsync } from './guard.js';
 
 /** Answers a refused try with when to try again. */
@@ -339,7 +340,7 @@ function stateFor(viewer) {
     bookings: activeBookings.map(anonBooking),
     promos: publicPromos(),
     // preview: stations and money are the demo's until real networks and payments are connected.
-    platform: { ...publicSettings(), preview: playMoney() },
+    platform: platformForApp(),
     events: visibleEvents(viewer),
     stats: statsFor(viewer),
     serverTime: new Date().toISOString(),
@@ -450,6 +451,16 @@ function employerOf(driverId) {
 const companyIntent = new Map();
 
 /** Records an event in the activity log and pushes it to every live portal. */
+/**
+ * The platform settings the apps read. Only the ways to top up that can take
+ * money now are offered: one the admin has on but without its keys would only
+ * end in "the provider is not set up".
+ */
+function platformForApp() {
+  const p = publicSettings();
+  return { ...p, topup: { ...p.topup, providers: p.topup.providers.filter(topupReady) }, preview: playMoney() };
+}
+
 function emit({ type, portal, actor, message, entity = null, payload = {} }) {
   if (payload?.simulated) {
     const live = withScope({ id: `sim-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, type, portal, actor, message, entity, payload, ts: new Date().toISOString() });
