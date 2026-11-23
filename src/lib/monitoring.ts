@@ -26,7 +26,10 @@ export function initMonitoring() {
           }
           return b;
         },
-        beforeSend(event) {
+        beforeSend(event, hint) {
+          // A page reloading onto a new build, or a file a deploy just replaced: not a bug.
+          const err = hint?.originalException ?? event.exception?.values?.[0]?.value;
+          if (reloadingForNewBuild() || isMissingBuildFile(err)) return null;
           delete event.user;
           if (event.request) {
             delete event.request.headers;

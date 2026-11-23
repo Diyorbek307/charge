@@ -5,7 +5,7 @@
  */
 const KEY = 'voli-build-reload';
 // The last two: a part of the old build paired with a part of the new one has no default export to read.
-const CHUNK = /dynamically imported module|Importing a module script failed|error loading dynamically imported module|Unable to preload CSS|of undefined \(reading 'default'\)|property 'default' of undefined|undefined is not an object \(evaluating '[^']*\.default'\)/i;
+const CHUNK = /dynamically imported module|Importing a module script failed|error loading dynamically imported module|Unable to preload CSS|of undefined \(reading 'default'\)|property 'default' of undefined|property 'default' of '\(intermediate value\)'|undefined is not an object \(evaluating '[^']*\.default'\)/i;
 
 let reloading = false;
 /**
