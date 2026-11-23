@@ -1,6 +1,7 @@
 import { DEFAULT_COMMISSION } from './commission.js';
 import { db } from './db.js';
 import { orgOf } from './org.js';
+import { OPERATORS as DEMO_NETWORKS } from './history.js';
 
 /**
  * Aggregates for the dashboards, computed from sessions on every request so
@@ -588,10 +589,12 @@ function invoicesFor(operatorIds, sessions, now) {
       // history before last month counts as paid, so the prototype does not look in arrears.
       const record = (db.data.payouts ?? []).find(r => r.invoiceId === invoiceId && r.operatorId === id);
       const demoHistory = DEMO_MODE && month < previousMonth(now);
+      // The demo's own networks (made-up charges): Voli owes them nothing, so they are never "overdue".
+      const demoNet = DEMO_NETWORKS.some(n => n.id === id);
       const status = month === current ? 'accruing'
         : record || demoHistory ? 'paid'
         // The demo never shows Voli as late to a network: showing a partner the cabinet, that would read as arrears.
-        : !DEMO_MODE && now >= payDate + PAYOUT_GRACE ? 'overdue'
+        : !DEMO_MODE && !demoNet && now >= payDate + PAYOUT_GRACE ? 'overdue'
         : 'processing';
       out.push({
         id: invoiceId,

@@ -54,3 +54,12 @@ test('a Payme cashbox key is real money only with PAYME_TEST=false', () => {
   assert.deepEqual(keys({ PAYME_CASHBOX_KEY: 'k', PAYME_TEST: '' }), []);
   assert.deepEqual(keys({ PAYME_CASHBOX_KEY: 'k', PAYME_TEST: 'false' }), ['PAYME_CASHBOX_KEY']);
 });
+
+test('with real money on, the demo networks are never shown as owed money (no "overdue payout" alarms)', async () => {
+  const r = await fetch(`http://127.0.0.1:${PORT}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ portal: 'admin', login: 'admin@voli.uz', password: 'Admin2026' }) });
+  const token = (await r.json()).token;
+  assert.ok(token, 'admin signs in on a test server');
+  const a = await (await fetch(`http://127.0.0.1:${PORT}/api/analytics?days=120`, { headers: { Authorization: `Bearer ${token}` } })).json();
+  assert.ok(Array.isArray(a.invoices) && a.invoices.length > 0, 'the demo networks have statements');
+  assert.deepEqual(a.invoices.filter(i => i.status === 'overdue').map(i => `${i.operator} ${i.month}`), []);
+});
