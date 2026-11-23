@@ -35,6 +35,67 @@ function triggerDownload(blob: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+const inApp = () => typeof window !== 'undefined' && !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
+type FileShare = Navigator & { canShare?: (data: ShareData) => boolean };
+
+/**
+ * A small sheet over the page for the store app: its web view cannot download a
+ * file made on the page, so the file goes to the phone's share sheet (save to
+ * Files, send to Telegram), from a tap of its own — the phone wants a fresh tap.
+ */
+function shareSheet(file: File | null) {
+  document.getElementById('pg-file-sheet')?.remove();
+  const wrap = document.createElement('div');
+  wrap.id = 'pg-file-sheet';
+  wrap.setAttribute('role', 'dialog');
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;font-family:Inter,system-ui,sans-serif';
+  const box = document.createElement('div');
+  box.style.cssText = 'width:100%;max-width:480px;background:#fff;border-radius:22px 22px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));box-sizing:border-box';
+  const title = document.createElement('p');
+  title.style.cssText = 'margin:0 0 6px;font-size:17px;font-weight:800;color:#111';
+  title.textContent = file ? 'Файл готов' : 'Скачать файл здесь не получится';
+  const note = document.createElement('p');
+  note.style.cssText = 'margin:0 0 16px;font-size:14px;line-height:1.45;color:#64748b';
+  note.textContent = file ? 'Сохраните его в «Файлы» или отправьте в мессенджер.' : 'Откройте app.voli.uz в браузере телефона или компьютера — там файл скачается.';
+  const close = () => wrap.remove();
+  const main = document.createElement('button');
+  main.type = 'button';
+  main.style.cssText = 'width:100%;height:50px;border:0;border-radius:16px;background:#C6F432;color:#111;font-size:16px;font-weight:700';
+  main.textContent = file ? 'Сохранить или отправить' : 'Понятно';
+  main.onclick = async () => {
+    if (!file) return close();
+    try {
+      await (navigator as FileShare).share({ files: [file], title: file.name });
+    } catch {
+      /* closed by the user */
+    }
+    close();
+  };
+  const cancel = document.createElement('button');
+  cancel.type = 'button';
+  cancel.style.cssText = 'width:100%;height:44px;margin-top:6px;border:0;background:none;color:#64748b;font-size:14px;font-weight:600';
+  cancel.textContent = 'Закрыть';
+  cancel.onclick = close;
+  wrap.onclick = e => { if (e.target === wrap) close(); };
+  box.append(title, note, main, ...(file ? [cancel] : []));
+  wrap.append(box);
+  document.body.append(wrap);
+}
+
+/** In a browser: a download. In the store app: the phone's share sheet. */
+async function deliver(blob: Blob, filename: string) {
+  if (!inApp()) return triggerDownload(blob, filename);
+  const file = new File([blob], filename, { type: blob.type });
+  const nav = navigator as FileShare;
+  if (!nav.share || !nav.canShare?.({ files: [file] })) return shareSheet(null);
+  try {
+    await nav.share({ files: [file], title: filename });
+  } catch (err) {
+    // The tap that asked for the file is too long ago once it is drawn: ask for a fresh one.
+    if ((err as Error).name !== 'AbortError') shareSheet(file);
+  }
+}
+
 function stamp() {
   return new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
 }
@@ -42,7 +103,7 @@ function stamp() {
 export function exportCsv(baseName: string, headers: string[], rows: CsvValue[][]): void {
   const lines = [headers.map(csvCell).join(';'), ...rows.map(r => r.map(csvCell).join(';'))];
   const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-  triggerDownload(blob, `${baseName}_${stamp()}.csv`);
+  void deliver(blob, `${baseName}_${stamp()}.csv`);
 }
 
 const text = (v: CsvValue) => (v === null || v === undefined ? '' : String(v));
@@ -52,6 +113,7 @@ const ROW_H = 34;
 const HEAD_H = 40;
 const PAD = 14;
 const TITLE_H = 74;
+const MIN_TABLE_W = 1100;
 
 /** Measures columns once so every page shares the same layout. */
 function measureColumns(
@@ -75,7 +137,10 @@ function measureColumns(
 
   const withPadding = widths.map(w => w + PAD * 2);
   const total = withPadding.reduce((a, b) => a + b, 0);
-  if (total <= maxWidth) return withPadding;
+  // A narrow table (a receipt: two columns) is widened, so the page does not blow it up
+  // to a huge font with five rows a page; the last column takes the room.
+  if (total < MIN_TABLE_W) withPadding[withPadding.length - 1] += MIN_TABLE_W - total;
+  if (Math.max(total, MIN_TABLE_W) <= maxWidth) return withPadding;
 
   // Shrink proportionally; cells are ellipsised when they still don't fit.
   const scale = maxWidth / total;
@@ -128,9 +193,9 @@ function renderPage(
 
   // Header row
   const headTop = TITLE_H;
-  ctx.fillStyle = '#0EA5E9';
+  ctx.fillStyle = '#111111';
   ctx.fillRect(0, headTop, width, HEAD_H);
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = '#C6F432';
   ctx.font = `600 14px ${FONT}`;
 
   let x = 0;
@@ -225,5 +290,5 @@ export async function exportPdf(
     );
   });
 
-  pdf.save(`${baseName}_${stamp()}.pdf`);
+  await deliver(pdf.output('blob'), `${baseName}_${stamp()}.pdf`);
 }

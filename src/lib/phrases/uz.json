@@ -4700,5 +4700,12 @@
 "{0} · {1} кВт·ч": "{0} · {1} kVt·s",
 "Геолокация нужна, чтобы карта открылась там, где вы, а расстояние и время до станции были точными.": "Geolokatsiya xarita siz turgan joyda ochilishi, stansiyagacha masofa va vaqt aniq bo‘lishi uchun kerak.",
 "Возврат бонуса за зарядку": "Zaryadlash uchun bonus qaytarildi",
-"Возврат {0} сум · {1} · {2} · из них {3} бонусом": "Qaytarish {0} so‘m · {1} · {2} · shundan {3} bonus bilan"
+"Возврат {0} сум · {1} · {2} · из них {3} бонусом": "Qaytarish {0} so‘m · {1} · {2} · shundan {3} bonus bilan",
+"Файл готов": "Fayl tayyor",
+"Скачать файл здесь не получится": "Bu yerda faylni yuklab bo‘lmaydi",
+"Сохраните его в «Файлы» или отправьте в мессенджер.": "Uni «Fayllar»ga saqlang yoki messenjerga yuboring.",
+"Откройте app.voli.uz в браузере телефона или компьютера — там файл скачается.": "Telefon yoki kompyuter brauzerida app.voli.uz ni oching — fayl o‘sha yerda yuklanadi.",
+"Сохранить или отправить": "Saqlash yoki yuborish",
+"Деньги на кошельке закончились — зарядка остановлена · {0}. Пополните кошелёк, чтобы продолжить": "Hamyondagi pul tugadi — zaryadlash to‘xtatildi · {0}. Davom etish uchun hamyonni to‘ldiring",
+"Деньги на кошельке закончились": "Hamyondagi pul tugadi"
 }

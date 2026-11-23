@@ -4700,5 +4700,12 @@
 "{0} · {1} кВт·ч": "{0} · {1} kWh",
 "Геолокация нужна, чтобы карта открылась там, где вы, а расстояние и время до станции были точными.": "Location lets the map open where you are, with exact distance and time to each station.",
 "Возврат бонуса за зарядку": "Bonus returned for a charge",
-"Возврат {0} сум · {1} · {2} · из них {3} бонусом": "Refund {0} sum · {1} · {2} · of it {3} as bonus"
+"Возврат {0} сум · {1} · {2} · из них {3} бонусом": "Refund {0} sum · {1} · {2} · of it {3} as bonus",
+"Файл готов": "The file is ready",
+"Скачать файл здесь не получится": "The file cannot be downloaded here",
+"Сохраните его в «Файлы» или отправьте в мессенджер.": "Save it to Files or send it to a messenger.",
+"Откройте app.voli.uz в браузере телефона или компьютера — там файл скачается.": "Open app.voli.uz in a phone or computer browser — the file downloads there.",
+"Сохранить или отправить": "Save or send",
+"Деньги на кошельке закончились — зарядка остановлена · {0}. Пополните кошелёк, чтобы продолжить": "The wallet ran out — charging stopped · {0}. Top up the wallet to continue",
+"Деньги на кошельке закончились": "The wallet ran out"
 }
