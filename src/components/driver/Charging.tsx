@@ -4,6 +4,7 @@ import type { Session } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 import { exportPdf } from '../../lib/export';
 import WhileCharging from './WhileCharging';
+import { PrizeProgress } from './Prizes';
 import { startLiveActivity, endLiveActivity } from '../../lib/liveActivity';
 
 /** Mirrors server/history.js: what a car really draws — DC tapers, AC is capped by the onboard charger. */
@@ -182,85 +183,82 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
   );
 }
 
-/** The car from above, nose up: body, glass, wheels, mirrors (viewBox 0 0 200 340). */
-const BODY = 'M100 14 C136 14 160 30 164 62 L168 118 C171 160 171 222 168 268 C165 306 140 328 100 328 C60 328 35 306 32 268 C29 222 29 160 32 118 L36 62 C40 30 64 14 100 14 Z';
-const BOTTOM = 328;
-const TOP = 14;
-
 /**
- * The car seen from above, filling with energy: the yellow rises from the
- * back to the charge so far, with a moving surface and bubbles, the glass
- * stays dark over it, and a dashed line marks where the charge will stop.
- * The percent sits on the roof.
+ * The charge as a glowing ring on a pedestal: a glass rim, the lime arc
+ * filling clockwise to the charge so far with a soft glow, a tick where the
+ * charge will stop, and the percent with a bolt in the dark glass centre.
  */
 function ChargeHero({ battery, target }: { battery: number; target: number }) {
-  const span = BOTTOM - TOP;
-  const level = BOTTOM - (span * Math.min(100, Math.max(0, battery))) / 100;
-  const stop = BOTTOM - (span * target) / 100;
+  const pct = Math.min(100, Math.max(0, battery));
+  const R = 96;
+  const C = 2 * Math.PI * R;
+  const tick = ((target / 100) * 360 - 90) * (Math.PI / 180);
+  const charging = pct < 99.5;
   return (
-    <div className="relative mt-3 mx-auto w-[200px] select-none" aria-hidden="true">
-      <div className="absolute inset-x-[-40px] top-[20%] h-[60%] rounded-full blur-3xl" style={{ background: 'radial-gradient(closest-side, rgba(198,244,50,.28), rgba(198,244,50,0))' }} />
-      <svg viewBox="0 0 200 340" className="relative w-full block overflow-visible">
+    <div className="relative mt-4 mx-auto w-[264px] select-none" aria-hidden="true">
+      <div className="absolute inset-x-[-30px] top-[6%] h-[78%] rounded-full blur-3xl pg-ring-breathe" style={{ background: 'radial-gradient(closest-side, rgba(198,244,50,.32), rgba(198,244,50,0))' }} />
+      <svg viewBox="0 0 264 300" className="relative w-full block overflow-visible">
         <defs>
-          <clipPath id="pg-car-clip"><path d={BODY} /></clipPath>
-          <linearGradient id="pg-energy" x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0" stopColor="#1FA33A" />
-            <stop offset=".55" stopColor="#C6F432" />
-            <stop offset="1" stopColor="#DEF88C" />
+          <linearGradient id="pg-arc" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#EFFCC9" />
+            <stop offset=".45" stopColor="#C6F432" />
+            <stop offset="1" stopColor="#8FD61A" />
           </linearGradient>
-          <linearGradient id="pg-shell" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="#1d1d1d" />
-            <stop offset=".5" stopColor="#2a2a2a" />
-            <stop offset="1" stopColor="#1d1d1d" />
+          <radialGradient id="pg-core" cx=".5" cy=".38" r=".7">
+            <stop offset="0" stopColor="#1f2618" />
+            <stop offset=".7" stopColor="#0d0f0b" />
+            <stop offset="1" stopColor="#060705" />
+          </radialGradient>
+          <linearGradient id="pg-rim" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#ffffff" stopOpacity=".35" />
+            <stop offset=".5" stopColor="#ffffff" stopOpacity=".06" />
+            <stop offset="1" stopColor="#C6F432" stopOpacity=".3" />
           </linearGradient>
+          <linearGradient id="pg-base" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#2b2f27" />
+            <stop offset="1" stopColor="#0a0b09" />
+          </linearGradient>
+          <filter id="pg-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6" /></filter>
         </defs>
 
-        {/* Wheels and mirrors, outside the body */}
-        {[[22, 72], [166, 72], [22, 236], [166, 236]].map(([x, y]) => <rect key={`${x}-${y}`} x={x} y={y} width="12" height="46" rx="5" fill="#0b0b0b" stroke="#3a3a3a" />)}
-        <path d="M34 112 L18 106 C14 105 13 112 17 114 L33 120 Z" fill="#232323" stroke="#3a3a3a" />
-        <path d="M166 112 L182 106 C186 105 187 112 183 114 L167 120 Z" fill="#232323" stroke="#3a3a3a" />
+        {/* The pedestal: a dark disc with a lime rim of light */}
+        <ellipse cx="132" cy="262" rx="120" ry="26" fill="#C6F432" opacity=".22" filter="url(#pg-glow)" />
+        <ellipse cx="132" cy="258" rx="108" ry="22" fill="url(#pg-base)" stroke="#C6F432" strokeOpacity=".55" strokeWidth="1.5" />
+        <ellipse cx="132" cy="250" rx="92" ry="15" fill="#15180f" stroke="#ffffff" strokeOpacity=".1" />
 
-        <path d={BODY} fill="url(#pg-shell)" />
-        <g clipPath="url(#pg-car-clip)">
-          {/* The energy, its surface moving */}
-          <g style={{ transform: `translateY(${level}px)`, transition: 'transform 1s linear' }}>
-            <path className="pg-wave" d="M-200 0 Q-175 -7 -150 0 T-100 0 T-50 0 T0 0 T50 0 T100 0 T150 0 T200 0 T250 0 T300 0 T350 0 T400 0 V400 H-200 Z" fill="url(#pg-energy)" />
-            <path className="pg-wave pg-wave-slow" d="M-200 2 Q-175 -4 -150 2 T-100 2 T-50 2 T0 2 T50 2 T100 2 T150 2 T200 2 T250 2 T300 2 T350 2 T400 2 V400 H-200 Z" fill="#DEF88C" opacity=".35" />
-          </g>
-          {battery < 99.5 && [36, 70, 104, 132, 158].map((x, i) => (
-            <circle key={x} className="pg-bubble" cx={x + 8} cy={BOTTOM - 6} r={2 + (i % 3)} fill="#EFFCC9" style={{ animationDelay: `${i * 0.55}s`, ['--rise' as string]: `${Math.max(20, BOTTOM - level - 10)}px` }} />
-          ))}
+        <g transform="translate(132 122)">
+          {/* Glass rim */}
+          <circle r="118" fill="none" stroke="url(#pg-rim)" strokeWidth="3" />
+          <circle r="110" fill="#0b0c0a" fillOpacity=".6" stroke="#ffffff" strokeOpacity=".08" />
+          {/* Track and the charge so far */}
+          <circle r={R} fill="none" stroke="#ffffff" strokeOpacity=".07" strokeWidth="20" />
+          <circle r={R} fill="none" stroke="#C6F432" strokeOpacity=".55" strokeWidth="22" strokeLinecap="round" filter="url(#pg-glow)"
+            strokeDasharray={C} strokeDashoffset={C * (1 - pct / 100)} transform="rotate(-90)" style={{ transition: 'stroke-dashoffset 1s linear' }} />
+          <circle r={R} fill="none" stroke="url(#pg-arc)" strokeWidth="20" strokeLinecap="round"
+            strokeDasharray={C} strokeDashoffset={C * (1 - pct / 100)} transform="rotate(-90)" style={{ transition: 'stroke-dashoffset 1s linear' }} />
+          {/* A moving shine along the arc while charging */}
+          {charging && <circle r={R} fill="none" stroke="#ffffff" strokeOpacity=".5" strokeWidth="6" strokeLinecap="round" strokeDasharray={`10 ${C - 10}`} className="pg-ring-shine" />}
+          {/* Where the charge stops */}
+          {target < 100 && <line x1={Math.cos(tick) * (R - 14)} y1={Math.sin(tick) * (R - 14)} x2={Math.cos(tick) * (R + 14)} y2={Math.sin(tick) * (R + 14)} stroke="#ffffff" strokeOpacity=".85" strokeWidth="3" strokeLinecap="round" />}
+          {/* The dark glass centre */}
+          <circle r="80" fill="url(#pg-core)" stroke="#C6F432" strokeOpacity=".25" />
+          <path d="M-62 -30 A70 70 0 0 1 -24 -66" fill="none" stroke="#ffffff" strokeOpacity=".12" strokeWidth="5" strokeLinecap="round" />
+          <path d="M3 -70 L-9 -51 L-1 -51 L-5 -38 L9 -58 L1 -58 Z" fill="#C6F432" className={charging ? 'pg-bolt' : ''} style={{ filter: 'drop-shadow(0 0 8px rgba(198,244,50,.8))' }} />
         </g>
-
-        {/* Glass over the energy: windscreen, roof, rear window */}
-        <path d="M46 100 C66 86 134 86 154 100 L146 140 C124 132 76 132 54 140 Z" fill="#0d0d0d" fillOpacity=".78" stroke="#D9F77A" strokeOpacity=".35" />
-        <rect x="56" y="146" width="88" height="96" rx="20" fill="#0d0d0d" fillOpacity=".55" stroke="#D9F77A" strokeOpacity=".25" />
-        <path d="M54 250 C76 258 124 258 146 250 L152 280 C126 290 74 290 48 280 Z" fill="#0d0d0d" fillOpacity=".78" stroke="#D9F77A" strokeOpacity=".35" />
-        {/* Headlights and tail lights */}
-        <path d="M54 34 C64 26 78 22 88 22" stroke="#EFFCC9" strokeWidth="3" strokeLinecap="round" fill="none" />
-        <path d="M146 34 C136 26 122 22 112 22" stroke="#EFFCC9" strokeWidth="3" strokeLinecap="round" fill="none" />
-        <path d="M48 316 C70 322 130 322 152 316" stroke="#EF4444" strokeOpacity=".8" strokeWidth="3" strokeLinecap="round" fill="none" />
-
-        <path d={BODY} fill="none" stroke="#D9F77A" strokeOpacity=".7" strokeWidth="2" />
-
-        {/* Where the charge stops */}
-        {target < 100 && (
-          <g>
-            <line x1="28" x2="172" y1={stop} y2={stop} stroke="#FFFFFF" strokeOpacity=".75" strokeWidth="1.5" strokeDasharray="5 5" />
-            <text x="178" y={stop + 4} fill="#FFFFFF" fillOpacity=".75" fontSize="11" fontWeight="700" fontFamily="Inter, sans-serif">{`${target}%`}</text>
-          </g>
-        )}
       </svg>
 
-      <p className="absolute left-0 right-0 top-[44%] -translate-y-1/2 text-center text-white font-extrabold text-[46px] leading-none tabular-nums tracking-tight" style={{ textShadow: '0 2px 14px rgba(0,0,0,.85)' }}>
-        {Math.floor(battery)}<span className="text-[24px] align-top ml-0.5">%</span>
-      </p>
+      <div className="absolute left-0 right-0 top-[43%] -translate-y-1/2 text-center">
+        <p className="text-white font-extrabold text-[54px] leading-none tabular-nums tracking-tight">
+          {Math.floor(pct)}<span className="text-[26px] align-top ml-0.5">%</span>
+        </p>
+        <p className="text-white/70 text-[13px] font-medium mt-1.5">{charging ? 'Заряжается' : 'Заряжено'}</p>
+      </div>
     </div>
   );
 }
 
 /** The receipt of the charge that just ended, with a rating that goes to the station. */
-export function ChargingDoneScreen({ session, onClose }: { session: Session | null; onClose: () => void }) {
+export function ChargingDoneScreen({ session, onClose, onRewards }: { session: Session | null; onClose: () => void; onRewards?: () => void }) {
   const { actions, state } = useSync();
   const [stars, setStars] = useState(session?.rating ?? 0);
   const [sent, setSent] = useState(!!session?.rating);
@@ -364,6 +362,8 @@ export function ChargingDoneScreen({ session, onClose }: { session: Session | nu
             </>
           )}
         </div>
+
+        {state?.rewards?.prizes && <PrizeProgress prizes={state.rewards.prizes} onOpen={onRewards} />}
       </div>
 
       <div className="px-4 pb-6 pt-2 grid grid-cols-2 gap-2">

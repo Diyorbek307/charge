@@ -973,6 +973,14 @@ input::-ms-reveal, input::-ms-clear { display: none; }
 .pg-tour-card { transition: top .45s cubic-bezier(.32,.72,0,1), bottom .45s cubic-bezier(.32,.72,0,1); }
 
 /* Charging: the energy's surface inside the car, and bubbles rising through it */
+/* Charging ring: the glow breathes, a shine runs round the arc, the bolt flickers. */
+.pg-ring-breathe { animation: pg-ring-breathe 3.2s ease-in-out infinite; }
+@keyframes pg-ring-breathe { 50% { opacity: .55; transform: scale(1.05); } }
+.pg-ring-shine { transform-origin: 0 0; animation: pg-ring-shine 3s linear infinite; }
+@keyframes pg-ring-shine { from { transform: rotate(-90deg); } to { transform: rotate(270deg); } }
+.pg-bolt { animation: pg-bolt 2.4s ease-in-out infinite; }
+@keyframes pg-bolt { 0%, 100% { opacity: 1; } 45% { opacity: .55; } 50% { opacity: 1; } 55% { opacity: .7; } }
+@media (prefers-reduced-motion: reduce) { .pg-ring-breathe, .pg-ring-shine, .pg-bolt { animation: none; } .pg-ring-shine { display: none; } }
 .pg-wave { animation: pg-wave 2.6s linear infinite; }
 .pg-wave-slow { animation-duration: 4.2s; animation-direction: reverse; }
 @keyframes pg-wave { from { transform: translateX(0); } to { transform: translateX(-100px); } }

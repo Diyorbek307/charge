@@ -12,7 +12,7 @@ import { db } from './db.js';
 
 const n = (name, fallback) => (process.env[name] !== undefined && process.env[name] !== '' ? Number(process.env[name]) : fallback);
 
-/** type: bool | int | money | percent | tiers. min/max bound numbers; unit is shown next to the field. */
+/** type: bool | int | money | percent | tiers | prizes. min/max bound numbers; unit is shown next to the field. */
 export const SCHEMA = [
   // What drivers see
   { key: 'feature.offline', group: 'features', label: 'Офлайн-трассы', hint: 'Сохранение трассы для поездки без связи', type: 'bool', def: true },
@@ -57,6 +57,9 @@ export const SCHEMA = [
     { key: `rewards.${id}.amount`, group: 'rewards', label: `«${label}» — бонус`, type: 'money', def: amount, min: 0, max: 1_000_000, unit: 'сум' },
     ...(goal > 1 ? [{ key: `rewards.${id}.goal`, group: 'rewards', label: `«${label}» — сколько нужно`, type: 'int', def: goal, min: 1, max: 100_000, unit }] : []),
   ]),
+  // Gifts for kWh charged in total (a service at a partner, not money): Voli pays the partner.
+  { key: 'rewards.prizes', group: 'rewards', label: 'Подарки за киловатты', hint: 'Цена подарка в кВт·ч. Водитель копит кВт·ч как монеты; забрал подарок — они списываются. Код он называет в поддержке', type: 'prizes',
+    def: [{ kwh: 7000, icon: '🛢️', title: 'Замена масла и фильтра' }, { kwh: 12000, icon: '🧽', title: 'Химчистка салона' }, { kwh: 15000, icon: '🛞', title: 'Комплект из 4 шин' }] },
   { key: 'points.valueUzs', group: 'rewards', label: 'Стоимость одного балла', hint: 'При обмене баллов на кошелёк', type: 'money', def: 10, min: 0, max: 1000, unit: 'сум' },
 
   // Bring a friend (Voli pays, from the rewards budget)
@@ -138,6 +141,14 @@ function clean(s, v) {
     if (tiers[0].kwh !== 0) return { error: `${s.label}: первая ступень — с 0 кВт·ч` };
     if (new Set(tiers.map(t => t.kwh)).size !== tiers.length) return { error: `${s.label}: ступени не должны повторяться` };
     return { v: tiers };
+  }
+  if (s.type === 'prizes') {
+    if (!Array.isArray(v) || v.length > 10) return { error: `${s.label}: не больше 10 подарков` };
+    const list = v.map(p => ({ kwh: Math.round(Number(p?.kwh)), icon: String(p?.icon ?? '').trim().slice(0, 4) || '🎁', title: String(p?.title ?? '').trim().slice(0, 60) })).sort((a, b) => a.kwh - b.kwh);
+    if (list.some(p => !Number.isFinite(p.kwh) || p.kwh < 1 || p.kwh > 1_000_000)) return { error: `${s.label}: кВт·ч от 1 до 1 000 000` };
+    if (list.some(p => p.title.length < 2)) return { error: `${s.label}: у каждого подарка нужно название` };
+    if (new Set(list.map(p => p.kwh)).size !== list.length) return { error: `${s.label}: два подарка на одно число кВт·ч` };
+    return { v: list };
   }
   const num = Number(v);
   if (!Number.isFinite(num)) return { error: `${s.label}: нужно число` };

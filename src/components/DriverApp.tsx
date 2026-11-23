@@ -241,7 +241,7 @@ export default function DriverApp() {
   const passportFrom = useRef<Screen>('profile');
   const batteryFrom = useRef<Screen>('profile');
   // A reward just reached: shown big, one at a time.
-  const [burst, setBurst] = useState<{ amount: number; title: string } | null>(null);
+  const [burst, setBurst] = useState<{ amount: number; title: string; icon?: string } | null>(null);
   const seenRewards = useRef(new Set<string>());
   useLargeMode();
   const [picked, setSelectedStation] = useState<Station | null>(null);
@@ -333,12 +333,13 @@ export default function DriverApp() {
   }, [events]);
 
   useEffect(() => {
-    const fresh = events.find(e => e.type === 'reward.granted' && !seenRewards.current.has(e.entity ?? e.id) && Date.now() - Date.parse(e.ts) < 60_000);
+    const fresh = events.find(e => (e.type === 'reward.granted' || e.type === 'prize.ready') && !seenRewards.current.has(e.entity ?? e.id) && Date.now() - Date.parse(e.ts) < 60_000);
     // Not under the welcome screens: it waits until they close.
     if (!fresh || burst || showOnboarding) return;
     seenRewards.current.add(fresh.entity ?? fresh.id);
-    const p = fresh.payload as { amount?: number; title?: string };
-    if (p.amount) setBurst({ amount: p.amount, title: p.title ?? 'Награда' });
+    const p = fresh.payload as { amount?: number; title?: string; icon?: string };
+    if (fresh.type === 'prize.ready') setBurst({ amount: 0, title: p.title ?? 'Подарок', icon: p.icon });
+    else if (p.amount) setBurst({ amount: p.amount, title: p.title ?? 'Награда' });
   }, [events, burst, showOnboarding]);
 
   // The tour once per account, after the car screens, when the map is in front.
@@ -563,7 +564,7 @@ export default function DriverApp() {
   const renderContent = () => {
     if (screen === 'charging-start') return <ChargingStartScreen station={selectedStation} preferConnector={preferPoint.current} onBack={backToStation} onConfirm={startCharging} onOpenQR={() => setScreen('qr-scan')} />;
     if (screen === 'charging-active') return <ChargingActiveScreen session={liveSession} startBattery={state?.vehicles.find(v => v.driverId === driverAccount?.id)?.battery ?? null} packKwh={driverAccount?.car?.battery} limit={driverAccount?.car?.chargeLimit} onStop={stopCharging} onLeave={() => { setActiveTab('charging'); setScreen('map'); }} />;
-    if (screen === 'charging-done') return <ChargingDoneScreen session={lastSession} onClose={handleBack} />;
+    if (screen === 'charging-done') return <ChargingDoneScreen session={lastSession} onClose={handleBack} onRewards={() => setScreen('rewards')} />;
     if (screen === 'trip') return <TripPlannerScreen onBack={() => setScreen('map')} onSelectStation={handleSelectStation} />;
     if (screen === 'booking') return <BookingScreen station={selectedStation} onBack={backToStation} onConfirm={b => { setLastBooking(b); setScreen('booking-done'); }} />;
     if (screen === 'booking-done') return <BookingDoneScreen station={selectedStation} booking={lastBooking} onClose={handleBack} />;
@@ -669,7 +670,7 @@ export default function DriverApp() {
         </div>
       )}
 
-      {burst && <RewardBurst amount={burst.amount} title={burst.title} onDone={() => setBurst(null)} />}
+      {burst && <RewardBurst amount={burst.amount} title={burst.title} icon={burst.icon} onDone={() => setBurst(null)} />}
 
       {/* Push notification toasts */}
       {toasts.length > 0 && (

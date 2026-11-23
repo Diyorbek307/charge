@@ -144,4 +144,52 @@ describe('Voli rewards', () => {
     assert.match(source, /n\('PASSPORT_BONUS_UZS', 0\)/);
     assert.match(source, /key: 'fleet\.tiers'.*def: \[\{ kwh: 0, pct: 3 \}, \{ kwh: 500, pct: 5 \}\]/);
   });
+
+  test('kWh are coins for gifts: taking one spends its price, a cancelled one gives the kWh back', async () => {
+    const token = await driver();
+    const admin = await login('admin', 'admin@voli.uz', 'Admin2026');
+    const prizes = async () => (await call('/state', { token })).data.rewards.prizes;
+    const start = await prizes();
+    assert.ok(start && start.items.length === 3, 'three gifts by default: oil, dry clean, tyres');
+    assert.deepEqual(start.items.map(p => p.kwh), [7000, 12000, 15000]);
+    const B = start.balance;
+    assert.ok(B >= 2, `the demo driver has charged some kWh (${B})`);
+
+    // Gifts priced around what the driver has: one affordable, one not.
+    const cheap = Math.floor(B / 2);
+    const dear = B + 1000;
+    const set = await call('/admin/settings', { method: 'PUT', token: admin, body: { changes: { 'rewards.prizes': [{ kwh: dear, icon: '🧽', title: 'Химчистка салона' }, { kwh: cheap, icon: '🛢️', title: 'Замена масла и фильтра' }] } } });
+    assert.equal(set.status, 200, JSON.stringify(set.data));
+    let now = await prizes();
+    assert.deepEqual(now.items.map(p => [p.kwh, p.left]), [[cheap, 0], [dear, 1000]]);
+
+    // Not enough for the dear one.
+    const refused = await call('/rewards/prizes/claim', { method: 'POST', token, body: { kwh: dear } });
+    assert.equal(refused.status, 400);
+    assert.match(refused.data.error, /Не хватает 1\s000 кВт·ч/);
+
+    // Taking the cheap one spends its kWh and gives a code; saving starts over.
+    const took = await call('/rewards/prizes/claim', { method: 'POST', token, body: { kwh: cheap } });
+    assert.equal(took.status, 200, JSON.stringify(took.data));
+    assert.match(took.data.prize.code, /^[0-9A-F]{6}$/);
+    now = await prizes();
+    assert.equal(now.balance, B - cheap);
+    assert.equal(now.items.find(p => p.kwh === dear).left, dear - (B - cheap));
+    assert.equal(now.taken[0].status, 'ready');
+
+    // The admin sees it, hands it over; cancelling another gives its kWh back.
+    const list = (await call('/admin/programs', { token: admin })).data.prizes;
+    const mine = list.find(p => p.id === took.data.prize.id);
+    assert.ok(mine && mine.code === took.data.prize.code);
+    assert.equal((await call(`/admin/prizes/${mine.id}/status`, { method: 'POST', token: admin, body: { status: 'issued' } })).status, 200);
+    assert.equal((await prizes()).taken[0].status, 'issued');
+    assert.equal((await call(`/admin/prizes/${mine.id}/status`, { method: 'POST', token: admin, body: { status: 'cancelled' } })).status, 200);
+    assert.equal((await prizes()).balance, B, 'a cancelled gift returns its kWh');
+
+    // Bad lists are refused; the default comes back.
+    const bad = await call('/admin/settings', { method: 'PUT', token: admin, body: { changes: { 'rewards.prizes': [{ kwh: 100, icon: '🎁', title: '' }] } } });
+    assert.equal(bad.status, 400);
+    await call('/admin/settings', { method: 'PUT', token: admin, body: { changes: { 'rewards.prizes': null } } });
+    assert.deepEqual((await prizes()).items.map(p => p.kwh), [7000, 12000, 15000]);
+  });
 });

@@ -378,7 +378,17 @@ export interface Rewards {
   /** After a paid top-up: a bonus per kWh on the first charges. */
   topup?: { perKwh: number; left: number; charges: number; toppedUp: boolean } | null;
   achievements: Achievement[];
+  /** Gifts for kWh: every kWh is a coin; a gift spends its price and saving starts over. */
+  prizes?: Prizes | null;
 }
+export interface Prizes {
+  /** kWh coins to spend now. */
+  balance: number;
+  items: { kwh: number; icon: string; title: string; left: number }[];
+  taken: PrizeTaken[];
+}
+export interface PrizeTaken { id: string; kwh: number; icon: string; title: string; code: string; at: string; status: 'ready' | 'issued' | 'cancelled' }
+export interface PrizeAdmin extends PrizeTaken { userId: string; user: string; phone: string | null; issuedAt: string | null; issuedBy: string | null }
 /** Battery health from the driver's charges (server/battery.js). */
 export interface BatteryHealth {
   car: { brand: string; model: string; year: number; rated: number } | null;
@@ -564,7 +574,7 @@ export interface PlatformSettings {
   preview?: boolean;
 }
 /** One setting in the admin's Platform control. */
-export interface SettingItem { key: string; group: string; label: string; hint?: string; type: 'bool' | 'int' | 'money' | 'percent' | 'tiers'; def: unknown; min?: number; max?: number; unit?: string; value: unknown; changed: boolean }
+export interface SettingItem { key: string; group: string; label: string; hint?: string; type: 'bool' | 'int' | 'money' | 'percent' | 'tiers' | 'prizes'; def: unknown; min?: number; max?: number; unit?: string; value: unknown; changed: boolean }
 export interface SettingsView { groups: Record<string, string>; items: SettingItem[]; log: { key: string; label: string; from: unknown; to: unknown; by: string; at: string }[] }
 
 export interface PlatformState {
@@ -958,6 +968,7 @@ export const apiClient = {
     post<{ report: CommunityReport; community: StationCommunity }>(`/stations/${stationId}/community`, body, 'driver'),
   confirmCommunityReport: (id: string) => post<{ report: CommunityReport; community: StationCommunity }>(`/community/${id}/confirm`, undefined, 'driver'),
   loyalty: () => request<Loyalty>('/loyalty', { portal: 'driver' }),
+  claimPrize: (kwh: number) => post<{ prize: PrizeTaken; rewards: Rewards }>('/rewards/prizes/claim', { kwh }, 'driver'),
   redeemPoints: (points: number) => post<{ wallet: Wallet; amount: number; loyalty: Loyalty }>('/loyalty/redeem', { points }, 'driver'),
   sendSos: (body: { kind: SosKind; lat?: number; lng?: number; note?: string }) => post<{ sos: SosRequest }>('/sos', body, 'driver'),
   mySos: () => request<SosRequest[]>('/sos/mine', { portal: 'driver' }),
@@ -1020,6 +1031,7 @@ export const apiClient = {
   adminPrograms: () => request<any>('/admin/programs', { portal: 'admin' }),
   markPayout: (b: { invoiceId: string; operatorId: string; amount: number; paidAt: string; ref: string }) => post<{ paidAt: string }>('/admin/payouts', b, 'admin'),
   undoPayout: (invoiceId: string, operatorId: string) => request<{ removed: boolean }>(`/admin/payouts/${encodeURIComponent(invoiceId)}/${encodeURIComponent(operatorId)}`, { method: 'DELETE', portal: 'admin' }),
+  adminPrizeStatus: (id: string, status: 'issued' | 'ready' | 'cancelled') => post<{ prizes: PrizeAdmin[] }>(`/admin/prizes/${encodeURIComponent(id)}/status`, { status }, 'admin'),
   adminBonus: (phone: string, amount: number, reason: string) => post<BonusGrant>('/admin/bonus', { phone, amount, reason }, 'admin'),
   adminPartners: () => request<PartnerPlace[]>('/admin/partners', { portal: 'admin' }),
   createPartner: (body: { name: string; kind: PlaceKind; offer: string; lat: number; lng: number; pricePerShow: number; days: number }) => post<PartnerPlace>('/admin/partners', body, 'admin'),

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Gift, CheckCircle, Info } from 'lucide-react';
 import { useSync } from '../../lib/sync';
+import { PrizesSection } from './Prizes';
 
 const sum = (n: number) => `${Math.round(n).toLocaleString('ru-RU')} сум`;
 const date = (iso: string) => new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', timeZone: 'Asia/Tashkent' });
@@ -51,6 +52,8 @@ export default function RewardsScreen({ onBack, onAddCar, onPassport }: { onBack
             </p>
           </div>
         )}
+
+        {r?.prizes && r.prizes.items.length > 0 && <PrizesSection prizes={r.prizes} />}
 
         {left.length > 0 && <p className="text-xs font-semibold text-slate-500 px-1 pt-1">ЗАДАНИЯ</p>}
         <div className="space-y-2 pg-stagger">
@@ -111,7 +114,7 @@ export default function RewardsScreen({ onBack, onAddCar, onPassport }: { onBack
  * The moment a reward lands: the amount pops up big over the screen with a
  * burst of confetti in the brand colours, then leaves by itself.
  */
-export function RewardBurst({ amount, title, onDone }: { amount: number; title: string; onDone: () => void }) {
+export function RewardBurst({ amount, title, icon, onDone }: { amount: number; title: string; icon?: string; onDone: () => void }) {
   const [out, setOut] = useState(false);
   useEffect(() => {
     navigator.vibrate?.([30, 40, 30]);
@@ -137,9 +140,19 @@ export function RewardBurst({ amount, title, onDone }: { amount: number; title: 
           <span key={i} className="pg-confetti absolute w-2.5 h-3.5 rounded-sm" style={{ background: b.c, ['--dx' as string]: `${b.dx}px`, ['--dy' as string]: `${b.dy}px`, ['--rot' as string]: `${b.rot}deg`, animationDelay: `${b.d}ms` }} />
         ))}
         <div className="relative rounded-3xl px-7 py-5 text-center text-[#111] shadow-2xl pg-pop" style={{ background: 'linear-gradient(135deg,#E2F99A,#8FD61A)' }}>
-          <Gift size={30} className="mx-auto mb-1" />
-          <p className="text-3xl font-black tabular-nums">{`+${amount.toLocaleString('ru-RU')} сум`}</p>
-          <p className="text-sm font-semibold opacity-80">{`бонусом · ${title}`}</p>
+          {amount > 0 ? (
+            <>
+              <Gift size={30} className="mx-auto mb-1" />
+              <p className="text-3xl font-black tabular-nums">{`+${amount.toLocaleString('ru-RU')} сум`}</p>
+              <p className="text-sm font-semibold opacity-80">{`бонусом · ${title}`}</p>
+            </>
+          ) : (
+            <>
+              <p className="text-4xl mb-1" aria-hidden="true">{icon ?? '🎁'}</p>
+              <p className="text-xs font-bold opacity-70">ХВАТАЕТ КВТ·Ч НА ПОДАРОК</p>
+              <p className="text-2xl font-black max-w-[240px]">{title}</p>
+            </>
+          )}
         </div>
       </div>
     </div>

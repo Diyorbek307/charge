@@ -33,7 +33,7 @@ import {
   directOperatorOf, netBalance, chargeNetwork, refundNetwork, networkWalletsFor, publicPayout, setPayout, directReport,
 } from './direct.js';
 import { promoFor, publicPromos, createPromo, createCampaign, stopPromo, promosOf } from './promos.js';
-import { syncRewards, rewardsFor, bonusFor, spendBonus, rewardsOverview, grantManual, topupBonus } from './rewards.js';
+import { syncRewards, rewardsFor, bonusFor, spendBonus, rewardsOverview, grantManual, topupBonus, prizesOverview, setPrizeStatus, claimPrize, newlyAffordable } from './rewards.js';
 import { batteryHealthFor } from './battery.js';
 import { setting, feature, updateSettings, settingsView, publicSettings } from './settings.js';
 import { attempt, blocked, forgive, hashPasswordAsync, verifyPasswordAsync } from './guard.js';
@@ -131,6 +131,9 @@ function scopeOf({ type, entity, payload = {} }) {
     case 'schedule.started':
     case 'schedule.failed':
     case 'reward.granted':
+    case 'prize.ready':
+    case 'prize.claimed':
+    case 'prize.issued':
     case 'plus.start':
     case 'autocharge.linked':
     case 'autocharge.start':
@@ -1254,6 +1257,14 @@ api.get('/rewards', requireAuth('driver'), (req, res) => {
   res.json(rewardsFor(req.account));
 });
 
+// The driver spends kWh coins on a gift; the code goes to support.
+api.post('/rewards/prizes/claim', requireAuth('driver'), (req, res) => {
+  const r = claimPrize(req.account, req.body?.kwh);
+  if (r.error) return res.status(r.status).json({ error: r.error });
+  emit({ type: 'prize.claimed', portal: 'driver', actor: req.account.name, message: `Подарок: ${r.prize.title} · код ${r.prize.code}. Назовите код в поддержке — договоримся о времени`, entity: r.prize.id, payload: { userId: req.account.id, kwh: r.prize.kwh, title: r.prize.title, code: r.prize.code } });
+  res.json({ prize: r.prize, rewards: rewardsFor(req.account) });
+});
+
 api.post('/loyalty/redeem', requireAuth('driver'), (req, res) => {
   const r = redeemPoints(req.account.id, req.body?.points);
   if (r.error) return res.status(r.status ?? 400).json({ error: r.error });
@@ -1309,6 +1320,7 @@ api.get('/admin/programs', requireAuth('admin'), (_req, res) => {
   const month = new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 7);
   res.json({
     rewards: rewardsOverview(),
+    prizes: prizesOverview(),
     plus: plusOverview(),
     fleetCoveredMonth: db.data.sessions.filter(s => s.fleetCovered && s.start.startsWith(month)).reduce((n, s) => n + s.fleetCovered, 0),
     autochargeCars: (db.data.autocharge ?? []).filter(l => l.enabled).length,
@@ -1322,6 +1334,16 @@ api.post('/admin/bonus', requireAuth('admin'), (req, res) => {
   if (r.error) return res.status(r.status).json({ error: r.error });
   emit({ type: 'reward.granted', portal: 'admin', actor: req.account.name, message: `+${r.grant.amount.toLocaleString('ru-RU')} сум бонусом · ${r.grant.title}`, entity: r.grant.id, payload: { userId: account.id, amount: r.grant.amount, kind: r.grant.kind, title: r.grant.title, manual: true } });
   res.json(r.grant);
+});
+
+// A kWh gift handed over to the driver (or the mark taken back).
+api.post('/admin/prizes/:id/status', requireAuth('admin'), (req, res) => {
+  const r = setPrizeStatus(req.params.id, req.body?.status, req.account);
+  if (r.error) return res.status(r.status).json({ error: r.error });
+  if (r.prize.status === 'issued') {
+    emit({ type: 'prize.issued', portal: 'admin', actor: req.account.name, message: `Подарок выдан: ${r.prize.title}`, entity: r.prize.id, payload: { userId: r.prize.userId, kwh: r.prize.kwh } });
+  }
+  res.json({ prizes: prizesOverview() });
 });
 
 api.get('/admin/sos', requireAuth('admin'), (_req, res) => res.json(allSos()));
@@ -1981,6 +2003,12 @@ export function completeSession(session, actor, { energyKwh = null, simulated = 
   promoteQueue(session.stationId, session.connectorId);
   const driver = db.byId('accounts', session.userId);
   if (driver && !simulated) announceRewards(driver, syncRewards(driver));
+  // kWh are coins for gifts: tell the driver when this charge made one affordable.
+  if (driver && !simulated) {
+    for (const m of newlyAffordable(driver, energy)) {
+      emit({ type: 'prize.ready', portal: 'system', actor: 'Voli', message: `Хватает кВт·ч на подарок: ${m.title}. Заберите его в «Наградах»`, entity: `prize-${driver.id}-${m.kwh}-${session.id}`, payload: { userId: driver.id, kwh: m.kwh, title: m.title, icon: m.icon } });
+    }
+  }
   if (driver && !simulated) {
     const g = topupBonus(session);
     if (g) announceRewards(driver, [g]);

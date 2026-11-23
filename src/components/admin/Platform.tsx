@@ -1,21 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RotateCcw, Plus as PlusIcon, Trash2, Gift } from 'lucide-react';
-import type { SettingItem, SettingsView } from '../../lib/api';
+import type { SettingItem, SettingsView, PrizeAdmin } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 import { money, num, dateTime } from '../../lib/analytics';
 import { Page, Card, Kpi, Loading, ErrorNote, Pill } from './ui';
 
 type Tier = { kwh: number; pct: number };
+type Prize = { kwh: number; icon: string; title: string };
 type Programs = {
   rewards: { month: string; budget: number; grantedMonth: number; spentMonth: number; outstanding: number; recent: { id: string; user: string; title: string; amount: number; left: number; at: string; manual?: boolean }[] };
   plus: { active: number; renewing: number; revenueMonth: number; coveredMonth: number; subscribers: { userId: string; user: string; renewsAt: string; autoRenew: boolean; active: boolean }[] };
+  prizes: PrizeAdmin[];
   fleetCoveredMonth: number;
   autochargeCars: number;
   autochargeCharges: number;
 };
 
 const show = (v: unknown, s: SettingItem) =>
-  s.type === 'bool' ? (v ? 'вкл' : 'выкл') : s.type === 'tiers' ? (v as Tier[]).map(t => `${num(t.kwh)}→${t.pct}%`).join(', ') : `${Number(v).toLocaleString('ru-RU')}${s.unit ? ` ${s.unit}` : ''}`;
+  s.type === 'bool' ? (v ? 'вкл' : 'выкл') : s.type === 'prizes' ? ((v as Prize[]).map(p => `${num(p.kwh)} кВт·ч → ${p.title}`).join(', ') || 'нет') : s.type === 'tiers' ? (v as Tier[]).map(t => `${num(t.kwh)}→${t.pct}%`).join(', ') : `${Number(v).toLocaleString('ru-RU')}${s.unit ? ` ${s.unit}` : ''}`;
 
 /**
  * Platform control: every number and switch of Voli in one place — what
@@ -91,6 +93,25 @@ export default function AdminPlatform() {
             className={`relative w-12 h-7 rounded-full transition-colors ${v ? 'bg-emerald-500' : 'bg-slate-200'}`}>
             <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${v ? 'translate-x-5' : ''}`} />
           </button>
+        ) : s.type === 'prizes' ? (
+          <div className="space-y-1.5 w-full md:w-auto">
+            {(v as Prize[]).map((p, i) => {
+              const put = (patch: Partial<Prize>) => set(s.key, (v as Prize[]).map((x, k) => (k === i ? { ...x, ...patch } : x)));
+              return (
+                <div key={i} className="flex items-center gap-2 text-sm">
+                  <input aria-label="Значок" className="w-12 px-2 py-1.5 rounded-lg border border-slate-200 text-center" value={p.icon} onChange={e => put({ icon: e.target.value })} />
+                  <input aria-label="Подарок" className="w-56 px-2 py-1.5 rounded-lg border border-slate-200" value={p.title} placeholder="Например, химчистка салона" onChange={e => put({ title: e.target.value })} />
+                  <span className="text-slate-500">за</span>
+                  <input aria-label="кВт·ч" className="w-24 px-2 py-1.5 rounded-lg border border-slate-200 text-right" value={p.kwh} onChange={e => put({ kwh: Number(e.target.value.replace(/\D/g, '')) })} />
+                  <span className="text-slate-500">кВт·ч</span>
+                  <button onClick={() => set(s.key, (v as Prize[]).filter((_, k) => k !== i))} aria-label="Убрать подарок" className="p-1 text-slate-400 hover:text-red-500"><Trash2 size={14} /></button>
+                </div>
+              );
+            })}
+            {(v as Prize[]).length < 10 && (
+              <button onClick={() => set(s.key, [...(v as Prize[]), { kwh: ((v as Prize[]).at(-1)?.kwh ?? 0) + 5000, icon: '🎁', title: '' }])} className="text-xs font-semibold text-sky-600 inline-flex items-center gap-1"><PlusIcon size={12} />Подарок</button>
+            )}
+          </div>
         ) : s.type === 'tiers' ? (
           <div className="space-y-1.5">
             {(v as Tier[]).map((t, i) => (
@@ -121,6 +142,16 @@ export default function AdminPlatform() {
         )}
       </div>
     );
+  };
+
+  const prizeStatus = async (id: string, status: 'issued' | 'ready' | 'cancelled') => {
+    setError('');
+    try {
+      const { prizes } = await actions.adminPrizeStatus(id, status);
+      setPrograms(p => (p ? { ...p, prizes } : p));
+    } catch (e) {
+      setError((e as Error).message);
+    }
   };
 
   const r = programs?.rewards;
@@ -199,6 +230,35 @@ export default function AdminPlatform() {
           )}
         </Card>
       </div>
+
+      {programs && (
+        <Card title="Подарки за киловатты" pad={false} right={<span className="text-xs text-slate-500">{`ждут выдачи: ${programs.prizes.filter(p => p.status === 'ready').length}`}</span>}>
+          {programs.prizes.length === 0 ? (
+            <p className="px-5 py-4 text-sm text-slate-400">Пока никто не забрал подарок. Список подарков и их цена в кВт·ч — в разделе «Награды и бонусы» выше.</p>
+          ) : (
+            <div className="divide-y divide-slate-50 max-h-[28rem] overflow-y-auto">
+              {programs.prizes.map(p => (
+                <div key={p.id} className="px-5 py-3 flex flex-wrap items-center gap-3 text-sm">
+                  <span className="text-xl" aria-hidden="true">{p.icon}</span>
+                  <div className="flex-1 min-w-[200px]">
+                    <p className="font-semibold text-slate-800">{`${p.title} · ${num(p.kwh)} кВт·ч`}</p>
+                    <p className="text-xs text-slate-500">{`${p.user}${p.phone ? ` · ${p.phone}` : ''} · ${dateTime(p.at)}`}{p.issuedBy && p.status !== 'ready' ? ` · ${p.issuedBy}` : ''}</p>
+                  </div>
+                  <span className="px-2 py-1 rounded-lg bg-[#111] text-[#C6F432] font-black tracking-widest text-xs">{p.code}</span>
+                  {p.status === 'ready' ? (
+                    <>
+                      <button onClick={() => void prizeStatus(p.id, 'issued')} className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold">Выдано</button>
+                      <button onClick={() => void prizeStatus(p.id, 'cancelled')} title="кВт·ч вернутся водителю" className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-semibold">Отменить</button>
+                    </>
+                  ) : p.status === 'issued' ? (
+                    <button onClick={() => void prizeStatus(p.id, 'ready')} title="Снять отметку" className="contents"><Pill tone="green">{`выдано ${p.issuedAt ? dateTime(p.issuedAt) : ''}`}</Pill></button>
+                  ) : <Pill tone="slate">отменён · кВт·ч вернулись</Pill>}
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
 
       {programs && programs.plus.subscribers.length > 0 && (
         <Card title="Подписчики Voli Plus" pad={false}>

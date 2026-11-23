@@ -80,6 +80,73 @@ export function syncRewards(account) {
   return fresh;
 }
 
+// ---------------------------------------------------------------------------
+// Gifts for kWh: every kWh charged is a coin. The admin lists gifts with
+// their price in kWh (an oil change, a dry clean, tyres). The driver takes a
+// gift when the coins are enough; its price is spent and saving starts over.
+// The driver gets a code and names it to support; the admin hands it over.
+// ---------------------------------------------------------------------------
+
+const prizesStore = () => (db.data.prizes ??= []);
+const chargedKwh = sessions => sessions.reduce((n, x) => n + (x.energy ?? 0), 0);
+// A gift the admin cancelled gives its kWh back.
+const spentKwh = userId => prizesStore().filter(p => p.userId === userId && p.status !== 'cancelled').reduce((n, p) => n + p.kwh, 0);
+const prizeCode = () => crypto.randomBytes(3).toString('hex').toUpperCase();
+
+/** kWh coins the driver can spend now. */
+export function kwhBalance(account) {
+  return Math.max(0, Math.floor(chargedKwh(done(account)) - spentKwh(account.id)));
+}
+
+/** The driver's side: the coins, each gift with what is left to save, and the gifts taken. */
+function prizesFor(account) {
+  const balance = kwhBalance(account);
+  const items = setting('rewards.prizes').map(m => ({ kwh: m.kwh, icon: m.icon, title: m.title, left: Math.max(0, m.kwh - balance) }));
+  const taken = prizesStore().filter(p => p.userId === account.id).slice(0, 30).map(p => ({ id: p.id, kwh: p.kwh, icon: p.icon, title: p.title, code: p.code, at: p.at, status: p.status }));
+  return { balance, items, taken };
+}
+
+/** The driver takes a gift: its kWh are spent, a code comes back. */
+export function claimPrize(account, kwh) {
+  if (!feature('rewards')) return { status: 403, error: 'Награды сейчас выключены' };
+  const gift = setting('rewards.prizes').find(m => m.kwh === Number(kwh));
+  if (!gift) return { status: 404, error: 'Такого подарка больше нет — обновите экран' };
+  const balance = kwhBalance(account);
+  if (balance < gift.kwh) return { status: 400, error: `Не хватает ${(gift.kwh - balance).toLocaleString('ru-RU')} кВт·ч` };
+  const prize = { id: `PR-${Date.now().toString(36)}-${crypto.randomBytes(2).toString('hex')}`, userId: account.id, kwh: gift.kwh, icon: gift.icon, title: gift.title, code: prizeCode(), at: nowIso(), status: 'ready', issuedAt: null, issuedBy: null };
+  prizesStore().unshift(prize);
+  db.save();
+  return { prize, balance: balance - gift.kwh };
+}
+
+/** After a charge: the gifts this charge made affordable, for one notice each. */
+export function newlyAffordable(account, energy) {
+  if (!feature('rewards') || !(energy > 0)) return [];
+  const after = kwhBalance(account);
+  const before = after - energy;
+  return setting('rewards.prizes').filter(m => before < m.kwh && after >= m.kwh);
+}
+
+/** For the admin: who took what, newest first, and which are still to hand over. */
+export function prizesOverview() {
+  return prizesStore().slice(0, 200).map(p => {
+    const a = db.byId('accounts', p.userId);
+    return { ...p, user: a?.name ?? p.userId, phone: a?.login ?? null };
+  });
+}
+
+/** The admin hands a gift over, takes the mark back, or cancels it (the kWh go back to the driver). */
+export function setPrizeStatus(id, status, actor) {
+  const p = prizesStore().find(x => x.id === id);
+  if (!p) return { status: 404, error: 'Подарок не найден' };
+  if (!['issued', 'ready', 'cancelled'].includes(status)) return { status: 400, error: 'Статус: issued, ready или cancelled' };
+  p.status = status;
+  p.issuedAt = status === 'issued' ? nowIso() : null;
+  p.issuedBy = status === 'ready' ? null : (actor?.name ?? 'Администратор');
+  db.save();
+  return { prize: p };
+}
+
 const hasTopUp = userId => (db.data.payments ?? []).some(o => o.userId === userId && o.status === 'paid');
 const topupUsed = userId => (store()[userId]?.grants ?? []).filter(g => g.kind.startsWith('topup-')).length;
 
@@ -102,6 +169,7 @@ export function rewardsFor(account) {
   return {
     bonus: bonusFor(account.id),
     bonusDays: BONUS_DAYS(),
+    prizes: feature('rewards') || prizesStore().some(p => p.userId === account.id) ? prizesFor(account) : null,
     topup: feature('rewards') && setting('rewards.topupPerKwh') > 0 ? { perKwh: setting('rewards.topupPerKwh'), left: Math.max(0, setting('rewards.topupCharges') - topupUsed(account.id)), charges: setting('rewards.topupCharges'), toppedUp: hasTopUp(account.id) } : null,
     // A milestone switched off is hidden unless the driver already got it.
     achievements: ACHIEVEMENTS.filter(a => feature('rewards') && (enabled(a) || grants.some(g => g.kind === a.id))).map(a => {
