@@ -135,11 +135,21 @@ test('a new driver opens on the welcome, signs up with a code, accepts the agree
   await page.getByRole('checkbox', { name: /Мне есть 18 лет/ }).click();
   await page.getByRole('checkbox', { name: /обработку моих персональных данных/ }).click();
   await create.click();
-  // Only now, signed in: location and notifications, each may be put off.
-  await expect(page.getByRole('heading', { name: 'Станции рядом с вами' })).toBeVisible();
-  await page.getByRole('button', { name: 'Не сейчас' }).click();
+  // Only now, signed in: location and notifications. One neutral "Continue" each and no
+  // way round it (App Store 5.1.1(iv)); the choice is the system's dialog, and a refusal goes on.
+  const location = page.getByRole('heading', { name: 'Станции рядом с вами' });
+  await expect(location).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Не сейчас' })).toHaveCount(0);
+  for (let i = 0; i < 3 && (await location.isVisible().catch(() => false)); i++) {
+    await page.getByRole('button', { name: 'Продолжить' }).click({ timeout: 20_000 }).catch(() => {});
+    await page.waitForTimeout(1000);
+  }
+  await expect(location).toHaveCount(0, { timeout: 20_000 });
   // Notifications are asked only where the browser can still ask.
-  if (await page.getByRole('heading', { name: 'Не пропустите главное' }).isVisible({ timeout: 3000 }).catch(() => false)) await page.getByRole('button', { name: 'Не сейчас' }).click();
+  if (await page.getByRole('heading', { name: 'Не пропустите главное' }).isVisible({ timeout: 3000 }).catch(() => false)) {
+    await expect(page.getByRole('button', { name: 'Не сейчас' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Продолжить' }).click();
+  }
   await expect(page.getByRole('dialog', { name: /Добро пожаловать/ })).toHaveCount(0);
   await expect(page.locator('#driver-signup-name')).toHaveCount(0);
   await expect(page.locator('#driver-signin-to')).toHaveCount(0);

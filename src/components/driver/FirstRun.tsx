@@ -102,8 +102,13 @@ function Footer({ children }: { children: ReactNode }) {
 
 // ── Location ──
 
-function Permission({ icon, title, text, points, allow, onAllow, onLater, note }: {
-  icon: ReactNode; title: string; text: string; points: string[]; allow: string; onAllow: () => void; onLater: () => void; note?: string | null;
+/**
+ * The screen before the system's permission question. App Store rule 5.1.1(iv):
+ * one neutral "Continue" and nothing to skip it — the choice is made in the
+ * system dialog that follows, and the app works either way.
+ */
+function Permission({ icon, title, text, points, allow, onAllow, note }: {
+  icon: ReactNode; title: string; text: string; points: string[]; allow: string; onAllow: () => void; note?: string | null;
 }) {
   return (
     <>
@@ -127,7 +132,6 @@ function Permission({ icon, title, text, points, allow, onAllow, onLater, note }
       </div>
       <Footer>
         <PrimaryButton onClick={onAllow}>{allow}</PrimaryButton>
-        <button onClick={onLater} className="w-full h-11 text-sm font-semibold text-slate-500 rounded-2xl hover:bg-slate-50">Не сейчас</button>
       </Footer>
     </>
   );
@@ -166,11 +170,10 @@ function Location({ onDone }: { onDone: () => void }) {
     <Permission
       icon={<Navigation size={40} className="fill-[#111]" />}
       title="Станции рядом с вами"
-      text="Разрешите доступ к геолокации — карта откроется там, где вы, а расстояние и время до станции будут точными."
+      text="Геолокация нужна, чтобы карта открылась там, где вы, а расстояние и время до станции были точными."
       points={['Ближайшие свободные станции и путь до них по дорогам', 'Навигатор с голосом и предупреждениями о камерах', 'Используется, только пока приложение открыто']}
-      allow={busy ? 'Ждём ответ устройства…' : note ? 'Продолжить' : 'Разрешить геолокацию'}
+      allow={busy ? 'Ждём ответ устройства…' : 'Продолжить'}
       onAllow={() => void allow()}
-      onLater={onDone}
       note={note}
     />
   );
@@ -193,9 +196,8 @@ function Notify({ onDone }: { onDone: (yes: boolean) => void }) {
       title="Не пропустите главное"
       text="Сообщим, когда машина зарядилась, подошла очередь или бронь скоро закончится — даже если приложение закрыто."
       points={['Зарядка завершена — можно ехать', 'Ваша очередь: разъём свободен и держится за вами', 'Оплата, возвраты и безопасность аккаунта']}
-      allow={busy ? 'Ждём ответ устройства…' : 'Включить уведомления'}
+      allow={busy ? 'Ждём ответ устройства…' : 'Продолжить'}
       onAllow={() => void allow()}
-      onLater={() => onDone(false)}
     />
   );
 }

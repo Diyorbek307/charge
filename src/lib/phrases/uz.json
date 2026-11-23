@@ -4697,5 +4697,6 @@
 "Убрать подарок": "Sovg‘ani olib tashlash",
 "{0} кВт·ч → {1}": "{0} kVt·s → {1}",
 "кВт·ч вернутся водителю": "kVt·s haydovchiga qaytadi",
-"{0} · {1} кВт·ч": "{0} · {1} kVt·s"
+"{0} · {1} кВт·ч": "{0} · {1} kVt·s",
+"Геолокация нужна, чтобы карта открылась там, где вы, а расстояние и время до станции были точными.": "Geolokatsiya xarita siz turgan joyda ochilishi, stansiyagacha masofa va vaqt aniq bo‘lishi uchun kerak."
 }
