@@ -78,15 +78,16 @@ function Actions({ p, onChanged }: { p: SupportProfile; onChanged: () => void })
 }
 
 /** Who is writing: account, money and recent trouble, so the answer needs no other page. */
-function ProfilePanel({ threadId }: { threadId: string }) {
+/** The person's card with support's actions: from a chat (threadId) or from the users list (accountId). */
+export function ProfilePanel({ threadId, accountId }: { threadId?: string; accountId?: string }) {
   const [p, setP] = useState<SupportProfile | null>(null);
   const [error, setError] = useState('');
   const [tick, setTick] = useState(0);
   useEffect(() => {
     setError('');
-    apiClient.supportProfile(threadId).then(setP).catch(e => setError((e as Error).message));
-  }, [threadId, tick]);
-  useEffect(() => setP(null), [threadId]);
+    (accountId ? apiClient.accountProfile(accountId) : apiClient.supportProfile(threadId ?? '')).then(setP).catch(e => setError((e as Error).message));
+  }, [threadId, accountId, tick]);
+  useEffect(() => setP(null), [threadId, accountId]);
   const row = (k: string, v: React.ReactNode) => (
     <div className="flex justify-between gap-3 py-1.5 border-b border-slate-50 last:border-0 text-sm"><span className="text-slate-500">{k}</span><span className="font-semibold text-slate-800 text-right">{v}</span></div>
   );

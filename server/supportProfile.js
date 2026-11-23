@@ -79,13 +79,24 @@ function businessProfile(a) {
   };
 }
 
+function profileOf(a) {
+  if (a.portal === 'operator') return operatorProfile(a);
+  if (a.portal === 'business') return businessProfile(a);
+  if (a.portal === 'api') return { kind: 'api', id: a.id, name: a.name, login: a.login, org: a.org ?? null, webhooks: (db.data.webhooks ?? []).filter(w => w.ownerId === a.id).length };
+  return driverProfile(a);
+}
+
 api.get('/admin/support/:id/profile', requireAuth('admin'), (req, res) => {
   const t = (db.data.supportThreads ?? []).find(x => x.id === req.params.id);
   if (!t) return res.status(404).json({ error: 'Обращение не найдено' });
   const a = db.byId('accounts', t.userId);
   if (!a) return res.json({ kind: 'gone', name: t.user });
-  if (a.portal === 'operator') return res.json(operatorProfile(a));
-  if (a.portal === 'business') return res.json(businessProfile(a));
-  if (a.portal === 'api') return res.json({ kind: 'api', id: a.id, name: a.name, login: a.login, org: a.org ?? null, webhooks: (db.data.webhooks ?? []).filter(w => w.ownerId === a.id).length });
-  res.json(driverProfile(a));
+  res.json(profileOf(a));
+});
+
+/** The same card from the users list, without a chat: bonus, balance, password, name. */
+api.get('/admin/accounts/:id/profile', requireAuth('admin'), (req, res) => {
+  const a = db.byId('accounts', req.params.id);
+  if (!a || a.portal === 'admin') return res.status(404).json({ error: 'Аккаунт не найден' });
+  res.json(profileOf(a));
 });

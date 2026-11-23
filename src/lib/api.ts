@@ -1077,6 +1077,7 @@ export const apiClient = {
   grantBonus: (userId: string, amount: number, reason: string) => post<{ amount: number }>('/admin/bonus', { userId, amount, reason }, 'admin'),
   setBalance: (walletId: string, balance: number) => post<{ wallet: unknown }>(`/wallets/${encodeURIComponent(walletId)}/balance`, { balance }, 'admin'),
   supportProfile: (id: string) => request<SupportProfile>(`/admin/support/${encodeURIComponent(id)}/profile`, { portal: 'admin' }),
+  accountProfile: (id: string) => request<SupportProfile>(`/admin/accounts/${encodeURIComponent(id)}/profile`, { portal: 'admin' }),
   adminSupport: () => request<SupportThread[]>('/admin/support', { portal: 'admin' }),
   answerSupport: (id: string, body: { text?: string; close?: boolean; ai?: boolean }) => post<SupportThread>(`/admin/support/${id}`, body, 'admin'),
   aiAgents: () => request<AiAgentsView>('/admin/ai-agents', { portal: 'admin' }),

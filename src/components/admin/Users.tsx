@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Users, UserCheck, UserPlus, UserX } from 'lucide-react';
+import { Users, UserCheck, UserPlus, UserX, X } from 'lucide-react';
+import { ProfilePanel } from './Support';
 import { useSync } from '../../lib/sync';
 import type { AdminUsers as Directory } from '../../lib/api';
 import { money, num, dateShort, dateTime } from '../../lib/analytics';
@@ -20,6 +21,8 @@ export default function AdminUsers() {
   const [page, setPage] = useState(1);
   const [confirm, setConfirm] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // The driver whose card is open: bonus, balance, password, name.
+  const [open, setOpen] = useState<string | null>(null);
 
   const load = useCallback(() => {
     actions.adminUsers('admin').then(setDir).catch(e => setError(e.message));
@@ -123,7 +126,7 @@ export default function AdminUsers() {
                       <div className="flex items-center gap-2.5">
                         <span className="w-8 h-8 rounded-xl bg-sky-50 text-sky-700 text-xs font-bold flex items-center justify-center shrink-0">{initials(u.name)}</span>
                         <div className="min-w-0">
-                          <p className="font-semibold text-slate-800 truncate">{u.name}</p>
+                          <button onClick={() => setOpen(u.id)} className="font-semibold text-slate-800 truncate hover:text-sky-600 hover:underline text-left">{u.name}</button>
                           <p className="text-[11px] text-slate-400">{`${u.city || '—'} · с ${u.registered ? dateShort(u.registered) : '—'}${u.selfRegistered ? ' · через SMS' : ''}`}</p>
                         </div>
                       </div>
@@ -154,6 +157,16 @@ export default function AdminUsers() {
         )}
         <Pagination page={current} pages={pages} onPage={setPage} total={shown.length} label="водителей" />
       </Card>
+      {open && (
+        <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={e => { if (e.target === e.currentTarget) setOpen(null); }}>
+          <div className="w-full max-w-md h-full overflow-y-auto bg-slate-50 p-4 shadow-2xl">
+            <div className="flex justify-end mb-2">
+              <button onClick={() => setOpen(null)} aria-label="Закрыть" className="p-2 rounded-xl bg-white border border-slate-200 text-slate-500"><X size={16} /></button>
+            </div>
+            <ProfilePanel accountId={open} />
+          </div>
+        </div>
+      )}
     </Page>
   );
 }
