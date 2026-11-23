@@ -22,6 +22,32 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const REF = /^[\p{L}\d\s№#/.,-]{1,60}$/u;
 
 const periods = () => (db.data.volumePeriods ??= []);
+const NOTE = /^[^<>]{3,300}$/;
+
+/** The moment after `from` when `days` working days (Mon–Fri, Tashkent) have passed. */
+function workingDaysAfter(from, days) {
+  let t = from;
+  let left = days;
+  while (left > 0) {
+    t += DAY;
+    const wd = new Date(t + TZ).getUTCDay();
+    if (wd !== 0 && wd !== 6) left--;
+  }
+  return t;
+}
+const CONFIRM_DAYS = 3;
+
+/**
+ * The network's word on a marked payment: it confirms the money arrived or
+ * says it did not; silent for 3 working days, the payment counts as accepted.
+ */
+function receiptOf(p, now) {
+  if (!p.paidAt) return null;
+  if (p.receipt?.status === 'confirmed') return { status: 'confirmed', at: p.receipt.at, by: p.receipt.by };
+  if (p.receipt?.status === 'disputed') return { status: 'disputed', at: p.receipt.at, by: p.receipt.by, note: p.receipt.note };
+  const by = workingDaysAfter(Date.parse(p.paidMarkedAt ?? p.paidAt), CONFIRM_DAYS);
+  return now >= by ? { status: 'auto', at: new Date(by).toISOString() } : { status: 'waiting', by: localDate(by) };
+}
 const startOfDay = date => Date.parse(`${date}T00:00:00Z`) - TZ;
 const localDate = ms => new Date(ms + TZ).toISOString().slice(0, 10);
 
@@ -117,7 +143,7 @@ function view(p, now = Date.now()) {
     overAmount: Math.round(Math.max(0, used - total) * p.price),
     payBy: localDate(due),
     status,
-    ...(p.paidAt ? { paidAt: p.paidAt, paidRef: p.paidRef, paidAmount: p.paidAmount } : {}),
+    ...(p.paidAt ? { paidAt: p.paidAt, paidRef: p.paidRef, paidAmount: p.paidAmount, receipt: receiptOf(p, now) } : {}),
   };
 }
 
@@ -209,7 +235,8 @@ api.post('/admin/volume/:id/paid', requireAuth('admin'), (req, res) => {
   if (!DATE.test(paidAt) || Date.parse(paidAt) > Date.now() + DAY) return res.status(400).json({ error: 'Укажите дату перевода' });
   const ref = String(b.ref ?? '').trim();
   if (!REF.test(ref)) return res.status(400).json({ error: 'Укажите номер платёжного поручения' });
-  Object.assign(p, { paidAt, paidRef: ref, paidAmount: amount, paidBy: req.account.name ?? req.account.login });
+  Object.assign(p, { paidAt, paidRef: ref, paidAmount: amount, paidBy: req.account.name ?? req.account.login, paidMarkedAt: new Date().toISOString() });
+  delete p.receipt;
   db.save();
   const op = db.byId('operators', p.operatorId);
   emit({
@@ -227,8 +254,50 @@ api.post('/admin/volume/:id/paid', requireAuth('admin'), (req, res) => {
 api.delete('/admin/volume/:id/paid', requireAuth('admin'), (req, res) => {
   const p = periods().find(x => x.id === req.params.id);
   if (!p?.paidAt) return res.status(404).json({ error: 'Отметки нет' });
-  delete p.paidAt; delete p.paidRef; delete p.paidAmount; delete p.paidBy;
+  delete p.paidAt; delete p.paidRef; delete p.paidAmount; delete p.paidBy; delete p.paidMarkedAt; delete p.receipt;
   db.save();
   emit({ type: 'operator.volume.undo', portal: 'admin', actor: req.account.name ?? req.account.login, message: `Отметка оплаты ${p.id} снята`, entity: p.id, payload: { operatorId: p.operatorId } });
   res.json(view(p));
+});
+
+/**
+ * The network answers for a payment Voli marked: the money arrived, or it did
+ * not (with what is wrong). "Not received" alerts the team; a later "received"
+ * settles it. A confirmed payment cannot be disputed afterwards.
+ */
+api.post('/operator/volume/:id/receipt', requireAuth('operator'), (req, res) => {
+  const p = periods().find(x => x.id === req.params.id && x.operatorId === req.account.orgId);
+  if (!p) return res.status(404).json({ error: 'Период не найден' });
+  if (!p.paidAt) return res.status(400).json({ error: 'Voli ещё не отметила оплату этого периода' });
+  const ok = req.body?.ok === true;
+  const now = Date.now();
+  const current = receiptOf(p, now);
+  if (current.status === 'confirmed') return res.status(409).json({ error: 'Получение уже подтверждено' });
+  if (!ok && current.status === 'auto') return res.status(409).json({ error: 'Срок подтверждения прошёл — оплата принята. Если деньги не пришли, напишите Voli' });
+  const by = req.account.name ?? req.account.login;
+  const op = db.byId('operators', p.operatorId);
+  const range = `${localDate(p.from)} — ${localDate(p.to - 1)}`;
+  if (ok) {
+    p.receipt = { status: 'confirmed', at: new Date(now).toISOString(), by };
+  } else {
+    const note = String(req.body?.note ?? '').trim();
+    if (!NOTE.test(note)) return res.status(400).json({ error: 'Напишите, что не так: например, деньги не пришли или пришло меньше' });
+    p.receipt = { status: 'disputed', at: new Date(now).toISOString(), by, note };
+    void alertTeam(`volume-dispute:${p.id}:${now}`, 'Сеть не получила оплату выкупа', [
+      ['Сеть', op?.name ?? p.operatorId],
+      ['Период', range],
+      ['Отмечено', `${(p.paidAmount ?? 0).toLocaleString('ru-RU')} сум, п/п ${p.paidRef}`],
+      ['Сеть пишет', note],
+    ]);
+  }
+  db.save();
+  emit({
+    type: 'operator.volume.receipt',
+    portal: 'operator',
+    actor: by,
+    message: ok ? `${op?.name ?? p.operatorId}: получение оплаты за ${range} подтверждено` : `${op?.name ?? p.operatorId}: оплата за ${range} не получена — ${p.receipt.note}`,
+    entity: p.id,
+    payload: { operatorId: p.operatorId },
+  });
+  res.json(view(p, now));
 });

@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
-import { Package, Zap, Battery, Banknote } from 'lucide-react';
-import type { VolumePeriod, VolumeView } from '../../lib/api';
+import { useState, type ReactNode } from 'react';
+import { Package, Zap, Battery, Banknote, CheckCircle2, XCircle } from 'lucide-react';
+import { apiClient, type VolumePeriod, type VolumeView } from '../../lib/api';
 import { money, num, dateShort } from '../../lib/analytics';
 import ExportButton from '../ExportButton';
 import { Page, Card, Kpi, Pill, Empty } from '../admin/ui';
@@ -21,6 +21,16 @@ export const kwh = (n: number) => `${num(n)} кВт·ч`;
 export const range = (p: VolumePeriod) => `${dateShort(p.from)} — ${dateShort(p.to)}`;
 export const kindLabel = (k: 'month' | 'week') => (k === 'week' ? 'неделя' : 'месяц');
 
+/** What the network said about a marked payment. */
+export function ReceiptLine({ p }: { p: VolumePeriod }) {
+  const r = p.receipt;
+  if (!r) return null;
+  if (r.status === 'confirmed') return <span className="text-[11px] font-semibold text-emerald-700">Сеть подтвердила получение</span>;
+  if (r.status === 'auto') return <span className="text-[11px] text-slate-400">Принято: сеть не возразила</span>;
+  if (r.status === 'disputed') return <span className="text-[11px] font-semibold text-red-600">{`Сеть: не получили — ${r.note ?? ''}`}</span>;
+  return <span className="text-[11px] text-amber-700">{`Ждёт подтверждения сети до ${dateShort(r.by ?? '')}`}</span>;
+}
+
 export function PayStatus({ p }: { p: VolumePeriod }) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -28,6 +38,53 @@ export function PayStatus({ p }: { p: VolumePeriod }) {
       <span className="text-[11px] text-slate-400 whitespace-nowrap">
         {p.paidAt ? `${dateShort(p.paidAt)}${p.paidRef ? ` · п/п ${p.paidRef}` : ''}` : `до ${dateShort(p.payBy)}`}
       </span>
+      <ReceiptLine p={p} />
+    </div>
+  );
+}
+
+/** The network's answer to a payment Voli marked: received, or not (with what is wrong). */
+function ConfirmReceipt({ p, onDone }: { p: VolumePeriod; onDone: () => void }) {
+  const [disputing, setDisputing] = useState(p.receipt?.status === 'disputed');
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const send = async (ok: boolean) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.volumeReceipt(p.id, ok, ok ? undefined : note.trim());
+      onDone();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не получилось');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const disputed = p.receipt?.status === 'disputed';
+  return (
+    <div className={`rounded-2xl border px-4 py-3 ${disputed ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'}`}>
+      <p className="text-sm text-slate-800">
+        <b>{`Voli отправила ${money(p.paidAmount ?? p.amount)} за ${range(p)}`}</b>
+        {` · п/п ${p.paidRef ?? '—'} от ${dateShort(p.paidAt ?? '')}`}
+      </p>
+      <p className="text-xs text-slate-600 mt-1">
+        {disputed
+          ? `Вы сообщили: «${p.receipt?.note ?? ''}». Voli разбирается. Когда деньги придут, подтвердите получение.`
+          : `Проверьте счёт и подтвердите получение до ${dateShort(p.receipt?.by ?? '')}. Если не ответить, оплата будет считаться принятой.`}
+      </p>
+      {disputing && !disputed && (
+        <label className="block text-xs font-semibold text-slate-600 mt-3">Что не так
+          <input value={note} onChange={e => setNote(e.target.value)} placeholder="например, деньги не пришли или пришло меньше" className="mt-1 w-full h-10 px-3 rounded-xl border border-slate-200 text-sm text-slate-800 bg-white" />
+        </label>
+      )}
+      {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+      <div className="flex flex-wrap gap-2 mt-3">
+        <button disabled={busy} onClick={() => void send(true)} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl bg-[#111] text-white text-sm font-semibold disabled:opacity-40"><CheckCircle2 size={14} />Деньги получены</button>
+        {!disputed && (disputing
+          ? <button disabled={busy || note.trim().length < 3} onClick={() => void send(false)} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl border border-red-300 bg-white text-red-700 text-sm font-semibold disabled:opacity-40"><XCircle size={14} />Отправить</button>
+          : <button disabled={busy} onClick={() => setDisputing(true)} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-semibold disabled:opacity-40"><XCircle size={14} />Не получили</button>)}
+      </div>
     </div>
   );
 }
@@ -94,7 +151,7 @@ export const exportRows = (periods: VolumePeriod[]) =>
 export const EXPORT_HEADERS = ['С', 'По', 'Период', 'Выкуплено, кВт·ч', 'Перенесено, кВт·ч', 'Израсходовано, кВт·ч', 'Зарядок', 'Остаток, кВт·ч', 'Сверх объёма, кВт·ч', 'Цена 1 кВт·ч, сум', 'Сумма, сум', 'Сверх объёма, сум', 'Оплата', 'Дата оплаты', 'П/п'];
 
 /** The network's «Финансы» when Voli buys its volume. */
-export function OperatorVolumeFinance({ data }: { data: VolumeView }) {
+export function OperatorVolumeFinance({ data, reload }: { data: VolumeView; reload: () => void }) {
   const deal = data.deal!;
   const cur = data.periods.find(p => p.current) ?? data.periods[0];
   const paid = data.periods.filter(p => p.status === 'paid').reduce((s, p) => s + (p.paidAmount ?? p.amount), 0);
@@ -110,6 +167,8 @@ export function OperatorVolumeFinance({ data }: { data: VolumeView }) {
         <Kpi label={cur?.over ? 'Сверх объёма' : 'Остаток'} value={num(cur?.over || cur?.left || 0)} sub="кВт·ч" icon={<Battery size={14} />} tone={cur?.over ? 'red' : 'violet'} />
         <Kpi label="Получено от Voli" value={money(paid, false)} sub="сум за всё время" icon={<Banknote size={14} />} tone="amber" />
       </div>
+
+      {data.periods.filter(p => p.receipt?.status === 'waiting' || p.receipt?.status === 'disputed').map(p => <ConfirmReceipt key={p.id} p={p} onDone={reload} />)}
 
       {cur ? (
         <Card title={`Текущий период · ${range(cur)}`} right={<PayStatus p={cur} />}>

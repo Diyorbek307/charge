@@ -188,6 +188,7 @@ export default function VolumeDeals() {
   const withDeal = list.filter(v => v.deal);
   const shown = showAll ? list : withDeal;
   const overdue = withDeal.flatMap(v => v.periods.filter(p => p.status === 'overdue').map(p => ({ ...p, operator: v.operator })));
+  const disputed = withDeal.flatMap(v => v.periods.filter(p => p.receipt?.status === 'disputed').map(p => ({ ...p, operator: v.operator })));
   return (
     <Card
       pad={false}
@@ -201,6 +202,12 @@ export default function VolumeDeals() {
           <p><b>{`Не оплачено вовремя: ${overdue.length}`}</b> {overdue.map(p => `${p.operator} (${range(p)})`).join(', ')}</p>
         </div>
       )}
+      {disputed.map(p => (
+        <div key={p.id} className="mx-5 mb-3 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+          <p><b>{`${p.operator}: оплату за ${range(p)} не получили`}</b> {`— «${p.receipt?.note ?? ''}». Проверьте перевод в банке. Если отметили по ошибке — снимите отметку и отметьте заново.`}</p>
+        </div>
+      ))}
       {shown.length ? shown.map(v => <Network key={v.operatorId} v={v} reload={reload} />) : (
         <p className="px-5 pb-4 text-sm text-slate-400">Пока ни с одной сетью не настроен выкуп объёма. Нажмите «Все сети», чтобы настроить.</p>
       )}

@@ -11,11 +11,12 @@ import { OperatorVolumeFinance } from './Volume';
 /** A network Voli buys volume from sees the volume; any other, its share of the takings. */
 export default function OperatorFinance() {
   const [volume, setVolume] = useState<VolumeView | null | undefined>(undefined);
-  useEffect(() => {
-    apiClient.operatorVolume().then(setVolume, () => setVolume(null));
-  }, []);
+  const load = () => {
+    apiClient.operatorVolume().then(setVolume, () => setVolume(v => v ?? null));
+  };
+  useEffect(load, []);
   if (volume === undefined) return <Page title="Финансы"><Loading /></Page>;
-  if (volume?.deal) return <OperatorVolumeFinance data={volume} />;
+  if (volume?.deal) return <OperatorVolumeFinance data={volume} reload={load} />;
   return <CommissionFinance />;
 }
 

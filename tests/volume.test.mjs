@@ -101,5 +101,17 @@ test('volume terms: periods from the start date, usage, carry-over, prepayment m
   assert.equal((await call(`/admin/volume/${first.id}/paid`, { method: 'POST', token: admin, body: { amount: 1, paidAt: daysAgo(1), ref: '1' } })).status, 409);
   const seen = (await call('/operator/volume', { token: op })).data.periods.find(p => p.id === first.id);
   assert.equal(seen.paidRef, '124');
+  assert.equal(seen.receipt.status, 'waiting', 'the network is asked to confirm');
+
+  // The network: "not received" needs a reason; then it can still confirm; a confirmed one cannot be disputed.
+  const receipt = (body, token = op) => call(`/operator/volume/${first.id}/receipt`, { method: 'POST', token, body });
+  assert.equal((await call(`/operator/volume/${cur.id}/receipt`, { method: 'POST', token: op, body: { ok: true } })).status, 400, 'nothing marked yet');
+  assert.equal((await receipt({ ok: false, note: '' })).status, 400);
+  const disputed = await receipt({ ok: false, note: 'Деньги не пришли' });
+  assert.equal(disputed.data.receipt.status, 'disputed');
+  assert.equal((await call('/admin/volume', { token: admin })).data.find(v => v.operatorId === 'op-001').periods.find(p => p.id === first.id).receipt.note, 'Деньги не пришли');
+  assert.equal((await receipt({ ok: true })).data.receipt.status, 'confirmed');
+  assert.equal((await receipt({ ok: false, note: 'передумали' })).status, 409);
+  assert.equal((await receipt({ ok: true }, admin)).status, 403, 'only the network answers');
   assert.equal((await call(`/admin/volume/${first.id}/paid`, { method: 'DELETE', token: admin })).data.status, 'overdue', 'unpaid 35 days after its start is overdue');
 });

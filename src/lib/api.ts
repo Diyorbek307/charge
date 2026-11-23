@@ -395,6 +395,7 @@ export interface VolumePeriod {
   kwh: number; carriedIn: number; total: number; used: number; sessions: number; left: number; over: number;
   price: number; amount: number; overAmount: number; payBy: string; status: 'paid' | 'due' | 'overdue';
   paidAt?: string; paidRef?: string; paidAmount?: number;
+  receipt?: { status: 'waiting' | 'confirmed' | 'disputed' | 'auto'; at?: string; by?: string; note?: string } | null;
 }
 export interface VolumeView { operatorId: string; operator: string; deal: VolumeDeal | null; periods: VolumePeriod[] }
 
@@ -1049,6 +1050,7 @@ export const apiClient = {
   markPayout: (b: { invoiceId: string; operatorId: string; amount: number; paidAt: string; ref: string }) => post<{ paidAt: string }>('/admin/payouts', b, 'admin'),
   undoPayout: (invoiceId: string, operatorId: string) => request<{ removed: boolean }>(`/admin/payouts/${encodeURIComponent(invoiceId)}/${encodeURIComponent(operatorId)}`, { method: 'DELETE', portal: 'admin' }),
   operatorVolume: () => request<VolumeView>('/operator/volume', { portal: 'operator' }),
+  volumeReceipt: (id: string, ok: boolean, note?: string) => post<VolumePeriod>(`/operator/volume/${encodeURIComponent(id)}/receipt`, { ok, note }, 'operator'),
   adminVolume: () => request<VolumeView[]>('/admin/volume', { portal: 'admin' }),
   setVolumeDeal: (operatorId: string, deal: VolumeDeal) => post<VolumeView>(`/admin/operators/${encodeURIComponent(operatorId)}/volume`, deal, 'admin'),
   markVolumePaid: (id: string, b: { amount: number; paidAt: string; ref: string }) => post<VolumePeriod>(`/admin/volume/${encodeURIComponent(id)}/paid`, b, 'admin'),
