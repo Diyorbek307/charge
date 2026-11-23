@@ -2,6 +2,7 @@ import { db } from './db.js';
 import { api, requireAuth, emit } from './api.js';
 import { allInvoices } from './analytics.js';
 import { alertTeam } from './alerts.js';
+import { remindVolumeOverdue } from './volume.js';
 
 /**
  * Paying the networks their share. Drivers' money lands on Voli's account;
@@ -78,6 +79,7 @@ export function startPayoutWatch() {
   const t = setInterval(() => {
     try {
       remindOverdue();
+      remindVolumeOverdue();
     } catch (e) {
       console.warn('[payouts]', e.message);
     }

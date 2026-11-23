@@ -4,8 +4,22 @@ import { useAnalytics, money, num, monthShort, monthLong, dateShort } from '../.
 import ExportButton from '../ExportButton';
 import { Page, Card, Kpi, Loading, ErrorNote, Pill, CHART, STATUS_PILL } from '../admin/ui';
 import { downloadAct } from '../../lib/act';
+import { useEffect, useState } from 'react';
+import { apiClient, type VolumeView } from '../../lib/api';
+import { OperatorVolumeFinance } from './Volume';
 
+/** A network Voli buys volume from sees the volume; any other, its share of the takings. */
 export default function OperatorFinance() {
+  const [volume, setVolume] = useState<VolumeView | null | undefined>(undefined);
+  useEffect(() => {
+    apiClient.operatorVolume().then(setVolume, () => setVolume(null));
+  }, []);
+  if (volume === undefined) return <Page title="Финансы"><Loading /></Page>;
+  if (volume?.deal) return <OperatorVolumeFinance data={volume} />;
+  return <CommissionFinance />;
+}
+
+function CommissionFinance() {
   const { data, error } = useAnalytics('operator', 30);
   if (!data?.invoices) return <Page title="Финансы">{error ? <ErrorNote text={error} /> : <Loading />}</Page>;
 

@@ -566,6 +566,8 @@ function invoicesFor(operatorIds, sessions, now) {
     for (const id of operatorIds) {
       const o = db.byId('operators', id);
       if (!o || o.status !== 'active') continue;
+      // A network Voli buys volume from is paid for the volume (server/volume.js), not a share of the takings.
+      if (o.volume?.start && month >= o.volume.start.slice(0, 7)) continue;
       const roll = rollups.find(r => r.month === month && r.operatorId === id);
       let sessionsN = 0;
       let revenue = 0;

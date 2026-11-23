@@ -6,6 +6,7 @@ import { apiClient } from '../../lib/api';
 import ExportButton from '../ExportButton';
 import { Page, Card, Kpi, Loading, ErrorNote, Pill, Segmented, CHART, STATUS_PILL } from './ui';
 import { downloadAct } from '../../lib/act';
+import VolumeDeals from './VolumeDeals';
 
 /**
  * Monthly settlement with operators: the month is closed on the 1st and the
@@ -87,7 +88,7 @@ export default function AdminSettlement() {
   return (
     <Page
       title="Расчёты с операторами"
-      subtitle="Месяц закрывается 1-го числа, выплата оператору — 2-го: оборот минус комиссия платформы"
+      subtitle="Сети с выкупом объёма — в блоке ниже. Сети на комиссии: месяц закрывается 1-го числа, выплата — 2-го, оборот минус комиссия платформы"
       actions={
         <ExportButton
           name="invoices"
@@ -104,6 +105,8 @@ export default function AdminSettlement() {
         <Kpi label={`Комиссия · ${monthShort(current)}`} value={money(sum(current, 'commission'), false)} sub={`сум · ${num((sum(current, 'commission') / Math.max(sum(current, 'revenue'), 1)) * 100, 1)}% оборота`} icon={<Percent size={14} />} tone="violet" />
         <Kpi label="Следующая выплата" value={nextPay ? dateShort(nextPay) : '—'} sub={`${all.filter(i => i.month === current).length} ${plural(all.filter(i => i.month === current).length, ['инвойс', 'инвойса', 'инвойсов'])}`} icon={<CalendarClock size={14} />} tone="amber" />
       </div>
+
+      <VolumeDeals />
 
       {overdue.length > 0 && (
         <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">

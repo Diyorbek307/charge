@@ -185,6 +185,9 @@ function scopeOf({ type, entity, payload = {} }) {
       return { userId: entity };
     case 'operator.payout.paid':
     case 'operator.payout.undo':
+    case 'operator.volume.update':
+    case 'operator.volume.paid':
+    case 'operator.volume.undo':
       return { operatorId: payload.operatorId ?? null };
     case 'employee.added':
       return { fleet: payload.orgId ?? DEMO_ORG, userId: payload.userId ?? null };

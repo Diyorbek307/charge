@@ -388,6 +388,16 @@ export interface Prizes {
   taken: PrizeTaken[];
 }
 /** A company whose staff charge on its money (server/companies.js). */
+/** Voli's prepaid volume at a network (server/volume.js). */
+export interface VolumeDeal { on: boolean; period: 'month' | 'week'; kwh: number; price: number; carry: boolean; start: string }
+export interface VolumePeriod {
+  id: string; n: number; kind: 'month' | 'week'; from: string; to: string; current: boolean;
+  kwh: number; carriedIn: number; total: number; used: number; sessions: number; left: number; over: number;
+  price: number; amount: number; overAmount: number; payBy: string; status: 'paid' | 'due' | 'overdue';
+  paidAt?: string; paidRef?: string; paidAmount?: number;
+}
+export interface VolumeView { operatorId: string; operator: string; deal: VolumeDeal | null; periods: VolumePeriod[] }
+
 export interface Company {
   id: string; name: string; inn: string | null; createdAt: string; createdBy: string; demo?: boolean;
   balance: number; employees: number; monthSpend: number; monthKwh: number;
@@ -1038,6 +1048,11 @@ export const apiClient = {
   adminPrograms: () => request<any>('/admin/programs', { portal: 'admin' }),
   markPayout: (b: { invoiceId: string; operatorId: string; amount: number; paidAt: string; ref: string }) => post<{ paidAt: string }>('/admin/payouts', b, 'admin'),
   undoPayout: (invoiceId: string, operatorId: string) => request<{ removed: boolean }>(`/admin/payouts/${encodeURIComponent(invoiceId)}/${encodeURIComponent(operatorId)}`, { method: 'DELETE', portal: 'admin' }),
+  operatorVolume: () => request<VolumeView>('/operator/volume', { portal: 'operator' }),
+  adminVolume: () => request<VolumeView[]>('/admin/volume', { portal: 'admin' }),
+  setVolumeDeal: (operatorId: string, deal: VolumeDeal) => post<VolumeView>(`/admin/operators/${encodeURIComponent(operatorId)}/volume`, deal, 'admin'),
+  markVolumePaid: (id: string, b: { amount: number; paidAt: string; ref: string }) => post<VolumePeriod>(`/admin/volume/${encodeURIComponent(id)}/paid`, b, 'admin'),
+  undoVolumePaid: (id: string) => request<VolumePeriod>(`/admin/volume/${encodeURIComponent(id)}/paid`, { method: 'DELETE', portal: 'admin' }),
   adminCompanies: () => request<Company[]>('/admin/companies', { portal: 'admin' }),
   createCompany: (body: { name: string; inn: string; managerName: string; email: string }) => post<{ company: Company; link: string; mail: InviteMail }>('/admin/companies', body, 'admin'),
   companyInvite: (id: string) => post<{ link: string; mail: InviteMail }>(`/admin/companies/${encodeURIComponent(id)}/invite`, {}, 'admin'),
