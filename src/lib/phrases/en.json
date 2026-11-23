@@ -4698,5 +4698,7 @@
 "{0} кВт·ч → {1}": "{0} kWh → {1}",
 "кВт·ч вернутся водителю": "The kWh go back to the driver",
 "{0} · {1} кВт·ч": "{0} · {1} kWh",
-"Геолокация нужна, чтобы карта открылась там, где вы, а расстояние и время до станции были точными.": "Location lets the map open where you are, with exact distance and time to each station."
+"Геолокация нужна, чтобы карта открылась там, где вы, а расстояние и время до станции были точными.": "Location lets the map open where you are, with exact distance and time to each station.",
+"Возврат бонуса за зарядку": "Bonus returned for a charge",
+"Возврат {0} сум · {1} · {2} · из них {3} бонусом": "Refund {0} sum · {1} · {2} · of it {3} as bonus"
 }

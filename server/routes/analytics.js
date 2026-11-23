@@ -4,6 +4,7 @@ import { db } from '../db.js';
 import { analyticsFor, growthFor, investorFor } from '../analytics.js';
 import { refundDebt } from '../credit.js';
 import { refundNetwork } from '../direct.js';
+import { returnBonus } from '../rewards.js';
 import { api, emit, requireAuth } from '../api.js';
 
 // ---------------------------------------------------------------------------
@@ -37,7 +38,10 @@ api.post('/transactions/:id/refund', requireAuth('admin'), (req, res) => {
   } else {
     const walletId = session?.corporate ? 'biz-001' : session?.familyOwner ?? txn.userId;
     const wallet = (db.data.wallets[walletId] ??= { balance: 0, currency: 'UZS', autoTopUp: false, threshold: 0, card: null });
-    wallet.balance += txn.amount;
+    // What the bonus paid goes back as bonus; only what the wallet paid goes back to the wallet.
+    const bonus = Math.min(txn.amount, txn.bonus ?? 0);
+    wallet.balance += txn.amount - bonus;
+    if (bonus) returnBonus(txn.userId, bonus, txn.id);
   }
   txn.status = 'refunded';
   txn.refundedAt = new Date().toISOString();
@@ -47,9 +51,9 @@ api.post('/transactions/:id/refund', requireAuth('admin'), (req, res) => {
     type: 'wallet.refund',
     portal: 'admin',
     actor: req.account.name,
-    message: `Возврат ${txn.amount.toLocaleString('ru-RU')} сум · ${txn.id} · ${txn.user}`,
+    message: `Возврат ${txn.amount.toLocaleString('ru-RU')} сум · ${txn.id} · ${txn.user}${txn.bonus ? ` · из них ${Math.min(txn.amount, txn.bonus).toLocaleString('ru-RU')} бонусом` : ''}`,
     entity: txn.id,
-    payload: { amount: txn.amount, userId: txn.userId },
+    payload: { amount: txn.amount, bonus: Math.min(txn.amount, txn.bonus ?? 0), userId: txn.userId },
   });
   res.json({ transaction: txn });
 });

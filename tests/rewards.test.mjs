@@ -105,6 +105,31 @@ describe('Voli rewards', () => {
     assert.equal(next.transactions.find(t => t.sessionId === start.data.session.id).bonus ?? 0, used);
   });
 
+  test('refunding a charge the bonus paid returns that part as bonus, never as wallet money', async () => {
+    const token = await driver();
+    const admin = await login('admin', 'admin@voli.uz', 'Admin2026');
+    const state = (await call('/state', { token })).data;
+    assert.ok(state.rewards.bonus.balance > 0);
+    const st = state.stations.find(s => !s.ocpi && s.connectors.some(c => c.status === 'available'));
+    const c = st.connectors.find(x => x.status === 'available');
+    const start = await call('/sessions/start', { method: 'POST', token, body: { stationId: st.id, connectorId: c.id } });
+    assert.equal(start.status, 200, JSON.stringify(start.data));
+    await call(`/sessions/${start.data.session.id}/stop`, { method: 'POST', token });
+    const after = (await call('/state', { token })).data;
+    const txn = after.transactions.find(t => t.sessionId === start.data.session.id);
+    const bonusPaid = txn.bonus ?? 0;
+    assert.ok(bonusPaid > 0, 'the bonus paid at least part of the charge');
+    const wallet = after.wallets['acc-driver'].balance;
+    const bonus = after.rewards.bonus.balance;
+
+    const r = await call(`/transactions/${txn.id}/refund`, { method: 'POST', token: admin });
+    assert.equal(r.status, 200, JSON.stringify(r.data));
+    const back = (await call('/state', { token })).data;
+    assert.equal(back.wallets['acc-driver'].balance, wallet + (txn.amount - bonusPaid), 'only the wallet part goes back to the wallet');
+    assert.equal(back.rewards.bonus.balance, bonus + bonusPaid, 'the bonus part comes back as bonus');
+    assert.equal((await call(`/transactions/${txn.id}/refund`, { method: 'POST', token: admin })).status, 409);
+  });
+
   test('the bonus per kWh comes only after a paid top-up, on the first charges', async () => {
     const phone = '+998935554077';
     const code = (await call('/auth/sms/request', { method: 'POST', body: { phone, purpose: 'register' } })).data.demoCode;

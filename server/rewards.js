@@ -229,6 +229,25 @@ export function grantBonus(userId, kind, title, amount) {
   return grant;
 }
 
+/**
+ * A refunded charge that was paid partly or wholly with the bonus: that part
+ * comes back as bonus, never as wallet money (a bonus cannot be withdrawn).
+ * Outside the month's budget — it was already counted when first granted.
+ */
+export function returnBonus(userId, amount, txnId) {
+  const sum = Math.round(Number(amount));
+  if (!(sum > 0)) return null;
+  const mine = (store()[userId] ??= { grants: [] });
+  const kind = `refund-${txnId}`;
+  if (mine.grants.some(g => g.kind === kind)) return null;
+  const at = nowIso();
+  const grant = { id: `BN-${Date.now().toString(36)}-refund`, kind, title: 'Возврат бонуса за зарядку', amount: sum, left: sum, at, expiresAt: new Date(Date.now() + BONUS_DAYS() * DAY).toISOString() };
+  mine.grants.push(grant);
+  ledger().unshift({ id: grant.id, userId, kind, amount: sum, ts: at, type: 'grant' });
+  db.save();
+  return grant;
+}
+
 /** Support gives a driver a bonus by hand (an apology, a goodwill gesture); it counts towards the budget. */
 export function grantManual(account, amount, reason) {
   const sum = Math.round(Number(amount));

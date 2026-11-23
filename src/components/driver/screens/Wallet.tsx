@@ -55,13 +55,14 @@ export function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewa
     }),
     ...(state?.transactions ?? [])
       // A charge that never started bills nothing: no "−0 сум" row for it.
-      .filter(t => t.userId === driverId && t.amount > 0 && (t.method === 'Кошелёк' || t.method.startsWith('Баланс сети')))
+      // A refund of a charge the bonus paid in full brings nothing back to the wallet (the bonus returns as bonus).
+      .filter(t => t.userId === driverId && t.amount > 0 && (t.method === 'Кошелёк' || t.method.startsWith('Баланс сети')) && !(t.status === 'refunded' && t.amount - (t.bonus ?? 0) <= 0))
       .map(t => {
         const ses = state?.sessions.find(x => x.id === t.sessionId);
         const refunded = t.status === 'refunded';
         const viaNetwork = t.method.startsWith('Баланс сети');
         const fromWallet = t.amount - (t.bonus ?? 0);
-        return { id: t.id, type: refunded ? 'topup' : 'charge', amount: refunded ? t.amount : -fromWallet, label: `${refunded ? 'Возврат' : 'Зарядка'} — ${ses?.stationName ?? t.sessionId}${viaNetwork ? ' · баланс сети' : ''}${t.bonus ? ` · ${t.bonus.toLocaleString('ru-RU')} бонусом` : ''}`, at: t.time };
+        return { id: t.id, type: refunded ? 'topup' : 'charge', amount: refunded ? fromWallet : -fromWallet, label: `${refunded ? 'Возврат' : 'Зарядка'} — ${ses?.stationName ?? t.sessionId}${viaNetwork ? ' · баланс сети' : ''}${t.bonus ? ` · ${t.bonus.toLocaleString('ru-RU')} бонусом` : ''}`, at: t.time };
       }),
   ]
     .sort((a, b) => b.at.localeCompare(a.at))
