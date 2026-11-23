@@ -84,7 +84,14 @@ const checking = new Set();
 
 // An order closed on our side whose receipt may still have been paid: checked for this long.
 const LATE_PAYMENT_MS = 7 * 24 * 60 * 60_000;
-const recheckable = o => o.receipt?.id && (o.status === 'pending' || (o.status === 'expired' && Date.now() - new Date(o.created).getTime() < LATE_PAYMENT_MS));
+// The cashbox in use: the real one (PAYME_TEST=false) or Payme's test one.
+const RECEIPTS_LIVE = process.env.PAYME_TEST === 'false';
+// A receipt from the other cashbox (test receipts after switching to the real one) is not ours to ask about.
+// Older receipts carry no mark: they are still asked, and one Payme does not know is closed quietly.
+const sameCashbox = o => o.receipt?.live === undefined || o.receipt.live === RECEIPTS_LIVE;
+const recheckable = o => o.receipt?.id && sameCashbox(o) && (o.status === 'pending' || (o.status === 'expired' && Date.now() - new Date(o.created).getTime() < LATE_PAYMENT_MS));
+// Payme does not know the receipt at all: nothing was paid by it.
+const RECEIPT_UNKNOWN = err => err?.code === -31602 || /не найден|not found|topilmadi/i.test(String(err?.message));
 
 /**
  * Asks Payme about one receipt and credits the order once it is paid. Payme is
@@ -124,6 +131,13 @@ async function syncReceipt(order) {
     }
     paymeFailures = 0;
   } catch (err) {
+    if (RECEIPT_UNKNOWN(err)) {
+      // Not a fault of Payme's: an order whose receipt Payme never had is closed, quietly.
+      order.status = order.status === 'paid' ? 'paid' : 'cancelled';
+      order.receipt.unknown = true;
+      db.save();
+      return order;
+    }
     console.error('[payme receipts]', err.message);
     // Wrong keys or Payme down for a while: the team hears of it, not only the log.
     if (++paymeFailures >= 5) alertTeam('payme-receipts', 'Payme не отвечает на проверку чеков', [['Ошибка', err.message], ['Подряд', String(paymeFailures)]]);
@@ -345,7 +359,7 @@ paymentsApi.post('/topup', async (req, res) => {
   }
 
   expireStale();
-  const walletId = account.portal === 'business' ? 'biz-001' : account.id;
+  const walletId = account.portal === 'business' ? account.orgId : account.id;
   if (!db.data.wallets[walletId]) return res.status(404).json({ error: 'Кошелёк не найден' });
   if (orders().filter(o => o.userId === account.id && o.status === 'pending').length >= MAX_PENDING_PER_USER) {
     return res.status(429).json({ error: 'Слишком много неоплаченных счетов — оплатите или подождите' });
@@ -373,7 +387,7 @@ paymentsApi.post('/topup', async (req, res) => {
         description: `Voli: пополнение баланса ${order.id}`,
       });
       if (!receipt?._id) throw new PaymeApiError('Payme не вернул номер чека');
-      order.receipt = { id: receipt._id, state: receipt.state ?? 0 };
+      order.receipt = { id: receipt._id, state: receipt.state ?? 0, live: RECEIPTS_LIVE };
     } catch (err) {
       console.error('[payme receipts]', err.message);
       alertTeam('payme-create', 'Payme: не удалось создать чек для пополнения', [['Ошибка', err.message], ['Сумма', `${amount} сум`]]);

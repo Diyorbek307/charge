@@ -163,3 +163,15 @@ test('a receipt Payme reports paid after we closed it is still credited, once', 
   await call('/payments', { token });
   assert.equal(await balance(), start + 40000);
 });
+
+test('a receipt Payme does not know (from the test cashbox) is closed quietly, without an alarm', async () => {
+  const token = await driver();
+  const r = await call('/payments/topup', { method: 'POST', token, body: { provider: 'payme', amount: 20000 } });
+  const receiptId = [...receipts.keys()].at(-1);
+  // Switched to another cashbox: Payme has never seen this receipt.
+  receipts.delete(receiptId);
+  assert.equal((await call(`/payments/order/${r.data.order.id}`, { token })).data.status, 'cancelled');
+  const before = seen.filter(s => s.method === 'receipts.check' && s.params.id === receiptId).length;
+  await call('/payments', { token });
+  assert.equal(seen.filter(s => s.method === 'receipts.check' && s.params.id === receiptId).length, before, 'not asked again');
+});
