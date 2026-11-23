@@ -190,6 +190,7 @@ const KINDS = {
   // A charge stopped at its goal is announced by session.goal, with the reminder to free the spot.
   'session.stop': { title: 'Зарядка завершена', url: '/?portal=driver', when: e => !['driver', 'business'].includes(e.portal) && db.byId('sessions', e.entity)?.stopReason !== 'goal' },
   'session.goal': { title: 'Зарядка завершена — освободите место', url: '/?portal=driver' },
+  'session.funds': { title: 'Деньги на кошельке закончились', url: '/?portal=driver' },
   'session.idle.warn': { title: 'Освободите разъём', url: '/?portal=driver' },
   'session.idle': { title: 'Плата за простой', url: '/?portal=driver&go=history' },
   'photo.decision': { title: 'Ваше фото станции', url: '/?portal=driver' },

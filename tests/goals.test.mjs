@@ -30,6 +30,9 @@ async function call(path, { method = 'GET', token, body, bearer } = {}) {
 }
 const login = async (portal, l, p) => (await call('/auth/login', { method: 'POST', body: { portal, login: l, password: p } })).data.token;
 const driver = () => login('driver', '+998901234567', 'Driver2026');
+let seq = 0;
+let current = 'G-1';
+let lastKwh = 3.7;
 const net = (path, method = 'GET', body) => call(`/network/v1${path}`, { method, body, bearer: key });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function until(fn, what, ms = 6000) {
@@ -47,8 +50,11 @@ before(async () => {
     commands.push(req.body);
     res.json({ accepted: true });
     setTimeout(async () => {
-      if (req.body.type === 'start') await net('/sessions/G-1', 'POST', { event: 'started', driverId: req.body.driver.id, station: req.body.station, connector: req.body.connector });
-      if (req.body.type === 'stop') await net('/sessions/G-1', 'POST', { event: 'stopped', kwh: 3.7, cost: 6660 });
+      if (req.body.type === 'start') {
+        current = `G-${++seq}`;
+        await net(`/sessions/${current}`, 'POST', { event: 'started', driverId: req.body.driver.id, station: req.body.station, connector: req.body.connector });
+      }
+      if (req.body.type === 'stop') await net(`/sessions/${current}`, 'POST', { event: 'stopped', kwh: lastKwh, cost: Math.round(lastKwh * 1800) });
     }, 20);
   });
   await new Promise(r => (hookServer = app.listen(HOOK_PORT, r)));
@@ -134,5 +140,31 @@ describe('charge goals and scheduled starts', () => {
     assert.equal(session.goal.stopCost, 20000);
     assert.ok((await call('/notifications', { token })).data.some(e => e.type === 'schedule.started'));
     await call(`/sessions/${session.id}/stop`, { method: 'POST', token });
+  });
+  test('a charge paid from the wallet stops itself when the money runs out', async () => {
+    const token = await driver();
+    const adm = await login('admin', 'admin@voli.uz', 'Admin2026');
+    const st = (await net('/stations')).data[0];
+    const price = (await call('/state', { token })).data.stations.find(s => s.id === st.id)?.connectors?.[0]?.price ?? 1800;
+    // A wallet with room for about 6 kWh (the bonus counts too).
+    const bonus = (await call('/state', { token })).data.rewards?.bonus?.balance ?? 0;
+    const walletNow = Math.max(0, 6 * price - bonus) + 5 * price;
+    assert.equal((await call('/wallets/acc-driver/balance', { method: 'POST', token: adm, body: { balance: walletNow } })).status, 200);
+    const stopsBefore = commands.filter(c => c.type === 'stop').length;
+    const r = await call('/sessions/start', { method: 'POST', token, body: { stationId: st.id, connectorId: st.connectors[0].id } });
+    assert.equal(r.status, 202, JSON.stringify(r.data));
+    const session = await until(async () => (await call('/state', { token })).data.sessions.find(s => s.status === 'active' && s.stationId === st.id), 'the start');
+    // Not yet at the money: keeps going.
+    lastKwh = 2;
+    await net(`/sessions/${current}`, 'POST', { event: 'meter', kwh: 2 });
+    await sleep(600);
+    assert.equal(commands.filter(c => c.type === 'stop').length, stopsBefore, 'stopped too early');
+    // Past what the wallet (and bonus) can pay: stopped by Voli, the driver told why.
+    const funds = walletNow + bonus;
+    lastKwh = Math.ceil(funds / (session.price || price)) + 2;
+    await net(`/sessions/${current}`, 'POST', { event: 'meter', kwh: lastKwh });
+    await until(() => commands.filter(c => c.type === 'stop').length > stopsBefore, 'the stop when the money ran out');
+    const notice = await until(async () => (await call('/notifications', { token })).data.find(e => e.type === 'session.funds' && e.entity === session.id), 'the "wallet ran out" notice');
+    assert.match(notice.message, /Деньги на кошельке закончились/);
   });
 });

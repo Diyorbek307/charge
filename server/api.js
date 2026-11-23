@@ -120,6 +120,7 @@ function scopeOf({ type, entity, payload = {} }) {
     case 'session.tick':
     case 'session.progress':
     case 'session.goal':
+    case 'session.funds':
     case 'session.idle.warn':
     case 'session.idle':
       return { ...sessionScope(entity), public: false };

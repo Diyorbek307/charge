@@ -4,6 +4,7 @@ import { api, requireAuth, emit, startCharge, stopCharge, chargeGoal } from './a
 import { demoEnergy } from './history.js';
 import { pushLiveCharge } from './push.js';
 import { setting, feature } from './settings.js';
+import { bonusFor } from './rewards.js';
 
 /**
  * Watches running charges and the clock, so the driver does not have to:
@@ -97,6 +98,44 @@ async function watchGoals() {
   }
 }
 
+/**
+ * A charge paid from a wallet stops when the money runs out. The start only
+ * checks a minimum; without this, a long charge would empty the wallet, the
+ * rest would go unpaid while the network still bills Voli its full price.
+ * Charges sharing a wallet (a family, a company) count against it together.
+ */
+async function watchFunds() {
+  const live = db.data.sessions.filter(s => s.status === 'active' && !s.credit && !s.direct && !s.fundsStopped);
+  for (const session of live) {
+    const walletId = session.corporate ? 'biz-001' : session.familyOwner ?? session.userId;
+    const wallet = db.data.wallets[walletId];
+    if (!wallet) continue;
+    const bonus = walletId === session.userId ? bonusFor(session.userId).balance : 0;
+    const others = live.filter(s => s !== session && (s.corporate ? 'biz-001' : s.familyOwner ?? s.userId) === walletId).reduce((n, s) => n + current(s).cost, 0);
+    const funds = wallet.balance + bonus - others;
+    const now = current(session);
+    // Stop a little before the edge: the next reading comes a few seconds later.
+    if (now.cost < funds - (session.price || 1800) * 0.3) continue;
+    session.fundsStopped = true;
+    session.stopReason = 'funds';
+    db.save();
+    const r = await stopCharge(session, SYSTEM);
+    if (r.status >= 400) {
+      session.fundsStopped = false;
+      session.stopReason = null;
+      continue;
+    }
+    emit({
+      type: 'session.funds',
+      portal: 'system',
+      actor: 'Voli',
+      message: `Деньги на кошельке закончились — зарядка остановлена · ${session.stationName}. Пополните кошелёк, чтобы продолжить`,
+      entity: session.id,
+      payload: { userId: session.userId },
+    });
+  }
+}
+
 async function runSchedules() {
   const due = schedules().filter(x => x.status === 'pending' && Date.parse(x.at) <= Date.now());
   for (const x of due) {
@@ -171,6 +210,7 @@ export function startSessionWatch() {
     if (busy) return;
     busy = true;
     try {
+      await watchFunds();
       await watchGoals();
       await runSchedules();
       await watchLive();
