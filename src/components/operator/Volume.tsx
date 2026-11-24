@@ -6,16 +6,20 @@ import ExportButton from '../ExportButton';
 import { Page, Card, Kpi, Pill, Empty } from '../admin/ui';
 
 /**
- * Voli buys the network's charging ahead: a volume of kWh each month or week,
- * paid whether drivers use it or not. Shared by the network's cabinet and the
- * admin (who also gets the buttons to mark a prepayment).
+ * Voli buys the network's charging ahead: 5 000 kWh prepaid at the start, paid
+ * whether drivers use it or not; later periods take the volume both sides agree.
+ * Shared by the network's cabinet and the admin (who also gets the buttons).
  */
 
-const PAY: Record<VolumePeriod['status'], { tone: 'green' | 'amber' | 'red'; label: string }> = {
+const PAY: Record<VolumePeriod['status'], { tone: 'green' | 'amber' | 'red' | 'slate'; label: string }> = {
   paid: { tone: 'green', label: 'Оплачен' },
   due: { tone: 'amber', label: 'Ожидает оплаты' },
   overdue: { tone: 'red', label: 'Оплата просрочена' },
+  actual: { tone: 'slate', label: 'Оплата по факту' },
 };
+
+/** A period's volume as a cell reads it: none agreed means drivers' charging is paid by the fact. */
+export const volumeText = (p: VolumePeriod) => (p.kwh ? kwh(p.kwh) : 'не согласован');
 
 export const kwh = (n: number) => `${num(n)} кВт·ч`;
 export const range = (p: VolumePeriod) => `${dateShort(p.from)} — ${dateShort(p.to)}`;
@@ -36,7 +40,7 @@ export function PayStatus({ p }: { p: VolumePeriod }) {
     <div className="flex flex-col gap-0.5">
       <Pill tone={PAY[p.status].tone}>{PAY[p.status].label}</Pill>
       <span className="text-[11px] text-slate-400 whitespace-nowrap">
-        {p.paidAt ? `${dateShort(p.paidAt)}${p.paidRef ? ` · п/п ${p.paidRef}` : ''}` : `до ${dateShort(p.payBy)}`}
+        {p.paidAt ? `${dateShort(p.paidAt)}${p.paidRef ? ` · п/п ${p.paidRef}` : ''}` : p.status === 'actual' ? 'объём не согласован' : `до ${dateShort(p.payBy)}`}
       </span>
       <ReceiptLine p={p} />
     </div>
@@ -99,7 +103,7 @@ export function UsageBar({ p }: { p: VolumePeriod }) {
   );
 }
 
-export function PeriodsTable({ periods, action }: { periods: VolumePeriod[]; action?: (p: VolumePeriod) => ReactNode }) {
+export function PeriodsTable({ periods, action }: { periods: VolumePeriod[]; action?: (p: VolumePeriod, i: number) => ReactNode }) {
   if (!periods.length) return <Empty text="Первый период ещё не начался" />;
   return (
     <div className="overflow-x-auto">
@@ -117,13 +121,16 @@ export function PeriodsTable({ periods, action }: { periods: VolumePeriod[]; act
           </tr>
         </thead>
         <tbody>
-          {periods.map(p => (
+          {periods.map((p, i) => (
             <tr key={p.id} className="border-b border-slate-50 last:border-0 align-top">
               <td className="px-5 py-2.5 text-slate-700 whitespace-nowrap">
                 {range(p)}
-                <span className="block text-[11px] text-slate-400">{p.current ? `${kindLabel(p.kind)} · идёт сейчас` : kindLabel(p.kind)}</span>
+                <span className="block text-[11px] text-slate-400">{[kindLabel(p.kind), p.start ? 'стартовый аванс' : '', p.current ? 'идёт сейчас' : ''].filter(Boolean).join(' · ')}</span>
               </td>
-              <td className="px-5 py-2.5 text-right tabular-nums text-slate-700 whitespace-nowrap">{kwh(p.kwh)}</td>
+              <td className={`px-5 py-2.5 text-right tabular-nums whitespace-nowrap ${p.kwh ? 'text-slate-700' : 'text-slate-400'}`}>
+                {volumeText(p)}
+                {p.carryOut && <span className="block text-[11px] text-emerald-700">остаток переносится</span>}
+              </td>
               <td className="px-5 py-2.5 text-right tabular-nums text-slate-500 whitespace-nowrap">{p.carriedIn ? kwh(p.carriedIn) : '—'}</td>
               <td className="px-5 py-2.5 text-right tabular-nums text-slate-700 whitespace-nowrap">
                 {kwh(p.used)}
@@ -133,11 +140,12 @@ export function PeriodsTable({ periods, action }: { periods: VolumePeriod[]; act
                 {p.over ? `сверх ${kwh(p.over)}` : kwh(p.left)}
               </td>
               <td className="px-5 py-2.5 text-right tabular-nums text-slate-800 whitespace-nowrap">
-                {money(p.amount)}
-                {p.overAmount > 0 && <span className="block text-[11px] text-red-600">{`+ ${money(p.overAmount)} сверх объёма`}</span>}
+                {p.kwh ? money(p.amount) : money(p.overAmount)}
+                {p.kwh > 0 && p.overAmount > 0 && <span className="block text-[11px] text-red-600">{`+ ${money(p.overAmount)} сверх объёма`}</span>}
+                {!p.kwh && <span className="block text-[11px] text-slate-400">по факту зарядок</span>}
               </td>
               <td className="px-5 py-2.5"><PayStatus p={p} /></td>
-              {action && <td className="px-5 py-2.5 text-right">{action(p)}</td>}
+              {action && <td className="px-5 py-2.5 text-right">{action(p, i)}</td>}
             </tr>
           ))}
         </tbody>
@@ -147,7 +155,7 @@ export function PeriodsTable({ periods, action }: { periods: VolumePeriod[]; act
 }
 
 export const exportRows = (periods: VolumePeriod[]) =>
-  periods.map(p => [p.from, p.to, kindLabel(p.kind), p.kwh, p.carriedIn, p.used, p.sessions, p.left, p.over, p.price, p.amount, p.overAmount, PAY[p.status].label, p.paidAt ?? '', p.paidRef ?? '']);
+  periods.map(p => [p.from, p.to, p.start ? `${kindLabel(p.kind)}, стартовый аванс` : kindLabel(p.kind), p.kwh, p.carriedIn, p.used, p.sessions, p.left, p.over, p.price, p.amount, p.overAmount, PAY[p.status].label, p.paidAt ?? '', p.paidRef ?? '']);
 export const EXPORT_HEADERS = ['С', 'По', 'Период', 'Выкуплено, кВт·ч', 'Перенесено, кВт·ч', 'Израсходовано, кВт·ч', 'Зарядок', 'Остаток, кВт·ч', 'Сверх объёма, кВт·ч', 'Цена 1 кВт·ч, сум', 'Сумма, сум', 'Сверх объёма, сум', 'Оплата', 'Дата оплаты', 'П/п'];
 
 /** The network's «Финансы» when Voli buys its volume. */
@@ -158,11 +166,11 @@ export function OperatorVolumeFinance({ data, reload }: { data: VolumeView; relo
   return (
     <Page
       title="Финансы"
-      subtitle={`Voli заранее выкупает у вашей сети ${kwh(deal.kwh)} за ${deal.period === 'week' ? 'каждую неделю' : 'каждый месяц'} по ${money(deal.price)} за 1 кВт·ч и платит за этот объём, сколько бы водители ни израсходовали`}
+      subtitle={`На старте Voli оплачивает вашей сети авансом ${kwh(deal.kwh ?? 5000)} по ${money(deal.price)} за 1 кВт·ч, сколько бы водители ни израсходовали. Объём следующих периодов Voli и ваша сеть согласуют отдельно, по заявке.`}
       actions={<ExportButton name="voli-volume" title="Выкуп объёма Voli" portal="operator" headers={EXPORT_HEADERS} rows={exportRows(data.periods)} />}
     >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Kpi label="Выкуплено на период" value={num(cur?.total ?? deal.kwh)} sub={cur?.carriedIn ? `кВт·ч · в том числе ${num(cur.carriedIn)} перенесено` : 'кВт·ч'} icon={<Package size={14} />} tone="sky" />
+        <Kpi label="Выкуплено на период" value={num(cur?.total ?? deal.kwh ?? 5000)} sub={cur?.carriedIn ? `кВт·ч · в том числе ${num(cur.carriedIn)} перенесено` : 'кВт·ч'} icon={<Package size={14} />} tone="sky" />
         <Kpi label="Израсходовано" value={num(cur?.used ?? 0)} sub={`кВт·ч · ${num(cur?.sessions ?? 0)} зарядок`} icon={<Zap size={14} />} tone="emerald" />
         <Kpi label={cur?.over ? 'Сверх объёма' : 'Остаток'} value={num(cur?.over || cur?.left || 0)} sub="кВт·ч" icon={<Battery size={14} />} tone={cur?.over ? 'red' : 'violet'} />
         <Kpi label="Получено от Voli" value={money(paid, false)} sub="сум за всё время" icon={<Banknote size={14} />} tone="amber" />
@@ -172,14 +180,23 @@ export function OperatorVolumeFinance({ data, reload }: { data: VolumeView; relo
 
       {cur ? (
         <Card title={`Текущий период · ${range(cur)}`} right={<PayStatus p={cur} />}>
-          <UsageBar p={cur} />
-          <div className="flex flex-wrap justify-between gap-2 mt-2 text-xs text-slate-500">
-            <span>{`Израсходовано ${kwh(cur.used)} из ${kwh(cur.total)}`}</span>
-            <span>{cur.overAmount ? `К оплате Voli: ${money(cur.amount)} + ${money(cur.overAmount)} сверх объёма` : `К оплате Voli: ${money(cur.amount)}`}</span>
-          </div>
+          {cur.total > 0 ? (
+            <>
+              <UsageBar p={cur} />
+              <div className="flex flex-wrap justify-between gap-2 mt-2 text-xs text-slate-500">
+                <span>{`Израсходовано ${kwh(cur.used)} из ${kwh(cur.total)}`}</span>
+                <span>{cur.overAmount ? `К оплате Voli: ${money(cur.amount)} + ${money(cur.overAmount)} сверх объёма` : `К оплате Voli: ${money(cur.amount)}`}</span>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-slate-600">{`Объём на этот период не согласован. Зарядки водителей Voli оплачиваются по факту: сейчас ${kwh(cur.used)} на ${money(cur.overAmount)}.`}</p>
+          )}
           <p className="text-xs text-slate-400 mt-3">
-            {deal.carry ? 'Остаток в конце периода переносится на следующий.' : 'Остаток в конце периода не переносится.'}
+            {cur.carryOut ? 'Остаток этого периода перенесётся на следующий — стороны согласовали.' : 'Остаток переносится на следующий период по согласованию сторон.'}
             {' '}Зарядки водителей Voli считаются по показаниям счётчиков ваших станций, в реальном времени.
+          </p>
+          <p className="text-xs text-slate-500 mt-1">
+            {deal.next ? `На следующий период согласовано: ${kwh(deal.next.kwh)}.` : 'Объём на следующий период пока не согласован.'}
           </p>
         </Card>
       ) : (
