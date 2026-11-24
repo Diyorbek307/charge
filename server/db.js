@@ -228,9 +228,54 @@ class PostgresStore {
     await client.query('DELETE FROM onecharge_backups WHERE name NOT IN (SELECT name FROM onecharge_backups ORDER BY taken_at DESC LIMIT $1)', [keep]);
   }
 
+  /** Whether this database already holds the state (any copy of it). */
+  async hasState() {
+    const client = await this.#tables();
+    const a = await client.query('SELECT 1 FROM onecharge_doc WHERE id = 1');
+    if (a.rows.length) return true;
+    const b = await client.query('SELECT 1 FROM onecharge_state WHERE id = 1');
+    return b.rows.length > 0;
+  }
+
+  /** Every backup as stored, for copying to another database. */
+  async allBackups() {
+    const client = await this.#backups();
+    const { rows } = await client.query('SELECT name, meta, gz FROM onecharge_backups ORDER BY taken_at');
+    return rows.map(r => ({ name: r.name, meta: r.meta, gz: Buffer.from(r.gz) }));
+  }
+
   async close() {
     await this.pool?.end();
     await this.pglite?.close();
+  }
+}
+
+/**
+ * Moving to another database (24.11.2026: to a server in Uzbekistan, as the law
+ * on personal data asks). With MIGRATE_FROM_DATABASE_URL set to the old one and
+ * DATABASE_URL to the new, empty one, the server copies the state and the backups
+ * across on start, then works from the new one. A new database that already holds
+ * the state is left alone, so later restarts with the variable still set do nothing.
+ * If the old one cannot be read, the server stops rather than start empty.
+ */
+async function migrateInto(target, fromUrl) {
+  if (!fromUrl || !(target instanceof PostgresStore)) return null;
+  if (fromUrl === target.url) throw new Error('MIGRATE_FROM_DATABASE_URL совпадает с DATABASE_URL');
+  if (await target.hasState()) {
+    console.log('[db] the new database already has the data; MIGRATE_FROM_DATABASE_URL can be removed');
+    return null;
+  }
+  const source = new PostgresStore(fromUrl);
+  try {
+    const state = await source.load();
+    if (!state) throw new Error('в старой базе нет данных — перенос остановлен, чтобы не начать с пустой');
+    const backups = await source.allBackups();
+    for (const b of backups) await target.saveBackup(b.name, b.gz, b.meta);
+    await target.write(JSON.stringify(state));
+    console.log(`[db] moved: the state and ${backups.length} backups from ${source.describe()} to ${target.describe()}`);
+    return state;
+  } finally {
+    await source.close().catch(() => {});
   }
 }
 
@@ -293,6 +338,8 @@ class Database {
 
   async #init() {
     let loaded = null;
+    // Copied from the old database first, when moving to a new one; a failure stops the start.
+    await migrateInto(this.store, process.env.MIGRATE_FROM_DATABASE_URL || '');
     try {
       loaded = await this.store.load();
     } catch (err) {
