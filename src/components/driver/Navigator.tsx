@@ -365,7 +365,7 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
 
         {/* Speed */}
         {speed !== null && (
-          <div className="absolute left-3 bottom-3 z-[1000] w-16 h-16 rounded-full bg-white shadow-lg grid place-items-center">
+          <div className="absolute left-3 bottom-7 z-[1000] w-16 h-16 rounded-full bg-white shadow-lg grid place-items-center">
             <div className="text-center leading-none">
               <p className={`text-xl font-black tabular-nums ${over ? 'text-red-600' : 'text-slate-900'}`}>{speed}</p>
               <p className="text-[10px] text-slate-500">км/ч</p>
@@ -384,7 +384,7 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
         ) : (
           <div className="flex items-center gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-xl font-bold text-slate-900 tabular-nums">{route ? `${etaMin} мин · ${fmtDist(lang, left)}` : '—'}</p>
+              <p className="text-xl font-bold text-slate-900 tabular-nums">{route ? (etaMin >= 60 ? `${Math.floor(etaMin / 60)} ч ${etaMin % 60} мин · ${fmtDist(lang, left)}` : `${etaMin} мин · ${fmtDist(lang, left)}`) : '—'}</p>
               <p className="text-xs text-slate-500 truncate">{route ? `Прибытие в ${etaClock} · ${station.name}` : station.name}</p>
               {lightsLeft > 0 && <p className="text-xs text-slate-500">{word(lang, 'signals', { n: lightsLeft })}</p>}
             </div>
