@@ -114,6 +114,16 @@ html, body, #root {
   font-family: var(--font-sans);
 }
 
+/* Phones and tablets (iPhone, iPad, Android): no grey flash on tap, no font blow-up on turn,
+   no rubber-band pull of the whole app, no double-tap zoom delay. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
+@media (pointer: coarse) {
+  html, body { overscroll-behavior: none; }
+  button, a, [role="button"], [role="tab"], label { touch-action: manipulation; -webkit-touch-callout: none; }
+  /* iOS zooms the page into any field whose text is under 16px, and stays zoomed. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select { font-size: max(16px, 1em) !important; }
+}
+
 /* Scrollbars — thin, hidden on nav */
 * {
   scrollbar-width: thin;
@@ -695,10 +705,13 @@ nav::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 
-/* Phones with a notch: keep the app below the status bar (the page uses viewport-fit=cover). */
-@media (max-width: 639px) {
-  /* Older Android web views report no env() insets; the app shell passes them as --safe-area-inset-*. */
-  .safe-top { padding-top: max(env(safe-area-inset-top), var(--safe-area-inset-top, 0px)); }
+/* Phones and tablets: keep the app below the status bar and clear of the notch when the phone
+   is turned (the page uses viewport-fit=cover). On a computer the insets are 0.
+   Older Android web views report no env() insets; the app shell passes them as --safe-area-inset-*. */
+.safe-top {
+  padding-top: max(env(safe-area-inset-top), var(--safe-area-inset-top, 0px));
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 /* ═══════════════════════════════════════════════════

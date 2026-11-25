@@ -19,3 +19,12 @@ export const landingElsewhere = () => elsewhere(LANDING_URL);
 /** Inside the store app the shell opens the app itself; it never leaves for the landing. */
 export const inNativeShell = () =>
   typeof window !== 'undefined' && !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
+
+/**
+ * The phone mock-up around the driver's app is a showcase for a computer's browser.
+ * On a phone or a tablet, in the store app and in Telegram the app fills the screen.
+ */
+export const showPhoneFrame = () =>
+  typeof window !== 'undefined' && !inNativeShell() && !/tgWebAppData=/.test(window.location.hash) &&
+  !(window as { Telegram?: { WebApp?: { initData?: string } } }).Telegram?.WebApp?.initData &&
+  !window.matchMedia?.('(pointer: coarse)').matches;

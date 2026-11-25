@@ -42,6 +42,7 @@ import { AppSettingsScreen } from './driver/screens/Settings';
 import { StationDetailSheet } from './driver/screens/StationSheet';
 import { SupportScreen } from './driver/screens/Support';
 import { WalletScreen } from './driver/screens/Wallet';
+import { showPhoneFrame } from '../lib/site';
 
 type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate' | 'rewards' | 'battery' | 'plus' | 'autocharge' | 'referral' | 'passport';
 type Tab = 'map' | 'charging' | 'deals' | 'profile';
@@ -630,7 +631,7 @@ export default function DriverApp() {
       {showOnboarding && <OnboardingScreen onComplete={finishOnboarding} />}
       {touring && <Tour root={appRef} onDone={endTour} />}
       {/* Status bar of the device mock — a real phone draws its own */}
-      <div className="bg-white px-4 pt-2 pb-1 hidden sm:flex items-center justify-between shrink-0 border-b border-slate-100">
+      <div className={`bg-white px-4 pt-2 pb-1 hidden items-center justify-between shrink-0 border-b border-slate-100 ${showPhoneFrame() ? 'sm:flex' : ''}`}>
         <span className="text-xs font-semibold text-slate-800 mono">09:41</span>
         <div className="flex items-center gap-1">
           <div className="flex gap-0.5 items-end">
@@ -641,7 +642,8 @@ export default function DriverApp() {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 overflow-hidden">
+      {/* Without the tab bar a screen's own bottom buttons would sit on the iPhone's home bar: keep them above it. Camera and navigation stay edge to edge. */}
+      <div className={`flex-1 overflow-hidden ${!showTabs && screen !== 'qr-scan' && screen !== 'navigate' ? 'pb-[env(safe-area-inset-bottom)]' : ''}`}>
         {/* A soft hand-over between screens; the map stays mounted under its station card. */}
         <div key={screen === 'map' || screen === 'station' ? `tab-${activeTab}` : `screen-${screen}`} className="pg-screen h-full">
           {renderContent()}
@@ -686,7 +688,7 @@ export default function DriverApp() {
       {/* Tab bar: a light floating pill; the yellow marker glides to the open tab */}
       {showTabs && (
         <div className="shrink-0 bg-white px-3 pt-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))]">
-          <nav aria-label="Разделы" className="relative h-[64px] rounded-[26px] bg-white/90 backdrop-blur-xl border border-slate-100 grid grid-cols-5 items-center shadow-[0_10px_34px_rgba(22,22,26,0.12),0_2px_6px_rgba(22,22,26,0.05)]">
+          <nav aria-label="Разделы" className="relative w-full max-w-[560px] mx-auto h-[64px] rounded-[26px] bg-white/90 backdrop-blur-xl border border-slate-100 grid grid-cols-5 items-center shadow-[0_10px_34px_rgba(22,22,26,0.12),0_2px_6px_rgba(22,22,26,0.05)]">
             <TabMarker slot={[0, 1, 3, 4][tabs.findIndex(t => t.id === activeTab)] ?? 0} />
             {[tabs[0], tabs[1], null, tabs[2], tabs[3]].map(tab => {
               if (!tab) {

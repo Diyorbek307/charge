@@ -24,7 +24,7 @@ const FirstRun = lazyPage(() => import('./components/driver/FirstRun'));
 import { useSync } from './lib/sync';
 import { useFirstRunNeeded } from './lib/firstRun';
 import { greetingDue } from './lib/greeting';
-import { APP_URL, LANDING_URL, appElsewhere, landingElsewhere, inNativeShell } from './lib/site';
+import { APP_URL, LANDING_URL, appElsewhere, landingElsewhere, inNativeShell, showPhoneFrame } from './lib/site';
 import type { Portal as AuthPortal } from './lib/api';
 import { inTelegram, telegramInitData } from './lib/telegram';
 import { TopBar } from './lib/topBar';
@@ -394,6 +394,8 @@ function MainApp() {
   }, [toApp]);
   // 'light' | 'dark' | 'auto' — auto follows the phone or computer setting.
   const systemDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
+  // The phone mock-up only on a computer; a phone, a tablet and the store app get the app full screen.
+  const [framed] = useState(showPhoneFrame);
   const [darkMode, setDarkMode] = useState(() => {
     const t = localStorage.getItem('oc-theme');
     return t === 'dark' || (t === 'auto' && systemDark());
@@ -426,7 +428,7 @@ function MainApp() {
       <Suspense fallback={<PortalLoading />}>
       {portal === 'selector' && !landingElsewhere() && <Landing />}
       {portal === 'driver' && (
-        <div className="h-full flex items-center justify-center relative overflow-clip" style={{ background: 'radial-gradient(ellipse at 50% 30%, #0f1e3a 0%, #080d19 50%, #050810 100%)' }}>
+        <div className="h-full flex items-center justify-center relative overflow-clip" style={{ background: !framed ? (darkMode ? '#1f1f1f' : '#ffffff') : 'radial-gradient(ellipse at 50% 30%, #0f1e3a 0%, #080d19 50%, #050810 100%)' }}>
           {/* Animated ambient orbs */}
           <div className="absolute pointer-events-none">
             <div className="anim-orb-1" style={{ position: 'absolute', top: -200, left: -100, width: 500, height: 500, background: 'radial-gradient(circle, rgba(198,244,50,0.12) 0%, transparent 65%)', borderRadius: '50%', filter: 'blur(30px)' }} />
@@ -437,11 +439,11 @@ function MainApp() {
           {/* Ambient glow behind device */}
           <div className="absolute w-96 max-w-full h-96 bg-sky-500/8 rounded-full blur-[100px] pointer-events-none" style={{ animation: 'charge-glow 4s ease-in-out infinite' }} />
           {/* Mobile device frame */}
-          <div className="relative z-10 w-full h-full sm:w-[390px] sm:h-[min(844px,90vh)]">
+          <div className={framed ? 'relative z-10 w-full h-full sm:w-[390px] sm:h-[min(844px,90vh)]' : 'relative z-10 w-full h-full'}>
             {/* Device body — only drawn around the app on wider screens */}
-            <div className="absolute inset-0 sm:rounded-[42px] sm:shadow-[0_32px_80px_rgba(0,0,0,0.6),0_0_0_2px_rgba(255,255,255,0.08)] overflow-hidden" style={{ background: 'linear-gradient(135deg, #2a2a2e 0%, #1a1a1e 100%)' }}>
-              <div className="absolute inset-0 sm:inset-[2px] bg-black sm:rounded-[40px] overflow-hidden">
-                <div className="relative w-full h-full bg-white sm:rounded-[40px] overflow-hidden safe-top" style={{ backgroundColor: `var(--topbar, ${darkMode ? '#1f1f1f' : '#ffffff'})` }}>
+            <div className={framed ? 'absolute inset-0 sm:rounded-[42px] sm:shadow-[0_32px_80px_rgba(0,0,0,0.6),0_0_0_2px_rgba(255,255,255,0.08)] overflow-hidden' : 'absolute inset-0 overflow-hidden'} style={{ background: 'linear-gradient(135deg, #2a2a2e 0%, #1a1a1e 100%)' }}>
+              <div className={framed ? 'absolute inset-0 sm:inset-[2px] bg-black sm:rounded-[40px] overflow-hidden' : 'absolute inset-0 bg-black overflow-hidden'}>
+                <div className={framed ? 'relative w-full h-full bg-white sm:rounded-[40px] overflow-hidden safe-top' : 'relative w-full h-full bg-white overflow-hidden safe-top'} style={{ backgroundColor: `var(--topbar, ${darkMode ? '#1f1f1f' : '#ffffff'})` }}>
                   {/* The strip under the phone's clock: the app's own colour, unless a screen on top says otherwise */}
                   <TopBar color={darkMode ? '#1f1f1f' : '#ffffff'} dark={darkMode} />
                   {/* Overlays fill this box, below the strip, so nothing slides under the clock */}
@@ -464,21 +466,21 @@ function MainApp() {
               </div>
             </div>
             {/* Dynamic Island */}
-            <div className="absolute top-3.5 left-1/2 -translate-x-1/2 w-[120px] h-[34px] bg-black rounded-[20px] z-20 hidden sm:flex items-center justify-center gap-2">
+            <div className={framed ? 'absolute top-3.5 left-1/2 -translate-x-1/2 w-[120px] h-[34px] bg-black rounded-[20px] z-20 hidden sm:flex items-center justify-center gap-2' : 'hidden'}>
               <div className="w-2 h-2 bg-slate-800 rounded-full border border-slate-700" />
               <div className="w-3 h-3 bg-slate-800 rounded-full border border-slate-700" />
             </div>
             {/* Side buttons */}
-            <div className="hidden sm:block absolute right-[-3px] top-28 w-1 h-16 bg-slate-600 rounded-l-full" />
-            <div className="hidden sm:block absolute left-[-3px] top-24 w-1 h-10 bg-slate-600 rounded-r-full" />
-            <div className="hidden sm:block absolute left-[-3px] top-36 w-1 h-10 bg-slate-600 rounded-r-full" />
+            <div className={framed ? 'hidden sm:block absolute right-[-3px] top-28 w-1 h-16 bg-slate-600 rounded-l-full' : 'hidden'} />
+            <div className={framed ? 'hidden sm:block absolute left-[-3px] top-24 w-1 h-10 bg-slate-600 rounded-r-full' : 'hidden'} />
+            <div className={framed ? 'hidden sm:block absolute left-[-3px] top-36 w-1 h-10 bg-slate-600 rounded-r-full' : 'hidden'} />
           </div>
           {/* Back button */}
           <button onClick={() => setPortal('selector')}
-            className="absolute top-5 left-5 hidden sm:flex items-center gap-2 text-sm text-white/80 bg-white/8 backdrop-blur border border-white/12 px-3 py-2 rounded-xl hover:bg-white/14 transition-colors">
+            className={framed ? 'absolute top-5 left-5 hidden sm:flex items-center gap-2 text-sm text-white/80 bg-white/8 backdrop-blur border border-white/12 px-3 py-2 rounded-xl hover:bg-white/14 transition-colors' : 'hidden'}>
             <ArrowRight size={14} className="rotate-180" /> Порталы
           </button>
-          <div className="absolute bottom-5 left-0 right-0 text-center text-xs text-white/25 inter tracking-wider hidden sm:block">
+          <div className={framed ? 'absolute bottom-5 left-0 right-0 text-center text-xs text-white/25 inter tracking-wider hidden sm:block' : 'hidden'}>
             Voli · Driver App · iOS / Android
           </div>
         </div>
@@ -505,7 +507,7 @@ function MainApp() {
       )}
       {portal === 'architecture' && <ArchitectureDiagram onBack={() => setPortal('selector')} />}
       </Suspense>
-      {portal !== 'selector' && <SyncToasts />}
+      {portal !== 'selector' && !(portal === 'driver' && !framed) && <SyncToasts />}
       <Suspense fallback={null}>
         {!embedded && (
           <CommandPalette
@@ -513,7 +515,7 @@ function MainApp() {
             onSplitView={() => setSplitView(true)}
           />
         )}
-        {!embedded && portal !== 'selector' && <SyncInspector />}
+        {!embedded && portal !== 'selector' && !(portal === 'driver' && !framed) && <SyncInspector />}
       </Suspense>
       {splitView && (
         <Suspense fallback={<PortalLoading />}>
