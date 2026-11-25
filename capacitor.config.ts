@@ -27,7 +27,10 @@ const config: CapacitorConfig = {
     allowMixedContent: false,
   },
   ios: {
-    contentInset: 'always',
+    // The page itself keeps clear of the notch and the home bar (viewport-fit=cover, env() insets):
+    // with 'always' iOS shrank the page, leaving an empty strip at the bottom and a stray colour on top.
+    contentInset: 'never',
+    backgroundColor: '#111111',
     limitsNavigationsToAppBoundDomains: true,
   },
 };
