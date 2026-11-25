@@ -652,7 +652,7 @@ export default function DriverApp() {
 
       {/* Main content */}
       {/* Without the tab bar a screen's own bottom buttons would sit on the iPhone's home bar: keep them above it. Camera and navigation stay edge to edge. */}
-      <div className={`flex-1 overflow-hidden ${!showTabs && screen !== 'qr-scan' && screen !== 'navigate' ? 'pb-[env(safe-area-inset-bottom)]' : ''}`}>
+      <div className={`flex-1 overflow-hidden ${!showTabs && screen !== 'qr-scan' && screen !== 'navigate' && screen !== 'charging-active' ? 'pb-[env(safe-area-inset-bottom)]' : ''}`}>
         {/* A soft hand-over between screens; the map stays mounted under its station card. */}
         <div key={screen === 'map' || screen === 'station' ? `tab-${activeTab}` : `screen-${screen}`} className="pg-screen h-full">
           {renderContent()}

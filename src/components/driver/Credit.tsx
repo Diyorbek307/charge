@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Camera, Check, LoaderCircle, ScanFace, ShieldCheck, Trash2, TriangleAlert, Upload, X } from 'lucide-react';
 import type { CreditState } from '../../lib/api';
 import { useSync } from '../../lib/sync';
+import { TopBar } from '../../lib/topBar';
 
 const sum = (n: number) => `${Math.round(n).toLocaleString('ru-RU')} сум`;
 // Numeric dates read the same in every language.
@@ -72,7 +73,7 @@ export function FaceCapture({ title, hint, busy, error, onShot, onClose }: { tit
   };
 
   return (
-    <div className="absolute inset-0 z-[10000] bg-[#111] flex flex-col text-white" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="absolute inset-0 z-[10000] bg-[#111] flex flex-col text-white" role="dialog" aria-modal="true" aria-label={title}><TopBar color="#111111" dark />
       <div className="flex items-center gap-3 px-4 pt-4 pb-2">
         <button onClick={onClose} aria-label="Закрыть" className="p-2 rounded-xl bg-white/10"><X size={18} /></button>
         <p className="font-bold flex-1">{title}</p>

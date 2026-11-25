@@ -6,6 +6,7 @@ import { exportPdf } from '../../lib/export';
 import WhileCharging from './WhileCharging';
 import { PrizeProgress } from './Prizes';
 import { startLiveActivity, endLiveActivity } from '../../lib/liveActivity';
+import { useTopBar } from '../../lib/topBar';
 
 /** Mirrors server/history.js: what a car really draws — DC tapers, AC is capped by the onboard charger. */
 const effectiveKw = (power: number) => (power >= 50 ? power * 0.6 : Math.min(power, 11) * 0.95);
@@ -26,6 +27,8 @@ const mmss = (s: number) => `${String(Math.floor(s / 3600)).padStart(2, '0')}:${
  * server bills by when the session stops.
  */
 export function ChargingActiveScreen({ session, startBattery, packKwh, limit, onStop, onLeave }: { session: Session | null; startBattery: number | null; packKwh?: number | null; limit?: number | null; onStop: () => void; onLeave?: () => void }) {
+  // A dark screen: the strip under the clock is dark too, with a white clock.
+  useTopBar('#141414', true);
   const pack = packKwh || PACK_KWH;
   const goal = session?.goal;
   // A goal set at the start wins over the car's default limit.
@@ -161,7 +164,7 @@ export function ChargingActiveScreen({ session, startBattery, packKwh, limit, on
         <p className="mt-3 mb-2 text-white/30 text-[10px] text-center">{metered ? 'Энергия — по счётчику станции.' : `Процент — оценка для батареи ${pack} кВт·ч; к оплате — по энергии.`}</p>
       </div>
 
-      <div className="relative px-4 pb-6 pt-3 z-10">
+      <div className="relative px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 z-10">
         {askStop && !stopping ? (
           <div className="grid grid-cols-2 gap-2 pg-reveal">
             <button onClick={() => setAskStop(false)} className="rounded-2xl py-4 font-semibold text-[15px] text-white/85 bg-white/[0.06] border border-white/10">Продолжить</button>

@@ -5,6 +5,7 @@ import { useLiveStations } from '../../lib/live';
 import { useSync } from '../../lib/sync';
 import { useMyLocation, km, fmtKm } from '../../lib/geo';
 import { readStickerLink } from '../../lib/stickers';
+import { TopBar } from '../../lib/topBar';
 
 type Phase = 'idle' | 'camera' | 'success' | 'error' | 'manual';
 
@@ -318,7 +319,7 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
 
   // ── CAMERA ──
   if (phase === 'camera') return (
-    <div className="h-full flex flex-col relative overflow-hidden bg-black">
+    <div className="h-full flex flex-col relative overflow-hidden bg-black"><TopBar color="#000000" dark />
       {galleryInput}
       <video ref={video} className="absolute inset-0 w-full h-full object-cover" playsInline muted autoPlay aria-hidden="true" />
       <div className="relative z-20 flex items-center justify-between px-4 pt-5 pb-3">
