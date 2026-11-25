@@ -21,6 +21,7 @@ export const MIN_KWH = 5000;
 const DAY = 86400_000;
 const TZ = 5 * 3600_000; // Asia/Tashkent
 const PAY_DAYS = 5; // 3 banking days after the start, with a weekend in between
+const START_PAY_DAYS = 7; // the start volume: 5 banking days after the integration (contract 6.1)
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const REF = /^[\p{L}\d\s№#/.,-]{1,60}$/u;
 
@@ -132,8 +133,12 @@ function ensureAll(now = Date.now()) {
   if (added) db.save();
 }
 
-/** The prepayment's date: 3 banking days from the start, or from the agreement when the volume was agreed late. */
-const dueOf = p => Math.max(p.from, p.agreedAt ?? 0) + PAY_DAYS * DAY;
+/**
+ * The prepayment's date: the start volume 5 banking days after the integration (the first period
+ * starts once it is confirmed), later ones 3 banking days from their start, or from the agreement
+ * when the volume was agreed late.
+ */
+const dueOf = p => Math.max(p.from, p.agreedAt ?? 0) + (p.n === 1 ? START_PAY_DAYS : PAY_DAYS) * DAY;
 
 /** One period as the cabinet and the admin read it. */
 function view(p, now = Date.now()) {
