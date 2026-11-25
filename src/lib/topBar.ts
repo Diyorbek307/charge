@@ -77,3 +77,17 @@ export function DimTopBar({ by }: { by: number }) {
   useTopBar(color, true);
   return null;
 }
+
+let bleeding = 0;
+/** While shown, this screen fills the phone up to the top edge, under the clock and the camera (see .pg-bleed). */
+export function useFullBleed(on = true) {
+  useEffect(() => {
+    if (!on) return;
+    bleeding++;
+    document.documentElement.classList.add('pg-bleed');
+    return () => {
+      bleeding = Math.max(0, bleeding - 1);
+      if (!bleeding) document.documentElement.classList.remove('pg-bleed');
+    };
+  }, [on]);
+}

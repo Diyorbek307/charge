@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MARK_SRC } from '../../landing/Logo';
-import { useTopBar } from '../../lib/topBar';
+import { useTopBar, useFullBleed } from '../../lib/topBar';
 
 /**
  * The first seconds of the app, as a charge: comets of energy stream in from
@@ -37,6 +37,7 @@ function arc(x1: number, y1: number, x2: number, y2: number, jitter: number) {
 
 export default function Splash({ onDone }: { onDone: () => void }) {
   useTopBar('#050505', true);
+  useFullBleed();
   const [pct, setPct] = useState(0);
   const [arcs, setArcs] = useState<string[]>([]);
   const [fly, setFly] = useState<{ x: number; y: number; s: number } | null>(null);

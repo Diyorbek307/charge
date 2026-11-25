@@ -43,6 +43,7 @@ import { StationDetailSheet } from './driver/screens/StationSheet';
 import { SupportScreen } from './driver/screens/Support';
 import { WalletScreen } from './driver/screens/Wallet';
 import { showPhoneFrame } from '../lib/site';
+import { useFullBleed } from '../lib/topBar';
 
 type Screen = 'map' | 'station' | 'charging-start' | 'charging-active' | 'charging-done' | 'history' | 'profile' | 'trip' | 'booking' | 'booking-done' | 'add-car' | 'notifications' | 'reviews' | 'report' | 'favorites' | 'qr-scan' | 'onboarding' | 'app-settings' | 'finance' | 'loyalty' | 'family' | 'host' | 'wallet' | 'security' | 'support' | 'eco' | 'credit' | 'navigate' | 'rewards' | 'battery' | 'plus' | 'autocharge' | 'referral' | 'passport';
 type Tab = 'map' | 'charging' | 'deals' | 'profile';
@@ -235,6 +236,8 @@ export default function DriverApp() {
   const [activeTab, setActiveTab] = useState<Tab>('map');
   const driverPromoCount = useDriverPromos().length;
   const [screen, setScreen] = useState<Screen>('map');
+  // The map runs up to the top edge of the phone, under the clock, like a maps app.
+  useFullBleed(activeTab === 'map' && (screen === 'map' || screen === 'station'));
   // The wallet opens from the profile or from the balance on the map; Back returns there.
   const walletFrom = useRef<Screen>('profile');
   // The car form opens from the profile, the charging tab or the rewards; saving returns there.
@@ -619,7 +622,7 @@ export default function DriverApp() {
         {sos && <SosSheet onClose={() => setSos(false)} />}
         {/* Before the launch the stations and the money are examples: say so, so no one drives to one. */}
         {screen === 'map' && state?.platform?.preview && (
-          <p role="note" className="absolute left-3 right-[68px] top-[76px] z-[1000] max-w-[300px] rounded-xl bg-[#111]/85 backdrop-blur px-3 py-2 text-center text-[11px] leading-snug font-medium text-white pointer-events-none">
+          <p role="note" style={{ top: 'calc(76px + var(--bleed, 0px))' }} className="absolute left-3 right-[68px] z-[1000] max-w-[300px] rounded-xl bg-[#111]/85 backdrop-blur px-3 py-2 text-center text-[11px] leading-snug font-medium text-white pointer-events-none">
             Предварительная версия: станции и оплата — для примера. Запуск в Ташкенте — IV квартал 2026
           </p>
         )}
@@ -658,7 +661,7 @@ export default function DriverApp() {
 
       {/* No signal: what is shown is the last data seen, and the saved roads still work */}
       {!online && !showOnboarding && (
-        <div data-offline-banner className="absolute top-2 inset-x-3 z-40 flex justify-center pointer-events-none">
+        <div data-offline-banner style={{ top: 'calc(0.5rem + var(--bleed, 0px))' }} className="absolute inset-x-3 z-40 flex justify-center pointer-events-none">
           <div role="status" className="pointer-events-auto max-w-full flex items-center gap-2 pl-2.5 pr-3.5 py-2 rounded-2xl bg-[#111]/92 backdrop-blur text-white shadow-lg pg-reveal">
             <span className="w-7 h-7 rounded-xl bg-white/10 grid place-items-center shrink-0 animate-pulse">📡</span>
             <span className="text-xs leading-tight min-w-0">
@@ -682,7 +685,7 @@ export default function DriverApp() {
 
       {/* Push notification toasts */}
       {toasts.length > 0 && (
-        <div className="absolute top-14 left-3 right-3 z-50 flex flex-col gap-2 pointer-events-none">
+        <div style={{ top: 'calc(3.5rem + var(--bleed, 0px))' }} className="absolute left-3 right-3 z-50 flex flex-col gap-2 pointer-events-none">
           {toasts.map(t => (
             <div key={t.id} className="pointer-events-auto">
               <PushToast toast={t} onDismiss={() => dismissToast(t.id)} />

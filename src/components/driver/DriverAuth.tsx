@@ -7,7 +7,7 @@ import { LANGS, useI18n } from '../../lib/i18n';
 import { greetNext } from '../../lib/greeting';
 import { AgreementChecks, NOTHING_AGREED, agreedEnough, type Agreed } from './Agreement';
 import { inNativeShell } from '../../lib/site';
-import { useTopBar } from '../../lib/topBar';
+import { useTopBar, useFullBleed } from '../../lib/topBar';
 import type { SignInResult } from '../../lib/api';
 import { Logo } from '../../landing/Logo';
 import ChargeScene from './ChargeScene';
@@ -65,6 +65,7 @@ export default function DriverAuth() {
   const [step, setStep] = useState<Step>('welcome');
   // Under the clock: the dusk sky over the welcome, the sign-in's own black over the sign-in.
   useTopBar(step === 'welcome' ? WELCOME_TOP : SIGN_IN_TOP, true);
+  useFullBleed();
   const [splash, setSplash] = useState(() => !splashSeen());
   // The welcome's words leave first, then the sign-in takes the photo over; coming back, the photo opens up again.
   const [leaving, setLeaving] = useState(false);
@@ -286,7 +287,7 @@ export default function DriverAuth() {
   return (
     <div className="relative min-h-full w-full flex flex-col bg-[#070707] text-white overflow-hidden" style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* The car at the charger, fading into the dark, sparks rising over it */}
-      <div className="absolute inset-x-0 top-0 h-[330px] overflow-hidden sp5-hero-in" aria-hidden="true">
+      <div className="absolute inset-x-0 top-0 overflow-hidden sp5-hero-in" style={{ height: 'calc(330px + var(--bleed, 0px))' }} aria-hidden="true">
         <img src="/welcome/welcome.jpg" alt="" className="w-full h-full object-cover object-[50%_74%] sp5-img-in" />
         <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(7,7,7,.55) 0%, rgba(7,7,7,.15) 35%, rgba(7,7,7,.75) 72%, #070707 100%)' }} />
         {SPARKS.map((sp, i) => (
@@ -294,7 +295,7 @@ export default function DriverAuth() {
         ))}
       </div>
 
-      <div className="relative px-5 pt-3 flex items-center justify-between sp5-in" style={{ animationDelay: '.3s' }}>
+      <div className="relative px-5 flex items-center justify-between sp5-in" style={{ animationDelay: '.3s', paddingTop: 'calc(0.75rem + var(--bleed, 0px))' }}>
         <button onClick={back} aria-label="Назад" className="w-10 h-10 rounded-full grid place-items-center text-white bg-white/10 border border-white/15 backdrop-blur-md hover:bg-white/20"><ArrowLeft size={19} /></button>
         <Logo size={28} ink="#FFFFFF" />
         <span className="w-10" />
@@ -488,7 +489,7 @@ function ErrorBox({ error }: { error: string | null }) {
 function LangChips() {
   const { lang, setLang } = useI18n();
   return (
-    <div className="absolute top-3 right-3 z-10 flex gap-1 p-1 rounded-full bg-black/35 border border-white/15 backdrop-blur-md" role="radiogroup" aria-label="Язык приложения">
+    <div style={{ top: 'calc(0.75rem + var(--bleed, 0px))' }} className="absolute right-3 z-10 flex gap-1 p-1 rounded-full bg-black/35 border border-white/15 backdrop-blur-md" role="radiogroup" aria-label="Язык приложения">
       {LANGS.map(l => (
         <button key={l.id} role="radio" aria-checked={lang === l.id} aria-label={l.full} onClick={() => setLang(l.id)}
           className={`h-7 min-w-[34px] px-2 rounded-full text-[11px] font-bold transition-colors ${lang === l.id ? 'bg-[#C6F432] text-[#111]' : 'text-white/75 hover:text-white'}`}>
@@ -518,7 +519,7 @@ function Welcome({ slide, onSlide, onStart, onSignIn, logoHidden = false, leavin
       <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(8,10,18,.55) 0%, rgba(8,10,18,.1) 30%, rgba(8,10,18,0) 50%, rgba(10,10,10,.75) 72%, rgba(10,10,10,.96) 84%)' }} />
 
       {!logoHidden && <LangChips />}
-      <div className={`relative pt-14 flex flex-col items-center px-6 ${leaving ? 'sp5-out' : returning ? 'sp5-in' : ''}`} style={returning && !leaving ? { animationDelay: '.3s' } : undefined}>
+      <div className={`relative flex flex-col items-center px-6 ${leaving ? 'sp5-out' : returning ? 'sp5-in' : ''}`} style={{ paddingTop: 'calc(3.5rem + var(--bleed, 0px))', ...(returning && !leaving ? { animationDelay: '.3s' } : {}) }}>
         {/* Hidden while the splash's wordmark flies here, so the two never show at once */}
         <div data-welcome-logo style={{ opacity: logoHidden ? 0 : 1 }}><Logo size={64} ink="#FFFFFF" /></div>
         <h1 key={slide} className="mt-6 text-center text-[34px] font-extrabold leading-[1.1] tracking-tight pg-reveal" style={{ textShadow: "0 2px 18px rgba(0,0,0,.65)" }}>

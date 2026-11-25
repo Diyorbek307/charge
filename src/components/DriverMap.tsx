@@ -604,7 +604,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
       {!hideChrome && (
         <>
           {/* Top: the balance one glance away, and the map tools */}
-          <div className="absolute top-3 left-3 right-3 z-[1000] flex items-start justify-between gap-2 pointer-events-none">
+          <div style={{ top: 'calc(0.75rem + var(--bleed, 0px))' }} className="absolute left-3 right-3 z-[1000] flex items-start justify-between gap-2 pointer-events-none">
             {onOpenWallet && sessions.driver ? (
               <button onClick={onOpenWallet} aria-label="Кошелёк" data-tour="wallet" className="pointer-events-auto flex items-center gap-2.5 pl-2 pr-4 py-2 rounded-2xl bg-white/95 backdrop-blur shadow-[0_4px_20px_rgba(15,23,42,0.12)]">
                 <span className="w-9 h-9 rounded-xl bg-[#C6F432] text-[#111] grid place-items-center"><Wallet size={18} /></span>

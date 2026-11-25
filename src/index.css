@@ -717,6 +717,12 @@ nav::-webkit-scrollbar { display: none; }
   padding-right: env(safe-area-inset-right);
 }
 
+/* Full screen: the map, the sign-in and the splash run under the clock and the camera; their own
+   top controls move down by --bleed (0 elsewhere, and 0 on a computer). */
+html.pg-bleed { --bleed: max(env(safe-area-inset-top), var(--safe-area-inset-top, 0px)); }
+html.pg-bleed .safe-top { padding-top: 0; }
+
+
 /* ═══════════════════════════════════════════════════
    READABILITY — brand yellow on white and on black
    ═══════════════════════════════════════════════════ */
