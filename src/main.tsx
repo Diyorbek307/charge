@@ -7,6 +7,15 @@ import './index.css'
 import { initAnalytics } from './landing/analytics'
 import { initMonitoring } from './lib/monitoring'
 import { reloadForNewBuild } from './lib/reloadForNewBuild'
+import { inNativeShell } from './lib/site'
+import { inTelegram } from './lib/telegram'
+
+// In the store app and in Telegram the app should feel like an app: no pinch or double-tap zoom
+// of the whole page, as on a website (the map still zooms with two fingers on its own).
+if (inNativeShell() || inTelegram()) {
+  document.querySelector('meta[name="viewport"]')?.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover')
+  for (const type of ['gesturestart', 'gesturechange']) document.addEventListener(type, e => e.preventDefault(), { passive: false })
+}
 
 initAnalytics()
 initMonitoring()

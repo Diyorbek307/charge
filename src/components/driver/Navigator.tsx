@@ -375,7 +375,7 @@ export default function Navigator({ station, onClose, onArrive }: { station: Sta
       </div>
 
       {/* Bottom bar */}
-      <div className="bg-white rounded-t-3xl -mt-4 relative z-[1001] px-4 pt-4 pb-6 space-y-3">
+      <div className="bg-white rounded-t-3xl -mt-4 relative z-[1001] px-4 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] space-y-3">
         {arrived ? (
           <>
             <p className="text-base font-bold text-slate-900">{station.name}</p>

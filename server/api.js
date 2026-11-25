@@ -1080,7 +1080,8 @@ api.post('/auth/password', requireAuth(), async (req, res) => {
 /** What happened to me: the events addressed to this account, without the network's public feed. */
 api.get('/notifications', requireAuth(), (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 50, 100);
-  res.json(db.data.events.filter(e => entitled(req.account, e) && e.scope?.userId === req.account.id).slice(0, limit).map(e => viewFor(req.account, e)));
+  // Their own sign-ins are not news: each one would pile up as «… вошёл в Driver App». Devices are in «Безопасность».
+  res.json(db.data.events.filter(e => e.type !== 'auth.login' && entitled(req.account, e) && e.scope?.userId === req.account.id).slice(0, limit).map(e => viewFor(req.account, e)));
 });
 
 /**

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowRight, CheckCircle, LoaderCircle, X } from 'lucide-react';
 import type { NetworkWallet } from '../../lib/api';
 import { useSync } from '../../lib/sync';
+import { DimTopBar } from '../../lib/topBar';
 
 const sum = (n: number) => `${Math.round(n).toLocaleString('ru-RU')} сум`;
 const PROVIDERS = [
@@ -45,7 +46,7 @@ export function NetworkTopUp({ wallet, onClose, need = 0 }: { wallet: NetworkWal
   };
 
   return (
-    <div className="absolute inset-0 bg-black/50 z-[60] flex items-end" onClick={e => e.target === e.currentTarget && onClose()} role="dialog" aria-modal="true" aria-label={`Пополнить баланс сети ${wallet.name}`}>
+    <div className="absolute inset-0 bg-black/50 z-[60] flex items-end" onClick={e => e.target === e.currentTarget && onClose()} role="dialog" aria-modal="true" aria-label={`Пополнить баланс сети ${wallet.name}`}><DimTopBar by={0.5} />
       <div className="bg-white rounded-t-3xl p-5 space-y-4 w-full">
         <div className="flex items-start gap-3">
           <span className="text-2xl leading-none" aria-hidden="true">{wallet.logo}</span>

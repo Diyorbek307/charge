@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { inNativeShell } from './site';
 
 /**
@@ -61,5 +61,19 @@ export function useTopBar(color: string, dark: boolean) {
 /** The same as a component, for a screen rendered conditionally. */
 export function TopBar({ color, dark }: Bar) {
   useTopBar(color, dark);
+  return null;
+}
+
+/** The strip under a dimmed backdrop (a bottom sheet): the colour under it, darkened as much as the backdrop. */
+export function DimTopBar({ by }: { by: number }) {
+  const [color] = useState(() => {
+    const under = shown[shown.length - 1]?.color ?? '#ffffff';
+    const m = /^#([0-9a-f]{6})$/i.exec(under.trim());
+    if (!m) return under;
+    const n = parseInt(m[1], 16);
+    const ch = (v: number) => Math.round(v * (1 - by)).toString(16).padStart(2, '0');
+    return `#${ch(n >> 16)}${ch((n >> 8) & 255)}${ch(n & 255)}`;
+  });
+  useTopBar(color, true);
   return null;
 }

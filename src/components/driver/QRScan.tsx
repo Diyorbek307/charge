@@ -359,7 +359,7 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
         )}
       </div>
 
-      <div className="relative z-20 px-10 pb-8 pt-4 flex items-center justify-between">
+      <div className="relative z-20 px-10 pb-[max(2rem,env(safe-area-inset-bottom))] pt-4 flex items-center justify-between">
         <button onClick={() => setPhase('manual')} className="flex flex-col items-center gap-1.5">
           <span className="w-12 h-12 rounded-full bg-black/40 backdrop-blur grid place-items-center"><Keyboard size={19} className="text-white" /></span>
           <span className="text-white/80 text-[10px]">Ввести код</span>
@@ -517,7 +517,7 @@ export default function QRScanScreen({ onBack, onStartCharging, onBook, onRoute 
           </div>
         </div>
       </div>
-      <div className="px-4 pb-6 pt-2 space-y-2">
+      <div className="px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2 space-y-2">
         <button onClick={() => accept(typed)} disabled={!typed}
           className="w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 disabled:bg-slate-200 disabled:text-slate-400 text-[#111]"
           style={typed ? { background: 'linear-gradient(135deg,#D9F77A,#8FD61A)', boxShadow: '0 6px 20px rgba(198,244,50,0.35)' } : undefined}>

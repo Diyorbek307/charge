@@ -689,6 +689,9 @@ nav::-webkit-scrollbar { display: none; }
   border-color: #C6F432;
   outline: none;
 }
+/* A field drawn inside its own box (the map search) stays see-through, not a dark patch in the box. */
+.dark input.bg-transparent,
+.dark textarea.bg-transparent { background-color: transparent; }
 
 /* ── Scrollbars ── */
 .dark ::-webkit-scrollbar-track { background: #141414; }
@@ -852,6 +855,8 @@ nav::-webkit-scrollbar { display: none; }
 .pg-app :is(.bg-sky-400, .bg-sky-500, .bg-sky-600, [class*="from-sky-"]).text-white,
 .pg-app :is(.bg-sky-400, .bg-sky-500, .bg-sky-600, [class*="from-sky-"]) .text-white { color: #111; }
 .pg-app :is(.text-sky-500, .text-sky-600) { color: #3D6B00; }
+/* …but in the dark theme the deep gold disappears on the dark cards: there the brand yellow reads. */
+.dark .pg-app :is(.text-sky-500, .text-sky-600) { color: #C6F432; }
 /* Something that just opened inside a card: an answer, a receipt, a form. */
 .pg-reveal { animation: pg-reveal .32s cubic-bezier(.32,.72,0,1) both; }
 @keyframes pg-reveal { from { opacity: 0; translate: 0 -6px; clip-path: inset(0 0 100% 0); } to { opacity: 1; translate: none; clip-path: inset(0 0 -20px 0); } }

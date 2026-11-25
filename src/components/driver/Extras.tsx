@@ -7,6 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import type { Loyalty, FamilyState, HostOverview, HostKind, SosKind, SosRequest, Session } from '../../lib/api';
 import { useSync } from '../../lib/sync';
 import { locate } from '../../lib/geo';
+import { DimTopBar } from '../../lib/topBar';
 
 const sum = (n: number) => `${Math.round(n).toLocaleString('ru-RU')} сум`;
 const KM_PER_KWH = 1 / 0.18;
@@ -491,7 +492,7 @@ export function SosSheet({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="absolute inset-0 z-50 bg-black/40 flex items-end" onClick={onClose}>
+    <div className="absolute inset-0 z-50 bg-black/40 flex items-end" onClick={onClose}><DimTopBar by={0.4} />
       <div className="w-full bg-white rounded-t-3xl max-h-[90%] overflow-y-auto p-4 pb-6 space-y-3" onClick={e => e.stopPropagation()} role="dialog" aria-label="SOS">
         <div className="flex items-center justify-between">
           <p className="text-lg font-bold text-red-600">SOS — нужна помощь</p>

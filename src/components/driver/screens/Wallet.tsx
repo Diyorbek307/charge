@@ -6,6 +6,7 @@ import { NetworkWalletList } from '../NetworkWallets';
 import { usePlatform } from '../../../lib/platform';
 import type { PaymentOrder } from '../../../lib/api';
 import { apiClient } from '../../../lib/api';
+import { DimTopBar } from '../../../lib/topBar';
 
 export function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewards: () => void }) {
   const { actions, refresh, state, sessions: portalSessions } = useSync();
@@ -170,7 +171,7 @@ export function WalletScreen({ onBack, onRewards }: { onBack: () => void; onRewa
 
       {/* Top-up modal */}
       {showTopUp && (
-        <div className="absolute inset-0 bg-black/50 z-50 flex items-end pg-fade" onClick={e => { if (e.target === e.currentTarget && !paying) setShowTopUp(false); }}>
+        <div className="absolute inset-0 bg-black/50 z-50 flex items-end pg-fade" onClick={e => { if (e.target === e.currentTarget && !paying) setShowTopUp(false); }}><DimTopBar by={0.5} />
           <div className="bg-white rounded-t-3xl p-6 space-y-5 w-full pg-sheet-in">
             <div className="flex justify-center mb-1">
               <div className="w-10 h-1 bg-slate-200 rounded-full" />

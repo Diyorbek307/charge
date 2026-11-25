@@ -605,7 +605,13 @@ export default function DriverApp() {
     if (screen === 'history') return <HistoryScreen onBack={() => { setScreen('map'); setActiveTab('charging'); }} />;
     if (activeTab === 'deals') return <DealsScreen onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} onRoute={st => { setActiveTab('map'); setSelectedStation(st); setScreen('navigate'); }} />;
     if (activeTab === 'profile') return <ProfileScreen onNavigate={s => { walletFrom.current = 'profile'; carFrom.current = 'profile'; batteryFrom.current = 'profile'; setScreen(s as Screen); }} />;
-    if (activeTab === 'charging') return <ChargingHubScreen onNavigate={(s) => { carFrom.current = 'map'; batteryFrom.current = 'map'; setScreen(s as Screen); }} onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} onOpenCharge={() => { setActiveTab('map'); setScreen('charging-active'); }} onRepeat={(st, cid, goal) => { setActiveTab('map'); setSelectedStation(st); void startCharging(cid, 'self', undefined, { goal }, st); }} />;
+    if (activeTab === 'charging') return <ChargingHubScreen onNavigate={(s) => { carFrom.current = 'map'; batteryFrom.current = 'map'; setScreen(s as Screen); }} onSelectStation={st => { setActiveTab('map'); handleSelectStation(st); }} onOpenCharge={() => { setActiveTab('map'); setScreen('charging-active'); }} onRepeat={(st, cid, goal) => {
+      setActiveTab('map'); setSelectedStation(st);
+      // The car is already above last time's target: "the same" cannot start, so let the driver pick a new one.
+      const now = state?.vehicles.find(v => v.driverId === driverAccount?.id)?.battery;
+      if (goal.kind === 'percent' && typeof now === 'number' && goal.value <= now) { preferPoint.current = cid; setScreen('charging-start'); return; }
+      void startCharging(cid, 'self', undefined, { goal }, st);
+    }} />;
 
     return (
       <div className="relative w-full h-full">

@@ -49,13 +49,14 @@ before(async () => {
   app.post('/hook', (req, res) => {
     commands.push(req.body);
     res.json({ accepted: true });
-    setTimeout(async () => {
+    // The network's answer may come after the last test stopped the server: not a failure.
+    setTimeout(async () => { try {
       if (req.body.type === 'start') {
         current = `G-${++seq}`;
         await net(`/sessions/${current}`, 'POST', { event: 'started', driverId: req.body.driver.id, station: req.body.station, connector: req.body.connector });
       }
       if (req.body.type === 'stop') await net(`/sessions/${current}`, 'POST', { event: 'stopped', kwh: lastKwh, cost: Math.round(lastKwh * 1800) });
-    }, 20);
+    } catch { /* server already stopped */ } }, 20);
   });
   await new Promise(r => (hookServer = app.listen(HOOK_PORT, r)));
 

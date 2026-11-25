@@ -71,7 +71,7 @@ export default function BatteryScreen({ onBack, onAddCar }: { onBack: () => void
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-[44px] font-black text-slate-900 tabular-nums leading-none pg-pop">{h.soh !== null ? `${h.soh}%` : '—'}</span>
-                  <span className="text-[11px] text-slate-500 mt-1 max-w-[104px] text-center leading-tight">{h.soh !== null ? 'от ёмкости по паспорту' : 'ещё не измерено'}</span>
+                  <span className="text-[11px] text-slate-500 mt-1 max-w-[104px] text-center leading-tight">{h.soh !== null ? 'от ёмкости по паспорту' : h.car ? 'ещё не измерено' : 'укажите машину'}</span>
                 </div>
               </div>
               {grade && <p className="mt-3 text-sm font-bold" style={{ color: grade.color }}>{grade.text}</p>}
