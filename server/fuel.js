@@ -7,6 +7,7 @@
  * 3 hours; the newest one is what others see.
  */
 import { readFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { db } from './db.js';
 import { api, requireAuth } from './api.js';
 
@@ -48,8 +49,37 @@ api.post('/fuel/:id/report', requireAuth('driver'), (req, res) => {
   if (!FUEL_STATUSES.includes(status)) return res.status(400).json({ error: 'Неизвестная отметка' });
   const mine = marks().find(m => m.stationId === station.id && m.userId === req.account.id && Date.now() - Date.parse(m.ts) < COOLDOWN);
   if (mine) return res.status(409).json({ error: 'Вы уже отмечали эту заправку — можно снова через 20 минут' });
-  marks().unshift({ stationId: station.id, fuel, status, userId: req.account.id, ts: new Date().toISOString() });
+  marks().unshift({ id: `FM-${randomUUID().slice(0, 8)}`, stationId: station.id, fuel, status, userId: req.account.id, user: req.account.name ?? '', ts: new Date().toISOString() });
   if (marks().length > 5000) marks().length = 5000;
   db.save();
   res.status(201).json(view(station, fuel));
+});
+
+// ---------------------------------------------------------------------------
+// Admin: how many stations the map has, what drivers said, and removing a false mark.
+// ---------------------------------------------------------------------------
+
+api.get('/admin/fuel', requireAuth('admin'), (_req, res) => {
+  const day = Date.now() - 24 * 3600_000;
+  const recent = marks().filter(m => Date.parse(m.ts) > day);
+  res.json({
+    source: data.source,
+    at: data.at,
+    total: data.stations.length,
+    gas: data.stations.filter(s => s.metan || s.propan).length,
+    petrol: data.stations.filter(s => s.petrol).length,
+    day: { marks: recent.length, yes: recent.filter(m => m.status === 'yes').length, no: recent.filter(m => m.status === 'no').length, queue: recent.filter(m => m.status === 'queue').length, drivers: new Set(recent.map(m => m.userId)).size },
+    marks: marks().slice(0, 200).map(m => {
+      const st = byId.get(m.stationId);
+      return { ...m, station: st?.name || st?.brand || null, address: st?.address ?? null, lat: st?.lat ?? null, lng: st?.lng ?? null };
+    }),
+  });
+});
+
+api.delete('/admin/fuel/marks/:id', requireAuth('admin'), (req, res) => {
+  const i = marks().findIndex(m => m.id === req.params.id);
+  if (i < 0) return res.status(404).json({ error: 'Отметка не найдена' });
+  marks().splice(i, 1);
+  db.save();
+  res.json({ removed: true });
 });

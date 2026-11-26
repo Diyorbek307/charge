@@ -69,4 +69,15 @@ test('gas and petrol stations, and a driver marking whether there is gas', async
   assert.equal(marked.data.now.status, 'no');
   assert.equal((await call('/fuel?kind=gas')).data.stations.find(s => s.id === st.id).now.status, 'no', 'everyone sees it');
   assert.equal((await call(`/fuel/${st.id}/report`, { method: 'POST', token, body: { fuel: 'gas', status: 'yes' } })).status, 409, 'one mark per 20 minutes');
+
+  // The admin sees the mark and can remove a false one; a driver cannot.
+  assert.equal((await call('/admin/fuel', { token })).status, 403);
+  const admin = (await call('/auth/login', { method: 'POST', body: { portal: 'admin', login: 'admin@voli.uz', password: 'Admin2026' } })).data.token;
+  const view = (await call('/admin/fuel', { token: admin })).data;
+  assert.ok(view.total > 1000 && view.gas > 100);
+  assert.equal(view.day.no, 1);
+  const mark = view.marks.find(m => m.stationId === st.id);
+  assert.ok(mark?.id && mark.user, 'whose mark it is');
+  assert.equal((await call(`/admin/fuel/marks/${mark.id}`, { method: 'DELETE', token: admin })).status, 200);
+  assert.equal((await call('/fuel?kind=gas')).data.stations.find(s => s.id === st.id).now, null, 'removed: nobody sees it any more');
 });

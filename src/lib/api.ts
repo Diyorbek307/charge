@@ -148,6 +148,8 @@ export interface FuelStation {
   now: { status: 'yes' | 'no' | 'queue'; at: string; count: number } | null;
 }
 export type FuelKind = 'gas' | 'petrol';
+export interface FuelMark { id: string; stationId: string; fuel: FuelKind; status: 'yes' | 'no' | 'queue'; userId: string; user: string; ts: string; station: string | null; address: string | null; lat: number | null; lng: number | null }
+export interface AdminFuel { source: string; at: string; total: number; gas: number; petrol: number; day: { marks: number; yes: number; no: number; queue: number; drivers: number }; marks: FuelMark[] }
 export interface StationCommunity { works: number; broken: number; queue: number; noQueue: number; access: number; power: number | null; reports: CommunityReport[] }
 export interface Loyalty {
   balance: number;
@@ -1079,6 +1081,8 @@ export const apiClient = {
   adminPartners: () => request<PartnerPlace[]>('/admin/partners', { portal: 'admin' }),
   createPartner: (body: { name: string; kind: PlaceKind; offer: string; lat: number; lng: number; pricePerShow: number; days: number }) => post<PartnerPlace>('/admin/partners', body, 'admin'),
   stopPartner: (id: string) => request<PartnerPlace>(`/admin/partners/${id}`, { method: 'DELETE', portal: 'admin' }),
+  adminFuel: () => request<AdminFuel>('/admin/fuel', { portal: 'admin' }),
+  removeFuelMark: (id: string) => request<{ removed: boolean }>(`/admin/fuel/marks/${encodeURIComponent(id)}`, { method: 'DELETE', portal: 'admin' }),
   places: (stationId: string) => request<StationPlaces>(`/stations/${stationId}/places`),
   tapPlace: (id: string) => post<{ ok: boolean }>(`/places/${id}/tap`),
   arrival: (stationId: string, etaMin: number) => request<ArrivalChance>(`/stations/${stationId}/arrival?eta=${Math.round(etaMin)}`),

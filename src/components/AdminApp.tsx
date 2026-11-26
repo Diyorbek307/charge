@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import AdminDriverPhotos from './admin/DriverPhotos';
+import AdminFuel from './admin/Fuel';
 import AdminPartners from './admin/Partners';
 import AdminPlatform from './admin/Platform';
 import AdminPromos from './admin/Promos';
@@ -32,7 +33,7 @@ import {
   LayoutDashboard, MapPin, Users, Activity, DollarSign, BarChart2, Settings, LogOut, Shield,
   Building2, Brain, ScrollText, ClipboardCheck, Percent, UserCheck, Banknote, Tag, Menu, Inbox,
   Siren, Home, ScanFace, Landmark, MessageCircle, Coffee, SlidersHorizontal, Megaphone, TrendingUp,
-  Camera, Briefcase,
+  Camera, Briefcase, Flame,
 } from 'lucide-react';
 import { useI18n } from '../lib/i18n';
 import { useAdminInbox } from '../lib/inbox';
@@ -40,7 +41,7 @@ import SidebarThemeToggle from './SidebarThemeToggle';
 import AIChat from './AIChat';
 import { LogoMark } from '../landing/Logo';
 
-type Page = 'companies' | 'investor' | 'photos' | 'dashboard' | 'promos' | 'map' | 'sos' | 'hosts' | 'credit' | 'direct' | 'support' | 'operators' | 'leads' | 'users' | 'sessions' | 'payments' | 'settlement' | 'analytics' | 'ai' | 'fraud' | 'cdr' | 'commissions' | 'tariffs_global' | 'partners' | 'platform' | 'audit' | 'roles' | 'settings' | 'system_health';
+type Page = 'fuel' | 'companies' | 'investor' | 'photos' | 'dashboard' | 'promos' | 'map' | 'sos' | 'hosts' | 'credit' | 'direct' | 'support' | 'operators' | 'leads' | 'users' | 'sessions' | 'payments' | 'settlement' | 'analytics' | 'ai' | 'fraud' | 'cdr' | 'commissions' | 'tariffs_global' | 'partners' | 'platform' | 'audit' | 'roles' | 'settings' | 'system_health';
 
 function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current: Page; onChange: (p: Page) => void; onBack: () => void; isOpen?: boolean; onClose?: () => void }) {
   const { t } = useI18n();
@@ -70,6 +71,7 @@ function AdminSidebar({ current, onChange, onBack, isOpen, onClose }: { current:
         { id: 'hosts' as Page, label: 'Частные зарядки', icon: <Home size={14} /> },
         { id: 'credit' as Page, label: 'Зарядка в долг', icon: <ScanFace size={14} /> },
         { id: 'photos' as Page, label: 'Фото от водителей', icon: <Camera size={14} /> },
+        { id: 'fuel' as Page, label: 'Заправки', icon: <Flame size={14} /> },
       ],
     },
     {
@@ -194,7 +196,7 @@ export default function AdminApp({ onBack }: { onBack: () => void }) {
   const go = (p: string) => setPage(p as Page);
   const renderPage = () => {
     const pages: Record<string, ReactNode> = {
-      map: <AdminNetworkMap />, sos: <AdminSos />, support: <AdminSupport />, hosts: <AdminHosts />, credit: <AdminCredit />, photos: <AdminDriverPhotos />, operators: <AdminOperators onNavigate={go} />, leads: <LeadsPage />, users: <AdminUsers />,
+      map: <AdminNetworkMap />, sos: <AdminSos />, support: <AdminSupport />, hosts: <AdminHosts />, credit: <AdminCredit />, photos: <AdminDriverPhotos />, fuel: <AdminFuel />, operators: <AdminOperators onNavigate={go} />, leads: <LeadsPage />, users: <AdminUsers />,
       settlement: <AdminSettlement />, direct: <DirectSettlement portal="admin" />, commissions: <AdminCommissions />, tariffs_global: <AdminTariffs />, partners: <AdminPartners />, platform: <AdminPlatform />, promos: <AdminPromos />,
       sessions: <AdminSessions />, payments: <AdminPayments />, companies: <AdminCompanies />,
       analytics: <AdminAnalytics />, investor: <Investor />, ai: <AdminInsights onNavigate={go} />, fraud: <AdminRisk />,
