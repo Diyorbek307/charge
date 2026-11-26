@@ -317,8 +317,30 @@ export function hostPortal(): Portal | null {
   return HOST_PORTALS[window.location.hostname.split('.')[0]?.toLowerCase() ?? ''] ?? null;
 }
 
+/**
+ * The store apps Voli Business and Voli Admin are the same shell opening
+ * ?portal=business / ?portal=admin (capacitor.config.ts, VOLI_APP). That portal
+ * is kept, so a reload without the query still opens it and nothing leads out of it.
+ */
+function shellPortal(): Portal | null {
+  if (!inNativeShell()) return null;
+  try {
+    const q = new URLSearchParams(window.location.search).get('portal');
+    if (q === 'business' || q === 'admin') {
+      localStorage.setItem('voli-shell-portal', q);
+      return q;
+    }
+    const kept = localStorage.getItem('voli-shell-portal');
+    return kept === 'business' || kept === 'admin' ? kept : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Lets a portal be deep-linked (?portal=operator) — used by the split view. */
 function initialPortal(): Portal {
+  const shell = shellPortal();
+  if (shell) return shell;
   const pinned = hostPortal();
   if (pinned) return pinned;
   // The store app and the Telegram mini app are the driver's app, and so is
@@ -350,7 +372,9 @@ export default function App() {
 
 function MainApp() {
   const { t: tApp } = useI18n();
-  const [portal, setPortal] = useState<Portal>(initialPortal);
+  const [portal, setPortalState] = useState<Portal>(initialPortal);
+  // Inside Voli Business / Voli Admin the app is that one portal: «back to portals» stays put.
+  const setPortal = (p: Portal) => setPortalState(shellPortal() ?? p);
   // A cabinet on its own address has no portal list behind it: "back" leads to the main site.
   useEffect(() => {
     if (portal === 'selector' && hostPortal()) window.location.href = LANDING_URL || 'https://voli.uz';
@@ -358,7 +382,9 @@ function MainApp() {
   const [splitView, setSplitView] = useState(() => new URLSearchParams(window.location.search).has('split'));
   // Split view embeds the app in iframes; nested chrome there would be noise.
   const embedded = typeof window !== 'undefined' && window.self !== window.top;
-  const { sessions, actions, adoptSession } = useSync();
+  const { sessions, actions, adoptSession, logout } = useSync();
+  // «Выйти из портала» inside Voli Business / Voli Admin signs out: there is no other portal to go to.
+  const leave = () => { const shell = shellPortal(); if (shell === 'business' || shell === 'admin') void logout(shell); else setPortal('selector'); };
   const driverSession = sessions.driver;
   const firstRun = useFirstRunNeeded(sessions.driver ?? null);
   // "Добрый вечер, …" once, right after the driver signs in.
@@ -487,17 +513,17 @@ function MainApp() {
       )}
       {portal === 'operator' && (
         <PortalGate portal="operator" title="Operator Portal" subtitle={tApp('portal.operator.sub')} icon={<Building2 size={22} />} onBack={() => setPortal('selector')}>
-          <div className="h-full overflow-x-auto"><OperatorApp onBack={() => setPortal('selector')} /></div>
+          <div className="h-full overflow-x-auto"><OperatorApp onBack={leave} /></div>
         </PortalGate>
       )}
       {portal === 'admin' && (
         <PortalGate portal="admin" title="Admin Control Center" subtitle={tApp('portal.admin.sub')} icon={<Shield size={22} />} onBack={() => setPortal('selector')}>
-          <div className="h-full overflow-x-auto"><AdminApp onBack={() => setPortal('selector')} /></div>
+          <div className="h-full overflow-x-auto"><AdminApp onBack={leave} /></div>
         </PortalGate>
       )}
       {portal === 'business' && (
         <PortalGate portal="business" title="Business Portal" subtitle={tApp('portal.business.sub')} icon={<Briefcase size={22} />} onBack={() => setPortal('selector')}>
-          <div className="h-full overflow-x-auto"><BusinessApp onBack={() => setPortal('selector')} /></div>
+          <div className="h-full overflow-x-auto"><BusinessApp onBack={leave} /></div>
         </PortalGate>
       )}
       {portal === 'api' && (

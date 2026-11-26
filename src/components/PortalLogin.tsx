@@ -4,6 +4,7 @@ import { useSync } from '../lib/sync';
 import { useI18n } from '../lib/i18n';
 import type { Portal } from '../lib/api';
 import DriverAuth from './driver/DriverAuth';
+import { inNativeShell } from '../lib/site';
 
 // Every portal signs in under the same brand: a yellow button with near-black text.
 const BRAND_THEME = { grad: 'from-[#C6F432] to-[#8FD61A]', accent: 'text-[#C6F432]', ring: 'focus:border-[#C6F432]/60 focus:ring-[#C6F432]/20', glow: 'rgba(198,244,50,0.3)' };
@@ -159,13 +160,16 @@ function LoginForm({ portal, title, subtitle, icon, onBack }: Props) {
       <div className="absolute inset-0 dot-grid opacity-40 pointer-events-none" />
 
       <div className="relative w-full max-w-[400px]">
-        <button
-          onClick={onBack}
-          className="mb-5 flex items-center gap-2 text-xs sm:text-sm text-slate-400 hover:text-white transition-colors"
-        >
-          <ArrowRight size={14} className="rotate-180" />
-          {t('nav.portals')}
-        </button>
+        {/* Inside Voli Business / Voli Admin there are no other portals to go back to. */}
+        {!inNativeShell() && (
+          <button
+            onClick={onBack}
+            className="mb-5 flex items-center gap-2 text-xs sm:text-sm text-slate-400 hover:text-white transition-colors"
+          >
+            <ArrowRight size={14} className="rotate-180" />
+            {t('nav.portals')}
+          </button>
+        )}
 
         <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-6 sm:p-7">
           <div
@@ -175,7 +179,7 @@ function LoginForm({ portal, title, subtitle, icon, onBack }: Props) {
             {icon}
           </div>
 
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{title}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{inNativeShell() && portal === 'business' ? 'Voli Business' : inNativeShell() && portal === 'admin' ? 'Voli Admin' : title}</h1>
           <p className="text-sm text-slate-400 mt-1.5 mb-6">{subtitle}</p>
 
           {challenge ? (
@@ -296,9 +300,11 @@ function LoginForm({ portal, title, subtitle, icon, onBack }: Props) {
           )}
         </div>
 
-        <p className="text-center text-[11px] text-slate-600 mt-4">
-          {t('auth.ownAccount')}
-        </p>
+        {!inNativeShell() && (
+          <p className="text-center text-[11px] text-slate-600 mt-4">
+            {t('auth.ownAccount')}
+          </p>
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-# Store builds of the Voli app in the cloud — no Mac needed.
+# Store builds of the Voli apps in the cloud — no Mac needed.
 #
 # Set up once in Codemagic (codemagic.io), see docs/stores.md:
 #   - Teams → Integrations → Developer Portal: an App Store Connect API key, named "Voli ASC".
@@ -8,6 +8,86 @@
 #     to upload to Google Play by itself after the first release was uploaded by hand.
 #
 # Start a build: Codemagic → the app → Start new build → choose the workflow.
+#
+# Three apps from one shell (capacitor.config.ts, scripts/native_flavor.py, docs/business-admin-apps.md):
+#   Voli          uz.voli.app       — drivers, App Store and Google Play
+#   Voli Business uz.voli.business  — fleets and companies, App Store (unlisted) and Google Play
+#   Voli Admin    uz.voli.admin     — the Voli team only: TestFlight and a closed Play track
+
+definitions:
+  ios_scripts: &ios_scripts
+    - name: Install and build the site
+      script: npm ci
+    # Voli Business / Voli Admin: their own ID, name and icon; no CarPlay, no Firebase.
+    - name: Which app
+      script: if [ -n "$VOLI_APP" ]; then python3 scripts/native_flavor.py "$VOLI_APP" ios; fi
+    - name: Copy the site into the iOS project
+      script: npx cap sync ios
+    # Certificate and profile straight from Apple with the API key; made there if missing.
+    - name: Signing from Apple
+      script: |
+        set -e
+        keychain initialize
+        # The key as pasted into Codemagic, often on one line: rebuild a proper PEM file from it.
+        python3 - <<'PY'
+        import base64, os, re, textwrap
+        raw = os.environ.get('CERTIFICATE_PRIVATE_KEY', '').strip()
+        # One line of base64 (signing/ios_cert_private_key.b64.txt) survives pasting best.
+        if 'BEGIN' not in raw:
+            try:
+                raw = base64.b64decode(raw).decode()
+            except Exception:
+                pass
+        m = re.search(r'-----BEGIN ([A-Z ]+)-----(.*?)-----END ([A-Z ]+)-----', raw, re.S)
+        if not m:
+            raise SystemExit(f'CERTIFICATE_PRIVATE_KEY is not a whole key ({len(raw)} characters, BEGIN {"found" if "BEGIN" in raw else "missing"}, END {"found" if "END" in raw else "missing"})')
+        body = re.sub(r'\s+', '', m.group(2))
+        lines = '\n'.join(textwrap.wrap(body, 64))
+        open('/tmp/cert_key.pem', 'w').write(f'-----BEGIN {m.group(1)}-----\n{lines}\n-----END {m.group(3)}-----\n')
+        PY
+        app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create --certificate-key=@file:/tmp/cert_key.pem
+        keychain add-certificates
+        xcode-project use-profiles
+    - name: Build number (one above the last in App Store Connect)
+      script: |
+        # TestFlight holds every upload, the App Store only released ones: one above the larger.
+        TF=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
+        AS=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
+        TF=${TF//[^0-9]/}; AS=${AS//[^0-9]/}; TF=${TF:-0}; AS=${AS:-0}
+        LATEST=$(( TF > AS ? TF : AS ))
+        cd ios/App && agvtool new-version -all $((LATEST + 1))
+    - name: Build the .ipa
+      script: xcode-project build-ipa --project "ios/App/App.xcodeproj" --scheme "App"
+
+  android_scripts: &android_scripts
+    - name: Install and build the site
+      script: npm ci
+    - name: Which app
+      script: if [ -n "$VOLI_APP" ]; then python3 scripts/native_flavor.py "$VOLI_APP" android; fi
+    - name: Copy the site into the Android project
+      script: npx cap sync android
+    - name: Build the signed .aab
+      script: |
+        export BUILD_NUMBER=$((PROJECT_BUILD_NUMBER + 1))
+        cd android && ./gradlew bundleRelease
+
+  publish_ios: &publish_ios
+    app_store_connect:
+      auth: integration
+      # Upload only: the team tests it in TestFlight at once, without Apple's beta review.
+      submit_to_testflight: false
+    email:
+      recipients:
+        - info@voli.uz
+
+  publish_android: &publish_android
+    email:
+      recipients:
+        - info@voli.uz
+    # After the first release is uploaded by hand in Play Console, add to upload by itself:
+    # google_play:
+    #   credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+    #   track: internal
 
 workflows:
   ios-release:
@@ -19,63 +99,60 @@ workflows:
     environment:
       node: 22
       xcode: latest
-      vars:
-        # The app's Apple ID: App Store Connect → the app → App Information → Apple ID (digits).
-        APP_STORE_APPLE_ID: "6836232117"
       # The certificate's private key (signing/ios_cert_private_key.pem, never in git):
       # Codemagic → the app → Environment variables → CERTIFICATE_PRIVATE_KEY, group ios_signing, secret.
       groups:
         - ios_signing
-    scripts:
-      - name: Install and build the site
-        script: npm ci
-      - name: Copy the site into the iOS project
-        script: npx cap sync ios
-      # Certificate and profile straight from Apple with the API key; made there if missing.
-      - name: Signing from Apple
-        script: |
-          set -e
-          keychain initialize
-          # The key as pasted into Codemagic, often on one line: rebuild a proper PEM file from it.
-          python3 - <<'PY'
-          import base64, os, re, textwrap
-          raw = os.environ.get('CERTIFICATE_PRIVATE_KEY', '').strip()
-          # One line of base64 (signing/ios_cert_private_key.b64.txt) survives pasting best.
-          if 'BEGIN' not in raw:
-              try:
-                  raw = base64.b64decode(raw).decode()
-              except Exception:
-                  pass
-          m = re.search(r'-----BEGIN ([A-Z ]+)-----(.*?)-----END ([A-Z ]+)-----', raw, re.S)
-          if not m:
-              raise SystemExit(f'CERTIFICATE_PRIVATE_KEY is not a whole key ({len(raw)} characters, BEGIN {"found" if "BEGIN" in raw else "missing"}, END {"found" if "END" in raw else "missing"})')
-          body = re.sub(r'\s+', '', m.group(2))
-          lines = '\n'.join(textwrap.wrap(body, 64))
-          open('/tmp/cert_key.pem', 'w').write(f'-----BEGIN {m.group(1)}-----\n{lines}\n-----END {m.group(3)}-----\n')
-          PY
-          app-store-connect fetch-signing-files "uz.voli.app" --type IOS_APP_STORE --create --certificate-key=@file:/tmp/cert_key.pem
-          keychain add-certificates
-          xcode-project use-profiles
-      - name: Build number (one above the last in App Store Connect)
-        script: |
-          # TestFlight holds every upload, the App Store only released ones: one above the larger.
-          TF=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
-          AS=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
-          TF=${TF//[^0-9]/}; AS=${AS//[^0-9]/}; TF=${TF:-0}; AS=${AS:-0}
-          LATEST=$(( TF > AS ? TF : AS ))
-          cd ios/App && agvtool new-version -all $((LATEST + 1))
-      - name: Build the .ipa
-        script: xcode-project build-ipa --project "ios/App/App.xcodeproj" --scheme "App"
+      vars:
+        BUNDLE_ID: uz.voli.app
+        # The app's Apple ID: App Store Connect → the app → App Information → Apple ID (digits).
+        APP_STORE_APPLE_ID: "6836232117"
+    scripts: *ios_scripts
     artifacts:
       - build/ios/ipa/*.ipa
-    publishing:
-      app_store_connect:
-        auth: integration
-        # Upload only: the team tests it in TestFlight at once, without Apple's beta review.
-        submit_to_testflight: false
-      email:
-        recipients:
-          - info@voli.uz
+    publishing: *publish_ios
+
+  ios-business:
+    name: iOS · Voli Business → App Store
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: Voli ASC
+    environment:
+      node: 22
+      xcode: latest
+      groups:
+        - ios_signing
+      vars:
+        VOLI_APP: business
+        BUNDLE_ID: uz.voli.business
+        # After the app is made in App Store Connect: its Apple ID (digits) here.
+        APP_STORE_APPLE_ID: ""
+    scripts: *ios_scripts
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing: *publish_ios
+
+  ios-admin:
+    name: iOS · Voli Admin → TestFlight (team only)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: Voli ASC
+    environment:
+      node: 22
+      xcode: latest
+      groups:
+        - ios_signing
+      vars:
+        VOLI_APP: admin
+        BUNDLE_ID: uz.voli.admin
+        # After the app is made in App Store Connect: its Apple ID (digits) here.
+        APP_STORE_APPLE_ID: ""
+    scripts: *ios_scripts
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing: *publish_ios
 
   android-release:
     name: Android → AAB for Google Play
@@ -86,22 +163,39 @@ workflows:
       java: 21
       android_signing:
         - voli_upload
-    scripts:
-      - name: Install and build the site
-        script: npm ci
-      - name: Copy the site into the Android project
-        script: npx cap sync android
-      - name: Build the signed .aab
-        script: |
-          export BUILD_NUMBER=$((PROJECT_BUILD_NUMBER + 1))
-          cd android && ./gradlew bundleRelease
+    scripts: *android_scripts
     artifacts:
       - android/app/build/outputs/bundle/release/*.aab
-    publishing:
-      email:
-        recipients:
-          - info@voli.uz
-      # After the first release is uploaded by hand in Play Console, uncomment to upload by itself:
-      # google_play:
-      #   credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-      #   track: internal
+    publishing: *publish_android
+
+  android-business:
+    name: Android · Voli Business → AAB
+    instance_type: linux_x2
+    max_build_duration: 45
+    environment:
+      node: 22
+      java: 21
+      android_signing:
+        - voli_upload
+      vars:
+        VOLI_APP: business
+    scripts: *android_scripts
+    artifacts:
+      - android/app/build/outputs/bundle/release/*.aab
+    publishing: *publish_android
+
+  android-admin:
+    name: Android · Voli Admin → AAB (closed testing)
+    instance_type: linux_x2
+    max_build_duration: 45
+    environment:
+      node: 22
+      java: 21
+      android_signing:
+        - voli_upload
+      vars:
+        VOLI_APP: admin
+    scripts: *android_scripts
+    artifacts:
+      - android/app/build/outputs/bundle/release/*.aab
+    publishing: *publish_android

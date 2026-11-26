@@ -10,6 +10,11 @@
 
 ## 0. Самое свежее (24–25 ноября 2026) — прочитать первым
 
+**Voli Business и Voli Admin (26.11)** — тот же каркас, другой кабинет: `uz.voli.business` (App Store по ссылке + Google Play),
+`uz.voli.admin` (только TestFlight и закрытое тестирование). Всё — в `docs/business-admin-apps.md`; сборка — сценарии
+`ios-business`, `ios-admin`, `android-business`, `android-admin` в `codemagic.yaml`. Владелец: создать App ID и приложения
+в App Store Connect / Play Console, прислать Apple ID (цифры) — вписать в `codemagic.yaml`; тестовая компания для проверки Apple.
+
 **Карта: Электро / Газ / Бензин (26.11, коммит 8f85164)**
 - Переключатель над поиском. «Газ» и «Бензин» — заправки из OpenStreetMap (`server/data/fuel-uz.json`, 820 с газом,
   1 690 с бензином; обновлять `node scripts/fuel-osm.mjs`, раз в месяц-два). Есть ли газ — отметки водителей

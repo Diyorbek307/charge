@@ -12,12 +12,24 @@ import type { CapacitorConfig } from '@capacitor/cli';
 // The site as deployed today; set CAP_SERVER_URL=https://voli.uz once that domain serves it.
 const server = process.env.CAP_SERVER_URL ?? 'https://app.voli.uz';
 
+/**
+ * The same shell is also Voli Business (fleets, in the stores) and Voli Admin
+ * (the team only: TestFlight and a closed Play track). VOLI_APP picks which;
+ * scripts/native_flavor.py renames the native projects to match (codemagic.yaml).
+ */
+const FLAVORS = {
+  business: { appId: 'uz.voli.business', appName: 'Voli Business' },
+  admin: { appId: 'uz.voli.admin', appName: 'Voli Admin' },
+} as const;
+const flavor = process.env.VOLI_APP === 'business' || process.env.VOLI_APP === 'admin' ? FLAVORS[process.env.VOLI_APP] : null;
+const startUrl = flavor ? `${server}/?portal=${process.env.VOLI_APP}` : server;
+
 const config: CapacitorConfig = {
-  appId: 'uz.voli.app',
-  appName: 'Voli',
+  appId: flavor?.appId ?? 'uz.voli.app',
+  appName: flavor?.appName ?? 'Voli',
   webDir: 'dist',
   server: {
-    url: server,
+    url: startUrl,
     androidScheme: 'https',
     // Only our own site opens inside the app; everything else (maps, payments) goes to the browser.
     allowNavigation: [new URL(server).host],
