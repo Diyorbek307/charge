@@ -126,8 +126,8 @@ workflows:
       vars:
         VOLI_APP: business
         BUNDLE_ID: uz.voli.business
-        # After the app is made in App Store Connect: its Apple ID (digits) here.
-        APP_STORE_APPLE_ID: ""
+        # The app's Apple ID: App Store Connect → App Information → Apple ID.
+        APP_STORE_APPLE_ID: "6839612553"
     scripts: *ios_scripts
     artifacts:
       - build/ios/ipa/*.ipa
@@ -147,8 +147,8 @@ workflows:
       vars:
         VOLI_APP: admin
         BUNDLE_ID: uz.voli.admin
-        # After the app is made in App Store Connect: its Apple ID (digits) here.
-        APP_STORE_APPLE_ID: ""
+        # The app's Apple ID: App Store Connect → App Information → Apple ID.
+        APP_STORE_APPLE_ID: "6839613202"
     scripts: *ios_scripts
     artifacts:
       - build/ios/ipa/*.ipa
