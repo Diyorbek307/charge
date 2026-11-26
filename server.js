@@ -50,6 +50,7 @@ import "./server/driverPhotos.js";
 import "./server/employees.js";
 import "./server/companies.js";
 import "./server/volume.js";
+import "./server/fuel.js";
 import "./server/supportProfile.js";
 import "./server/supportActions.js";
 import { startPayoutWatch } from "./server/payouts.js";

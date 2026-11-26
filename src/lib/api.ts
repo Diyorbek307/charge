@@ -140,6 +140,14 @@ export interface StationForecast {
 }
 export type ReportKind = 'works' | 'broken' | 'queue' | 'no_queue' | 'power' | 'access';
 export interface CommunityReport { id: string; stationId: string; userId: string; user: string; kind: ReportKind; value: number | null; note: string; ts: string; confirms: number; verified: boolean }
+/** A gas or petrol station from OpenStreetMap; `now` is what drivers said in the last 3 hours. */
+export interface FuelStation {
+  id: string; name: string | null; brand: string | null; lat: number; lng: number;
+  metan: boolean | null; propan: boolean | null; petrol: boolean; diesel: boolean | null;
+  address: string | null; hours: string | null;
+  now: { status: 'yes' | 'no' | 'queue'; at: string; count: number } | null;
+}
+export type FuelKind = 'gas' | 'petrol';
 export interface StationCommunity { works: number; broken: number; queue: number; noQueue: number; access: number; power: number | null; reports: CommunityReport[] }
 export interface Loyalty {
   balance: number;
@@ -982,6 +990,8 @@ export const apiClient = {
   me: (portal: Portal) => request<{ user: Account }>('/auth/me', { portal }),
   stationForecast: (stationId: string) => request<StationForecast>(`/stations/${stationId}/forecast`),
   stationCommunity: (stationId: string) => request<StationCommunity>(`/stations/${stationId}/community`),
+  fuelStations: (kind: FuelKind) => request<{ source: string; at: string; stations: FuelStation[] }>(`/fuel?kind=${kind}`),
+  fuelReport: (id: string, body: { fuel: FuelKind; status: 'yes' | 'no' | 'queue' }) => post<FuelStation>(`/fuel/${encodeURIComponent(id)}/report`, body, 'driver'),
   addCommunityReport: (stationId: string, body: { kind: ReportKind; value?: number; note?: string }) =>
     post<{ report: CommunityReport; community: StationCommunity }>(`/stations/${stationId}/community`, body, 'driver'),
   confirmCommunityReport: (id: string) => post<{ report: CommunityReport; community: StationCommunity }>(`/community/${id}/confirm`, undefined, 'driver'),

@@ -14,6 +14,8 @@ import { useTariffNow, priceNow, partnerNetwork } from '../lib/tariff';
 import { NetworkBadge } from './driver/NetworkBadge';
 import { ChargerFriend } from './driver/Illustration';
 import { fetchRoute, pointAt, type Route } from '../lib/nav';
+import { MapModeSwitch, FuelMarkers, FuelSheet, useFuelStations, readMapMode, saveMapMode, type MapMode } from './driver/FuelMode';
+import type { FuelStation } from '../lib/api';
 
 const statusColor: Record<string, string> = {
   available: '#16A34A',
@@ -458,6 +460,11 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
   const [openOnly, setOpenOnly] = useState(false);
   const [amen, setAmen] = useState<string[]>([]);
   const [listOpen, setListOpen] = useState(false);
+  // Электро, газ или бензин: what the map shows.
+  const [mode, setModeState] = useState<MapMode>(readMapMode);
+  const setMode = (m: MapMode) => { setModeState(m); saveMapMode(m); setFuelPick(null); };
+  const fuel = useFuelStations(mode === 'ev' ? null : mode);
+  const [fuelPick, setFuelPick] = useState<FuelStation | null>(null);
   const toggleAmen = (a: string) => setAmen(v => (v.includes(a) ? v.filter(x => x !== a) : [...v, a]));
 
   // Networks that have stations on the map, biggest first.
@@ -594,10 +601,16 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
       <MapContainer center={[start.lat, start.lng]} zoom={start.zoom} style={{ height: '100%', width: '100%' }} zoomControl={false}>
         <BaseMap />
         <MeMarker fix={here} />
-        <ClusteredMarkers stations={filtered} promos={promos} onSelect={pick} selectedId={selected?.id ?? null} />
+        {mode === 'ev' ? (
+          <>
+            <ClusteredMarkers stations={filtered} promos={promos} onSelect={pick} selectedId={selected?.id ?? null} />
+            <FocusStation station={selected} />
+            <RoutePreview station={selected} from={here ?? lastKnown()} />
+          </>
+        ) : (
+          <FuelMarkers kind={mode} stations={fuel.list ?? []} selected={fuelPick} onSelect={setFuelPick} />
+        )}
         <MapBridge target={target} />
-        <FocusStation station={selected} />
-        <RoutePreview station={selected} from={here ?? lastKnown()} />
         <ViewKeeper onTouch={() => { touched.current = true; }} />
       </MapContainer>
 
@@ -615,7 +628,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
                 </span>
               </button>
             ) : <span />}
-            <div className="pointer-events-auto flex flex-col gap-2 items-end">
+            <div className={`pointer-events-auto flex flex-col gap-2 items-end ${mode === 'ev' ? '' : 'invisible'}`}>
               <button onClick={() => { setListOpen(v => !v); setShowFilters(false); }} aria-pressed={listOpen} aria-label={listOpen ? 'Показать карту' : 'Станции списком'} className="w-12 h-12 rounded-2xl bg-white/95 backdrop-blur shadow-[0_4px_20px_rgba(15,23,42,0.12)] grid place-items-center text-slate-800">
                 {listOpen ? <MapIcon size={20} /> : <List size={20} />}
               </button>
@@ -652,6 +665,12 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
 
               <div className="bg-white rounded-t-[28px] shadow-[0_-8px_30px_rgba(15,23,42,0.12)] pt-2 pb-3">
                 <div className="mx-auto w-10 h-1 rounded-full bg-slate-200 mb-2" aria-hidden="true" />
+
+                <MapModeSwitch mode={mode} onChange={setMode} />
+
+                {mode !== 'ev' ? (
+                  <FuelSheet kind={mode} stations={fuel.list} selected={fuelPick} here={here} onSelect={setFuelPick} onClose={() => setFuelPick(null)} onUpdated={st => { fuel.replace(st); setFuelPick(st); }} />
+                ) : (<>
 
                 {panel && (
                   <div className="px-3 mb-2 max-h-[min(52vh,420px)] overflow-y-auto">
@@ -838,6 +857,7 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
                   <button onClick={() => setOpenOnly(v => !v)} aria-pressed={openOnly} className={chip(openOnly, 'green')}>Открыто сейчас</button>
                   {quick && <span className="shrink-0 self-center text-xs font-semibold text-slate-500 px-1">{`${filtered.length} ${plural(filtered.length, ['станция', 'станции', 'станций'])}`}</span>}
                 </div>
+                </>)}
               </div>
             </div>
           </div>
