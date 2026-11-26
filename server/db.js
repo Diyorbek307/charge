@@ -306,12 +306,21 @@ const DEMO_STAFF_LOGINS = new Set(DEMO_ACCOUNTS.filter(a => a.portal !== 'driver
 export const isDemoStaff = account => DEMO_STAFF_LOGINS.has(`${account?.portal}:${account?.login}`);
 
 /**
+ * The store reviewers' company login (Voli Business in the App Store and Google
+ * Play): REVIEW_BUSINESS_LOGIN, a company manager's email. The reviewers cannot
+ * read codes off our phone, so this one login works without the second factor.
+ * Use it only for a test company with play money and no real people in it.
+ */
+const REVIEW_BUSINESS_LOGIN = String(process.env.REVIEW_BUSINESS_LOGIN ?? '').trim().toLowerCase();
+export const isReviewCompany = account => !!REVIEW_BUSINESS_LOGIN && account?.portal === 'business' && String(account.login ?? '').toLowerCase() === REVIEW_BUSINESS_LOGIN;
+/**
  * Everyone but drivers holds money or other people's data, so on a real
  * server they work only with a second factor. The demo staff kept for showing
  * the portals are spared: they could not share one phone.
  */
 export function twoFactorRequired(account) {
   if (!account || account.portal === 'driver' || !STAFF_2FA) return false;
+  if (isReviewCompany(account)) return false;
   return account.portal === 'admin' || !(DEMO_STAFF && isDemoStaff(account));
 }
 /**

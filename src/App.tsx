@@ -275,7 +275,7 @@ function PortalGate({
         <div className="w-full max-w-[460px] space-y-4">
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 text-white">
             <h1 className="text-xl font-bold">Включите двухфакторную защиту</h1>
-            <p className="text-sm text-slate-400 mt-1.5">Админ-панель открывается только со вторым фактором: даже зная пароль, без кода из вашего телефона войти нельзя. Установите Google Authenticator или любое приложение-аутентификатор и отсканируйте код ниже.</p>
+            <p className="text-sm text-slate-400 mt-1.5">Кабинет открывается только со вторым фактором: даже зная пароль, без кода из вашего телефона войти нельзя. Установите Google Authenticator или любое приложение-аутентификатор и отсканируйте код ниже.</p>
           </div>
           <TwoFactorPanel portal={portal} onEnabled={() => setEnrolled(true)} />
         </div>

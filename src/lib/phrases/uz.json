@@ -4928,5 +4928,7 @@
 "на карте": "xaritada",
 "Удалить отметку": "Belgini o‘chirish",
 "Удалить ложную отметку": "Noto‘g‘ri belgini o‘chirish",
-"Отметка не найдена": "Belgi topilmadi"
+"Отметка не найдена": "Belgi topilmadi",
+"Включите двухфакторную защиту": "Ikki bosqichli himoyani yoqing",
+"Кабинет открывается только со вторым фактором: даже зная пароль, без кода из вашего телефона войти нельзя. Установите Google Authenticator или любое приложение-аутентификатор и отсканируйте код ниже.": "Kabinet faqat ikkinchi omil bilan ochiladi: parolni bilgan holda ham telefoningizdagi kodsiz kirib bo'lmaydi. Google Authenticator yoki istalgan autentifikator ilovasini o'rnating va quyidagi kodni skanerlang."
 }
