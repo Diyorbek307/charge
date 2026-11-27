@@ -21,6 +21,12 @@ Admin не выкладывается в открытый магазин: Apple 
 
 ---
 
+## Где сейчас (27.11.2026)
+
+- Apple ID: Voli Business `6839612553`, Voli Admin `6839613202` (в `codemagic.yaml`).
+- Voli Business: сборка 1 (1.0.1) прошла, 26.11 отправлена на проверку Apple, подана заявка на непубличное распространение. Вход для Apple — тестовая компания `support@voli.uz` (Render `REVIEW_BUSINESS_LOGIN`, без 2FA).
+- Voli Admin: TestFlight, внутренняя группа «Команда Voli» — настроить. Google Play — ещё не начинали.
+
 ## Что сделать владельцу
 
 ### Apple: оба приложения

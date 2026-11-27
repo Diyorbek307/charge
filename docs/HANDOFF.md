@@ -20,7 +20,14 @@
   1 690 с бензином; обновлять `node scripts/fuel-osm.mjs`, раз в месяц-два). Есть ли газ — отметки водителей
   «Газ есть / нет / очередь», 3 часа (`server/fuel.js`, `db.data.fuelReports`). Маршрут — Яндекс Карты.
   Карточка/значки — `src/components/driver/FuelMode.tsx`. Spectre отказались от выкупа, предложили показ станций
-  через их публичный API — ждём ссылку (макет `marketing/partners/spectre/`).
+  через их публичный API.
+
+**Spectre на карте (27.11)** — их открытый список `https://api.spectre-energy.uz/public-api/stations` (783 зарядки, без цен
+и статусов — «конфиденциально»). `server/partnerMap.js`: снимок `server/data/spectre-stations.json`, на Render обновляется
+раз в 6 ч; зарядки ближе 60 м — одна точка (413). `GET /api/partner-map`. На карте «Электро» — оранжевые квадратные значки,
+карточка «Открыть в Spectre» (`app.spectre-energy.uz/s/<public_id>?utm_source=voli&utm_medium=app&utm_campaign=map` —
+UTM они сами просили) и «Маршрут». Зарядка через Voli там нельзя. Файл `src/components/driver/PartnerMode.tsx`.
+Попросили у них публичный тариф (как в их приложении) — если дадут, показать цену в карточке.
 
 **App Store — приложение опубликовано**
 - **25.11 вечером: версия 1.0.1 отправлена на проверку Apple** (весь экран, contentInset never, языки ru/uz,

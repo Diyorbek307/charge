@@ -4930,5 +4930,15 @@
 "Удалить ложную отметку": "Noto‘g‘ri belgini o‘chirish",
 "Отметка не найдена": "Belgi topilmadi",
 "Включите двухфакторную защиту": "Ikki bosqichli himoyani yoqing",
-"Кабинет открывается только со вторым фактором: даже зная пароль, без кода из вашего телефона войти нельзя. Установите Google Authenticator или любое приложение-аутентификатор и отсканируйте код ниже.": "Kabinet faqat ikkinchi omil bilan ochiladi: parolni bilgan holda ham telefoningizdagi kodsiz kirib bo'lmaydi. Google Authenticator yoki istalgan autentifikator ilovasini o'rnating va quyidagi kodni skanerlang."
+"Кабинет открывается только со вторым фактором: даже зная пароль, без кода из вашего телефона войти нельзя. Установите Google Authenticator или любое приложение-аутентификатор и отсканируйте код ниже.": "Kabinet faqat ikkinchi omil bilan ochiladi: parolni bilgan holda ham telefoningizdagi kodsiz kirib bo'lmaydi. Google Authenticator yoki istalgan autentifikator ilovasini o'rnating va quyidagi kodni skanerlang.",
+"мощность не указана": "quvvat ko‘rsatilmagan",
+"{0} быстрая": "{0} ta tezkor",
+"{0} быстрые": "{0} ta tezkor",
+"{0} быстрых": "{0} ta tezkor",
+"{0} гибридная": "{0} ta gibrid",
+"{0} гибридные": "{0} ta gibrid",
+"{0} гибридных": "{0} ta gibrid",
+"Станция сети {0}. Зарядка, цена и оплата — в приложении {1}.": "{0} tarmog‘i stansiyasi. Quvvatlash, narx va to‘lov — {1} ilovasida.",
+"Открыть в {0}": "{0} ilovasida ochish",
+"Данные о станциях — открытый список {0}.": "Stansiyalar ma’lumoti — {0} ochiq ro‘yxati."
 }

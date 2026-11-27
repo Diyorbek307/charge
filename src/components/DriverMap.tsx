@@ -15,7 +15,8 @@ import { NetworkBadge } from './driver/NetworkBadge';
 import { ChargerFriend } from './driver/Illustration';
 import { fetchRoute, pointAt, type Route } from '../lib/nav';
 import { MapModeSwitch, FuelMarkers, FuelSheet, useFuelStations, readMapMode, saveMapMode, type MapMode } from './driver/FuelMode';
-import type { FuelStation } from '../lib/api';
+import type { FuelStation, PartnerSite } from '../lib/api';
+import { PartnerMarkers, PartnerSheet, usePartnerSites } from './driver/PartnerMode';
 
 const statusColor: Record<string, string> = {
   available: '#16A34A',
@@ -462,9 +463,12 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
   const [listOpen, setListOpen] = useState(false);
   // Электро, газ или бензин: what the map shows.
   const [mode, setModeState] = useState<MapMode>(readMapMode);
-  const setMode = (m: MapMode) => { setModeState(m); saveMapMode(m); setFuelPick(null); };
+  const setMode = (m: MapMode) => { setModeState(m); saveMapMode(m); setFuelPick(null); setPartnerPick(null); };
   const fuel = useFuelStations(mode === 'ev' ? null : mode);
   const [fuelPick, setFuelPick] = useState<FuelStation | null>(null);
+  // Networks on the map only (Spectre): their stations open in their own app.
+  const partners = usePartnerSites(mode === 'ev' && !hideChrome);
+  const [partnerPick, setPartnerPick] = useState<PartnerSite | null>(null);
   const toggleAmen = (a: string) => setAmen(v => (v.includes(a) ? v.filter(x => x !== a) : [...v, a]));
 
   // Networks that have stations on the map, biggest first.
@@ -603,7 +607,8 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
         <MeMarker fix={here} />
         {mode === 'ev' ? (
           <>
-            <ClusteredMarkers stations={filtered} promos={promos} onSelect={pick} selectedId={selected?.id ?? null} />
+            {!selected && <PartnerMarkers sites={partners} selected={partnerPick} onSelect={setPartnerPick} />}
+            <ClusteredMarkers stations={filtered} promos={promos} onSelect={s => { setPartnerPick(null); pick(s); }} selectedId={selected?.id ?? null} />
             <FocusStation station={selected} />
             <RoutePreview station={selected} from={here ?? lastKnown()} />
           </>
@@ -670,6 +675,8 @@ export default function DriverMap({ onSelectStation, onOpenWallet, onSos, hideCh
 
                 {mode !== 'ev' ? (
                   <FuelSheet kind={mode} stations={fuel.list} selected={fuelPick} here={here} onSelect={setFuelPick} onClose={() => setFuelPick(null)} onUpdated={st => { fuel.replace(st); setFuelPick(st); }} />
+                ) : partnerPick ? (
+                  <PartnerSheet site={partnerPick} here={here} onClose={() => setPartnerPick(null)} />
                 ) : (<>
 
                 {panel && (

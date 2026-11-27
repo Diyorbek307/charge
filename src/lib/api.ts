@@ -148,6 +148,12 @@ export interface FuelStation {
   now: { status: 'yes' | 'no' | 'queue'; at: string; count: number } | null;
 }
 export type FuelKind = 'gas' | 'petrol';
+/** A network shown on the map only: its station opens in the network's own app (server/partnerMap.js). */
+export interface PartnerSite {
+  id: string; network: string; operator: string; name: string; address: string; lat: number; lng: number;
+  maxPower: number | null; link: string;
+  chargers: { id: string; name: string; power: number | null; hybrid: boolean; link: string }[];
+}
 export interface FuelMark { id: string; stationId: string; fuel: FuelKind; status: 'yes' | 'no' | 'queue'; userId: string; user: string; ts: string; station: string | null; address: string | null; lat: number | null; lng: number | null }
 export interface AdminFuel { source: string; at: string; total: number; gas: number; petrol: number; day: { marks: number; yes: number; no: number; queue: number; drivers: number }; marks: FuelMark[] }
 export interface StationCommunity { works: number; broken: number; queue: number; noQueue: number; access: number; power: number | null; reports: CommunityReport[] }
@@ -992,6 +998,7 @@ export const apiClient = {
   me: (portal: Portal) => request<{ user: Account }>('/auth/me', { portal }),
   stationForecast: (stationId: string) => request<StationForecast>(`/stations/${stationId}/forecast`),
   stationCommunity: (stationId: string) => request<StationCommunity>(`/stations/${stationId}/community`),
+  partnerMap: () => request<{ networks: { id: string; name: string; at: string; chargers: number }[]; sites: PartnerSite[] }>('/partner-map'),
   fuelStations: (kind: FuelKind) => request<{ source: string; at: string; stations: FuelStation[] }>(`/fuel?kind=${kind}`),
   fuelReport: (id: string, body: { fuel: FuelKind; status: 'yes' | 'no' | 'queue' }) => post<FuelStation>(`/fuel/${encodeURIComponent(id)}/report`, body, 'driver'),
   addCommunityReport: (stationId: string, body: { kind: ReportKind; value?: number; note?: string }) =>

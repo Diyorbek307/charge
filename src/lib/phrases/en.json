@@ -4930,5 +4930,15 @@
 "Удалить ложную отметку": "Delete a false mark",
 "Отметка не найдена": "Mark not found",
 "Включите двухфакторную защиту": "Turn on two-factor protection",
-"Кабинет открывается только со вторым фактором: даже зная пароль, без кода из вашего телефона войти нельзя. Установите Google Authenticator или любое приложение-аутентификатор и отсканируйте код ниже.": "The cabinet opens only with a second factor: even knowing the password, nobody can sign in without the code from your phone. Install Google Authenticator or any authenticator app and scan the code below."
+"Кабинет открывается только со вторым фактором: даже зная пароль, без кода из вашего телефона войти нельзя. Установите Google Authenticator или любое приложение-аутентификатор и отсканируйте код ниже.": "The cabinet opens only with a second factor: even knowing the password, nobody can sign in without the code from your phone. Install Google Authenticator or any authenticator app and scan the code below.",
+"мощность не указана": "power not given",
+"{0} быстрая": "{0} fast",
+"{0} быстрые": "{0} fast",
+"{0} быстрых": "{0} fast",
+"{0} гибридная": "{0} hybrid",
+"{0} гибридные": "{0} hybrid",
+"{0} гибридных": "{0} hybrid",
+"Станция сети {0}. Зарядка, цена и оплата — в приложении {1}.": "A {0} network station. Charging, price and payment are in the {1} app.",
+"Открыть в {0}": "Open in {0}",
+"Данные о станциях — открытый список {0}.": "Station data: {0}'s public list."
 }
